@@ -1,3 +1,10 @@
+context (2006.07.13-0.2) UNRELEASED; urgency=low
+
+  * update copyright file and long description
+  * add a conflict with tetex as it also ships texexec and friends
+
+ -- Norbert Preining <preining@debian.org>  Sun, 22 Oct 2006 15:57:37 +0200
+
 context (2006.07.13-0.1) UNRELEASED; urgency=low
 
   * Initial release.

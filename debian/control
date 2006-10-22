@@ -12,8 +12,26 @@ Section: tex
 Architecture: all
 Depends: ${misc:Depends}, texlive-base-bin | tetex-bin, texlive-base | tetex-base
 Suggests: texlive-metapost | tetex-bin, perl-tk
-Conflicts: texlive-context
+Conflicts: texlive-context, tetex-bin
 Replaces: texlive-context
 Provides: texlive-context
-Description: Hans Hagen's powerful macro package, ConText
-  Missing long description.
+Description: A powerful TeX format.
+  ConTeXt is a typographical engine written in the typographical computer 
+  language TeX. ConTeXt provides you with a convenient way to encode documents 
+  in a structured way and to typeset these documents in various ways on paper, 
+  computer screen or web site.
+  .
+  Use ConTeXt to create simple documents and complex layouts. From a single 
+  source produce traditional paper documents as well as highly interactive 
+  electronic documents. Combine text and graphics and other information in
+  your document in different ways. Move around, use and reuse information 
+  and typeset in one or more natural languages.
+  .
+  This package also contains MetaFun. MetaFun (a superset of well known 
+  MetaPost) is a powerful system for vector graphics that is fully integrated
+  into ConTeXt thereby reaching its full potential for the first time, but
+  also useable as a stand alone product. 
+  .
+  MetaFun is not for interactive drawing applications and not for free hand 
+  drawings. Its strength lies in the ability to enhance the document layout
+  with highly accurate graphics elements.
