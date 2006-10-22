@@ -1,0 +1,18 @@
+This package was debianized by Norbert Preining <preining@debian.org> on
+Sun Oct 22 11:53:51 CEST 2006.
+
+The original source was downloaded from
+	http://www.pragma-ade.com/context/current/cont-tmf.zip
+and repacked into a tar.gz.
+
+Debian adaptations for this Package are licensed under the GNU General
+Public License, version 2, and are under Copyright by:
+
+	Norbert Preining <preining@debian.org> (2006)
+
+Upstream work is licensed under the Creative Commons GPL or the 
+LPPL.
+
+Work to be done here.
+
+

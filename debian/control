@@ -1,0 +1,19 @@
+Source: context
+Section: tex
+Priority: optional
+Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
+Uploaders: Norbert Preining <preining@debian.org>
+Build-Depends: debhelper (>= 5.0.35)
+Build-Depends-Indep: tex-common (>= 0.16)
+Standards-Version: 3.7.2
+
+Package: context
+Section: tex
+Architecture: all
+Depends: ${misc:Depends}, texlive-base-bin | tetex-bin, texlive-base | tetex-base
+Suggests: texlive-metapost | tetex-bin, perl-tk
+Conflicts: texlive-context
+Replaces: texlive-context
+Provides: texlive-context
+Description: Hans Hagen's powerful macro package, ConText
+  Missing long description.
