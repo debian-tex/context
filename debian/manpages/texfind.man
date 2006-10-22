@@ -64,7 +64,7 @@ None known\&. Well - the replace function isn't the most useful one.
 \fBtexfind\fP was written for the ConTeXt package by Hans Hagen and
 Ton Otten, PRAGMA\&.
 .PP 
-This manual page was written by Frank Küster <frank@kuesterei\&.ch>,
+This manual page was written by Frank K\[:u]ster <frank@kuesterei\&.ch>,
 for the Debian GNU/Linux system\&.  It may be used and modified by
 others without contacting the author\&.  Any mistakes or omissions in
 the manual page are my fault; inquiries about or corrections to this

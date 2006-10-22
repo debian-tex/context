@@ -3,16 +3,19 @@
 package        := context
 instbase       := debian/$(package)
 
+
+include /usr/share/dpatch/dpatch.make
+
 build: build-indep
 # We have nothing to do here but the Debian Policy says this target must
 # exist.
 
 build-indep: build-indep-stamp
 
-build-indep-stamp:
+build-indep-stamp: patch-stamp
 	touch build-indep-stamp
 
-clean:
+clean: unpatch
 	dh_testroot
 	rm -f build-indep-stamp
 	dh_clean

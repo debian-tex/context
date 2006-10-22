@@ -1,0 +1,78 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## fix-perl-header.dpatch  <preining@logic.at>
+##
+## DP: Fix invocation of various context perl scripts
+
+@DPATCH@
+--- scripts/context/perl/makempy.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/makempy.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ #D \module
+ #D   [       file=makempy.pl,
+--- scripts/context/perl/mptopdf.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/mptopdf.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ # MikTeX users can set environment variable TEXSYSTEM to "miktex".
+ 
+--- scripts/context/perl/pdftrimwhite.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/pdftrimwhite.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ #D \module
+ #D   [       file=pdftrimwhite.pl,
+--- scripts/context/perl/texexec.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/texexec.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -w -S $0 ${1+"$@"}' && eval 'exec perl -w -S $0 $argv:q'
+-  if 0 ;
++#!/usr/bin/perl
+ 
+ #D \module
+ #D   [       file=texexec.pl,
+--- scripts/context/perl/texfind.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/texfind.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ #D \module
+ #D   [       file=texfind.pl,
+--- scripts/context/perl/texfont.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/texfont.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ # This is an example of a crappy unstructured file but once
+ # I know what should happen exactly, I will clean it up.
+--- scripts/context/perl/texshow.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/texshow.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -w -S $0 ${1+"$@"}' && eval 'exec perl -w -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ #D \module
+ #D   [       file=texshow.pl,
+--- scripts/context/perl/texutil.pl.orig	2006-10-22 16:57:52.000000000 +0200
++++ scripts/context/perl/texutil.pl	2006-10-22 16:57:52.000000000 +0200
+@@ -1,5 +1,4 @@
+-eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+-        if 0;
++#!/usr/bin/perl
+ 
+ #D \module
+ #D   [       file=texutil.pl,
