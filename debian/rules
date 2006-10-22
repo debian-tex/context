@@ -26,6 +26,9 @@ binary-indep: build-indep
 		$(instbase)/usr/share/texmf
 	# this file is not needed
 	rm $(instbase)/usr/share/texmf/web2c/context.cnf
+	rm -rf $(instbase)/usr/share/texmf/scripts/context/ruby
+	rm -rf $(instbase)/usr/share/texmf/scripts/context/stubs
+	rm -rf $(instbase)/usr/share/texmf/context/examplap
 
 	# we need a check here that all maps are installed
 	# use context.formats and context.maps in debian dir
@@ -42,7 +45,12 @@ binary-indep: build-indep
 	cp scripts/context/perl/mptopdf.pl $(instbase)/usr/bin/mptopdf
 	cp scripts/context/perl/pdftrimwhite.pl $(instbase)/usr/bin/pdftrimwhite
 
-
+	dh_installman				\
+		doc/scripts/context/perl/texshow.1		\
+		debian/manpages/makempy.man			\
+		debian/manpages/texexec.man			\
+		debian/manpages/texfind.man			\
+		debian/manpages/texutil.man
 
 	dh_installchangelogs
 	dh_compress
