@@ -2,8 +2,10 @@ context (2006.07.13-0.2) UNRELEASED; urgency=low
 
   * update copyright file and long description
   * add a conflict with tetex as it also ships texexec and friends
+  * add a README.Debian
+  * use context.maps and context.formats instead of cmd line options
 
- -- Norbert Preining <preining@debian.org>  Sun, 22 Oct 2006 15:57:37 +0200
+ -- Norbert Preining <preining@debian.org>  Sun, 22 Oct 2006 16:17:43 +0200
 
 context (2006.07.13-0.1) UNRELEASED; urgency=low
 

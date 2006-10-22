@@ -27,17 +27,9 @@ binary-indep: build-indep
 	# this file is not needed
 	rm $(instbase)/usr/share/texmf/web2c/context.cnf
 
-	# we need a check here that all maps are installed!
-	dh_installtex 					\
-		map=Map,ec-lm.map			\
-		map=Map,el-lm.map			\
-		map=Map,qx-lm.map			\
-		map=Map,t5-lm.map			\
-		map=Map,texnansi-lm.map			\
-		map=Map,ts1-lm.map			\
-		format=cont-en,pdfetex,cont-usr.tex,"-8bit *cont-en.ini"  \
-		format=mptopdf,pdfetex,-,"-translate-file=cp227.tcx mptopdf.tex"	\
-		format=metafun,mpost,-,"-translate-file=cp227.tcx metafun.mp" \
+	# we need a check here that all maps are installed
+	# use context.formats and context.maps in debian dir
+	dh_installtex
 	
 	# now for the scripts!
 	dh_installdirs usr/bin

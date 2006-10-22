@@ -1,0 +1,9 @@
+# Context formats:
+#! cont-cz      pdfetex         cont-usr.tex    -8bit *cont-cz.ini
+#! cont-de      pdfetex         cont-usr.tex    -8bit *cont-de.ini
+cont-en pdfetex         cont-usr.tex    -8bit *cont-en.ini
+#! cont-nl      pdfetex         cont-usr.tex    -8bit *cont-nl.ini
+#! cont-uk      pdfetex         cont-usr.tex    -8bit *cont-uk.ini
+# mptopdf utility
+mptopdf         pdfetex -               -translate-file=cp227.tcx mptopdf.tex
+metafun         mpost           -               -translate-file=cp227.tcx metafun.mp
