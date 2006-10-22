@@ -1,6 +1,7 @@
 context (2006.08.08-0.1) UNRELEASED; urgency=low
 
   * that was not 07.13, but 08.08, why does CTAN state this ...
+  * install copyright and LICENSE.teTeX file
 
  -- Norbert Preining <preining@debian.org>  Sun, 22 Oct 2006 17:24:33 +0200
 
