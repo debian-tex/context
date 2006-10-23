@@ -1,4 +1,4 @@
-context (2006.08.08-0.2.1) UNRELEASED; urgency=low
+context (2006.08.08-0.3) UNRELEASED; urgency=low
 
   * switch to ruby stubs and scripts, add depends on ruby
 
