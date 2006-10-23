@@ -10,7 +10,7 @@ Standards-Version: 3.7.2
 Package: context
 Section: tex
 Architecture: all
-Depends: ${misc:Depends}, texlive-base-bin, texlive-base, texlive-metapost
+Depends: ${misc:Depends}, ruby, texlive-base-bin, texlive-base, texlive-metapost
 Suggests: perl-tk
 Conflicts: texlive-context, tetex-bin, tetex-base
 Replaces: texlive-context

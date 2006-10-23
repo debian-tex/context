@@ -29,7 +29,8 @@ binary-indep: build-indep
 		$(instbase)/usr/share/texmf
 	# this file is not needed
 	rm $(instbase)/usr/share/texmf/web2c/context.cnf
-	rm -r $(instbase)/usr/share/texmf/scripts/context/ruby
+	# switch to ruby
+	#rm -r $(instbase)/usr/share/texmf/scripts/context/ruby
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
 	rm -r $(instbase)/usr/share/texmf/context/examplap
 	rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
@@ -40,14 +41,17 @@ binary-indep: build-indep
 	
 	# now for the scripts!
 	dh_installdirs usr/bin
-	cp scripts/context/perl/texexec.pl $(instbase)/usr/bin/texexec
-	cp scripts/context/perl/texutil.pl $(instbase)/usr/bin/texutil
-	cp scripts/context/perl/texshow.pl $(instbase)/usr/bin/texshow
-	cp scripts/context/perl/texfont.pl $(instbase)/usr/bin/texfont
-	cp scripts/context/perl/texfind.pl $(instbase)/usr/bin/texfind
-	cp scripts/context/perl/makempy.pl $(instbase)/usr/bin/makempy
-	cp scripts/context/perl/mptopdf.pl $(instbase)/usr/bin/mptopdf
-	cp scripts/context/perl/pdftrimwhite.pl $(instbase)/usr/bin/pdftrimwhite
+	# switch to ruby
+	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
+	cp debian/texmfstart $(instbase)/usr/bin
+	#cp scripts/context/perl/texexec.pl $(instbase)/usr/bin/texexec
+	#cp scripts/context/perl/texutil.pl $(instbase)/usr/bin/texutil
+	#cp scripts/context/perl/texshow.pl $(instbase)/usr/bin/texshow
+	#cp scripts/context/perl/texfont.pl $(instbase)/usr/bin/texfont
+	#cp scripts/context/perl/texfind.pl $(instbase)/usr/bin/texfind
+	#cp scripts/context/perl/makempy.pl $(instbase)/usr/bin/makempy
+	#cp scripts/context/perl/mptopdf.pl $(instbase)/usr/bin/mptopdf
+	#cp scripts/context/perl/pdftrimwhite.pl $(instbase)/usr/bin/pdftrimwhite
 
 	dh_installman				\
 		doc/scripts/context/perl/texshow.1		\
