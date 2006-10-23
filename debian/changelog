@@ -1,3 +1,9 @@
+context (2006.08.08-0.2) UNRELEASED; urgency=low
+
+  * do not install the fonts/map/dvipdfm directory, it hoses the system
+
+ -- Norbert Preining <preining@debian.org>  Mon, 23 Oct 2006 12:06:38 +0200
+
 context (2006.08.08-0.1) UNRELEASED; urgency=low
 
   * that was not 07.13, but 08.08, why does CTAN state this ...
