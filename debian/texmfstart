@@ -1,0 +1,2 @@
+#!/bin/sh
+ruby /usr/share/texmf/scripts/context/ruby/texmfstart.rb $@
