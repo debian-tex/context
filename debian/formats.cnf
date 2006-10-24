@@ -1,0 +1,12 @@
+#
+# This file defines which ConTeXt formats are build
+#
+#engine format
+#	where engine is one of: all|xetex|aleph|pdftex
+#	format is one of:
+#		en nl de it fr cz ro uk
+#		mptopdf
+# You can use {} expansion as in the shell
+#
+#{pdftex,aleph} {de,en,it,mptopdf}
+pdftex {de,en,it,mptopdf}

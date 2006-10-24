@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# ctxfmtutil
+#
+# This script reads the context format definition file from
+#	/etc/texmf/context/formats.cnf
+# and creates the necessary formats by calling texexec.
+#
+
+export TEXMFSYSCONFIG=/usr/share/texmf
+
+case "$1" in 
+  "--build")
+  	build=1 ;;
+  "--remove")
+  	build=0 ;;
+  *)
+  	echo "Wrong commandline argument $1!" >&2 ; exit 1 ;;
+esac
+
+remove_format_files()
+{
+  engine=$1
+  format=$2
+  if [ "$engine" = pdftex ] ; then engine=pdfetex ; fi
+  case "$format" in 
+    ??) format=cont-$format ;;
+  esac
+  rm -f $TEXMFSYSCONFIG/web2c/$engine/$format.*
+}
+
+parse_line()
+{
+  engine=$1
+  format=$2
+  eval set $engine
+  allengines="$@"
+  eval set $format
+  allformats="$@"
+  for e in $allengines ; do
+    for f in $allformats ; do
+      if [ $build = 1 ] ; then
+        texexec --fast --make --$e $f
+      else
+        remove_format_files $e $f
+      fi
+    done
+  done
+}
+
+OIFS=$IFS
+IFS='
+'
+set $(echo x; sed '/^#/d; /^[  ]*$/d' "/etc/texmf/context/formats.cnf") ; shift
+IFS=$OIFS
+for line 
+do
+  parse_line $line;
+done
+

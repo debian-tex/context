@@ -37,19 +37,16 @@ binary-indep: build-indep
 	# use context.formats and context.maps in debian dir
 	dh_installtex
 	
-	# now for the scripts!
-	dh_installdirs usr/bin
+	dh_installdirs usr/bin etc/texmf/context
+
+	# install our context-format creation script
+	cp debian/ctxfmtutil $(instbase)/usr/bin
+	# and the formats definitions
+	cp debian/formats.cnf $(instbase)/etc/texmf/context
+
 	# switch to ruby
 	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
 	cp debian/texmfstart $(instbase)/usr/bin
-	#cp scripts/context/perl/texexec.pl $(instbase)/usr/bin/texexec
-	#cp scripts/context/perl/texutil.pl $(instbase)/usr/bin/texutil
-	#cp scripts/context/perl/texshow.pl $(instbase)/usr/bin/texshow
-	#cp scripts/context/perl/texfont.pl $(instbase)/usr/bin/texfont
-	#cp scripts/context/perl/texfind.pl $(instbase)/usr/bin/texfind
-	#cp scripts/context/perl/makempy.pl $(instbase)/usr/bin/makempy
-	#cp scripts/context/perl/mptopdf.pl $(instbase)/usr/bin/mptopdf
-	#cp scripts/context/perl/pdftrimwhite.pl $(instbase)/usr/bin/pdftrimwhite
 
 	dh_installman				\
 		doc/scripts/context/perl/texshow.1		\

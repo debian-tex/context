@@ -1,3 +1,10 @@
+context (2006.08.08-0.4) UNRELEASED; urgency=low
+
+  * ConTeXt formats are now defined in /etc/texmf/context/formats.cnf
+    and created with /usr/bin/ctxfmtutil
+
+ -- Norbert Preining <preining@debian.org>  Tue, 24 Oct 2006 19:32:47 +0200
+
 context (2006.08.08-0.3) UNRELEASED; urgency=low
 
   * switch to ruby stubs and scripts, add depends on ruby

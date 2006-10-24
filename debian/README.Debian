@@ -5,12 +5,13 @@ All the documentation to ConTeXt will be provided in a separate package
 	context-doc-nonfree
 as we cannot include the sources.
 
-If you want to activate more/different formats, please edit
-	/etc/texmf/fmt.d/10context.cnf
-call
-	update-fmtutil
-and
-	fmtutil-sys
-(all as root). For more details please see the Documentation TeX-on-Debian
-in the tex-common package.
+ConTeXt based formats are *NOT* defined in the usual way in 
+/etc/texmf/fmtutil.d, instead please edit the file
+	/etc/texmf/context/formats.cnf
+which also contains explanations about available formats.
 
+After editing this file please call as root
+	ctxfmtutil --build
+
+
+Norbert Preining, October 2006

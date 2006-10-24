@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+
+case "$1" in
+    remove|disappear)
+	ctxfmtutil --remove
+    ;;
+
+    purge|upgrade|failed-upgrade|abort-upgrade|abort-install)
+    ;;
+
+    *)
+        echo "postrm called with unknown argument '$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+
