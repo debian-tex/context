@@ -85,7 +85,7 @@ parse_line()
     fi
     for f in $allformats ; do
       case "$f" in
-        ??) format=cont-$format ;;
+        ??) f=cont-$f ;;
       esac
       if [ $build = 1 ] ; then
         dhit_build_format $e $f
