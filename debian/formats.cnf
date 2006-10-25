@@ -5,8 +5,11 @@
 #	where engine is one of: all|xetex|aleph|pdftex
 #	format is one of:
 #		en nl de it fr cz ro uk
-#		mptopdf
+#		mptopdf, metafun
 # You can use {} expansion as in the shell
 #
+# Example:
 #{pdftex,aleph} {de,en,it,mptopdf}
-pdftex {de,en,it,mptopdf}
+#
+# Only pre-build english context and mptopdf format
+pdftex {en,mptopdf,metafun}

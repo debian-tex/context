@@ -1,3 +1,9 @@
+context (2006.08.08-0.4.1) UNRELEASED; urgency=low
+
+  * only create cont-en, mptopdf, and metafun formats on pdftex by default
+
+ -- Norbert Preining <preining@debian.org>  Wed, 25 Oct 2006 03:58:35 +0200
+
 context (2006.08.08-0.4) UNRELEASED; urgency=low
 
   * ConTeXt formats are now defined in /etc/texmf/context/formats.cnf
