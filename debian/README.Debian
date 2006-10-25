@@ -3,11 +3,11 @@ README for using ConTeXt on Debian
 
 All the documentation to ConTeXt will be provided in a separate package
 	context-doc-nonfree
-as we cannot include the sources.
+as we cannot include the sources. 
 
 ConTeXt based formats are *NOT* defined in the usual way in 
 /etc/texmf/fmtutil.d, instead please edit the file
-	/etc/texmf/context/formats.cnf
+	/etc/texmf/context/config/formats.cnf
 which also contains explanations about available formats.
 
 After editing this file please call as root
