@@ -1,3 +1,9 @@
+context (2006.08.08-0.5.1) UNRELEASED; urgency=low
+
+  * fix format renaming, so that removal works
+
+ -- Norbert Preining <preining@debian.org>  Wed, 25 Oct 2006 13:45:21 +0200
+
 context (2006.08.08-0.5) UNRELEASED; urgency=low
 
   * only create cont-en, mptopdf, and metafun formats on pdftex by default
