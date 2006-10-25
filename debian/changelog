@@ -2,6 +2,7 @@ context (2006.08.08-0.6) UNRELEASED; urgency=low
 
   * fix format renaming, so that removal works
   * fix duplicate web2c component in the remove part
+  * at removal time remove the fmts in web2c/$engine AND web2c
 
  -- Norbert Preining <preining@debian.org>  Wed, 25 Oct 2006 16:18:37 +0200
 

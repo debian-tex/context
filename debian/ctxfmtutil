@@ -52,7 +52,7 @@ remove_format_files()
   engine=$1
   format=$2
   if [ "$engine" = pdftex ] ; then engine=pdfetex ; fi
-  rm -f $TEXFORMATS/$engine/$format.*
+  rm -f $TEXFORMATS/$engine/$format.* $TEXFORMATS/$format.*
 }
 
 check_program()
