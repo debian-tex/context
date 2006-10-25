@@ -1,8 +1,14 @@
-context (2006.08.08-0.4.1) UNRELEASED; urgency=low
+context (2006.08.08-0.5) UNRELEASED; urgency=low
 
   * only create cont-en, mptopdf, and metafun formats on pdftex by default
+  * fix man page
+  * install perl scripts, some stubs need them
+  * make ctxformat less noisy
+  * don't install formats in /usr/share/texmf/web2c, but into either
+    TEXMFSYSVAR/web2c or TEXMFVAR/web2c, depending on whether the running
+    user is root or not.
 
- -- Norbert Preining <preining@debian.org>  Wed, 25 Oct 2006 03:58:35 +0200
+ -- Norbert Preining <preining@debian.org>  Wed, 25 Oct 2006 11:41:38 +0200
 
 context (2006.08.08-0.4) UNRELEASED; urgency=low
 

@@ -34,7 +34,7 @@ files, and extracting and rearranging pages within a file
 (similar to the functions provided by \fBpsnup\fP(1) and
 \fBpdfmerge\fP(1))\&.
 .IP o 
-Extract or strip documentation from com{ConTeXt} source files
+Extract or strip documentation from ConTeXt source files
 (using \fBtexutil\fP(1))\&.
 .IP o 
 Run METAPOST (\fBmpost\fP(1)) to generate figures from METAPOST

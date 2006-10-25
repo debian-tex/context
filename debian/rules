@@ -29,7 +29,8 @@ binary-indep: build-indep
 	# switch to ruby
 	#rm -r $(instbase)/usr/share/texmf/scripts/context/ruby
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
-	rm -r $(instbase)/usr/share/texmf/scripts/context/perl
+	#we still need the perl scripts
+	#rm -r $(instbase)/usr/share/texmf/scripts/context/perl
 	rm -r $(instbase)/usr/share/texmf/context/examplap
 	rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
 
@@ -37,12 +38,12 @@ binary-indep: build-indep
 	# use context.formats and context.maps in debian dir
 	dh_installtex
 	
-	dh_installdirs usr/bin etc/texmf/context
+	dh_installdirs usr/bin etc/texmf/context/config
 
 	# install our context-format creation script
 	cp debian/ctxfmtutil $(instbase)/usr/bin
 	# and the formats definitions
-	cp debian/formats.cnf $(instbase)/etc/texmf/context
+	cp debian/formats.cnf $(instbase)/etc/texmf/context/config
 
 	# switch to ruby
 	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
