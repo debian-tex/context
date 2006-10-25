@@ -52,7 +52,12 @@ remove_format_files()
   engine=$1
   format=$2
   if [ "$engine" = pdftex ] ; then engine=pdfetex ; fi
-  rm -f $TEXMFSYSCONFIG/web2c/$engine/$format.*
+  rm -f $TEXFORMATS/web2c/$engine/$format.*
+}
+
+check_program()
+{
+  $1 --version  >/dev/null 2>&1
 }
 
 parse_line()
@@ -64,6 +69,20 @@ parse_line()
   eval set $format
   allformats="$@"
   for e in $allengines ; do
+    case "$e" in
+      pdftex) prog=pdfetex ;;
+      aleph) prog=aleph ;;
+      xetex) prog=xetex ;;
+      *) echo "Unknown engine $e, exit!" >&2 ; exit 1 ;;
+    esac
+    if check_program $prog ; then
+      # ok, we can build the format, do nothing here
+      :
+    else
+      echo "Warning: engine $prog not present, but specified in the config file!" >&2
+      echo "Warning: Will not build the formats based on this engine!" >&2
+      continue
+    fi
     for f in $allformats ; do
       case "$f" in
         ??) format=cont-$format ;;

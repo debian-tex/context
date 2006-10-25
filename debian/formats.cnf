@@ -2,14 +2,18 @@
 # This file defines which ConTeXt formats are build
 #
 #engine format
-#	where engine is one of: all|xetex|aleph|pdftex
+#	where engine is one of: pdftex aleph xetex
 #	format is one of:
 #		en nl de it fr cz ro uk
 #		mptopdf, metafun
 # You can use {} expansion as in the shell
 #
+# You can use many lines
+#
 # Example:
 #{pdftex,aleph} {de,en,it,mptopdf}
+#xetex nl
+#aleph {cz,fr}
 #
 # Only pre-build english context and mptopdf format
 pdftex {en,mptopdf,metafun}
