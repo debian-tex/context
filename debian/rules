@@ -52,7 +52,7 @@ binary-indep: build-indep
 	cp debian/texmfstart $(instbase)/usr/bin
 
 	dh_installman				\
-		doc/scripts/context/perl/texshow.1		\
+		doc/context/scripts/perl/texshow.1		\
 		debian/manpages/makempy.man			\
 		debian/manpages/texexec.man			\
 		debian/manpages/texfind.man			\
