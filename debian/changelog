@@ -1,3 +1,10 @@
+context (2006.08.08-0.7) UNRELEASED; urgency=low
+
+  * suggest fontforge, and let texfont call fontforge instead of pfaedit
+  * add dpatch build-dep and adjust rules
+
+ -- Norbert Preining <preining@debian.org>  Sat,  9 Dec 2006 12:28:02 +0100
+
 context (2006.08.08-0.6) UNRELEASED; urgency=low
 
   * fix format renaming, so that removal works
