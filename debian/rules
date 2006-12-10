@@ -23,7 +23,7 @@ binary-indep: build-indep
 	dh_testdir 
 	dh_testroot
 	dh_clean
-	dh_installdirs usr/share/texmf
+	dh_installdirs usr/share/texmf usr/share/doc/$(package)
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
 	# this file is not needed
@@ -51,6 +51,10 @@ binary-indep: build-indep
 	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
 	cp debian/texmfstart $(instbase)/usr/bin
 
+	# documentation
+	cp -a doc/context/* $(instbase)/usr/share/doc/$(package)
+	cp -a doc/fonts $(instbase)/usr/share/doc/$(package)
+	rm $(instbase)/usr/share/doc/$(package)/scripts/perl/texshow.1
 	dh_installman				\
 		doc/context/scripts/perl/texshow.1		\
 		debian/manpages/makempy.man			\
