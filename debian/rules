@@ -7,18 +7,16 @@ instbase       := debian/$(package)
 include /usr/share/dpatch/dpatch.make
 
 build: build-indep
-# We have nothing to do here but the Debian Policy says this target must
-# exist.
 
 unpack-stamp: unpack
+	for i in $(zipfiles) ; do unzip $$i ; done
 	touch unpack-stamp
 
-unpack:
-	for i in $(zipfiles) ; do unzip $$i ; done
+patch-stamp: unpack-stamp
 
 build-indep: build-indep-stamp
 
-build-indep-stamp: unpack-stamp patch-stamp
+build-indep-stamp: patch-stamp
 	touch build-indep-stamp
 
 clean: unpatch
