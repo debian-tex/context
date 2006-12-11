@@ -14,7 +14,7 @@ unpack-stamp: unpack
 	touch unpack-stamp
 
 unpack:
-	for i in $(zipfiles) ; do unzip -o $$i ; done
+	for i in $(zipfiles) ; do unzip $$i ; done
 
 build-indep: build-indep-stamp
 
@@ -24,6 +24,7 @@ build-indep-stamp: unpack-stamp patch-stamp
 clean: unpatch
 	dh_testroot
 	rm -f build-indep-stamp
+	rm -rf bibtex context doc fonts metapost scripts tex tpm web2c
 	dh_clean
 
 binary-indep: build-indep
