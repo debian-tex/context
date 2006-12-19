@@ -14,8 +14,10 @@ texmfvar=$(kpsewhich -expand-var '$TEXMFVAR')
 
 if [ "$(id -u)" -eq 0 ] ; then
   TEXFORMATS=$texmfsysvar/web2c
+  desttree=$texmfsysvar
 else
   TEXFORMATS=$texmfvar/web2c
+  desttree=$texmfvar
 fi
 export TEXFORMATS
 
@@ -106,4 +108,4 @@ do
   parse_line $line;
 done
 
-mktexlsr
+mktexlsr $desttree
