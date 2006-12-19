@@ -106,3 +106,4 @@ do
   parse_line $line;
 done
 
+mktexlsr
