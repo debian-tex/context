@@ -69,7 +69,7 @@ binary-indep: build-indep
 		debian/manpages/texfind.man			\
 		debian/manpages/texutil.man
 
-	dh_installdocs
+	dh_installdocs debian/changelog.Debian.prerelease
 	dh_installchangelogs
 	dh_compress
 	dh_fixperms
