@@ -21,6 +21,18 @@ Description: powerful TeX format.
  in a structured way and to typeset these documents in various ways on paper, 
  computer screen or web site.
  .
+ The main difference between ConTeXt and LaTeX lies in the fact that LaTeX
+ was created with the idea of separating content and presentation to such 
+ an extent that the typical author would write their content and then use 
+ a style file created by someone else to provide the visual presentation.
+ .
+ ConTeXt, on the other hand, retained the idea of separating content and
+ presentation, but was created with the idea of being used for books, where
+ each book tends to have a different layout, and so the expected "end user" is
+ the person doing all the layout. Thus, it's designed to provide a vast amount
+ of flexibility for layout in a way that can be fairly easily defined without
+ needing to write a package
+ .
  This package also contains MetaFun. MetaFun (a superset of well known 
  MetaPost) is a powerful system for vector graphics that is fully integrated
  into ConTeXt, but also usable as a stand alone product. 

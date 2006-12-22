@@ -1,17 +1,60 @@
 This package was debianized by Norbert Preining <preining@debian.org> on
 Sun Oct 22 11:53:51 CEST 2006.
 
-The original source was downloaded from
+The original source was downloaded and merged, and repackaged from the
+following source files
 	http://www.pragma-ade.com/context/current/cont-tmf.zip
-and repacked into a tar.gz.
+	http://www.pragma-ade.com/context/current/cont-fnt.zip
+	http://www.pragma-ade.com/context/current/cont-img.zip
+	http://www.pragma-ade.com/context/current/cont-ext.zip
 
 Debian adaptations for this Package are licensed under the GNU General
 Public License, version 2, and are under Copyright by:
 
 	Norbert Preining <preining@debian.org> (2006)
 
-Upstream work is licensed under the Creative Commons GPL or the 
-LPPL. Stating from the file mreadme.pdf:
+All the files contained in the generated orig.tar.gz are licensed under
+the GNU General Public License, but the files of t-letterine, which 
+are licensed under Public Domain.
+
+Following are excerpts from an email by Taco Hoekwater <taco@elvenkind.com>
+clarifying the license statement:
+
+-------- Message-ID: <458BEFE0.8030308@elvenkind.com> ----
+
+>First cont-img.zip:
+
+All images in cont-img are GPLv2.
+
+>cont-fnt contains a huge bunch of vf/afm/tfm/map files. I assume that
+>they were generated from some fontinst source, but this is missing.
+
+No, they were not, and there is no "missing source". The vf/tfm/map
+were generated using the texfont program, which does not use source
+files. The afms were created using ttf2afm, which uses ttfs as source.
+
+>Anyway, there is no accompanying readme or whatsoever besides the one
+>for lucida. 
+
+All the files in cont-fnt are GPLv2.
+
+>cont-ext seems to be ok besides a few points:
+>       t-lettrine.tex does not have a license statement
+
+Yes, it does. Top of file. PD. Perhaps you missed another then?
+
+>       t-urwgaramond, type-urwgaramond, 
+
+Peter, can you add the license statement and re-upload? (it is GPL,
+according to Peter's own license statement on the contextgarden page
+for this module)
+
+>     type-urwgothic: no license statement
+
+----------------------------------------------------
+
+The files from cont-tmf.zip are distributed under GPL as stated in the
+including mreadme.tex/pdf file:
 
    The program code (i.e. anything not under the /doc subtree) is distributed 
    under the Creative Commons GNU GPL
@@ -20,6 +63,10 @@ LPPL. Stating from the file mreadme.pdf:
    licence, which is considered to be a bit more TeX friendly. 
    (BSD alike licences, the Ruby Licence and the Apache are all licences 
    that apply well for ConTeXt.)
+
+
+On Debian systems the text of the GNU General Public License can be found
+in /usr/share/common-licenses/GPL (and GPL-2).
 
 
 The LaTeX Project Public License

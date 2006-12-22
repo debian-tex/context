@@ -1,34 +1,48 @@
-.TH "texfind" "1" "April 2004" "ConTeXt" "teTeX" 
-.PP 
+.TH "TEXFIND" "1" "December 2006" "texfind" "ConTeXt" 
+.de URL
+\\$2 \(laURL: \\$1 \(ra\\$3
+..
+.if \n[.g] .mso www.tmac
+.de EX
+.in +3
+.nf
+.ft CW
+..
+.de EE
+.in -3
+.ft R
+.fi
+..
+
 .SH "NAME" 
 texfind \- graphical tool to search for text in TeX input files
-.PP 
+
 .SH "SYNOPSIS" 
 .PP 
-\fBtexfind\fP  [ \fIOPTION\fP \&.\&.\&.  ]
-.PP 
+\fBtexfind\fP  [ \fIOPTION\fP ...  ]
+
 .SH "DESCRIPTION" 
 .PP 
 \fBtexfind\fP is a graphical, interactive tool that helps you
 searching through TeX input files, including subdirectories, and
-allows you to do search/replace tasks using Perl regular
+allows you to do search/replace tasks using \fBperl\fP(1) regular
 expressions. It opens two windows: One displays the directory
 hierarchy and allows to select different search directories. The
 second window is used to enter the query and display the results.
-.PP
+
 .SH "SEARCHING"
-.PP
+
 Enter a search string  in the input box at the top, choose the file
-extension (*tex by default) and hit ENTER to start the search. The
-results will be displayed below.
-.PP
-The search string is actually a perl regular expression. This gives
-you lots of flexibility. The search-and-replace function also uses
-Perl regex syntax, but you can also just use simple strings. Currently
-there is no way to save changed files.
-.PP 
+extension (\fItex\fP by default) and hit ENTER to start the search. The
+results will be displayed in the rest of the window.
+
+The search string is a perl regular expression (see \fBperlre\fP(1)),
+which gives you lots of flexibility. The search-and-replace function
+also uses perl regex syntax, but you can also just use simple
+strings. Currently there is no way to save changed files.
+
 .SH "MENU" 
-.PP 
+
 Use the right mouse button to open a menu. 
 .HP
 \fBFile\fP : Currently only used to exit the program
@@ -42,31 +56,32 @@ possible to change the file.
 .PP
 \fBView\fP : Select specific lines, and adjust word or character
 wrapping.  
-.PP
+
 .SH "OPTIONS" 
 .HP
 \fB\-\-font\fR : specify the font used for the menu. Default is
 courier. 
 .HP
-Other options probably exist - I appreciate input by the program
-authors, experienced users or perl geeks.
+Other options probably exist.   I appreciate input by the program
+authors, experienced users, or Perl geeks.
 .HP
 .SH "SEE ALSO" 
-.IP 
-\fBperlre\fP(1)
-.PP 
+
+.IP \(bu
+\fBperl\fP(1), \fBperlre\fP(1).
+.IP \(bu
+.URL "http://www.contextgarden.net" "ConTeXt wiki" .
+
 .SH "BUGS" 
-.PP 
-None known\&. Well - the replace function isn't the most useful one.
-.PP 
+
+None known. However, the replace function isn't the most useful one.
+
 .SH "AUTHOR" 
-.PP 
+
 \fBtexfind\fP was written for the ConTeXt package by Hans Hagen and
-Ton Otten, PRAGMA\&.
-.PP 
-This manual page was written by Frank K\[:u]ster <frank@kuesterei\&.ch>,
-for the Debian GNU/Linux system\&.  It may be used and modified by
-others without contacting the author\&.  Any mistakes or omissions in
-the manual page are my fault; inquiries about or corrections to this
-manual page should be directed to me (and not to the primary
-author)\&.
+Ton Otten, PRAGMA.
+
+This manual page was written by Frank Küster <frank@kuesterei.ch>
+for the Debian GNU/Linux system, and modified by Sanjoy Mahajan
+<sanjoy@mit.edu>.  It may be used and modified by
+others without contacting the authors.
