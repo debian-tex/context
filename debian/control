@@ -15,7 +15,7 @@ Suggests: perl-tk, fontforge, context-nonfree
 Conflicts: texlive-context, tetex-bin, tetex-base
 Replaces: texlive-context
 Provides: texlive-context
-Description: powerful TeX format.
+Description: powerful TeX format
  ConTeXt is a typographical engine written in the typographical computer 
  language TeX. ConTeXt provides you with a convenient way to encode documents 
  in a structured way and to typeset these documents in various ways on paper, 

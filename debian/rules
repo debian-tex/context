@@ -78,6 +78,10 @@ binary-indep: build-indep test-nonfree
 		debian/manpages/*.man
 
 	dh_installdocs debian/changelog.Debian.prerelease debian/MANIFEST.nonfree
+
+	# lintian override for script-not-executable
+	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)
+
 	dh_installchangelogs
 	dh_compress
 	dh_fixperms

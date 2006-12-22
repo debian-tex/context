@@ -93,7 +93,7 @@ Donald E. Knuth\'s \fIThe TeXbook\fP.
 
 .SH "AUTHOR" 
 
-This manual page was written by Frank Küster <frank@kuesterei.ch>,
+This manual page was written by Frank K\[:u]ster <frank@kuesterei.ch>,
 for the Debian GNU/Linux system, and  modified by Sanjoy Mahajan
 <sanjoy@mit.edu>.  It may be used and modified by others without
 contacting the authors.
