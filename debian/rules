@@ -26,7 +26,18 @@ clean: unpatch
 	# rm -rf bibtex context doc fonts metapost scripts tex tpm web2c
 	dh_clean
 
-binary-indep: build-indep
+test-nonfree:
+	found=0 ; for i in $$(cat debian/MANIFEST.nonfree) ; do	\
+		if [ -r $$i ] ; then			\
+			echo "nonfree stuff: $$i"	;	\
+			found=1;	\
+		fi ;					\
+	done ; 	if [ $$found = 1 ] ; then	\
+		echo "Found non free stuff, stopping, please clean up first!" ;\
+		exit 1;	\
+	fi
+
+binary-indep: build-indep test-nonfree
 	dh_testdir 
 	dh_testroot
 	dh_clean
