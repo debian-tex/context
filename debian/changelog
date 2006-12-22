@@ -1,4 +1,4 @@
-context (2006.12.21-0.1) unstable; urgency=low
+context (2006.12.21-1) unstable; urgency=low
 
   * first upload (Closes: #403770)
   * include the contents of cont-tmf, cont-fnt, cont-ext, cont-img, minus
