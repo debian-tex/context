@@ -16,27 +16,21 @@ Conflicts: texlive-context, tetex-bin, tetex-base
 Replaces: texlive-context
 Provides: texlive-context
 Description: powerful TeX format
- ConTeXt is a typographical engine written in the typographical computer 
- language TeX. ConTeXt provides you with a convenient way to encode documents 
- in a structured way and to typeset these documents in various ways on paper, 
- computer screen or web site.
+ ConTeXt is a document preparation system based on the TeX typesetting
+ system. It was designed with the same general-purpose aims as LaTeX,
+ but being younger reflects much more recent thinking about the
+ structure of the markup, is more modular in its conception, and more
+ monolithic in its building. ConTeXt gives more control to the "end
+ user" and makes it easier to create new layout without learning TeX
+ macro language. ConTeXt is consistent in its design, and does not
+ suffer from the "package clashes" in LaTeX.
  .
- The main difference between ConTeXt and LaTeX lies in the fact that LaTeX
- was created with the idea of separating content and presentation to such 
- an extent that the typical author would write their content and then use 
- a style file created by someone else to provide the visual presentation.
+ ConTeXt also integrates MetaFun which is a superset of MetaPost and a
+ powerful system for vector graphics. Metafun can be used as a stand
+ alone product, but its strength lies in the ability to enhance the
+ document layout with highly accurate graphic elements.
  .
- ConTeXt, on the other hand, retained the idea of separating content and
- presentation, but was created with the idea of being used for books, where
- each book tends to have a different layout, and so the expected "end user" is
- the person doing all the layout. Thus, it's designed to provide a vast amount
- of flexibility for layout in a way that can be fairly easily defined without
- needing to write a package
- .
- This package also contains MetaFun. MetaFun (a superset of well known 
- MetaPost) is a powerful system for vector graphics that is fully integrated
- into ConTeXt, but also usable as a stand alone product. 
- .
- MetaFun is not for interactive drawing applications and not for free hand 
- drawings. Its strength lies in the ability to enhance the document layout
- with highly accurate graphic elements.
+ ConTeXt allows the users to use markup in different languages. Markup
+ in English, Dutch, German, French and Italian is supported at present.
+ ConTeXt allows the user to use different engines (pdftex, XeTeX,
+ aleph, luatex) without changing the user interface.

@@ -77,7 +77,9 @@ binary-indep: build-indep test-nonfree
 		doc/context/scripts/perl/texshow.1		\
 		debian/manpages/*.man
 
-	dh_installdocs debian/changelog.Debian.prerelease debian/MANIFEST.nonfree
+	dh_installdocs debian/changelog.Debian.prerelease	\
+			debian/MANIFEST.nonfree			\
+			debian/type-tmf.dat
 
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)

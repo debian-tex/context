@@ -33,5 +33,13 @@ for the documentation, and
 	texexec --mode=demo t-french.tex
 for the example file.
 
+4. generation of the font files (vf,tfm)
+----------------------------------------
+These files were generated using the texfont program, as follows:
+	texfont --encoding=texnansi --batch type-tmf.dat
+where the type-tmf.dat can be obtained from
+	http://source.contextgarden.net/context/data/type-tmf.dat
+and is included in /usr/share/doc/context/
+
 
 Norbert Preining, December 2006
