@@ -37,9 +37,8 @@ for the example file.
 ----------------------------------------
 These files were generated using the texfont program, as follows:
 	texfont --encoding=texnansi --batch type-tmf.dat
-where the type-tmf.dat can be obtained from
-	http://source.contextgarden.net/context/data/type-tmf.dat
-and is included in /usr/share/doc/context/
+where the type-tmf.dat is located in 
+	/usr/share/texmf/context/data
 
 
 Norbert Preining, December 2006
