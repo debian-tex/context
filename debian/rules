@@ -27,7 +27,7 @@ clean: unpatch
 	dh_clean
 
 test-nonfree:
-	found=0 ; for i in $$(cat debian/MANIFEST.nonfree) ; do	\
+	found=0 ; for i in $$(cat debian/MANIFEST.nonfree debian/MANIFEST.doc-nonfree) ; do	\
 		if [ -r $$i ] ; then			\
 			echo "nonfree stuff: $$i"	;	\
 			found=1;	\
@@ -78,7 +78,7 @@ binary-indep: build-indep test-nonfree
 		debian/manpages/*.man
 
 	dh_installdocs debian/changelog.Debian.prerelease	\
-			debian/MANIFEST.nonfree	
+			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree
 
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)
