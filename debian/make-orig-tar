@@ -80,7 +80,7 @@ echo -n "Moving non-free files to context-nonfree-$version ..."
 for i in $(cat "$toplevel/debian/MANIFEST.nonfree") ; do
 	dn=$(dirname $i); bn=$(basename $i)
 	mkdir -p "$cnf/$dn"
-	cp $i "$cnf/$i"
+	mv $i "$cnf/$i"
 done
 echo "done"
 echo -n "Removing non-free documentation files ..."
