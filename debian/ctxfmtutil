@@ -35,7 +35,9 @@ dhit_build_format ()
 {
     tempfile=$(mktemp -p /tmp ctxfmtutil.XXXXXXXX)
     printf "Building ConTeXt format(s) $2 with engine $1.\n\tThis may take some time... "
-    if texexec --fast --make --$1 $2 > $tempfile 2>&1 ; then
+    # calling texexec with --nonstopmode AND </dev/null to be sure that
+    # it does not hang on TeX inputs
+    if texexec --nonstopmode --fast --make --$1 $2 > $tempfile 2>&1 </dev/null; then
         rm -f $tempfile
         echo "done."
     else
