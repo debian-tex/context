@@ -54,6 +54,9 @@ binary-indep: build-indep test-nonfree
 	rm -r $(instbase)/usr/share/texmf/context/examplap
 	rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
 
+	# missing stubs for some perl scripts:
+	cp -a debian/stubs/* $(instbase)/usr/bin/
+
 	# we need a check here that all maps are installed
 	# use context.formats and context.maps in debian dir
 	dh_installtex
