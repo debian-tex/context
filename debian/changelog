@@ -1,3 +1,9 @@
+context (2007.01.02-3) UNRELEASED; urgency=low
+
+  * UNRELEASED
+
+ -- Norbert Preining <preining@debian.org>  Tue,  9 Jan 2007 18:02:20 +0100
+
 context (2007.01.02-2) unstable; urgency=low
 
   * add missing stub for texshow (Closes: #406211) and pdftrimwhite
