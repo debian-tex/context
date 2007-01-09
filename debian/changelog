@@ -1,8 +1,8 @@
 context (2007.01.02-2) unstable; urgency=low
 
-  * add missing stub for texshow (Closes:#???????)
+  * add missing stub for texshow (Closes:#???????) and pdftrimwhite
 
- -- Norbert Preining <preining@debian.org>  Tue,  9 Jan 2007 16:50:41 +0100
+ -- Norbert Preining <preining@debian.org>  Tue,  9 Jan 2007 16:56:50 +0100
 
 context (2007.01.02-1) unstable; urgency=low
 
