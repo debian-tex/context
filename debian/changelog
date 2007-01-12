@@ -1,9 +1,10 @@
-context (2007.01.09-1) UNRELEASED; urgency=low
+context (2007.01.12-1) UNRELEASED; urgency=low
 
-  * new upstream release, fixes some incompatibilities with older 
-    pdf(e)tex versions. STILL MISSING texexec fix
+  * new upstream release, should fix texexec return values and 
+    incompatibilities with old pdfetex
+  * add libxml-parser-perl to the suggests
 
- -- Norbert Preining <preining@debian.org>  Wed, 10 Jan 2007 01:08:50 +0100
+ -- Norbert Preining <preining@debian.org>  Fri, 12 Jan 2007 12:02:14 +0100
 
 context (2007.01.02-2) unstable; urgency=low
 
