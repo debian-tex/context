@@ -82,6 +82,14 @@ binary-indep: build-indep test-nonfree
 	dh_installdocs debian/changelog.Debian.prerelease	\
 			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree
 
+	# backward compatibility with pdftex < 1.40 where formats MUST
+	# be put into web2c/pdfetex, while new context puts them into
+	# web2c/pdftex
+	# There is also a preinst part to this problem
+	# This can be removed as soon as TeX Live 2006/7 is in Debian
+	# Then also the link should be removed
+	dh_link var/lib/texmf/web2c/pdfetex var/lib/texmf/web2c/pdftex
+
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)
 
