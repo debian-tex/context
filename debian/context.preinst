@@ -19,7 +19,7 @@ case "$1" in
 		if [ ! -e /var/lib/texmf/web2c/pdftex ] ; then
 			: we are happy, it does not exist
 		else
-			if [ -d /var/lib/texmf/web2c/pdftex ] ; then
+			if [ -d /var/lib/texmf/web2c/pdftex ] && [ ! -L /var/lib/texmf/web2c/pdftex ] ; then
 				# it is a directory, just remove it
 				echo "Removing directory /var/lib/texmf/web2c/pdftex, it will"
 				echo "become a link to /var/lib/texmf/web2c/pdfetex!"
