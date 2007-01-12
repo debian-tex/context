@@ -1,12 +1,12 @@
-context (2007.01.12-1) UNRELEASED; urgency=low
+context (2007.01.12-1) unstable; urgency=low
 
-  * new upstream release, should fix texexec return values and 
+  * new upstream release, should fix texexec return values and
     incompatibilities with old pdfetex
   * add libxml-parser-perl to the suggests
   * add compatibility hack for pdftex < 1.40 where the formats must
     be placed into .../web2c/pdfetex by linking .../web2c/pdftex to pdfetex
 
- -- Norbert Preining <preining@debian.org>  Fri, 12 Jan 2007 12:02:14 +0100
+ -- Norbert Preining <preining@debian.org>  Fri, 12 Jan 2007 12:45:04 +0100
 
 context (2007.01.02-2) unstable; urgency=low
 

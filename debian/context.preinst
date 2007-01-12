@@ -39,8 +39,8 @@ case "$1" in
 						echo "/var/lib/texmf/web2c/pdftex is a symlink" >&2
 						echo "NOT pointing to /var/lib/texmf/web2c/pdfetex!" >&2
 						echo "" >&2
-						echo "Please before installing this package remove" >&2
-						echo "/var/lib/texmf/web2c/pdftex!" >&2
+						echo "Please before installing this package remove /var/lib/texmf/web2c/pdftex!" >&2
+						echo "" >&2
 						exit 1
 						;;
 				esac
