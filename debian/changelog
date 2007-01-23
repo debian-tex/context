@@ -1,3 +1,15 @@
+context (2007.01.23-1) unstable; urgency=low
+
+  * new upstream
+    - bugfixes:
+      . corrected XeTeX commandline
+    - new:
+      . The vim module is now included in cont-ext.zip
+      . Switch to latin modern math fonts. If this gives you trouble, you have
+        to update your latin modern font package, see CTAN
+
+ -- Norbert Preining <preining@debian.org>  Tue, 23 Jan 2007 19:34:32 +0100
+
 context (2007.01.12.2-1) unstable; urgency=low
 
   * new upstream (same day) fixes complete breakage
