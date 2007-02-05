@@ -41,7 +41,8 @@ binary-indep: build-indep test-nonfree
 	dh_testdir 
 	dh_testroot
 	dh_clean
-	dh_installdirs usr/share/texmf usr/share/doc/$(package)
+	dh_installdirs usr/share/texmf usr/share/doc/$(package)	\
+		var/lib/texmf/web2c/pdfetex
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
 	# this file is not needed
