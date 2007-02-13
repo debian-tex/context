@@ -1,3 +1,12 @@
+context (2007.01.23-3) UNRELEASED; urgency=low
+
+  * remove the conflict with tetex-base, and version the conflict with
+    tetex-bin << 2007
+  * exchange the links between pdftex and pdfetex, ie now pdfetex should
+    be the link, to ease transition to texlive 2007.
+
+ -- Norbert Preining <preining@debian.org>  Tue, 13 Feb 2007 01:59:22 +0100
+
 context (2007.01.23-2) unstable; urgency=low
 
   * install directory /var/lib/texmf/web2c/pdfetex (Closes: #409575)

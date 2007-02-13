@@ -12,7 +12,7 @@ Section: tex
 Architecture: all
 Depends: tex-common (>> 0.35), ruby, texlive-base-bin, texlive-base, texlive-metapost, lmodern (>= 1.00)
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
-Conflicts: texlive-context, tetex-bin, tetex-base
+Conflicts: texlive-context, tetex-bin (<< 2007)
 Replaces: texlive-context
 Provides: texlive-context
 Description: powerful TeX format
