@@ -42,7 +42,7 @@ binary-indep: build-indep test-nonfree
 	dh_testroot
 	dh_clean
 	dh_installdirs usr/share/texmf usr/share/doc/$(package)	\
-		var/lib/texmf/web2c/pdfetex
+		var/lib/texmf/web2c/pdftex
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
 	# this file is not needed
@@ -89,7 +89,7 @@ binary-indep: build-indep test-nonfree
 	# There is also a preinst part to this problem
 	# This can be removed as soon as TeX Live 2006/7 is in Debian
 	# Then also the link should be removed
-	dh_link var/lib/texmf/web2c/pdfetex var/lib/texmf/web2c/pdftex
+	dh_link var/lib/texmf/web2c/pdftex var/lib/texmf/web2c/pdfetex
 
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)

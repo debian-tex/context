@@ -55,7 +55,6 @@ remove_format_files()
 {
   engine=$1
   format=$2
-  if [ "$engine" = pdftex ] ; then engine=pdfetex ; fi
   rm -f $TEXFORMATS/$engine/$format.* $TEXFORMATS/$format.*
 }
 
@@ -74,7 +73,7 @@ parse_line()
   allformats="$@"
   for e in $allengines ; do
     case "$e" in
-      pdftex) prog=pdfetex ;;
+      pdftex) prog=pdftex ;;
       aleph) prog=aleph ;;
       xetex) prog=xetex ;;
       *) echo "Unknown engine $e, exit!" >&2 ; exit 1 ;;
