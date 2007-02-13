@@ -1,39 +1,16 @@
 #!/bin/sh
 set -e
 
-#
-# with current context texexec puts the formats into web2c/pdftex which
-# breaks as texlive currently has pdftex 1.30.5 and thus searches in 
-# web2c/pdfetex
-# To make later upgrading of texlive easier, we change the former layout
-# of pdftex being a link to pdfetex into the other direction, ie
-#    pdfetex -> pdftex
-#
-# starting situations:
-# new install: no pdftex, no pdfetex -> do nothing
-# upgrade from pdftex->pdfetex: rm -f pdftex, mv pdfetex pdftex
-# upgrade/reinstall from pdfetex->pdftex: do nothing
-
 case "$1" in
 	install|upgrade)
-		if [ ! -e /var/lib/texmf/web2c/pdftex ] && [ ! -e /var/lib/texmf/web2c/pdfetex ]; then
-			: we are happy, it does not exist
-		else
-			if [ -d /var/lib/texmf/web2c/pdftex ] && [ ! -L /var/lib/texmf/web2c/pdftex ] ; then
-				# pdftex is already a dir, good, let's check whether pdfetex is
-				: we are also happy, do nothing
-			elif [ -L /var/lib/texmf/web2c/pdftex ] ; then
-				# it is a link, we have to check the target
-				linkdest=$(readlink -n /var/lib/texmf/web2c/pdftex)
-				case "$linkdest" in 
-					pdfetex|/var/lib/texmf/web2c/pdfetex)
-						# already correct link, remove it so that it can
-						# be reinstalled by the package
-						rm /var/lib/texmf/web2c/pdftex
-						mv /var/lib/texmf/web2c/pdfetex /var/lib/texmf/web2c/pdftex
-						;;
-				esac
-			fi
+		if [ -L /var/lib/texmf/web2c/pdftex ] ; then
+			linkdest=$(readlink -n /var/lib/texmf/web2c/pdftex)
+			case "$linkdest" in
+				pdfetex|/var/lib/texmf/web2c/pdfetex)
+					rm /var/lib/texmf/web2c/pdftex
+					mv /var/lib/texmf/web2c/pdfetex /var/lib/texmf/web2c/pdftex
+					;;
+			esac
 		fi
     ;;
 

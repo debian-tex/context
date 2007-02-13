@@ -1,11 +1,11 @@
-context (2007.01.23-3) UNRELEASED; urgency=low
+context (2007.01.23-3) unstable; urgency=low
 
-  * remove the conflict with tetex-base, and version the conflict with
-    tetex-bin << 2007
-  * exchange the links between pdftex and pdfetex, ie now pdfetex should
-    be the link, to ease transition to texlive 2007.
+  * texlive 2007 preparation:
+    -  remove the conflict with tetex-base, and version the conflict with
+       tetex-bin << 2007
+    -  change links from pdftex->pdfetex to pdfetex->pdftex
 
- -- Norbert Preining <preining@debian.org>  Tue, 13 Feb 2007 01:59:22 +0100
+ -- Norbert Preining <preining@debian.org>  Tue, 13 Feb 2007 02:17:43 +0100
 
 context (2007.01.23-2) unstable; urgency=low
 
