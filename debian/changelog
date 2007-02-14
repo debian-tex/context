@@ -1,10 +1,17 @@
+context (2007.01.23-4) unstable; urgency=low
+
+  * UNRELEASED
+  * edit changelog for 2007.01.23-3 to close a bug
+
+ -- Norbert Preining <preining@debian.org>  Wed, 14 Feb 2007 01:43:10 +0100
+
 context (2007.01.23-3) unstable; urgency=low
 
   * texlive 2007 preparation:
     -  remove the conflict with tetex-base, and version the conflict with
        tetex-bin << 2007
     -  change links from pdftex->pdfetex to pdfetex->pdftex
-  * fix shebang lines, thanks to Jindrich Novy
+  * fix shebang lines, thanks to Jindrich Novy (Closes: #410851)
 
  -- Norbert Preining <preining@debian.org>  Wed, 14 Feb 2007 01:09:57 +0100
 
