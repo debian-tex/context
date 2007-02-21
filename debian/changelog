@@ -1,10 +1,11 @@
 context (2007.02.20-1) unstable; urgency=low
 
   * new upstream release:
-    - Bugfixes: Quite a few (mostly very small) fixes 
+    - Bugfixes: Quite a few (mostly very small) fixes
   * edit changelog for 2007.01.23-3 to close a bug
+  * remove 20_shebang_fixes.dpatch, included upstream
 
- -- Norbert Preining <preining@debian.org>  Wed, 21 Feb 2007 21:53:39 +0100
+ -- Norbert Preining <preining@debian.org>  Wed, 21 Feb 2007 22:05:12 +0100
 
 context (2007.01.23-3) unstable; urgency=low
 
