@@ -1,9 +1,10 @@
-context (2007.01.23-4) unstable; urgency=low
+context (2007.02.20-1) unstable; urgency=low
 
-  * UNRELEASED
+  * new upstream release:
+    - Bugfixes: Quite a few (mostly very small) fixes 
   * edit changelog for 2007.01.23-3 to close a bug
 
- -- Norbert Preining <preining@debian.org>  Wed, 14 Feb 2007 01:43:10 +0100
+ -- Norbert Preining <preining@debian.org>  Wed, 21 Feb 2007 21:53:39 +0100
 
 context (2007.01.23-3) unstable; urgency=low
 
