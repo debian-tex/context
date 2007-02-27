@@ -1,4 +1,12 @@
-context (2007.02.20-1) unstable; urgency=low
+context (2007.02.21-1) experimental; urgency=low
+
+  * new upstream release:
+    - Handling of figure paths extended (cache support)
+    - Corrected truetype font file for lmtypewriter10-regular (for use in X11)
+
+ -- Norbert Preining <preining@debian.org>  Tue, 27 Feb 2007 10:00:57 +0100
+
+context (2007.02.20-1) UNRELEASED; urgency=low
 
   * new upstream release:
     - Bugfixes: Quite a few (mostly very small) fixes
