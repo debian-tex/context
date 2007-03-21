@@ -10,7 +10,7 @@ Standards-Version: 3.7.2
 Package: context
 Section: tex
 Architecture: all
-Depends: tex-common (>> 0.35), ruby, texlive-base-bin, texlive-base, texlive-metapost, lmodern (>= 1.01)
+Depends: tex-common (>> 0.35), ruby, texlive-base-bin (>= 2007), texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.01)
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007)
 Replaces: texlive-context

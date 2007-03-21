@@ -62,9 +62,11 @@ binary-indep: build-indep test-nonfree
 	dh_installdirs usr/bin etc/texmf/context/config
 
 	# install our context-format creation script
-	cp debian/ctxfmtutil $(instbase)/usr/bin
+	# not needed anymore since we depend on texlive 2007 and use
+	# context.formats and fmtutil
+	# cp debian/ctxfmtutil $(instbase)/usr/bin
 	# and the formats definitions
-	cp debian/formats.cnf $(instbase)/etc/texmf/context/config
+	# cp debian/formats.cnf $(instbase)/etc/texmf/context/config
 
 	# switch to ruby
 	cp scripts/context/stubs/unix/* $(instbase)/usr/bin

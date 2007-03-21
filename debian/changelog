@@ -1,4 +1,22 @@
-context (2007.02.21-1) experimental; urgency=low
+context (2007.03.19-1) experimental; urgency=low
+
+  * new upstream release:
+    - Aditya's 'mathsets' modules in included in cont-ext.zip
+    - The use of \setuphead[][numberwidth=...]
+    - Named font styles can now also be 'sans' or 'sansbold'
+    - The old marvosym metric file is included, fixing the
+      'MarvoSym' symbols and '\texteuro' bugs
+    - Quoting of font files is changed so that hopefully XeTeX bare 
+      fontfiles are OK now.
+    - For some other small changes, see the details page 
+  * depend on texlive >= 2007:
+    - remove ctxfmtutil hack, texlive 2007 can deal with different
+      engines in the fmtutil.cnf file
+    - use context.formats with dh_installtex
+
+ -- Norbert Preining <preining@debian.org>  Wed, 21 Mar 2007 17:30:58 +0100
+
+context (2007.02.21-1) UNRELEASED; urgency=low
 
   * new upstream release:
     - Handling of figure paths extended (cache support)
