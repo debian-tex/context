@@ -1,28 +1,24 @@
 #!/bin/sh
 set -e
 
-cfgfile="/etc/texmf/fmt.d/20context.cnf"
-case "$1" in
-    configure) # not reconfigure
-	if dpkg --compare-versions "$2" ge 2007.03.19-2; then
-	  return 0
-	fi
-	;;
-    *)
-	return 0
-	;;
-esac
-if [ -f "$cfgfile.preinst-deleted" ]; then
-    echo "Preserving removal of $cfgfile."
-    mv "$cfgfile" "$cfgfile.dpkg-new"
-    rm "$cfgfile.preinst-deleted"
+# try to take over context format definitions:
+# first we check for texlive-context stuff, then for intermediate
+# context packages with ctxfmtutil format config lines.
+#
+# postinst part: change over to new place
+old_cfg=/etc/texmf/fmt.d/10texlive-context.cnf
+new_cfg=/etc/texmf/fmt.d/20context.cnf
+if [ -f $old_cfg ]; then
+  # not removed by preinst, this means it is modified
+  sed -i -e s/10texlive-context.cnf/20context.cnf/ $new_cfg
 fi
-if [ -f "$cfgfile.preinst-copy" ]; then
-    echo "Preserving user changes to $cfgfile"
-    # this only works as intended as long as the shipped version
-    # does not change!
-    mv -f "$cfgfile" "$cfgfile.dpkg-new"
-    mv -f "$cfgfile.preinst-copy" "$cfgfile"
+old_cfg=/etc/texmf/context/config/formats.cnf
+if [ -f $old_cfg ]; then
+  # not removed by preinst, this means it is modified
+  echo "
+Warning: you appear to have modified $old_cfg. The definition of context
+formats has changed and is now located in $new_cfg.
+Please transfer your changes to this file."
 fi
 
 #DEBHELPER#

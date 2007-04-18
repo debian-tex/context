@@ -24,7 +24,7 @@ case "$1" in
 esac
 
 
-# take over /etc/texmf/fmt.d/10texlive-context.cnf
+
 dpkg_md5sum()
 {
     file=$1
@@ -36,42 +36,32 @@ dpkg_md5sum()
     echo $md5sum
 }
 
-check_move ()
-{
-    orig="$1"
-    new="$2"
-    version="$3"
-    if [ -r "$orig" ] ; then
-        mdorig=$(dpkg_md5sum "$orig")
-        if [ $(md5sum "$orig" | cut -f 1 -d ' ') = "$mdorig" ] ; then
-            rm "$orig"
-        else
-            mkdir -p $(dirname "$new")
-            mv "$orig" "$new".preinst-copy
-        fi
-    else
-      if [ -n "$version" ]; then
-	# there is a previous version, we are actually upgrading (or reinstalling)
-        mkdir -p $(dirname "$new")
-        touch $new.preinst-deleted
-      fi
-    fi
-}
+# try to take over context format definitions:
+# first we check for texlive-context stuff, then for intermediate
+# context packages with ctxfmtutil format config lines.
+#
+# preinst part: remove everything which has the right md5sums
+old_cfg=/etc/texmf/fmt.d/10texlive-context.cnf
+if [ -f $old_cfg ]; then
+  mdorig=$(dpkg_md5sum $old_cfg)
+  if [ $(md5sum "$old_cfg" | cut -f 1 -d ' ') = "$mdorig" ] ; then
+    rm -f $old_cfg
+  fi
+fi
+old_cfg=/etc/texmf/context/config/formats.cnf
+if [ -f $old_cfg ]; then
+  mdorig=$(dpkg_md5sum $old_cfg)
+  if [ $(md5sum "$old_cfg" | cut -f 1 -d ' ') = "$mdorig" ] ; then
+    rm -f $old_cfg
+  fi
+fi
 
-case "$1" in
-    install|upgrade)
-	if [ -n "$version" ] && dpkg --compare-versions "$2" ge 2007.03.19-2; then
-	  return 0
-	fi
-	;;
-    *)
-	return 0
-	;;
-esac
-    
-check_move "/etc/texmf/fmt.d/10texlive-context.cnf" /etc/texmf/fmt.d/20context.cnf $2
 
 
 #DEBHELPER#
 
-
+# common.functions.preinst end
+# Local Variables:
+# mode: shell-script
+# End:
+# vim:set expandtab: #

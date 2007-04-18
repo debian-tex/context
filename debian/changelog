@@ -4,8 +4,9 @@ context (2007.03.22-1) unstable; urgency=low
     - ctxtools --updatecontext now supports a --proxy switch
     - and a few small bugfixes
   * take over config file from texlive-context (Closes: #414873)
+  * adjust build deps and run deps for tex-common
 
- -- Norbert Preining <preining@debian.org>  Fri, 13 Apr 2007 08:58:23 +0200
+ -- Norbert Preining <preining@debian.org>  Wed, 18 Apr 2007 08:46:52 +0200
 
 context (2007.03.19-1) experimental; urgency=low
 
