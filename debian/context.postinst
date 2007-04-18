@@ -22,8 +22,7 @@ Please transfer your changes to this file.
 After this you can remove $old_cfg."
 fi
 
-# remove format dumps in /v/l/texmf
-rm -f /var/lib/texmf/metafun.mem /var/lib/texmf/metafun.log
+rm -f /var/lib/texmf/web2c/metafun.mem /var/lib/texmf/web2c/metafun.log
 
 #DEBHELPER#
 
