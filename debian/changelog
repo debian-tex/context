@@ -3,7 +3,10 @@ context (2007.03.22-1) unstable; urgency=low
   * new upstream release:
     - ctxtools --updatecontext now supports a --proxy switch
     - and a few small bugfixes
-  * take over config file from texlive-context (Closes: #414873)
+  * switching to dh_installtex/fmt.d definitions of ConTeXt formats:
+    - take over config file from texlive-context (Closes: #414873)
+    - proper placement of format dumps (Closes: #418976, #419565, #419111)
+    - removing ctxfmtutil, adjust the rules file
   * adjust build deps and run deps for tex-common
 
  -- Norbert Preining <preining@debian.org>  Wed, 18 Apr 2007 08:46:52 +0200

@@ -18,8 +18,12 @@ if [ -f $old_cfg ]; then
   echo "
 Warning: you appear to have modified $old_cfg. The definition of context
 formats has changed and is now located in $new_cfg.
-Please transfer your changes to this file."
+Please transfer your changes to this file.
+After this you can remove $old_cfg."
 fi
+
+# remove format dumps in /v/l/texmf
+rm -f /var/lib/texmf/metafun.mem /var/lib/texmf/metafun.log
 
 #DEBHELPER#
 
