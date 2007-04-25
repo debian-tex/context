@@ -9,8 +9,9 @@ context (2007.04.17-1) unstable; urgency=low
     - support for TeX-Gyre Hermes
     - for various other small bugfixes, see the detailed page
   * remove paragraph about format generation from README.Debian
+  * make cont-sys.rme a conffile (/etc/texmf/tex/context/user/cont-sys.rme)
 
- -- Norbert Preining <preining@debian.org>  Wed, 25 Apr 2007 10:44:38 +0200
+ -- Norbert Preining <preining@debian.org>  Wed, 25 Apr 2007 10:54:13 +0200
 
 context (2007.03.22-1) unstable; urgency=low
 

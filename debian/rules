@@ -42,9 +42,14 @@ binary-indep: build-indep test-nonfree
 	dh_testroot
 	dh_clean
 	dh_installdirs usr/share/texmf usr/share/doc/$(package)	\
-		var/lib/texmf/web2c/pdftex
+		var/lib/texmf/web2c/pdftex	\
+		etc/texmf/tex/context/user
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
+	# move user config file to /etc
+	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
+		$(instbase)/etc/texmf/tex/context/user
+	rmdir $(instbase)/usr/share/texmf/tex/context/user
 	# this file is not needed
 	rm $(instbase)/usr/share/texmf/web2c/context.cnf
 	# switch to ruby
