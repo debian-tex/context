@@ -1,3 +1,16 @@
+context (2007.04.17-1) unstable; urgency=low
+
+  * new upstream release:
+    - mptopdf and texexec (once again) support the handling of LaTeX files
+    - allow blocking of installed programs for texutil
+    - fix the handling of external graphics in xetex
+    - various low-level fixes and extensiosn for multicolumn handling
+    - bugfix for disappearing footnotes
+    - support for TeX-Gyre Hermes
+    - for various other small bugfixes, see the detailed page 
+
+ -- Norbert Preining <preining@debian.org>  Wed, 25 Apr 2007 10:37:32 +0200
+
 context (2007.03.22-1) unstable; urgency=low
 
   * new upstream release:
