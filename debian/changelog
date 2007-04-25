@@ -7,9 +7,10 @@ context (2007.04.17-1) unstable; urgency=low
     - various low-level fixes and extensiosn for multicolumn handling
     - bugfix for disappearing footnotes
     - support for TeX-Gyre Hermes
-    - for various other small bugfixes, see the detailed page 
+    - for various other small bugfixes, see the detailed page
+  * remove paragraph about format generation from README.Debian
 
- -- Norbert Preining <preining@debian.org>  Wed, 25 Apr 2007 10:37:32 +0200
+ -- Norbert Preining <preining@debian.org>  Wed, 25 Apr 2007 10:44:38 +0200
 
 context (2007.03.22-1) unstable; urgency=low
 

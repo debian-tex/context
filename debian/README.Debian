@@ -10,19 +10,7 @@ in the
 	context-nonfree
 package.
 
-2. format generation
---------------------
-
-ConTeXt based formats are *NOT* defined in the usual way in 
-/etc/texmf/fmtutil.d, instead please edit the file
-	/etc/texmf/context/config/formats.cnf
-which also contains explanations about available formats.
-
-After editing this file please call as root
-	ctxfmtutil --build
-
-
-3. generation of documentation
+2. generation of documentation
 ------------------------------
 
 The documentation and examples for various modules as distributed in 
@@ -33,7 +21,7 @@ for the documentation, and
 	texexec --mode=demo t-french.tex
 for the example file.
 
-4. generation of the font files (vf,tfm)
+3. generation of the font files (vf,tfm)
 ----------------------------------------
 These files were generated using the texfont program, as follows:
 	texfont --encoding=texnansi --batch type-tmf.dat
@@ -41,4 +29,4 @@ where the type-tmf.dat is located in
 	/usr/share/texmf/context/data
 
 
-Norbert Preining, December 2006
+Norbert Preining, 2006-2007
