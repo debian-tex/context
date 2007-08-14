@@ -27,8 +27,10 @@ esac
 
 dpkg_md5sum()
 {
-    file=$1
-    md5sum=$(grep "$file[[:space:]]"  /var/lib/dpkg/status | cut -f 3 -d ' ')
+    conffile="$1"
+    package="$2"
+    md5sum=$(dpkg-query -W -f='${Conffiles}' "$package" \
+        | grep -F " $conffile " | cut -d ' ' -f 3)
     if [ -z "$md5sum" ]; then
         echo "$file: md5sum not known. Exiting" >&2
         exit 1
@@ -44,7 +46,7 @@ dpkg_md5sum()
 old_cfg=/etc/texmf/fmt.d/10texlive-context.cnf
 new_cfg=/etc/texmf/fmt.d/20context.cnf
 if [ -f $old_cfg ]; then
-  mdorig=$(dpkg_md5sum $old_cfg)
+  mdorig=$(dpkg_md5sum $old_cfg texlive-context)
   if [ $(md5sum "$old_cfg" | cut -f 1 -d ' ') = "$mdorig" ] ; then
     rm -f $old_cfg
   else
@@ -55,7 +57,7 @@ if [ -f $old_cfg ]; then
 fi
 old_cfg=/etc/texmf/context/config/formats.cnf
 if [ -f $old_cfg ]; then
-  mdorig=$(dpkg_md5sum $old_cfg)
+  mdorig=$(dpkg_md5sum $old_cfg context)
   if [ $(md5sum "$old_cfg" | cut -f 1 -d ' ') = "$mdorig" ] ; then
     rm -f $old_cfg
   else
