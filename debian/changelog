@@ -1,4 +1,4 @@
-context (2007.08.09-1~1) unstable; urgency=low
+context (2007.08.29-1~1) unstable; urgency=low
 
   * install a menu entry for texfind and texshow (Closes: #422131)
   * install a stub for texfind (Closes: #422132)
@@ -22,14 +22,21 @@ context (2007.08.09-1~1) unstable; urgency=low
       . A set of bugfixes for Mark IV
     - 2007.08.09
       . Another set of bugfixes for Mark IV
+    - 2007.08.20
+      . Fix some font issues in mkiv
+      . Some smaller common bugfixes 
+    - 2007.08.29
+      ???
     From the ConTeXt Wiki: Mark IV is the name of the LuaTeX-aware part of
     ConTeXt; that is, when you use ConTeXt over the LuaTeX engine instead of
     PDFTeX or XeTeX. You run it with texexec --lua.
   * don't use /var/lib/dpkg/status directly but dpkg-query
   * adjust menu entry to new policy
   * recommend luatex
+  * remove stubs which are now shipped by upstream (texshow, texfind,
+    pdftrimwhite)
 
- -- Norbert Preining <preining@debian.org>  Tue, 14 Aug 2007 09:44:34 +0200
+ -- Norbert Preining <preining@debian.org>  Mon, 03 Sep 2007 09:30:27 +0200
 
 context (2007.04.17-1) unstable; urgency=low
 

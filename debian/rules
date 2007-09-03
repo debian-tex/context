@@ -75,8 +75,13 @@ binary-indep: build-indep test-nonfree
 
 	# switch to ruby
 	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
-	cp debian/texmfstart $(instbase)/usr/bin
+	# install texmfstart.rb into /usr/bin/ instead of a stub
+	# replace the env shebang line with ruby
+	(echo "#!/usr/bin/ruby"; tail -n +2 scripts/context/ruby/texmfstart.rb ) > $(instbase)/usr/bin/texmfstart
+	#cp debian/texmfstart $(instbase)/usr/bin
 	# missing stubs for some perl scripts:
+	# these two (luatools and mtxtools could be installed as is, but
+	# would need texlua from luatex package)
 	cp -a debian/stubs/* $(instbase)/usr/bin/
 
 	# documentation
