@@ -1,7 +1,9 @@
 context (2007.08.29-1) unstable; urgency=low
 
   * install a menu entry for texfind and texshow (Closes: #422131)
-  * install a stub for texfind (Closes: #422132)
+  * remove alls stubs, they are shipped upstream (texfind, texshow,
+    pdftrimwhite), or are installed directly (mtxrools(.rb), mtxrun(.lua),
+    luatools(.lua) (Closes: #422132)
   * various new upstream versions:
     - 2007.07.24:
       . infrastructure preparations for MkIV
@@ -33,10 +35,8 @@ context (2007.08.29-1) unstable; urgency=low
   * don't use /var/lib/dpkg/status directly but dpkg-query
   * adjust menu entry to new policy
   * recommend luatex
-  * remove stubs which are now shipped by upstream (texshow, texfind,
-    pdftrimwhite)
 
- -- Norbert Preining <preining@debian.org>  Sun, 09 Sep 2007 21:07:56 +0200
+ -- Norbert Preining <preining@debian.org>  Sun, 09 Sep 2007 21:25:04 +0200
 
 context (2007.04.17-1) unstable; urgency=low
 
