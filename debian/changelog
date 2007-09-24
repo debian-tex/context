@@ -1,9 +1,12 @@
-context (2007.08.29-1) unstable; urgency=low
+context (2007.09.10-1~1) unstable; urgency=low
 
   * install a menu entry for texfind and texshow (Closes: #422131)
   * remove alls stubs, they are shipped upstream (texfind, texshow,
     pdftrimwhite), or are installed directly (mtxrools(.rb), mtxrun(.lua),
     luatools(.lua) (Closes: #422132)
+  * don't use /var/lib/dpkg/status directly but dpkg-query
+  * adjust menu entry to new policy
+  * recommend luatex
   * various new upstream versions:
     - 2007.07.24:
       . infrastructure preparations for MkIV
@@ -27,16 +30,15 @@ context (2007.08.29-1) unstable; urgency=low
     - 2007.08.20
       . Fix some font issues in mkiv
       . Some smaller common bugfixes
-    - 2007.08.29
-      ???
+    - 2007.09.10
+      . MathML and CALS tables for mkiv
+      . mkiv font handling improvements
+      . bugfixes 
     From the ConTeXt Wiki: Mark IV is the name of the LuaTeX-aware part of
     ConTeXt; that is, when you use ConTeXt over the LuaTeX engine instead of
     PDFTeX or XeTeX. You run it with texexec --lua.
-  * don't use /var/lib/dpkg/status directly but dpkg-query
-  * adjust menu entry to new policy
-  * recommend luatex
 
- -- Norbert Preining <preining@debian.org>  Sun, 09 Sep 2007 21:25:04 +0200
+ -- Norbert Preining <preining@debian.org>  Mon, 24 Sep 2007 08:47:37 +0200
 
 context (2007.04.17-1) unstable; urgency=low
 
