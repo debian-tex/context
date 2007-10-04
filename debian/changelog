@@ -1,8 +1,14 @@
 context (2007.09.28-1~1) unstable; urgency=low
 
-  * new upstream release, see http://wiki.contextgarden.net/Context_2007.09.28
+  * new upstream release (Closes: #443515)
+    - A rewritten XML parser for mkiv
+    - XML path expressions for mkiv
+    - Fixed and improved support for XeTeX fonts
+    - The file extension and method for included files is now always 
+      lowercased
+    - other small bugfixes 
 
- -- Norbert Preining <preining@debian.org>  Mon, 01 Oct 2007 07:06:35 +0200
+ -- Norbert Preining <preining@debian.org>  Thu, 04 Oct 2007 09:59:55 +0200
 
 context (2007.09.10-1) unstable; urgency=low
 
