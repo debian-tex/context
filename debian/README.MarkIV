@@ -1,0 +1,68 @@
+README.luatex
+=============
+
+Mark IV is the name of the LuaTeX-aware part of ConTeXt; that is, when you
+use ConTeXt over the LuaTeX engine instead of PDFTeX or XeTeX. You run it
+with texexec --lua.
+
+Currently the integration of Mark IV into Debian is not completely done,
+especially because the details are currently worked out (see the dev-context
+mailing list).
+
+If you want to start using Mark IV the following the following few points
+should get you started:
+
+1) Adjusting of TEXMFDIST in texmf.cnf:
+   Up to tex-common 1.8 the TEXMFDIST setting contains tetex and texlive
+   pathes with braces, which current luatools cannot understand.
+   Please remove the tetex part in /etc/texmf/texmf.d/05TeXMF.cnf 
+   (as root) such that
+   	TEXMFDIST=/usr/share/texmf-texlive
+   is there. Then call update-texmf.
+
+   Or wait for tex-common 1.9 which will do this change.
+
+2) environment variables and luatex-cache
+   Mark IV ships its own implementation of file searching and doesn't
+   use the ls-R databases, but luatex-cache. You have to tell luatools
+   where to find texmf.cnf, and then generate the cache:
+   	export TEXMFCNF=/usr/share/texmf/web2c
+	luatools --generate --verbose
+   This will generate the luatex-cache in $HOME. If you want to put it
+   somewhere else set (and export) the LUATEXCACHE variable.
+
+3) Generate a Mark IV format
+   This is not integrated into the usual format building process, and 
+   probably will need some time to be worked out completely as the 
+   current fmtutil cannot cope with Mark IV formats. Call
+   	texexec --make --luatex en
+
+4) Now you can try some simple document like (thanks to Arthur Reutenauer)
+	\starttext
+
+	\ctxlua{a = 1.5 ; b = 1.8 ; c = a*b ; tex.print(c) ;}
+	or the equivalent:
+	\startlua
+	a = 1.5
+	b = 1.8
+	c = a*b
+	tex.print(c)
+	\stoplua
+
+	You can also do more elaborate calculations with the lua math library:
+	\ctxlua{tex.print("$\string\\sqrt{2} = " .. math.sqrt(2) .. "$")}
+
+	\stoptext
+  and run it with
+  	texexec --lua filename.tex
+
+
+
+More needs to be done, but we are happy to get feedback/ideas/suggestions
+on the integration, please contact
+	debian-tex-maint@lists.debian.org
+
+
+Norbert Preining
+2007-10-05
+

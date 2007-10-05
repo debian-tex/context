@@ -1,14 +1,16 @@
-context (2007.09.28-1~1) unstable; urgency=low
+context (2007.09.28-1) unstable; urgency=low
 
   * new upstream release (Closes: #443515)
     - A rewritten XML parser for mkiv
     - XML path expressions for mkiv
     - Fixed and improved support for XeTeX fonts
-    - The file extension and method for included files is now always 
+    - The file extension and method for included files is now always
       lowercased
-    - other small bugfixes 
+    - other small bugfixes
+  * try to explain how to set up Mark IV (ConTeXt over LuaTeX) in
+    README.MarkIV
 
- -- Norbert Preining <preining@debian.org>  Thu, 04 Oct 2007 09:59:55 +0200
+ -- Norbert Preining <preining@debian.org>  Fri, 05 Oct 2007 16:56:25 +0200
 
 context (2007.09.10-1) unstable; urgency=low
 

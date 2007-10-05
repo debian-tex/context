@@ -28,5 +28,8 @@ These files were generated using the texfont program, as follows:
 where the type-tmf.dat is located in 
 	/usr/share/texmf/context/data
 
+4. ConTeXt over LuaTeX aka MarkIV
+---------------------------------
+Please see the separate README.MarkIV
 
 Norbert Preining, 2006-2007
