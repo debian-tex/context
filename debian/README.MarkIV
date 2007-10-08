@@ -13,14 +13,14 @@ If you want to start using Mark IV the following the following few points
 should get you started:
 
 1) Adjusting of TEXMFDIST in texmf.cnf:
-   Up to tex-common 1.8 the TEXMFDIST setting contains tetex and texlive
+   Up to tex-common 1.9 the TEXMFDIST setting contains tetex and texlive
    pathes with braces, which current luatools cannot understand.
    Please remove the tetex part in /etc/texmf/texmf.d/05TeXMF.cnf 
    (as root) such that
    	TEXMFDIST=/usr/share/texmf-texlive
    is there. Then call update-texmf.
 
-   Or wait for tex-common 1.9 which will do this change.
+   Or wait for tex-common 1.10 which will do this change.
 
 2) environment variables and luatex-cache
    Mark IV ships its own implementation of file searching and doesn't
