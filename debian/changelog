@@ -1,3 +1,9 @@
+context (2007.09.28-2~1) unstable; urgency=low
+
+  * add Vcs-Svn and Vcs-Browser fields to debian/control
+
+ -- Norbert Preining <preining@debian.org>  Fri, 02 Nov 2007 00:34:00 +0100
+
 context (2007.09.28-1) unstable; urgency=low
 
   * new upstream release (Closes: #443515)
