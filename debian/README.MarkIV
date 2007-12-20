@@ -12,7 +12,11 @@ mailing list).
 If you want to start using Mark IV the following the following few points
 should get you started:
 
-1) Adjusting of TEXMFDIST in texmf.cnf:
+0) Right versions:
+    luatex 0.20.2
+    context 2007.12.20
+
+1) TEXMFDIST settings
    Up to tex-common 1.9 the TEXMFDIST setting contains tetex and texlive
    pathes with braces, which current luatools cannot understand.
    Please remove the tetex part in /etc/texmf/texmf.d/05TeXMF.cnf 
@@ -29,13 +33,14 @@ should get you started:
    	export TEXMFCNF=/usr/share/texmf/web2c
 	luatools --generate --verbose
    This will generate the luatex-cache in $HOME. If you want to put it
-   somewhere else set (and export) the LUATEXCACHE variable.
+   somewhere else set (and export) the TEXMFCACHE variable (like
+   export TEXMFCACHE=/tmp)
 
 3) Generate a Mark IV format
    This is not integrated into the usual format building process, and 
    probably will need some time to be worked out completely as the 
    current fmtutil cannot cope with Mark IV formats. Call
-   	texexec --make --luatex en
+   	luatools --ini --compile cont-en
 
 4) Now you can try some simple document like (thanks to Arthur Reutenauer)
 	\starttext
@@ -64,5 +69,5 @@ on the integration, please contact
 
 
 Norbert Preining
-2007-10-05
+2007-12-20
 

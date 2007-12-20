@@ -96,7 +96,7 @@ binary-indep: build-indep test-nonfree
 
 	dh_installdocs debian/changelog.Debian.prerelease	\
 			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree \
-			debian/README.MarkIV
+			debian/README.MarkIV debian/Release_Notes
 
 	# backward compatibility with pdftex < 1.40 where formats MUST
 	# be put into web2c/pdfetex, while new context puts them into
