@@ -5,7 +5,7 @@ Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <preining@debian.org>
 Build-Depends: debhelper (>= 5.0.35), dpatch
 Build-Depends-Indep: tex-common (>= 1.6)
-Standards-Version: 3.7.2
+Standards-Version: 3.7.3
 Vcs-Svn: svn://svn.debian.org/svn/debian-tex/context/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/debian-tex/context/trunk/
 
