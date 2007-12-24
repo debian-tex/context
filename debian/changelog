@@ -1,3 +1,13 @@
+context (2007.12.18-2~1) unstable; urgency=low
+
+  * switch to quilt
+  * add upstream fix to supp-pdf.tex to fix metapost image inclusion
+    in tex file (Closes: #457622)
+  * add upstream fix to ppchtex.noc to fix chemtex usage in latex
+    (Closes: #447559)
+
+ -- Norbert Preining <preining@debian.org>  Mon, 24 Dec 2007 09:29:06 +0100
+
 context (2007.12.18-1) unstable; urgency=low
 
   * several new upstream releases (see doc file Release_Notes)

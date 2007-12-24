@@ -1,1 +1,3 @@
 10_texfont_fontforge.dpatch
+fix-ppchtex
+fix-supp-pdf
