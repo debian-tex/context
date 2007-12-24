@@ -1,3 +1,9 @@
+context (2007.12.18-3~1) unstable; urgency=low
+
+  * not released
+
+ -- Norbert Preining <preining@debian.org>  Mon, 24 Dec 2007 19:16:52 +0100
+
 context (2007.12.18-2) unstable; urgency=low
 
   * switch to quilt
