@@ -94,6 +94,9 @@ echo "done"
 
 echo -n "Removing empty directories ..."
 find . -type d -empty | xargs rmdir || true
+find . -type d -empty | xargs rmdir || true
+find . -type d -empty | xargs rmdir || true
+find . -type d -empty | xargs rmdir || true
 echo "done"
 
 cd ..
