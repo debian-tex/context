@@ -1,5 +1,43 @@
 Release Notes
 
+
+Context 2008.01.28
+
+    * some small extensions to opentype support
+    * fix a glitch in luatools that broke format generation in the
+      'official' luatex beta
+    * brings locating of processed files in mkiv in line with mkii 
+
+Context 2008.01.26
+
+    * bugfixes in contextual lookups and kerning handling in opentype
+      (mkiv)
+    * many macros that used \to for delimited arguments reimplemented
+      without the need for \to
+    * new command \setupmathematics, for global math setup 
+
+Context 2008.01.16
+
+    * New feature compose=yes will add missing composed chars as virtual
+      glyphs 
+
+ \definefontfeature[superdefault][default][compose=yes]
+
+    * Some math bugfixes in mkiv
+    * A few corrections to font synonyms 
+
+Context 2008.01.11
+
+This release fixes:
+
+    * handling of truetype disguised as opentype and vice versa 
+
+This release adds:
+
+    * a prelude to math definitions for mkiv
+    * a cache=no option for \setupfloats, i.e. direct flushing
+    * support for new lm naming scheme + fallback 
+
 Context 2007.12.17
 
    Many small optimizations, especially in the MkIV font code and the
