@@ -1,5 +1,30 @@
 Release Notes
 
+Context 2008.04.10
+
+One big news item:
+
+    * MkIV now uses the embedded MPlib in the latest luatex release.
+      No more external MP calls, resulting in a massive speedup 
+
+Also a bunch of bugfixes from the mailing list, and some small speedups
+
+
+Context 2008.03.24
+
+Fixes some more bugs in 2008.03.10
+
+Context 2008.03.11
+
+    * Fixes a few bugs in 2008.03.10
+
+Context 2008.03.10
+
+This is a feature release. Main news:
+
+    * Image inclusion in mkiv now uses lua
+    * Better support for zips and zipped xml files
+    * And lots of bugfixes 
 
 Context 2008.01.28
 

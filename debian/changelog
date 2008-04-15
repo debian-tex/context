@@ -1,3 +1,10 @@
+context (2008.04.11-1) unstable; urgency=low
+
+  * new upstream
+  * update the release notes
+
+ -- Norbert Preining <preining@debian.org>  Tue, 15 Apr 2008 08:48:28 +0200
+
 context (2008.01.28-1) unstable; urgency=low
 
   * new upstream
