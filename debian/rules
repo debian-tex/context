@@ -67,7 +67,6 @@ binary-indep: build-indep test-nonfree
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
 	#we still need the perl scripts
 	#rm -r $(instbase)/usr/share/texmf/scripts/context/perl
-	rm -r $(instbase)/usr/share/texmf/context/examplap
 	rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
 
 	# we need a check here that all maps are installed
