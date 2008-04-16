@@ -1,9 +1,41 @@
 Release Notes
 
+Context 2008.04.16
+
+Small update to 2008.04.15:
+
+    * mtxrun.lua now supports freebsd
+    * 2008.04.15 introduced a stray character in m-chemic removed
+    * the new MkIV font name resolver had an error
+    * a few more dummies for mplib in MkIV
+    * a fix for paragraph-shaped text in mplib (MkIV)
+    * a fix for disappearing colors in mplib (MkIV) 
+
 Context 2008.04.15
 
-    release notes missing
- 
+This release fixes a small set of bugs in MkIV:
+
+    * some mplib conversion errors (part of those need a new, to-be-released
+      luatex) and a few dummy macros
+    * figures in subpaths were not found
+    * see the separate page for more details 
+
+And a few small extras for MkIV:
+
+    * zwn and zwnj support
+    * Environment variable MTX_FONTS_AUTOLOAD='yes' can be used to force
+      automatic font database reloading on 'font not found' errors
+    * A parser that reads fontconfig's fonts.conf added (if it can be found)
+    * Better xml statistics reporting 
+
+As well as some internal changes:
+
+    * a bunch of counter implementations changed from macros to primitives.
+      if you have styles that redefine core macros, they could be broken
+      by this
+    * the experimental reserved object numbers patch from 2008.04.10 is
+      reverted, didn't work out. 
+
 Context 2008.04.10
 
 One big news item:
@@ -12,7 +44,6 @@ One big news item:
       No more external MP calls, resulting in a massive speedup 
 
 Also a bunch of bugfixes from the mailing list, and some small speedups
-
 
 Context 2008.03.24
 
