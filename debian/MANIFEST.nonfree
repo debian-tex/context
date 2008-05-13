@@ -6,6 +6,7 @@
 ./fonts/afm/hoekwater/koeieletters/koeien-ex.afm
 ./fonts/afm/hoekwater/koeieletters/koeien-mi.afm
 ./fonts/afm/hoekwater/koeieletters/koeien-sy.afm
+./fonts/pfm/hoekwater/context/koeieletters.pfm
 ./fonts/enc/pdftex/context/koeieletters-ex.enc
 ./fonts/enc/pdftex/context/koeieletters-mi.enc
 ./fonts/enc/pdftex/context/koeieletters-sy.enc
