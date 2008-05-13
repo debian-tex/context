@@ -2,8 +2,9 @@ context (2008.05.12-1) unstable; urgency=low
 
   * UNRELEASED
   * new upstream release
+  * remove the fix-context-stub patch as it is included upstream
 
- -- Norbert Preining <preining@debian.org>  Tue, 13 May 2008 11:00:04 +0200
+ -- Norbert Preining <preining@debian.org>  Tue, 13 May 2008 11:06:47 +0200
 
 context (2008.04.18-1) unstable; urgency=low
 
