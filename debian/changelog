@@ -1,13 +1,14 @@
-context (2008.05.12-1) unstable; urgency=low
+context (2008.05.21-1) unstable; urgency=low
 
   * UNRELEASED
-  * new upstream release
+  * new upstream releases
+  * update the release notes from the wiki page
   * remove the fix-context-stub patch as it is included upstream
-  * add type-loc.tex that makes context behave correctly with the LModern
-    fonts as shipped with Debian ATM (thanks to Mojca and Hans)
+  * add patch fix-for-old-lmodern-fonts from Mojca Miklavec to fix 
+    XeTeX/ConTeXt usage with old lmodern font (names)
   * add another file to the MANIFEST.non-free
 
- -- Norbert Preining <preining@debian.org>  Sun, 18 May 2008 15:53:18 +0200
+ -- Norbert Preining <preining@debian.org>  Thu, 22 May 2008 00:54:34 +0200
 
 context (2008.04.18-1) unstable; urgency=low
 

@@ -1,5 +1,26 @@
 Release Notes
 
+Context 2008.05.21
+
+    * MKIV now has support for running without any environment variables set
+      (still experimental, details are discussed on the dev-context mailing
+      list)
+    * Some of the internals of MathML support in MKIV have been reworked
+    * A few small bugfixes 
+
+
+Context 2008.05.13
+
+    * small bugfixes for 2008.05.09
+    * some corrections to the german interface messages 
+
+Context 2008.05.09
+
+    * A set of bugfixes relating to metapost labels in mkiv
+    * A rewritten MathML parser for mkiv
+    * Some math operator extensions for mkiv
+    * Other bugfixes 
+
 Context 2008.04.18
 
 Small update to 2008.04.16:
