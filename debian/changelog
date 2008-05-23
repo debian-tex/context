@@ -7,8 +7,9 @@ context (2008.05.21-1) unstable; urgency=low
   * add patch fix-for-old-lmodern-fonts from Mojca Miklavec to fix 
     XeTeX/ConTeXt usage with old lmodern font (names)
   * add another file to the MANIFEST.non-free
+  * add missing lm font map files
 
- -- Norbert Preining <preining@debian.org>  Thu, 22 May 2008 00:54:34 +0200
+ -- Norbert Preining <preining@debian.org>  Fri, 23 May 2008 19:26:59 +0200
 
 context (2008.04.18-1) unstable; urgency=low
 
