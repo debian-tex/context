@@ -56,9 +56,6 @@ binary-indep: build-indep test-nonfree
 		etc/texmf/tex/context/user
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
-	# install missing lm map files
-	mkdir -p $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
-	cp -a debian/lm-maps/* $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 	# move user config file to /etc
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
@@ -71,6 +68,9 @@ binary-indep: build-indep test-nonfree
 	#we still need the perl scripts
 	#rm -r $(instbase)/usr/share/texmf/scripts/context/perl
 	rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
+	# install missing lm map files
+	mkdir -p $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
+	cp -a debian/lm-maps/* $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 
 	# we need a check here that all maps are installed
 	# use context.formats and context.maps in debian dir
