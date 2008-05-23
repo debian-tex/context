@@ -1,23 +1,15 @@
 context (2008.05.21-1) unstable; urgency=low
 
-  * UNRELEASED
   * new upstream releases
   * update the release notes from the wiki page
-  * remove the fix-context-stub patch as it is included upstream
-  * add patch fix-for-old-lmodern-fonts from Mojca Miklavec to fix 
-    XeTeX/ConTeXt usage with old lmodern font (names)
+  * fix XeTeX/ConTeXt usage with the LModern fonts as they are present in 
+    Debian:
+    - add a patch fix-for-old-lmodern-fonts that updates the type-otf.tex file
+    - add the missing map files
+    (all thanks to Mojca Miklavec)
   * add another file to the MANIFEST.non-free
-  * add missing lm font map files
 
- -- Norbert Preining <preining@debian.org>  Fri, 23 May 2008 19:26:59 +0200
-
-context (2008.04.18-1) unstable; urgency=low
-
-  * several new upstream releases
-  * fix the context stub to protect the args (patch fix-context-stub)
-  * update the release notes
-
- -- Norbert Preining <preining@debian.org>  Sat, 19 Apr 2008 11:02:35 +0200
+ -- Norbert Preining <preining@debian.org>  Fri, 23 May 2008 19:52:53 +0200
 
 context (2008.01.28-1) unstable; urgency=low
 
