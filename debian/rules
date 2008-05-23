@@ -57,8 +57,8 @@ binary-indep: build-indep test-nonfree
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
 	# install missing lm map files
-	mkdir -p $(instbase)/usr/share/texmffonts/map/dvipdfm/context
-	cp -a debian/lm-maps/* $(instbase)/usr/share/texmffonts/map/dvipdfm/context
+	mkdir -p $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
+	cp -a debian/lm-maps/* $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 	# move user config file to /etc
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
