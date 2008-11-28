@@ -73,6 +73,10 @@ binary-indep: build-indep test-nonfree
 	mkdir -p $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 	cp -a debian/lm-maps/* $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 
+	# install missing .ini files
+	mkdir -p $(instbase)/usr/share/texmf/tex/context/config
+	cp -a debian/config/*.ini $(instbase)/usr/share/texmf/tex/context/config
+
 	# we need a check here that all maps are installed
 	# use context.formats and context.maps in debian dir
 	dh_installtex --flavor=format:no_links
