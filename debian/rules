@@ -67,7 +67,8 @@ binary-indep: build-indep test-nonfree
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
 	#we still need the perl scripts
 	#rm -r $(instbase)/usr/share/texmf/scripts/context/perl
-	rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
+	# removed upstream
+	#rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
 	# install missing lm map files
 	mkdir -p $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 	cp -a debian/lm-maps/* $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
