@@ -1,6 +1,10 @@
 README.luatex
 =============
 
+[ WARNING : That document is probably out of date, it should work anyway,
+[ WARNING : but easier setup methods should be available with modern ConTeXt.
+[ WARNING : If you wnat to contribute some improvents please send me any!
+
 Mark IV is the name of the LuaTeX-aware part of ConTeXt; that is, when you
 use ConTeXt over the LuaTeX engine instead of PDFTeX or XeTeX. You run it
 with texexec --lua.

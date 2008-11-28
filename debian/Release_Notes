@@ -1,5 +1,62 @@
 Release Notes
 
+Context 2008.10.31
+
+New features:
+
+    * A Persian interface (format)
+    * The whole multilingual subsystem is rewritten and is now generated
+      from a single lua database table. Note: external modules that define
+      or set system constants and system variables will need updating.
+    * New versions of the greek, vim and bib modules
+    * More files have been split into mkii+mkiv parts
+    * The old, dvipdfm style font mapfiles have been removed because newer
+      versions of (x)dvipdfmx support the pdftex-style map format
+    * mkiv now has support for 'special' features like knockout vs overprint
+      and spot colors via attributes 
+
+Bugs fixed:
+
+    * lots of smaller bugs fixed, especially in the MPlib handling in mkiv,
+      but many more small ones 
+
+Context 2008.08.05
+
+New feature:
+
+    * mtx-fonts now supports displaying feature information for OTF fonts 
+
+Bugs fixed:
+
+    * a number of files were accidentally missing from the Context 2008.08.04
+      release
+    * Hyphenation patterns for bokmal and nynorsk were broken in
+      Context 2008.08.04
+    * \Word now works ok in MKIV 
+
+Context 2008.08.04
+
+New features:
+
+    * MKIV now works best with luatex 0.29.0
+    * Integrated support for 'arabic' languages and number conversions
+    * New hyphenation patterns from the tex-hyphen project, including support
+      for the new languages Nynorsk (nn), Bulgarian (bg), Basque (eu), and
+      Ukranian (il). The identifiers of Czech (cz -> cs), UK English (uk -> gb)
+      and US English (en -> us) have changed.
+    * New third-party modules in cont-ext.zip: Account, Greek, and Letter
+    * new mtxrun scipts: grep, mptopdf, patterns
+    * New included module: calcmath (MKIV only)
+    * Typescripts for Herman Zapf's fonts in OTF format are now provided
+    * the mtxrun script 'context' is extended to be more like 'texexec'
+    * the mtxrun script 'convert' now supports a requested quality switch
+    * the mtxrun script 'server' is extended to support 'cgi' lua 
+
+Bugs fixed:
+
+    * Fix nasty font warnings in XeTeX
+    * Lots of small bugs. Please follow the link to the details page. 
+
 Context 2008.05.21
 
     * MKIV now has support for running without any environment variables set

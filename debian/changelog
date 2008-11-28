@@ -2,8 +2,10 @@ context (2008.10.31-1) experimental; urgency=low
 
   * new upstream release
   * upload to experimental for testing
+  * update the release notes
+  * add a warning to README.MarkIV
 
- -- Norbert Preining <preining@debian.org>  Fri, 28 Nov 2008 12:10:05 +0100
+ -- Norbert Preining <preining@debian.org>  Fri, 28 Nov 2008 12:15:39 +0100
 
 context (2008.05.21-1) unstable; urgency=low
 
