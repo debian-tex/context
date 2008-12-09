@@ -5,14 +5,14 @@ Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <preining@debian.org>
 Build-Depends: debhelper (>= 5.0.35), quilt
 Build-Depends-Indep: tex-common (>= 1.6)
-Standards-Version: 3.7.3
+Standards-Version: 3.8.0
 Vcs-Svn: svn://svn.debian.org/svn/debian-tex/context/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/debian-tex/context/trunk/
 
 Package: context
 Section: tex
 Architecture: all
-Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007), texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106)
+Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007), texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106), ${misc:Depends}
 Recommends: luatex
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007)
