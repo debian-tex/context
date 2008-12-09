@@ -1,3 +1,11 @@
+context (2008.10.31-2) experimental; urgency=low
+
+  * disable the fix-for-old-lmodern-fonts patch as we ship newer lmodern
+    fonts now
+  * adjust depends of context onto lmodern >= 1.106
+
+ -- Norbert Preining <preining@debian.org>  Tue, 09 Dec 2008 02:03:25 +0100
+
 context (2008.10.31-1) experimental; urgency=low
 
   * new upstream release

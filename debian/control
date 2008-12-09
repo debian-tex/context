@@ -12,7 +12,7 @@ Vcs-Browser: http://svn.debian.org/wsvn/debian-tex/context/trunk/
 Package: context
 Section: tex
 Architecture: all
-Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007), texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.01)
+Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007), texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106)
 Recommends: luatex
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007)
