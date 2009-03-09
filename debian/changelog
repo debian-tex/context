@@ -1,4 +1,4 @@
-context (2008.10.31-2) experimental; urgency=low
+context (2008.10.31-2) unstable; urgency=low
 
   * disable the fix-for-old-lmodern-fonts patch as we ship newer lmodern
     fonts now
@@ -6,7 +6,7 @@ context (2008.10.31-2) experimental; urgency=low
   * bump standards version to 3.8.0
   * add ${misc:Depends} to the depends field
 
- -- Norbert Preining <preining@debian.org>  Tue, 09 Dec 2008 02:06:38 +0100
+ -- Norbert Preining <preining@debian.org>  Mon, 09 Mar 2009 18:13:03 +0100
 
 context (2008.10.31-1) experimental; urgency=low
 
