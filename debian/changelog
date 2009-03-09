@@ -5,8 +5,10 @@ context (2008.10.31-2) unstable; urgency=low
   * adjust depends of context onto lmodern >= 1.106
   * bump standards version to 3.8.0
   * add ${misc:Depends} to the depends field
+  * bump build-dep on tex-common to >= 1.14 to get fix for dh_installtex
+    usage of --flavor argument
 
- -- Norbert Preining <preining@debian.org>  Mon, 09 Mar 2009 18:13:03 +0100
+ -- Norbert Preining <preining@debian.org>  Mon, 09 Mar 2009 18:33:09 +0100
 
 context (2008.10.31-1) experimental; urgency=low
 
