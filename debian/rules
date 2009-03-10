@@ -56,6 +56,9 @@ binary-indep: build-indep test-nonfree
 		etc/texmf/tex/context/user
 	cp -a scripts bibtex context fonts metapost tex web2c 	\
 		$(instbase)/usr/share/texmf
+	# now remove those font files that are already in Debian, and
+	# create a link file instead
+	bash debian/convert-fonts-to-link > debian/$(package).links
 	# move user config file to /etc
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
@@ -122,6 +125,9 @@ binary-indep: build-indep test-nonfree
 	# This can be removed as soon as TeX Live 2006/7 is in Debian
 	# Then also the link should be removed
 	# dh_link var/lib/texmf/web2c/pdftex var/lib/texmf/web2c/pdfetex
+	#
+	# We now have links for the font files, call dh_link
+	dh_link
 
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)

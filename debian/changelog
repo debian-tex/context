@@ -7,8 +7,10 @@ context (2008.10.31-2) unstable; urgency=low
   * add ${misc:Depends} to the depends field
   * bump build-dep on tex-common to >= 1.14 to get fix for dh_installtex
     usage of --flavor argument
+  * do not ship some fonts in the binary package, but links to 
+    recommended font packages
 
- -- Norbert Preining <preining@debian.org>  Mon, 09 Mar 2009 18:33:09 +0100
+ -- Norbert Preining <preining@debian.org>  Tue, 10 Mar 2009 15:42:44 +0100
 
 context (2008.10.31-1) experimental; urgency=low
 
