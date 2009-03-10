@@ -1,7 +1,7 @@
 
 set -e
 
-cat fonts-already-in-debian | while read line ; do
+cat debian/fonts-already-in-debian | while read line ; do
   #echo "LINE ===$line==="
   case "$line" in
     \#*) ;; 
