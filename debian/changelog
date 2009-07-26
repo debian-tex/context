@@ -1,5 +1,6 @@
 context (2008.10.31-2) unstable; urgency=low
 
+  [ Norbert Preining ]
   * disable the fix-for-old-lmodern-fonts patch as we ship newer lmodern
     fonts now
   * adjust depends of context onto lmodern >= 1.106
@@ -9,6 +10,10 @@ context (2008.10.31-2) unstable; urgency=low
     usage of --flavor argument
   * do not ship some fonts in the binary package, but links to 
     recommended font packages
+
+  [ أحمد المحمودي (Ahmed El-Mahmoudy) ]
+  * debian/rules: use /usr/share/quilt/quilt.make provided by quilt and remove 
+    patch-stamp & unpatch targets (Closes: #538544).
 
  -- Norbert Preining <preining@debian.org>  Thu, 16 Apr 2009 17:27:20 +0200
 

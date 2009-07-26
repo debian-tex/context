@@ -1,11 +1,10 @@
 #! /usr/bin/make -f
 
+include /usr/share/quilt/quilt.make
+
 package        := context
 # zipfiles       := cont-tmf.zip cont-fnt.zip cont-ext.zip cont-img.zip
 instbase       := debian/$(package)
-
-# needed for quilt:
-export QUILT_PATCHES=./debian/patches
 
 build: build-indep
 
@@ -18,23 +17,14 @@ build: build-indep
 
 build-indep: build-indep-stamp
 
-build-indep-stamp: patch-stamp
+build-indep-stamp: patch
 	touch build-indep-stamp
-
-patch-stamp:
-	quilt push -a
-	touch $@
 
 clean: unpatch
 	dh_testroot
 	rm -f build-indep-stamp
 	# rm -rf bibtex context doc fonts metapost scripts tex tpm web2c
 	dh_clean
-
-unpatch:
-	# unapply patches, not giving an error when quilt says "No patch removed"
-	quilt pop -a || [ $$? = 2 ]
-	rm -f patch-stamp
 
 test-nonfree:
 	found=0 ; for i in $$(cat debian/MANIFEST.nonfree debian/MANIFEST.doc-nonfree) ; do	\
