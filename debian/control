@@ -12,7 +12,7 @@ Vcs-Browser: http://svn.debian.org/wsvn/debian-tex/context/trunk/
 Package: context
 Section: tex
 Architecture: all
-Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007), texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106), ${misc:Depends}
+Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007) | texlive-binaries, texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106), ${misc:Depends}
 Recommends: luatex, ttf-gfs-artemisia, ttf-gfs-baskerville, ttf-gfs-bodoni-classic, ttf-gfs-didot-classic, ttf-gfs-gazis, ttf-gfs-neohellenic, ttf-gfs-solomos, ttf-gfs-theokritos, ttf-freefont, ttf-sil-gentium
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007)

@@ -1,3 +1,10 @@
+context (2008.10.31-3) unstable; urgency=low
+
+  * Allow texlive-binaries as an alternative dependency to
+    texlive-base-bin 
+
+ -- Frank Küster <frank@debian.org>  Sun, 09 Aug 2009 18:29:02 +0200
+
 context (2008.10.31-2) unstable; urgency=low
 
   [ Norbert Preining ]
