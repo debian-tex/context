@@ -4,16 +4,16 @@ Priority: optional
 Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <preining@debian.org>
 Build-Depends: debhelper (>= 5.0.35), quilt
-Build-Depends-Indep: tex-common (>= 1.18)
-Standards-Version: 3.8.1
+Build-Depends-Indep: tex-common (>= 2.00)
+Standards-Version: 3.8.3
 Vcs-Svn: svn://svn.debian.org/svn/debian-tex/context/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/debian-tex/context/trunk/
 
 Package: context
 Section: tex
 Architecture: all
-Depends: tex-common (>= 1.4), ruby, texlive-base-bin (>= 2007) | texlive-binaries, texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106), ${misc:Depends}
-Recommends: luatex, ttf-gfs-artemisia, ttf-gfs-baskerville, ttf-gfs-bodoni-classic, ttf-gfs-didot-classic, ttf-gfs-gazis, ttf-gfs-neohellenic, ttf-gfs-solomos, ttf-gfs-theokritos, ttf-freefont, ttf-sil-gentium
+Depends: ruby, texlive-binaries, texlive-base (>= 2007), texlive-metapost (>= 2007), lmodern (>= 1.106), tex-gyre, ${misc:Depends}
+Recommends: ttf-gfs-artemisia, ttf-gfs-baskerville, ttf-gfs-bodoni-classic, ttf-gfs-didot-classic, ttf-gfs-gazis, ttf-gfs-neohellenic, ttf-gfs-solomos, ttf-gfs-theokritos, ttf-freefont, ttf-sil-gentium
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007)
 Replaces: texlive-context

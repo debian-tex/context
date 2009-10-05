@@ -1,41 +1,30 @@
-context (2008.10.31-3) unstable; urgency=low
-
-  * Allow texlive-binaries as an alternative dependency to
-    texlive-base-bin 
-
- -- Frank Küster <frank@debian.org>  Sun, 09 Aug 2009 18:29:02 +0200
-
-context (2008.10.31-2) unstable; urgency=low
+context (2009.08.19-1) experimental; urgency=low
 
   [ Norbert Preining ]
-  * disable the fix-for-old-lmodern-fonts patch as we ship newer lmodern
-    fonts now
-  * adjust depends of context onto lmodern >= 1.106
-  * bump standards version to 3.8.1
-  * add ${misc:Depends} to the depends field
-  * bump build-dep on tex-common to >= 1.18 to get fix for dh_installtex
-    usage of --flavor argument
-  * do not ship some fonts in the binary package, but links to 
-    recommended font packages
-
-  [ أحمد المحمودي (Ahmed El-Mahmoudy) ]
-  * debian/rules: use /usr/share/quilt/quilt.make provided by quilt and remove 
-    patch-stamp & unpatch targets (Closes: #538544).
-
- -- Norbert Preining <preining@debian.org>  Thu, 16 Apr 2009 17:27:20 +0200
-
-context (2008.10.31-1) experimental; urgency=low
-
-  * new upstream release
-  * upload to experimental for testing
+  * several new upstream releases
   * update the release notes
   * add a warning to README.MarkIV
   * add a TODO.Debian
   * fix debian/rules for upstream removed dvipdfm files
   * add missing ini files which have been removed from upstream
     so that default fmtutil initialization still works
+  * disable the fix-for-old-lmodern-fonts patch as we ship newer lmodern
+    fonts now
+  * depend on tex-gyre
+  * adjust depends of context onto lmodern >= 1.106
+  * bump standards version to 3.8.3
+  * add ${misc:Depends} to the depends field
+  * bump build-dep on tex-common to >= 2.00 to get fix for dh_installtex
+    usage of --flavor argument
+  * do not ship some fonts in the binary package, but links to 
+    recommended font packages
+  * only depend on texlive-binaries for TL2009
 
- -- Norbert Preining <preining@debian.org>  Fri, 28 Nov 2008 12:31:04 +0100
+  [ أحمد المحمودي (Ahmed El-Mahmoudy) ]
+  * debian/rules: use /usr/share/quilt/quilt.make provided by quilt and remove 
+    patch-stamp & unpatch targets (Closes: #538544).
+
+ -- Norbert Preining <preining@debian.org>  Mon, 05 Oct 2009 13:27:19 +0900
 
 context (2008.05.21-1) unstable; urgency=low
 
