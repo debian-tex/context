@@ -2,10 +2,6 @@ context (2009.08.19-1) experimental; urgency=low
 
   [ Norbert Preining ]
   * several new upstream releases
-  * update the release notes
-  * add a warning to README.MarkIV
-  * add a TODO.Debian
-  * fix debian/rules for upstream removed dvipdfm files
   * add missing ini files which have been removed from upstream
     so that default fmtutil initialization still works
   * disable the fix-for-old-lmodern-fonts patch as we ship newer lmodern
@@ -24,7 +20,21 @@ context (2009.08.19-1) experimental; urgency=low
   * debian/rules: use /usr/share/quilt/quilt.make provided by quilt and remove 
     patch-stamp & unpatch targets (Closes: #538544).
 
- -- Norbert Preining <preining@debian.org>  Mon, 05 Oct 2009 13:27:19 +0900
+ -- Norbert Preining <preining@debian.org>  Mon, 12 Oct 2009 14:45:40 +0900
+
+context (2008.10.31-1) experimental; urgency=low
+
+  * new upstream release
+  * upload to experimental for testing
+  * update the release notes
+  * add a warning to README.MarkIV
+  * add a TODO.Debian
+  * fix debian/rules for upstream removed dvipdfm files
+  * add missing ini files which have been removed from upstream
+    so that default fmtutil initialization still works
+
+ -- Norbert Preining <preining@debian.org>  Fri, 28 Nov 2008 12:31:04 +0100
+
 
 context (2008.05.21-1) unstable; urgency=low
 
