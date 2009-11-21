@@ -7,8 +7,10 @@ context (2009.10.27-1) experimental; urgency=low
   * update the list of fonts already in Debian
   * add a stub for texfind
   * remove texshow menu entry, the program has been removed
+  * add some more fonts that are normally shipped by ConTeXt to the
+    recommends list
 
- -- Norbert Preining <preining@debian.org>  Sat, 21 Nov 2009 14:07:12 +0900
+ -- Norbert Preining <preining@debian.org>  Sat, 21 Nov 2009 14:25:05 +0900
 
 context (2009.08.19-1) experimental; urgency=low
 
