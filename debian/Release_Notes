@@ -1,5 +1,28 @@
 Release Notes
 
+Context 2009.10.27
+
+This release fixes a fairly large number of bugs and oversights in mkiv, 
+and few in mkii.
+
+Context 2009.08.19
+
+This is the context version on TeXLive 2009.
+
+Note TeXLive 2009 ships with a broken MkIV, because the luatex on TeXLive
+is too old. Hans and I apologise for that, but it was just not feasible to
+include a newer luatex. Once TeXLive is released, we will write down a
+recipe to upgrade its luatex binary.
+
+This is the first actually documented release for 2009 after a very long 
+time of no release (and no release notes). The reason for that is that
+ConTeXt is now split quite rigurously into source files for mkii and source
+files for mkiv. Also, many of the core functions in context mkiv have been
+rewritten to make extensive use of lua. Unfortunately, this means that there
+is a massive amount of changes, and there is just no way I can create proper
+release notes. Just follow the link for a (long) list of new, old, and
+renamed source files.
+
 Context 2008.10.31
 
 New features:

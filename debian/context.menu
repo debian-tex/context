@@ -3,8 +3,3 @@
  section="Applications/File Management"\
  title="TeXfind"\
  command="/usr/bin/texfind"
-?package(context):\
-  needs="x11"\
-  section="Help"\
-  title="TeXshow"\
-  command="/usr/bin/texshow"

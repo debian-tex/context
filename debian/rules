@@ -55,11 +55,6 @@ binary-indep: build-indep test-nonfree
 	rmdir $(instbase)/usr/share/texmf/tex/context/user
 	# this file is not needed
 	rm $(instbase)/usr/share/texmf/web2c/context.cnf
-	# switch to ruby
-	#rm -r $(instbase)/usr/share/texmf/scripts/context/ruby
-	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
-	#we still need the perl scripts
-	#rm -r $(instbase)/usr/share/texmf/scripts/context/perl
 	# removed upstream
 	#rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
 	# install missing lm map files
@@ -76,46 +71,29 @@ binary-indep: build-indep test-nonfree
 	
 	dh_installdirs usr/bin
 
-	# install our context-format creation script
-	# not needed anymore since we depend on texlive 2007 and use
-	# context.formats and fmtutil
-	# cp debian/ctxfmtutil $(instbase)/usr/bin
-	# and the formats definitions
-	# cp debian/formats.cnf $(instbase)/etc/texmf/context/config
-
-	# switch to ruby
+	#
+	# scripts dealing
+	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
 	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
+	# add missing stubs, currently only texfind
+	cp debian/stubs/* $(instbase)/usr/bin
 	# install texmfstart.rb into /usr/bin/ instead of a stub
 	# replace the env shebang line with ruby
 	(echo "#!/usr/bin/ruby"; tail -n +2 scripts/context/ruby/texmfstart.rb ) > $(instbase)/usr/bin/texmfstart
 	(echo "#!/usr/bin/ruby"; tail -n +2 scripts/context/ruby/mtxtools.rb ) > $(instbase)/usr/bin/mtxtools
-	#cp debian/texmfstart $(instbase)/usr/bin
 	# install mtxrun and luatools into /usr/bin
 	(echo "#!/usr/bin/texlua"; tail -n +2 scripts/context/lua/mtxrun.lua ) > $(instbase)/usr/bin/mtxrun
 	(echo "#!/usr/bin/texlua"; tail -n +2 scripts/context/lua/luatools.lua ) > $(instbase)/usr/bin/luatools
-	# missing stubs for some perl scripts:
-	#cp -a debian/stubs/* $(instbase)/usr/bin/
 
+	#
 	# documentation
 	cp -a doc/context/* $(instbase)/usr/share/doc/$(package)
 	cp -a doc/fonts $(instbase)/usr/share/doc/$(package)
-	rm $(instbase)/usr/share/doc/$(package)/scripts/perl/texshow.1
-	dh_installman				\
-		doc/context/scripts/perl/texshow.1		\
-		debian/manpages/*.man
-
+	dh_installman debian/manpages/*.man
 	dh_installdocs debian/changelog.Debian.prerelease	\
 			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree \
 			debian/README.MarkIV debian/Release_Notes
 
-	# backward compatibility with pdftex < 1.40 where formats MUST
-	# be put into web2c/pdfetex, while new context puts them into
-	# web2c/pdftex
-	# There is also a preinst part to this problem
-	# This can be removed as soon as TeX Live 2006/7 is in Debian
-	# Then also the link should be removed
-	# dh_link var/lib/texmf/web2c/pdftex var/lib/texmf/web2c/pdfetex
-	#
 	# We now have links for the font files, call dh_link
 	dh_link
 

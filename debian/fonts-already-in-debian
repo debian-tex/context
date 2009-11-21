@@ -9,6 +9,15 @@ fonts/opentype/greek/gfsbodoniclassic/GFSBodoniClassic.otf;ttf-gfs-bodoni-classi
 
 fonts/opentype/greek/gfsdidotclassic/GFSDidotClassic.otf;ttf-gfs-didot-classic;usr/share/fonts/truetype/ttf-gfs-didot-classic/GFSDidotClassic.otf
 
+fonts/opentype/greek/gfsdidot/GFSDidot.otf;ttf-gfs-didot;usr/share/fonts/truetype/ttf-gfs-didot/GFSDidot.otf
+fonts/opentype/greek/gfsdidot/GFSDidotBold.otf;ttf-gfs-didot;usr/share/fonts/truetype/ttf-gfs-didot/GFSDidotBold.otf
+fonts/opentype/greek/gfsdidot/GFSDidotBoldItalic.otf;ttf-gfs-didot;usr/share/fonts/truetype/ttf-gfs-didot/GFSDidotBoldItalic.otf
+fonts/opentype/greek/gfsdidot/GFSDidotItalic.otf;ttf-gfs-didot;usr/share/fonts/truetype/ttf-gfs-didot/GFSDidotItalic.otf
+
+fonts/opentype/greek/gfsolga/GFSOlga.otf;ttf-gfs-olga;usr/share/fonts/truetype/ttf-gfs-olga/GFSOlga.otf
+
+fonts/opentype/greek/gfsporson/GFSPorson.otf;ttf-gfs-porson;usr/share/fonts/truetype/ttf-gfs-porson/GFSPorson.otf
+
 fonts/opentype/greek/gfsgazis/GFSGazis.otf;ttf-gfs-gazis;usr/share/fonts/truetype/ttf-gfs-gazis/GFSGazis.otf
 
 fonts/opentype/greek/gfsneohellenic/GFSNeohellenic.otf;ttf-gfs-neohellenic;usr/share/fonts/truetype/ttf-gfs-neohellenic/GFSNeohellenic.otf
