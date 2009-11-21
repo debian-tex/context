@@ -1,3 +1,11 @@
+context (2009.10.27-1) experimental; urgency=low
+
+  * new upstream release
+  * pre-build format based on xetex (Closes: #483885)
+  * depend on luatex >= 0.45.0 (Closes: #529570)
+
+ -- Norbert Preining <preining@debian.org>  Sat, 21 Nov 2009 13:25:45 +0900
+
 context (2009.08.19-1) experimental; urgency=low
 
   [ Norbert Preining ]
