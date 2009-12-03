@@ -1,3 +1,10 @@
+context (2009.11.26-1) experimental; urgency=low
+
+  * new upstream release, update Release_Notes
+  * adjust dependencies to >= 2009, and add conflicts texlive-xetex << 2009
+
+ -- Norbert Preining <preining@debian.org>  Thu, 03 Dec 2009 16:01:49 +0900
+
 context (2009.10.27-1) experimental; urgency=low
 
   * new upstream release, update Release_Notes
