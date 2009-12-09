@@ -1,3 +1,9 @@
+context (2009.11.26-2) unstable; urgency=low
+
+  * upload to unstable
+
+ -- Norbert Preining <preining@debian.org>  Wed, 09 Dec 2009 23:46:31 +0900
+
 context (2009.11.26-1) experimental; urgency=low
 
   * new upstream release, update Release_Notes
