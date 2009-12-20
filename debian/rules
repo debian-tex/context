@@ -95,7 +95,9 @@ binary-indep: build-indep test-nonfree
 			debian/README.MarkIV debian/Release_Notes
 
 	# We now have links for the font files, call dh_link
-	dh_link
+	# we have to add metafun as we called dh_installtex without the
+	# option to create links
+	dh_link usr/bin/mpost usr/bin/metafun
 
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)
