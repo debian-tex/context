@@ -1,6 +1,7 @@
-context (2009.11.26-3) unstable; urgency=low
+context (2010.07.30-1) experimental; urgency=low
 
-  * UNRELEASED
+  * several new upstream releases
+  * for now only targetting experimental
   * add missing metafun link in /usr/bin
 
  -- Norbert Preining <preining@debian.org>  Mon, 21 Dec 2009 07:41:03 +0900
