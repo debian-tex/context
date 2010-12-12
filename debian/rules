@@ -48,7 +48,8 @@ binary-indep: build-indep test-nonfree
 		$(instbase)/usr/share/texmf
 	# now remove those font files that are already in Debian, and
 	# create a link file instead
-	bash debian/convert-fonts-to-link > debian/$(package).links
+	# since all the fonts have been removed, disable that
+	# bash debian/convert-fonts-to-link > debian/$(package).links
 	# move user config file to /etc
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
@@ -83,7 +84,6 @@ binary-indep: build-indep test-nonfree
 	(echo "#!/usr/bin/ruby"; tail -n +2 scripts/context/ruby/mtxtools.rb ) > $(instbase)/usr/bin/mtxtools
 	# install mtxrun and luatools into /usr/bin
 	(echo "#!/usr/bin/texlua"; tail -n +2 scripts/context/lua/mtxrun.lua ) > $(instbase)/usr/bin/mtxrun
-	(echo "#!/usr/bin/texlua"; tail -n +2 scripts/context/lua/luatools.lua ) > $(instbase)/usr/bin/luatools
 
 	#
 	# documentation
