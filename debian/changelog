@@ -1,7 +1,8 @@
 context (2010.07.30-2) unstable; urgency=low
 
   * NOT RELEASED
-  * rebuild with new tex-common (Closes: #606040)
+  * rebuild with new tex-common (Closes: #606040), tighten BD-Indep
+    Do NOT upload before tex-common 2.10!!
 
  -- Hilmar Preusse <hille42@web.de>  Wed, 23 Mar 2011 16:39:31 +0100
 
