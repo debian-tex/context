@@ -23,54 +23,6 @@ case "$1" in
     ;;
 esac
 
-
-
-dpkg_md5sum()
-{
-    conffile="$1"
-    package="$2"
-    md5sum=$(dpkg-query -W -f='${Conffiles}' "$package" \
-        | grep -F " $conffile " | cut -d ' ' -f 3)
-    if [ -z "$md5sum" ]; then
-        echo "$file: md5sum not known. Exiting" >&2
-        exit 1
-    fi
-    echo $md5sum
-}
-
-# try to take over context format definitions:
-# first we check for texlive-context stuff, then for intermediate
-# context packages with ctxfmtutil format config lines.
-#
-# preinst part: remove everything which has the right md5sums
-old_cfg=/etc/texmf/fmt.d/10texlive-context.cnf
-new_cfg=/etc/texmf/fmt.d/20context.cnf
-if [ -f $old_cfg ]; then
-  mdorig=$(dpkg_md5sum $old_cfg texlive-context)
-  if [ $(md5sum "$old_cfg" | cut -f 1 -d ' ') = "$mdorig" ] ; then
-    rm -f $old_cfg
-  else
-    cp $old_cfg $new_cfg
-    sed -i -e s/10texlive-context.cnf/20context.cnf/ $new_cfg
-    sed -i -e s/pdfetex/pdftex/g $new_cfg
-  fi
-fi
-old_cfg=/etc/texmf/context/config/formats.cnf
-if [ -f $old_cfg ]; then
-  mdorig=$(dpkg_md5sum $old_cfg context)
-  if [ $(md5sum "$old_cfg" | cut -f 1 -d ' ') = "$mdorig" ] ; then
-    rm -f $old_cfg
-  else
-    echo "
-Warning: you appear to have modified $old_cfg. 
-The definition of context formats has changed and is now located in 
-        $new_cfg.
-Please transfer your changes to this file."
-  fi
-fi
-
-
-
 #DEBHELPER#
 
 # common.functions.preinst end

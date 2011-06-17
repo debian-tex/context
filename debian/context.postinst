@@ -1,8 +1,0 @@
-#!/bin/sh
-set -e
-
-rm -f /var/lib/texmf/web2c/metafun.mem /var/lib/texmf/web2c/metafun.log
-
-#DEBHELPER#
-
-

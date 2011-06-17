@@ -3,17 +3,9 @@
 include /usr/share/quilt/quilt.make
 
 package        := context
-# zipfiles       := cont-tmf.zip cont-fnt.zip cont-ext.zip cont-img.zip
 instbase       := debian/$(package)
 
 build: build-indep
-
-# unpack-stamp:
-# 	for i in $(zipfiles) ; do unzip $$i ; done
-# 	touch unpack-stamp
-
-# patch-stamp: unpack-stamp
-
 
 build-indep: build-indep-stamp
 
@@ -26,78 +18,36 @@ clean: unpatch
 	# rm -rf bibtex context doc fonts metapost scripts tex tpm web2c
 	dh_clean
 
-test-nonfree:
-	found=0 ; for i in $$(cat debian/MANIFEST.nonfree debian/MANIFEST.doc-nonfree) ; do	\
-		if [ -r $$i ] ; then			\
-			echo "nonfree stuff: $$i"	;	\
-			found=1;	\
-		fi ;					\
-	done ; 	if [ $$found = 1 ] ; then	\
-		echo "Found non free stuff, stopping, please clean up first!" ;\
-		exit 1;	\
-	fi
-
-binary-indep: build-indep test-nonfree
+binary-indep: build-indep
 	dh_testdir 
 	dh_testroot
 	dh_clean
 	dh_installdirs usr/share/texmf usr/share/doc/$(package)	\
 		var/lib/texmf/web2c/pdftex	\
 		etc/texmf/tex/context/user
-	cp -a scripts bibtex context fonts metapost tex web2c 	\
-		$(instbase)/usr/share/texmf
-	# now remove those font files that are already in Debian, and
-	# create a link file instead
-	# since all the fonts have been removed, disable that
-	# bash debian/convert-fonts-to-link > debian/$(package).links
+	cp -a texmf/* $(instbase)/usr/share/texmf
 	# move user config file to /etc
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
 	rmdir $(instbase)/usr/share/texmf/tex/context/user
-	# this file is not needed
-	rm $(instbase)/usr/share/texmf/web2c/context.cnf
-	# removed upstream
-	#rm -r $(instbase)/usr/share/texmf/fonts/map/dvipdfm
-	# install missing lm map files
-	mkdir -p $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
-	cp -a debian/lm-maps/* $(instbase)/usr/share/texmf/fonts/map/dvipdfm/context
 
-	# install missing .ini files
-	mkdir -p $(instbase)/usr/share/texmf/tex/context/config
-	cp -a debian/config/*.ini $(instbase)/usr/share/texmf/tex/context/config
-
-	# we need a check here that all maps are installed
-	# use context.formats and context.maps in debian dir
 	dh_installtex --flavor=format:no_links
-	
 	dh_installdirs usr/bin
 
 	#
 	# scripts dealing
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
-	cp scripts/context/stubs/unix/* $(instbase)/usr/bin
-	# add missing stubs, currently only texfind
-	cp debian/stubs/* $(instbase)/usr/bin
-	# install texmfstart.rb into /usr/bin/ instead of a stub
-	# replace the env shebang line with ruby
-	(echo "#!/usr/bin/ruby"; tail -n +2 scripts/context/ruby/texmfstart.rb ) > $(instbase)/usr/bin/texmfstart
-	(echo "#!/usr/bin/ruby"; tail -n +2 scripts/context/ruby/mtxtools.rb ) > $(instbase)/usr/bin/mtxtools
-	# install mtxrun and luatools into /usr/bin
-	(echo "#!/usr/bin/texlua"; tail -n +2 scripts/context/lua/mtxrun.lua ) > $(instbase)/usr/bin/mtxrun
+	cp texmf/scripts/context/stubs/unix/* $(instbase)/usr/bin
 
 	#
 	# documentation
-	cp -a doc/context/* $(instbase)/usr/share/doc/$(package)
-	cp -a doc/fonts $(instbase)/usr/share/doc/$(package)
-	dh_installman debian/manpages/*.man
+	cp -a texmf/doc/context/* $(instbase)/usr/share/doc/$(package)
+	dh_installman man/*.1
+	# disabled
+	#dh_installman debian/manpages/*.man
 	dh_installdocs debian/changelog.Debian.prerelease	\
 			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree \
 			debian/README.MarkIV debian/Release_Notes
-
-	# We now have links for the font files, call dh_link
-	# we have to add metafun as we called dh_installtex without the
-	# option to create links
-	dh_link usr/bin/mpost usr/bin/metafun
 
 	# lintian override for script-not-executable
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)

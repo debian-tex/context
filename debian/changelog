@@ -1,10 +1,17 @@
-context (2010.07.30-2) unstable; urgency=low
+context (2011.05.18.20110617-1) unstable; urgency=low
 
+  [ Hilmar Preusse ]
   * NOT RELEASED
   * rebuild with new tex-common (Closes: #606040), tighten BD-Indep
     Do NOT upload before tex-common 2.10!!
 
- -- Hilmar Preusse <hille42@web.de>  Wed, 23 Mar 2011 16:39:31 +0100
+  [ Norbert Preining ]
+  * update to version which is/will be in TL2011
+  * drop most of the build adaptions
+  * drop maintainer code to upgrade from old-old versions converting
+    formats.cnf to the /etc/texmf/fmt.d
+
+ -- Norbert Preining <preining@debian.org>  Fri, 17 Jun 2011 18:15:47 +0900
 
 context (2010.07.30-1) experimental; urgency=low
 
