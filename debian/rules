@@ -41,6 +41,8 @@ binary-indep: build-indep
 	# scripts dealing
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
 	cp texmf-dist/scripts/context/stubs/unix/* $(instbase)/usr/bin
+	# install pdftrimwhite
+	(echo "#!/usr/bin/perl"; tail -n +3 texmf-dist/scripts/context/perl/pdftrimwhite.pl ) > $(instbase)/usr/bin/pdftrimwhite
 
 	#
 	# documentation

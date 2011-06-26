@@ -4,19 +4,22 @@ context (2011.05.18.20110626-1) unstable; urgency=low
   * rebuild with new tex-common (Closes: #606040), tighten BD-Indep
 
   [ Norbert Preining ]
-  * update to version which is/will be in TL2011
+  * update to version which is/will be in TL2011 
+    (Closes: #613416, #606656, #609600)
   * drop most of the build adaptions
   * drop maintainer code to upgrade from old-old versions converting
     formats.cnf to the /etc/texmf/fmt.d
   * add debian/README.source
+  * drop menu files (Closes: #593210)
   * update standards to 3.9.2 (date based version numbers)
   * update copyright file to mention the ConTeXt reference documentation
   * remove the GFDL in installed files, and mention it in copyright file
   * override lintian warning on extra license file in TeX code
   * ship texmfcnf.lua, but for now don't run mtxrun --generate
   * update README.MarkIV and TODO file
+  * install pdftrimwhite.pl into /usr/bin/pdftrimwhite (Closes: #594985)
 
- -- Norbert Preining <preining@debian.org>  Sun, 26 Jun 2011 13:03:37 +0900
+ -- Norbert Preining <preining@debian.org>  Sun, 26 Jun 2011 13:10:37 +0900
 
 context (2010.07.30-1) experimental; urgency=low
 
