@@ -25,7 +25,7 @@ binary-indep: build-indep
 	dh_installdirs usr/share/texmf usr/share/doc/$(package)	\
 		var/lib/texmf/web2c/pdftex	\
 		etc/texmf/tex/context/user
-	cp -a texmf/* $(instbase)/usr/share/texmf
+	cp -a texmf-doc/* $(instbase)/usr/share/texmf
 	# move user config file to /etc
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
@@ -37,12 +37,12 @@ binary-indep: build-indep
 	#
 	# scripts dealing
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
-	cp texmf/scripts/context/stubs/unix/* $(instbase)/usr/bin
+	cp texmf-dist/scripts/context/stubs/unix/* $(instbase)/usr/bin
 
 	#
 	# documentation
-	cp -a texmf/doc/context/* $(instbase)/usr/share/doc/$(package)
-	dh_installman man/*.1
+	cp -a texmf-dist/doc/context/* $(instbase)/usr/share/doc/$(package)
+	dh_installman texmf/doc/man/man1/*.1
 	# disabled
 	#dh_installman debian/manpages/*.man
 	dh_installdocs debian/changelog.Debian.prerelease	\
