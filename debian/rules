@@ -43,6 +43,8 @@ binary-indep: build-indep
 	# documentation
 	rm -r $(instbase)/usr/share/texmf/doc
 	cp -a texmf-dist/doc/context/* $(instbase)/usr/share/doc/$(package)
+	# remove GFDL license text, it is referenced in copyright
+	rm $(instbase)/usr/share/doc/context/manuals/reference/COPYING
 	# remove the doc under texmf
 	dh_installman texmf/doc/man/man1/*.1
 	# disabled
