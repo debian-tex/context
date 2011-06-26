@@ -22,7 +22,7 @@ binary-indep: build-indep
 	dh_testdir 
 	dh_testroot
 	dh_clean
-	dh_installdirs usr/share/texmf usr/share/doc/$(package)	\
+	dh_installdirs usr/share/texmf/web2c usr/share/doc/$(package)	\
 		var/lib/texmf/web2c/pdftex	\
 		etc/texmf/tex/context/user
 	cp -a texmf-dist/* $(instbase)/usr/share/texmf
@@ -30,6 +30,9 @@ binary-indep: build-indep
 	mv $(instbase)/usr/share/texmf/tex/context/user/cont-sys.rme	\
 		$(instbase)/etc/texmf/tex/context/user
 	rmdir $(instbase)/usr/share/texmf/tex/context/user
+
+	# install texmfcnf.lua file
+	cp debian/texmfcnf.lua $(instbase)/usr/share/texmf/web2c
 
 	dh_installtex --flavor=format:no_links
 	dh_installdirs usr/bin
