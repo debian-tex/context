@@ -1,17 +1,22 @@
 This package was debianized by Norbert Preining <preining@debian.org> on
 Sun Oct 22 11:53:51 CEST 2006.
 
-The original source was downloaded and merged, and repackaged from the
-following source files
+The original source was downloaded and merged from TeX Live 2011
+pretest archive (see http://www.tug.org/texlive/pretest.html)
+	http://<pretest-mirror>/archive/context.tar.xz
+	http://<pretest-mirror>/archive/context.doc.tar.xz
+Basis for these files are the distribution packages of ConTeXt as found
 	http://www.pragma-ade.com/context/current/cont-tmf.zip
 	http://www.pragma-ade.com/context/current/cont-fnt.zip
 	http://www.pragma-ade.com/context/current/cont-img.zip
 	http://www.pragma-ade.com/context/current/cont-ext.zip
+In addition these source files contains the documentation.
 
 Debian adaptations for this Package are licensed under the GNU General
 Public License, version 2, and are under Copyright by:
 
-	Norbert Preining <preining@debian.org> (2006, 2007)
+	Norbert Preining <preining@debian.org> 
+	(2006, 2007, 2008, 2009, 2010, 2011)
 
 All the files contained in the generated orig.tar.gz are licensed under
 the GNU General Public License, but the files of t-letterine, which 
@@ -63,6 +68,17 @@ including mreadme.tex/pdf file:
    licence, which is considered to be a bit more TeX friendly. 
    (BSD alike licences, the Ruby Licence and the Apache are all licences 
    that apply well for ConTeXt.)
+
+
+Furthermore, the files under texmf-dist/doc/context/manuals/reference
+are under GFDL:
+  Copyright (C) 1991--2008 Pragma ADE, Taco Hoekwater
+  Permission is granted to copy, distribute and/or modify this document
+  under the terms of the GNU Free Documentation License, Version 1.2
+  or any later version published by the Free Software Foundation;
+  with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+  A copy of the license is included in the section entitled `GNU
+  Free Documentation License'.
 
 
 On Debian systems the text of the GNU General Public License can be found
