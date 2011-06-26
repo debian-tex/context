@@ -1,42 +1,19 @@
-README.luatex
+README.MarkIV
 =============
-
-[ WARNING : That document is probably out of date, it should work anyway,
-[ WARNING : but easier setup methods should be available with modern ConTeXt.
-[ WARNING : If you wnat to contribute some improvents please send me any!
 
 Mark IV is the name of the LuaTeX-aware part of ConTeXt; that is, when you
 use ConTeXt over the LuaTeX engine instead of PDFTeX or XeTeX. You run it
-with texexec --lua.
+with 
+	context <filename>
 
-Currently the integration of Mark IV into Debian is not completely done,
-especially because the details are currently worked out (see the dev-context
-mailing list).
+Although currently the integration of Mark IV into Debian is not completely
+done, a simple call (as root!) of
+	mtxrun --generate
+(takes some time!) and then if users have their own files, also as user
+	mtxrun --generate
+should suffice.
 
-If you want to start using Mark IV the following the following few points
-should get you started:
-
-1) Right versions:
-    luatex >= 0.20.2
-    context >= 2007.12.20
-
-2) environment variables and luatex-cache
-   Mark IV ships its own implementation of file searching and doesn't
-   use the ls-R databases, but luatex-cache. You have to tell luatools
-   where to find texmf.cnf, and then generate the cache:
-   	export TEXMFCNF=/usr/share/texmf/web2c
-	luatools --generate --verbose
-   This will generate the luatex-cache in $HOME. If you want to put it
-   somewhere else set (and export) the TEXMFCACHE variable (like
-   export TEXMFCACHE=/tmp)
-
-3) Generate a Mark IV format
-   This is not integrated into the usual format building process, and 
-   probably will need some time to be worked out completely as the 
-   current fmtutil cannot cope with Mark IV formats. Call
-   	luatools --ini --compile cont-en
-
-4) Now you can try some simple document like (thanks to Arthur Reutenauer)
+Now you can try some simple document like (thanks to Arthur Reutenauer)
 	\starttext
 
 	\ctxlua{a = 1.5 ; b = 1.8 ; c = a*b ; tex.print(c) ;}
@@ -52,10 +29,8 @@ should get you started:
 	\ctxlua{tex.print("$\string\\sqrt{2} = " .. math.sqrt(2) .. "$")}
 
 	\stoptext
-  and run it with
-  	texexec --lua filename.tex
-
-
+and run it with
+  	context filename.tex
 
 More needs to be done, but we are happy to get feedback/ideas/suggestions
 on the integration, please contact
@@ -63,5 +38,5 @@ on the integration, please contact
 
 
 Norbert Preining
-2008-01-09
+2011-06-26
 

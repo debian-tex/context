@@ -9,5 +9,7 @@
   - document the behaviour in README.Debian
   - pre-generate xetex based format? But xetex is not necessarily installed!
 
-* check/test/play around with the MkIV luatex stuff that should us get rid 
-  of the tedious cache update problems.
+* MarkIV integration:
+  - mtxrun in postinst? But it takes quite some time
+  - on removal remove /var/lib/texmf/luatex-cache ?
+
