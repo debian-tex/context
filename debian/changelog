@@ -1,9 +1,10 @@
-context (2011.05.18.20110626-2) unstable; urgency=low
+context (2011.05.18.20110627-1) unstable; urgency=low
 
   * do not install koeieletters.map, it is shipped in the non-free part
     (Closes: #631790)
+  * include context-gnuplot, as it is part of ConTeXt
 
- -- Norbert Preining <preining@debian.org>  Mon, 27 Jun 2011 22:25:12 +0900
+ -- Norbert Preining <preining@debian.org>  Mon, 27 Jun 2011 23:33:27 +0900
 
 context (2011.05.18.20110626-1) unstable; urgency=low
 

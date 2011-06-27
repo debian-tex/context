@@ -5,6 +5,8 @@ The original source was downloaded and merged from TeX Live 2011
 pretest archive (see http://www.tug.org/texlive/pretest.html)
 	http://<pretest-mirror>/archive/context.tar.xz
 	http://<pretest-mirror>/archive/context.doc.tar.xz
+	http://<pretest-mirror>/archive/context-gnuplot.tar.xz
+	http://<pretest-mirror>/archive/context-gnuplot.doc.tar.xz
 Basis for these files are the distribution packages of ConTeXt as found
 	http://www.pragma-ade.com/context/current/cont-tmf.zip
 	http://www.pragma-ade.com/context/current/cont-fnt.zip

@@ -1,4 +1,5 @@
-* work around the problem that a dynamically generated context format 
+* (still needed???)
+  work around the problem that a dynamically generated context format 
   based on xetex does not work:
   	texexec --xtx foo.tex
 		-> calls mktexfmt cont-en
@@ -8,6 +9,8 @@
   Options:
   - document the behaviour in README.Debian
   - pre-generate xetex based format? But xetex is not necessarily installed!
+
+* install context modules from TeX Live, too
 
 * MarkIV integration:
   - mtxrun in postinst? But it takes quite some time

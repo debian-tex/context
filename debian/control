@@ -13,7 +13,7 @@ Package: context
 Section: tex
 Architecture: all
 Depends: ruby, texlive-binaries, texlive-base (>= 2009), texlive-metapost (>= 2009), lmodern (>= 2), tex-gyre, ${misc:Depends}, luatex (>= 0.45.0)
-Recommends: ttf-gfs-artemisia, ttf-gfs-baskerville, ttf-gfs-bodoni-classic, ttf-gfs-didot-classic, ttf-gfs-didot, ttf-gfs-olga, ttf-gfs-porson, ttf-gfs-gazis, ttf-gfs-neohellenic, ttf-gfs-solomos, ttf-gfs-theokritos, ttf-freefont, ttf-sil-gentium
+Recommends: ttf-gfs-artemisia, ttf-gfs-baskerville, ttf-gfs-bodoni-classic, ttf-gfs-didot-classic, ttf-gfs-didot, ttf-gfs-olga, ttf-gfs-porson, ttf-gfs-gazis, ttf-gfs-neohellenic, ttf-gfs-solomos, ttf-gfs-theokritos, ttf-freefont, ttf-sil-gentium, context-modules
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007), texlive-xetex (<< 2009)
 Replaces: texlive-context
