@@ -15,7 +15,7 @@ context (2011.05.18.20110627-1) unstable; urgency=low
 
 context (2011.05.18.20110626-1) unstable; urgency=low
 
-  [ Hilmar Preusse ]
+  [ Hilmar Preuße ]
   * rebuild with new tex-common (Closes: #606040), tighten BD-Indep
 
   [ Norbert Preining ]
