@@ -1,9 +1,9 @@
 context (2011.05.18.20110627-2) unstable; urgency=low
 
-  * UNRELEASED
   * use alternative to specify font package recommends (Closes: #640770)
+  * remove metafun format, it is not supported anymore in TL2012
 
- -- Norbert Preining <preining@debian.org>  Wed, 07 Sep 2011 15:22:14 +0900
+ -- Norbert Preining <preining@debian.org>  Mon, 05 Mar 2012 09:52:58 +0900
 
 context (2011.05.18.20110627-1) unstable; urgency=low
 

@@ -4,4 +4,3 @@
 cont-en	pdftex	cont-usr.tex	-8bit *cont-en.ini
 cont-en xetex   cont-usr.tex    -8bit *cont-en.ini
 mptopdf	pdftex	-		-translate-file=cp227.tcx mptopdf.tex
-metafun	mpost	-		metafun.mp
