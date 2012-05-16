@@ -1,10 +1,15 @@
 -- public domain
 
+-- ConTeXt needs a properly expanded TEXMFLOCAL, so here is a
+-- bit of lua code to make that happen
+
+local texmflocal = "/usr/local/share/texmf";
+
 return {
 
     type    = "configuration",
     version = "1.1.0",
-    date    = "2011-06-02", -- or so
+    date    = "2012-05-14", -- or so
     time    = "12:12:12",
     comment = "ConTeXt MkIV configuration file",
     author  = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
@@ -46,7 +51,7 @@ return {
             -- will be chosen but there can be more readable paths.
 
             TEXMFCACHE      = "$TEXMFSYSVAR;$TEXMFVAR",
-            TEXMFCONFIG     = "home:.texmf-config",
+            TEXMFCONFIG     = "home:texmf-config",
 
             -- I don't like this texmf under home and texmf-home would make more
             -- sense. One never knows what installers put under texmf anywhere and
@@ -58,20 +63,22 @@ return {
 
             -- TEXMFOS         = "selfautodir:",
             -- TEXMFSYSTEM     = "selfautoparent:$SELFAUTOSYSTEM",
-            TEXMFMAIN       = "/usr/share/texmf-texlive",
+            TEXMFMAIN       = "/usr/share/texlive/texmf",
+	    TEXMFDIST       = "/usr/share/texlive/texmf-dist",
             TEXMFCONTEXT    = "/usr/share/texmf",
 
-            TEXMFLOCAL      = "/usr/local/share/texmf",
+            TEXMFLOCAL      = /usr/local/share/texmf",
             TEXMFSYSCONFIG  = "/etc/texmf",
             -- TEXMFFONTS      = "selfautoparent:texmf-fonts",
             -- TEXMFPROJECT    = "selfautoparent:texmf-project",
 
             TEXMFHOME       = "home:texmf",
+         -- TEXMFHOME       = os.name == "macosx" and "home:Library/texmf" or "home:texmf",
 
             -- We need texmfos for a few rare files but as I have a few more bin trees
             -- a hack is needed. Maybe other users also have texmf-platform-new trees.
 
-            TEXMF           = "{$TEXMFCONFIG,$TEXMFHOME,!!$TEXMFSYSCONFIG,!!$TEXMFLOCAL,!!$TEXMFCONTEXT,!!$TEXMFMAIN}",
+            TEXMF           = "{$TEXMFCONFIG,$TEXMFVAR,$TEXMFHOME,$TEXMFSYSCONFIG,!!$TEXMFSYSVAR,!!$TEXMFLOCAL,!!$TEXMFCONTEXT,!!$TEXMFMAIN,!!$TEXMFDIST}",
 
             TEXFONTMAPS     = ".;$TEXMF/fonts/data//;$TEXMF/fonts/map/{pdftex,dvips}//",
             ENCFONTS        = ".;$TEXMF/fonts/data//;$TEXMF/fonts/enc/{dvips,pdftex}//",

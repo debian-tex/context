@@ -1,12 +1,9 @@
 This package was debianized by Norbert Preining <preining@debian.org> on
 Sun Oct 22 11:53:51 CEST 2006.
 
-The original source was downloaded and merged from TeX Live 2011
+The original source was downloaded and merged from TeX Live 2012
 pretest archive (see http://www.tug.org/texlive/pretest.html)
-	http://<pretest-mirror>/archive/context.tar.xz
-	http://<pretest-mirror>/archive/context.doc.tar.xz
-	http://<pretest-mirror>/archive/context-gnuplot.tar.xz
-	http://<pretest-mirror>/archive/context-gnuplot.doc.tar.xz
+	http://<pretest-mirror>/archive/context*.tar.xz
 Basis for these files are the distribution packages of ConTeXt as found
 	http://www.pragma-ade.com/context/current/cont-tmf.zip
 	http://www.pragma-ade.com/context/current/cont-fnt.zip
@@ -18,7 +15,7 @@ Debian adaptations for this Package are licensed under the GNU General
 Public License, version 2, and are under Copyright by:
 
 	Norbert Preining <preining@debian.org> 
-	(2006, 2007, 2008, 2009, 2010, 2011)
+	(2006, 2007, 2008, 2009, 2010, 2011, 2012)
 
 All the files contained in the generated orig.tar.gz are licensed under
 the GNU General Public License, but the files of t-letterine, which 

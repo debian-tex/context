@@ -42,10 +42,14 @@ binary-indep: build-indep
 
 	#
 	# scripts dealing
+	cp bin/i386-linux/* $(instbase)/usr/bin
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
-	cp texmf-dist/scripts/context/stubs/unix/* $(instbase)/usr/bin
-	# install pdftrimwhite
-	(echo "#!/usr/bin/perl"; tail -n +3 texmf-dist/scripts/context/perl/pdftrimwhite.pl ) > $(instbase)/usr/bin/pdftrimwhite
+	#
+	##cp texmf-dist/scripts/context/stubs/unix/* $(instbase)/usr/bin
+	(echo "#!/bin/sh"; echo "mtxrun --script pdftrimwhite \"$@\"" ) > $(instbase)/usr/bin/pdftrimwhite
+	(echo "#!/bin/sh"; echo "mtxrun --script texfind \"$@\"" ) > $(instbase)/usr/bin/texfind
+	(echo "#!/bin/sh"; echo "mtxrun --script texfont \"$@\"" ) > $(instbase)/usr/bin/texfont
+	####(echo "#!/usr/bin/perl"; tail -n +3 texmf-dist/scripts/context/perl/pdftrimwhite.pl ) > $(instbase)/usr/bin/pdftrimwhite
 
 	#
 	# documentation
@@ -56,7 +60,6 @@ binary-indep: build-indep
 	# remove the doc under texmf
 	dh_installman texmf/doc/man/man1/*.1
 	# disabled
-	#dh_installman debian/manpages/*.man
 	dh_installdocs debian/changelog.Debian.prerelease	\
 			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree \
 			debian/README.MarkIV debian/Release_Notes

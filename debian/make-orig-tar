@@ -1,0 +1,34 @@
+
+included_modules="account algorithmic bnf chromato construction-plan degrade filter fixme french fullpage games gantt gnuplot letter lettrine lilypond mathsets notes-zh-cn rst ruby simplefonts simpleslides typearea typescripts vim"
+
+tlnet=/var/www/norbert/tlpretest
+
+verstr=`date +%Y%m%d`
+pkg="context-$verstr"
+
+if [ -r $pkg ] ; then
+  echo "already here: $pkg"
+  exit 1
+fi
+
+unpackone() {
+  what=$1
+  for i in "" .doc .source .i386-linux ; do
+    fn="$tlnet/archive/$what${i}.tar.xz"
+    if [ -r "$fn" ] ; then
+      echo "unpacking $fn"
+      tar -xf "$fn"
+    fi
+  done
+}
+
+mkdir $pkg
+cd $pkg
+unpackone context
+cd texmf-dist
+for p in $included_modules ; do
+  unpackone context-$p
+done
+unpackone lmextra
+cd ../..
+

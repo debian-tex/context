@@ -1,3 +1,10 @@
+context (2012.05.14.20120516-1~1) unstable; urgency=low
+
+  * sync from TeX Live 2012 tlpretest 20120516
+  * bump standards version to 3.9.3, no changes necessary
+
+ -- Norbert Preining <preining@debian.org>  Wed, 16 May 2012 15:29:17 +0900
+
 context (2011.05.18.20110627-2) unstable; urgency=low
 
   * use alternative to specify font package recommends (Closes: #640770)
