@@ -1,9 +1,9 @@
-context (2012.05.14.20120516-1~1) unstable; urgency=low
+context (2012.05.14.20120522-1) unstable; urgency=low
 
-  * sync from TeX Live 2012 tlpretest 20120516
+  * sync from TeX Live 2012 tlpretest 20120522
   * bump standards version to 3.9.3, no changes necessary
 
- -- Norbert Preining <preining@debian.org>  Wed, 16 May 2012 15:29:17 +0900
+ -- Norbert Preining <preining@debian.org>  Tue, 22 May 2012 09:27:32 +0900
 
 context (2011.05.18.20110627-2) unstable; urgency=low
 
