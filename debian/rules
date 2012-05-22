@@ -8,6 +8,7 @@ instbase       := debian/$(package)
 build: build-indep
 
 build-indep: build-indep-stamp
+build-arch: build-indep-stamp
 
 build-indep-stamp: $(QUILT_STAMPFN)
 	touch build-indep-stamp

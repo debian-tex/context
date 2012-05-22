@@ -2,8 +2,9 @@ context (2012.05.14.20120522-1) unstable; urgency=low
 
   * sync from TeX Live 2012 tlpretest 20120522
   * bump standards version to 3.9.3, no changes necessary
+  * add build-arch rules target, make lintian happier
 
- -- Norbert Preining <preining@debian.org>  Tue, 22 May 2012 09:27:32 +0900
+ -- Norbert Preining <preining@debian.org>  Tue, 22 May 2012 10:07:24 +0900
 
 context (2011.05.18.20110627-2) unstable; urgency=low
 

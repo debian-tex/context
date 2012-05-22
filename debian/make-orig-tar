@@ -27,5 +27,6 @@ cd $pkg
 unpackone context
 cd texmf-dist
 unpackone lmextra
+unpackone context-gnuplot
 cd ../..
 
