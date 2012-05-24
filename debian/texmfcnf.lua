@@ -51,7 +51,7 @@ return {
             -- will be chosen but there can be more readable paths.
 
             TEXMFCACHE      = "$TEXMFSYSVAR;$TEXMFVAR",
-            TEXMFCONFIG     = "home:texmf-config",
+            TEXMFCONFIG     = "home:.texmf-config",
 
             -- I don't like this texmf under home and texmf-home would make more
             -- sense. One never knows what installers put under texmf anywhere and

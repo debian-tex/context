@@ -1,10 +1,11 @@
-context (2012.05.14.20120522-1) unstable; urgency=low
+context (2012.05.23.20120524-1) unstable; urgency=low
 
-  * sync from TeX Live 2012 tlpretest 20120522
+  * sync from TeX Live 2012 tlpretest 20120524
   * bump standards version to 3.9.3, no changes necessary
   * add build-arch rules target, make lintian happier
+  * add dep on new luatex which exports TEXMFCNF
 
- -- Norbert Preining <preining@debian.org>  Tue, 22 May 2012 10:07:24 +0900
+ -- Norbert Preining <preining@debian.org>  Thu, 24 May 2012 09:27:43 +0900
 
 context (2011.05.18.20110627-2) unstable; urgency=low
 
