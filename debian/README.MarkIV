@@ -6,12 +6,10 @@ use ConTeXt over the LuaTeX engine instead of PDFTeX or XeTeX. You run it
 with 
 	context <filename>
 
-Although currently the integration of Mark IV into Debian is not completely
-done, a simple call (as root!) of
+Current tex-common will try to call mtxrun when necessary. Users should
+not have the need to run anything, but a call as user of
 	mtxrun --generate
-(takes some time!) and then if users have their own files, also as user
-	mtxrun --generate
-should suffice.
+might help in certain cases.
 
 Now you can try some simple document like (thanks to Arthur Reutenauer)
 	\starttext
@@ -38,5 +36,5 @@ on the integration, please contact
 
 
 Norbert Preining
-2011-06-26
+2012-05-24
 
