@@ -3,8 +3,6 @@
 -- ConTeXt needs a properly expanded TEXMFLOCAL, so here is a
 -- bit of lua code to make that happen
 
-local texmflocal = "/usr/local/share/texmf";
-
 return {
 
     type    = "configuration",
@@ -67,7 +65,7 @@ return {
 	    TEXMFDIST       = "/usr/share/texlive/texmf-dist",
             TEXMFCONTEXT    = "/usr/share/texmf",
 
-            TEXMFLOCAL      = /usr/local/share/texmf",
+            TEXMFLOCAL      = "/usr/local/share/texmf",
             TEXMFSYSCONFIG  = "/etc/texmf",
             -- TEXMFFONTS      = "selfautoparent:texmf-fonts",
             -- TEXMFPROJECT    = "selfautoparent:texmf-project",
