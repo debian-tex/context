@@ -1,7 +1,5 @@
 #! /usr/bin/make -f
 
-include /usr/share/quilt/quilt.make
-
 package        := context
 instbase       := debian/$(package)
 
@@ -10,10 +8,10 @@ build: build-indep
 build-indep: build-indep-stamp
 build-arch: build-indep-stamp
 
-build-indep-stamp: $(QUILT_STAMPFN)
+build-indep-stamp:
 	touch build-indep-stamp
 
-clean: unpatch
+clean:
 	dh_testroot
 	rm -f build-indep-stamp
 	# rm -rf bibtex context doc fonts metapost scripts tex tpm web2c

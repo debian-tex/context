@@ -1,5 +1,100 @@
 Release Notes
 
+see http://wiki.contextgarden.net/Release_Notes
+
+Context 2011.05.18
+
+The split between mkii and mkiv is now complete, the two versions no longer share any code. This is nice, but it also makes creating release notes a bit of a pointless exercise because numerous files have been renamed and code has been reshuffled.
+
+Instead of going into details we just mention a couple of changes that were most noticeable in the diffs:
+
+    ConTeXt now assumes luatex version 0.70.1.
+    new mplib extension code (no longer a dual model using special colors and scripts)
+    bitmap inclusion in MP code
+    scalable colors in MP code as well as colors applied to textext() pictures
+    image masks in MP code and \externalfigure
+    spotcolor shading
+    better integrated logging in lua, selective enable/disable, coupled to interface languages
+    cleaned up resolver code, removal of some arcane web2c issues, a move towards URL-based file access
+    pdf backend code cleaned up and moved to mkvi
+    widgets cleaned up and rewritten (fields, attachments, comment, etc.)
+    improved color profile support (plus PDF/X)
+    intermediate colors (also needed for tikz)
+    messages etc. are now defined in lua
+    patterns are now stored in lua files
+    relocatable tex tree (+cache)
+    all kind of optimizations and cleanup of lua code
+    more extensive cld support, cleanup of support modules (side effect of documentation)
+    more efficient access to data tables
+    cleanup of lpath (XML) parser code
+    more efficient OTF data management (caching as well as in memory)
+    better split between generic and context font code (so that we can more easily add features without interference with other macro packages)
+    first version of epdf support
+    new verbatim pretty print model plus cleanup of verbatim (lua) code, including nested parsers
+    new catcode policy for ^, &, _ etc
+    support for remapping of fonts (especially non-standard fonts like dingbats)
+    more math and character definitions moved from tex files to lua
+    cleaned up conversion code
+    split between functions used at the lua end and derived ones used at the tex end (commands namespace)
+    more extensive sorting methods using chained character properties (like shape, decomposition, script specifics)
+    more access to status information in lua (modes, constants, conditionals etc)
+    extended virtual font support
+    more font goodies
+    arabic paragraph optimizer (pending public version of Idris' Husayni font)
+    labeltexts partially managed at the lua end (data tables)
+    support for mkvi encoded files
+    rewritten rule and color support in tabulate and table
+    some cleanup of arrange related code
+    cleaned up properties code
+    additions to tagged PDF, improvements to XML export, experimental XHTML (+CSS) export, prelude to ePub support
+    better support for the korean language
+    improved automatic generation of random thesis code including cross references, citations and bibliographic references (for Mojca)
+    more control over bookmarks
+    rewritten mark (header, footer etc. related) code
+    extended (but still experimental) rewrite of grid snapping
+    extensions and clean-up of notes (more to follow)
+    stripped down TaBle, removal of non-context features and replacement by more context friendly variants
+    upgraded typescripts (to new font releases)
+    automatic (base/node) mode detection of OpenType fonts 
+
+For sure we forgot things.
+
+
+Context 2010.07.30
+
+New MkIV features:
+
+    Tagged pdf generation.
+    Experimental support for keeping links in included pdfs \externalfigure[file.pdf][page=1,interaction=yes]
+    Hyphenation support is now processed with the help of lang-xx.lua files
+    texmfcnf.lua (see the example contextcnf.lua) now completely replaces texmf.cnf (and has an internal structure)
+    mtxrun has taken over the role of luatools (which is now a stub for mtxrun --script base and will eventually go away)
+    TEXMFCACHE can now consist of multiple paths (one writable followed by any number of read-only paths)
+    Support for the biolinum, stix, and xits fonts added, as well updated typescripts for iwona. 
+
+Context 2010.05.24
+
+This current fixes a small number of bugs in 2010.05.21, just in time for TeX Live 2010.
+
+It also adds support for the latest version of antykwa-poltawskiego.
+
+
+Context 2010.05.21
+
+This current fixes a number of bugs in 2010.05.08.
+
+
+Context 2010.05.08
+
+    Many of the stubs for the ruby tools have gone away. If you want one of the old command names back, just create a link from mtxrun to the required name, e.g. copy mtxrun.exe to mptopdf.exe on windows. Eventually all perl and ruby scripts will be gone. Most functionality is already provided by lua variants.
+    The hyphenation patterns for German, German (old), Hungarian and Spanish have been updated from the tex-hyphen project.
+    New versions of the ancientgreek, letter, and simplefont modules are included.
+    New modules: barcodes (mkiv only) and punk
+    Support for shockwave flash has been updated (mkiv only). The backend code has been rewritten and currently only pdf is supported.
+    The split between mkii and mkiv is getting more complete. Only a few mkii bug fixes have taken place.
+    Typescripts are now split completely and no definitions are shared; loading of a mkio/mkiv file takes precedence over a tex file. 
+
+
 Context 2009.11.26
 
      * The context command now supports --autopdf

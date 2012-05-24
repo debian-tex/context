@@ -3,7 +3,7 @@ Section: tex
 Priority: optional
 Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <preining@debian.org>
-Build-Depends: debhelper (>= 5.0.35), quilt
+Build-Depends: debhelper (>= 7.0.50~)
 Build-Depends-Indep: tex-common (>= 2.10)
 Standards-Version: 3.9.3
 Vcs-Svn: svn://svn.debian.org/svn/debian-tex/context/trunk
@@ -12,7 +12,7 @@ Vcs-Browser: http://svn.debian.org/wsvn/debian-tex/context/trunk/
 Package: context
 Section: tex
 Architecture: all
-Depends: ruby, texlive-binaries, texlive-base (>= 2009), texlive-metapost (>= 2009), lmodern (>= 2), tex-gyre, ${misc:Depends}, luatex (>= 0.70.1.20120524)
+Depends: ruby, texlive-binaries, texlive-base (>= 2011), texlive-metapost (>= 2009), lmodern (>= 2), tex-gyre, ${misc:Depends}, luatex (>= 0.70.1.20120524)
 Recommends: fonts-gfs-artemisia | ttf-gfs-artemisia, fonts-gfs-baskerville | ttf-gfs-baskerville, fonts-gfs-bodoni-classic | ttf-gfs-bodoni-classic, fonts-gfs-didot-classic | ttf-gfs-didot-classic, fonts-gfs-didot | ttf-gfs-didot, fonts-gfs-olga | ttf-gfs-olga, fonts-gfs-porson | ttf-gfs-porson, fonts-gfs-gazis | ttf-gfs-gazis, fonts-gfs-neohellenic | ttf-gfs-neohellenic, fonts-gfs-solomos | ttf-gfs-solomos, fonts-gfs-theokritos | ttf-gfs-theokritos, fonts-freefont | ttf-freefont, fonts-sil-gentium | ttf-sil-gentium, context-modules
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007), texlive-xetex (<< 2009)
