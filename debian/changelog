@@ -1,3 +1,10 @@
+context (2012.05.30.20120610-1) unstable; urgency=low
+
+  * new upstream release 2012.05.30
+  * (hopefully) statue of context as of TeX Live 2012 release
+
+ -- Norbert Preining <preining@debian.org>  Sun, 10 Jun 2012 00:03:57 +0900
+
 context (2012.05.29.20120529-1) unstable; urgency=low
 
   * new upstream release 2012.05.29
