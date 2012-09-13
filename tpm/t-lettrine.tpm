@@ -1,0 +1,32 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-lettrine.zip">
+    <TPM:Name>t-lettrine</TPM:Name>
+    <TPM:Type>Package</TPM:Type>
+    <TPM:Date>2006/04/04 00:00:00</TPM:Date>
+    <TPM:Version>2006.04.04</TPM:Version>
+    <TPM:Creator>taco</TPM:Creator>
+    <TPM:Title>ConTeXt Lettrines</TPM:Title>
+    <TPM:Description>
+	t-lettrine is a port from LaTeX's lettrine.sty
+    </TPM:Description>
+    <TPM:Author>Taco Hoekwater</TPM:Author>
+    <TPM:Size>130543</TPM:Size>
+    <TPM:Build/>
+    <TPM:RunFiles size="8681">
+tex/context/third/lettrine/t-lettrine.tex
+tex/context/interface/third/lettrine.xml
+tpm/t-lettrine.tpm
+    </TPM:RunFiles>
+    <TPM:DocFiles size="121862">
+doc/context/third/lettrine/lettrine-doc.pdf
+doc/context/third/lettrine/lettrine-doc.tex
+doc/context/third/lettrine/W.pdf
+    </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>Package/t-lettrine</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>
+

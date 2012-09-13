@@ -1,0 +1,261 @@
+%%% Custom agr (Ancient Greek) Encoding for font Porson. Created by script
+%%% agrencoding.pl on Mon Jun  5 12:29:13 2006.
+%
+/agr-Porson-encoding [
+/.notdef	%0	
+/sigmalunate %	0x03F2	%1	
+/endash %	0x2013	%2	
+/emdash %	0x2014	%3	
+/quoteright %	0x2019	%4	
+/betaAlt %	0x03D0	%5	
+/.notdef	%6	
+/.notdef	%7	
+/.notdef %	0x007B	%8	
+/.notdef %	0x007D	%9	
+/breve %	0x02D8	%10	
+/.notdef %	0x27E6	%11	
+/.notdef %	0x27E7	%12	
+/SigmaLunateUC %	0x03F9	%13	
+/IotaDieresisUC %	0x03AA	%14	
+/UpsilonDieresisUC %	0x03AB	%15	
+/alphaMacron	%16	
+/.notdef	%17	
+/.notdef %	0x1F7E	%18	
+/.notdef %	0x1F7F	%19	
+/epsilonCircumflexDasia %	0x1F17	%20	
+/omicronCircumflexDasia %	0x1F47	%21	
+/epsilonCircumflexPsili %	0x1F16	%22	
+/omicronCircumflexPsili %	0x1F46	%23	
+/iotaDieresisCircumflex %	0x1FD7	%24	
+/upsilonDieresisCircumflex %	0x1FE7	%25	
+/DieresisCircumflex %	0x1FC1	%26	
+/iotaMacron	%27	
+/.notdef	%28	
+/upsilonMacron	%29	
+/.notdef	%30	
+/.notdef	%31	
+/space	%32	
+/period %	0x0323	%33	
+/sampiAlt %	0x03E1	%34	
+/digammaAlt %	0x03DD	%35	
+/stigma %	0x03DB	%36	
+/koppaRound %	0x03D9	%37	
+/KoppaZigzag %	0x03DE	%38	
+/greater %	0x203A	%39	
+/parenleft	%40	
+/parenright	%41	
+/asterisk	%42	
+/textdag %	0x2020	%43	
+/comma	%44	
+/hyphen	%45	
+/period	%46	
+/AcuteGreek %	0x1FFD	%47	
+/zero  %	0x0030	%48	
+/one  %	0x0031	%49	
+/two  %	0x0032	%50	
+/three  %	0x0033	%51	
+/four  %	0x0034	%52	
+/five  %	0x0035	%53	
+/six  %	0x0036	%54	
+/seven  %	0x0037	%55	
+/eight  %	0x0038	%56	
+/nine  %	0x0039	%57	
+/question  %	0x003F	%58	
+/Anoteleia  %	0x0387	%59	
+/Dasia %	0x1FFE	%60	
+/equal %	0x003D	%61	
+/Psili %	0x1FBF	%62	
+/QuestionMarkGreek %	0x003B	%63	
+/dieresis %	0x00A8	%64	
+/AlphaUC %	0x0391	%65	
+/BetaUC %	0x0392	%66	
+/omegaIotaSubscript %	0x1FF3	%67	
+/DeltaUC %	0x0394	%68	
+/EpsilonUC %	0x0395	%69	
+/PhiUC %	0x03A6	%70	
+/GammaUC %	0x0393	%71	
+/EtaUC %	0x0397	%72	
+/IotaUC %	0x0399	%73	
+/ThetaUC %	0x0398	%74	
+/KappaUC %	0x039A	%75	
+/LamdaUC %	0x039B	%76	
+/MuUC %	0x039C	%77	
+/NuUC %	0x039D	%78	
+/OmicronUC %	0x039F	%79	
+/PiUC %	0x03A0	%80	
+/ChiUC %	0x03A7	%81	
+/RhoUC %	0x03A1	%82	
+/SigmaUC %	0x03A3	%83	
+/TauUC %	0x03A4	%84	
+/UpsilonUC %	0x03A5	%85	
+/etaIotaSubscript %	0x1FC3	%86	
+/OmegaUC %	0x03A9	%87	
+/XiUC %	0x039E	%88	
+/PsiUC %	0x03A8	%89	
+/ZetaUC %	0x0396	%90	
+/bracketleft %	0x005B	%91	
+/GraveGreek %	0x1FEF	%92	
+/bracketright %	0x005D	%93	
+/CircumflexGreek %	0x1FC0	%94	
+/.notdef	%95	
+/less %	0x2039	%96	
+/alpha %	0x03B1	%97	
+/beta %	0x03B2	%98	
+/finalSigma %	0x03C2	%99	
+/delta %	0x03B4	%100	
+/epsilon %	0x03B5	%101	
+/phiAlt %	0x03C6	%102	
+/gamma %	0x03B3	%103	
+/eta %	0x03B7	%104	
+/iota %	0x03B9	%105	
+/theta %	0x03B8	%106	
+/kappa %	0x03BA	%107	
+/lamda %	0x03BB	%108	
+/mu %	0x03BC	%109	
+/nu %	0x03BD	%110	
+/omicron %	0x03BF	%111	
+/pi %	0x03C0	%112	
+/chi %	0x03C7	%113	
+/rho %	0x03C1	%114	
+/sigma %	0x03C3	%115	
+/tau %	0x03C4	%116	
+/upsilon %	0x03C5	%117	
+/alphaIotaSubscript %	0x1FB3	%118	
+/omega %	0x03C9	%119	
+/xi %	0x03BE	%120	
+/psi %	0x03C8	%121	
+/zeta %	0x03B6	%122	
+/.notdef %	0xF1D4	%123	
+/IotaSubscriptAlt1 %	0x007C	%124	
+/.notdef %	0xF1D5	%125	
+/CircumflexGreek %	0x1FC0	%126	
+/.notdef	%127	
+/Koronis %	0x201C	%128	
+/quoteright %	0x201D	%129	
+/exclam %	0x0021	%130	
+/iotaDasia %	0x1F31	%131	
+/iotaPsili %	0x1F30	%132	
+/iotaAcute %	0x1F77	%133	
+/iotaDasiaAcute %	0x1F35	%134	
+/iotaPsiliAcute %	0x1F34	%135	
+/iotaGrave %	0x1F76	%136	
+/iotaDasiaGrave %	0x1F33	%137	
+/iotaPsiliGrave %	0x1F32	%138	
+/iotaCircumflex %	0x1FD6	%139	
+/iotaDasiaCircumflex %	0x1F37	%140	
+/iotaPsiliCircumflex %	0x1F36	%141	
+/iotaDieresis %	0x03CA	%142	
+/iotaDieresisAcute %	0x1FD3	%143	
+/iotaDieresisGrave %	0x1FD2	%144	
+/DasiaCircumflex %	0x1FDF	%145	
+/PsiliCircumflex %	0x1FCF	%146	
+/DasiaAcute %	0x1FDE	%147	
+/PsiliAcute %	0x1FCE	%148	
+/DasiaGrave %	0x1FDD	%149	
+/PsiliGrave %	0x1FCD	%150	
+/DieresisAcute %	0x1FEE	%151	
+/epsilonDasia %	0x1F11	%152	
+/epsilonPsili %	0x1F10	%153	
+/epsilonAcute %	0x1F73	%154	
+/epsilonDasiaAcute %	0x1F15	%155	
+/epsilonPsiliAcute %	0x1F14	%156	
+/epsilonGrave %	0x1F72	%157	
+/epsilonDasiaGrave %	0x1F13	%158	
+/epsilonPsiliGrave %	0x1F12	%159	
+/DieresisGrave %	0x1FED	%160	
+/alphaDasia %	0x1F01	%161	
+/alphaPsili %	0x1F00	%162	
+/alphaAcute %	0x1F71	%163	
+/alphaDasiaAcute %	0x1F05	%164	
+/alphaPsiliAcute %	0x1F04	%165	
+/alphaGrave %	0x1F70	%166	
+/alphaDasiaGrave %	0x1F03	%167	
+/alphaPsiliGrave %	0x1F02	%168	
+/alphaCircumflex %	0x1FB6	%169	
+/alphaDasiaCircumflex %	0x1F07	%170	
+/alphaPsiliCircumflex %	0x1F06	%171	
+/alphaDasiaIotaSubscript %	0x1F81	%172	
+/alphaPsiliIotaSubscript %	0x1F80	%173	
+/alphaAcuteIotaSubscript %	0x1FB4	%174	
+/alphaDasiaAcuteIotaSubscript %	0x1F85	%175	
+/alphaPsiliAcuteIotaSubscript %	0x1F84	%176	
+/alphaGraveIotaSubscript %	0x1FB2	%177	
+/alphaDasiaGraveIotaSubscript %	0x1F83	%178	
+/alphaPsiliGraveIotaSubscript %	0x1F82	%179	
+/alphaCircumflexIotaSubscript %	0x1FB7	%180	
+/alphaDasiaCircumflexIotaSubscript %	0x1F87	%181	
+/alphaPsiliCircumflexIotaSubscript %	0x1F86	%182	
+/rhoDasia %	0x1FE5	%183	
+/rhoPsili %	0x1FE4	%184	
+/etaDasia %	0x1F21	%185	
+/etaPsili %	0x1F20	%186	
+/etaAcute %	0x1F75	%187	
+/etaDasiaAcute %	0x1F25	%188	
+/etaPsiliAcute %	0x1F24	%189	
+/etaGrave %	0x1F74	%190	
+/etaDasiaGrave %	0x1F23	%191	
+/etaPsiliGrave %	0x1F22	%192	
+/etaCircumflex %	0x1FC6	%193	
+/etaDasiaCircumflex %	0x1F27	%194	
+/etaPsiliCircumflex %	0x1F26	%195	
+/slash %	0x002F	%196	
+/etaDasiaIotaSubscript %	0x1F91	%197	
+/etaPsiliIotaSubscript %	0x1F90	%198	
+/etaAcuteIotaSubscript %	0x1FC4	%199	
+/etaDasiaAcuteIotaSubscript %	0x1F95	%200	
+/etaPsiliAcuteIotaSubscript %	0x1F94	%201	
+/etaGraveIotaSubscript %	0x1FC2	%202	
+/etaDasiaGraveIotaSubscript %	0x1F93	%203	
+/etaPsiliGraveIotaSubscript %	0x1F92	%204	
+/etaCircumflexIotaSubscript %	0x1FC7	%205	
+/etaDasiaCircumflexIotaSubscript %	0x1F97	%206	
+/etaPsiliCircumflexIotaSubscript %	0x1F96	%207	
+/omicronDasia %	0x1F41	%208	
+/omicronPsili %	0x1F40	%209	
+/omicronAcute %	0x1F79	%210	
+/omicronDasiaAcute %	0x1F45	%211	
+/omicronPsiliAcute %	0x1F44	%212	
+/omicronGrave %	0x1F78	%213	
+/omicronDasiaGrave %	0x1F43	%214	
+/omicronPsiliGrave %	0x1F42	%215	
+/upsilonDasia %	0x1F51	%216	
+/upsilonPsili %	0x1F50	%217	
+/upsilonAcute %	0x1F7B	%218	
+/upsilonDasiaAcute %	0x1F55	%219	
+/upsilonPsiliAcute %	0x1F54	%220	
+/upsilonGrave %	0x1F7A	%221	
+/upsilonDasiaGrave %	0x1F53	%222	
+/upsilonPsiliGrave %	0x1F52	%223	
+/upsilonCircumflex %	0x1FE6	%224	
+/upsilonDasiaCircumflex %	0x1F57	%225	
+/upsilonPsiliCircumflex %	0x1F56	%226	
+/upsilonDieresis %	0x03CB	%227	
+/upsilonDieresisAcute %	0x1FE3	%228	
+/upsilonDieresisGrave %	0x1FE2	%229	
+/omegaDasia %	0x1F61	%230	
+/omegaPsili %	0x1F60	%231	
+/omegaAcute %	0x1F7D	%232	
+/omegaDasiaAcute %	0x1F65	%233	
+/omegaPsiliAcute %	0x1F64	%234	
+/omegaGrave %	0x1F7C	%235	
+/omegaDasiaGrave %	0x1F63	%236	
+/omegaPsiliGrave %	0x1F62	%237	
+/omegaCircumflex %	0x1FF6	%238	
+/omegaDasiaCircumflex %	0x1F67	%239	
+/omegaPsiliCircumflex %	0x1F66	%240	
+/omegaDasiaIotaSubscript %	0x1FA1	%241	
+/omegaPsiliIotaSubscript %	0x1FA0	%242	
+/omegaAcuteIotaSubscript %	0x1FF4	%243	
+/omegaDasiaAcuteIotaSubscript %	0x1FA5	%244	
+/omegaPsiliAcuteIotaSubscript %	0x1FA4	%245	
+/omegaGraveIotaSubscript %	0x1FF2	%246	
+/omegaDasiaGraveIotaSubscript %	0x1FA3	%247	
+/omegaPsiliGraveIotaSubscript %	0x1FA2	%248	
+/omegaCircumflexIotaSubscript %	0x1FF7	%249	
+/omegaDasiaCircumflexIotaSubscript %	0x1FA7	%250	
+/omegaPsiliCircumflexIotaSubscript %	0x1FA6	%251	
+/.notdef	%252	
+/.notdef	%253	
+/u0374 %	0x0374	%254	
+/u0375 %	0x0375	%255	
+] def 

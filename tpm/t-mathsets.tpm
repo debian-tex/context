@@ -1,0 +1,31 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-vim">
+    <TPM:Name>t-mathsets</TPM:Name>
+    <TPM:Type>Module</TPM:Type>
+    <TPM:Date>2007-02-25 00:00:00</TPM:Date>
+    <TPM:Version>2007-02-25</TPM:Version>
+    <TPM:Creator>Aditya Mahajan</TPM:Creator>
+    <TPM:Title>ConTeXt Math Sets</TPM:Title>
+    <TPM:Description>
+      A partial port of braket.sty to ConTeXt
+    </TPM:Description>
+    <TPM:Author>Aditya Mahaja</TPM:Author>
+    <TPM:Size>428395</TPM:Size>
+    <TPM:Build/>
+     <TPM:RunFiles size="13239">
+       tex/context/third/mathsets/t-mathsets.tex
+       tex/context/interface/third/t-mathsets.xml
+     </TPM:RunFiles>
+     <TPM:DocFiles size="415156">
+       doc/context/third/mathsets/mathsets-doc.pdf
+       doc/context/third/mathsets/README
+       tpm/t-mathsets.tpm
+     </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>t-mathsets</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>
+

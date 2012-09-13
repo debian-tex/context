@@ -1,0 +1,306 @@
+%
+% Typescript for Greek fonts
+%
+\installfontfeature[otf][gent]
+\installfontfeature[otf][grbl]
+\installfontfeature[otf][luna]
+\installfontfeature[otf][oxon]
+\installfontfeature[otf][olun]
+\installfontfeature[otf][ibyc]
+\installfontfeature[otf][kori]
+
+\definefontfeature
+  [oxoniensislun]
+  [mode=node,language=dflt,script=latn,kern=yes,tlig=no,trep=no,olun=yes,featurefile=oxoniensis.fea]
+  
+\definefontfeature
+  [oxoniensis]
+  [mode=node,language=dflt,script=latn,kern=yes,tlig=no,trep=no,oxon=yes,featurefile=oxoniensis.fea]
+  
+\definefontfeature
+  [korinthia]
+  [mode=node,language=dflt,script=latn,kern=yes,tlig=no,trep=no,kori=yes,featurefile=korinthia.fea]
+  
+\definefontfeature
+  [lunategreek]
+   [mode=node,language=dflt,script=latn,kern=yes,tlig=yes,trep=yes,
+    luna=yes,featurefile=greek-babel.fea]
+
+\definefontfeature
+  [ibycus]
+  [mode=node,language=dflt,script=latn,kern=yes,tlig=yes,trep=yes,
+   ibyc=yes,featurefile=ibycus.fea]
+
+\definefontfeature
+  [agreek]
+   [mode=node,language=dflt,script=latn,kern=yes,tlig=no,trep=no,
+    grbl=yes,featurefile=greek-babel.fea]
+%  [mode=node,script=latn,language=dflt,liga=yes,kern=yes,tlig=yes,trep=yes,grbl=yes,featurefile=greek-babel.fea]
+
+\definefontfeature
+  [gentiumgreek]
+   [mode=node,language=dflt,script=latn,kern=yes,tlig=no,trep=no,
+    gent=yes,featurefile=gentium.fea]
+
+\starttypescript [serif] [Alkaios] [name]
+  \definefontsynonym [Serif]           [name:Alkaios]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:AlkaiosItalic] [features=agreek]
+  \definefontsynonym [SerifBold]       [name:AlkaiosBold] [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:AlkaiosBoldItalic] [features=agreek]
+\stoptypescript
+
+\starttypescript [serif] [BosporosNew]
+  \definefontsynonym [Serif]           [name:BosporosU]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [BosporosNewlun]
+  \definefontsynonym [Serif]           [name:BosporosU]  [features=lunate]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSArtemisia]
+  \definefontsynonym [Serif]           [name:GFSArtemisia]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:GFSArtemisiaItalic] [features=agreek]
+  \definefontsynonym [SerifBold]       [name:GFSArtemisiaBold] [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:GFSArtemisiaBoldItalic] [features=agreek]
+\stoptypescript
+
+\starttypescript [serif] [GFSBaskerville]
+  \definefontsynonym [Serif]           [name:GFSBaskerville]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSBodoniClassic]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSBodoniClassic]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSComplutum]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSComplutum]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSDidotClassic]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSDidotClassic]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+  
+\starttypescript [serif] [GFSElpis]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSElpis]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSGazis]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSGazis]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+  
+\starttypescript [serif] [GFSPorson]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSPorson]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSOlga]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSOlga]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GFSNeohellenic]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSNeohellenic]     [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:GFSNeohellenicItalic]   [features=agreek]
+  \definefontsynonym [SerifBold]       [name:GFSNeohellenicBold]   [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:GFSNeohellenicBoldItalic] [features=agreek]
+\stoptypescript
+
+\starttypescript [serif] [GFSSolomos]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSSolomos]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+ 
+\starttypescript [serif] [GFSTheokritos]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSTheokritos]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GreekArno] 
+  \definefontsynonym [Serif]           [name:ArnoPro-Regular]  [features=default]
+  \definefontsynonym [SerifItalic]     [name:ArnoPro-Italic] [features=default]
+  \definefontsynonym [SerifBold]       [name:ArnoPro-Bold]   [features=default]
+  \definefontsynonym [SerifBoldItalic] [name:ArnoPro-BoldItalic] [features=default]
+\stoptypescript
+ 
+\starttypescript [serif] [GreekAsteria] 
+  \definefontsynonym [Serif]           [file:Asteria]        [features=default]
+  \definefontsynonym [SerifItalic]     [file:AsteriaItalic] [features=default]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [file:AsteriaBoldItalic] [features=default]
+\stoptypescript
+ 
+\starttypescript [serif] [GreekCanonica] 
+  \definefontsynonym [Serif]           [name:MgOpenCanonica]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:MgOpenCanonica-Italic] [features=agreek]
+  \definefontsynonym [SerifBold]       [name:MgOpenCanonicaBold]   [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:MgOpenCanonicaBoldItalic] [features=agreek]
+\stoptypescript
+ 
+\starttypescript [serif] [GreekDidot]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GFSDidot]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:GFSDidotItalic] [features=agreek]
+  \definefontsynonym [SerifBold]       [name:GFSDidotBold]   [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:GFSDidotBoldItalic] [features=agreek]
+\stoptypescript
+ 
+\starttypescript [serif] [GreekDioxipe]
+  \definefontsynonym [Serif]           [name:Dioxipe]  [features=default]
+  \definefontsynonym [SerifItalic]     [name:Dioxipe-Italic] [features=agreek]
+  \definefontsynonym [SerifBold]       [name:Dioxipe-Bold]   [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [SerifBold]
+\stoptypescript
+
+\starttypescript [serif] [GreekGaramondPrem]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:GaramondPremrPro]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:GaramondPremrPro-It]   [features=agreek]
+  \definefontsynonym [SerifBold]       [name:GaramondPremrPro-Bd] [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:GaramondPremrPro-BdIt] [features=agreek]
+\stoptypescript
+
+\starttypescript [serif] [GreekGentium] [name]
+  \definefontsynonym [Serif]           [name:GenR102] [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:GenI102] [features=agreek]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [SerifItalic]
+\stoptypescript
+
+\starttypescript [serif] [GreekGentiumAlt] [name]
+  \definefontsynonym [Serif]           [name:GenAR102] [features=gentiumgreek]
+  \definefontsynonym [SerifItalic]     [name:GenAI102] [features=gentiumgreek]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [SerifItalic]
+\stoptypescript
+
+\starttypescript [serif] [GreekKorinthia] [name]
+  \definefontsynonym [Serif]           [name:Korinthia]  [features=korinthia]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+ 
+\starttypescript [serif] [GreekKorinthialun]
+  \definefontsynonym [Serif]           [name:Korinthia]  [features=lunategreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GreekLibertine]
+  \definefontsynonym [Serif]           [file:LinLibertine_Re]  [features=default]
+  \definefontsynonym [SerifItalic]     [file:LinLibertine_It]       [features=default]
+  \definefontsynonym [SerifBold]       [file:LinLibertine_Bd]     [features=default]
+  \definefontsynonym [SerifBoldItalic] [file:LinLibertine_BI]   [features=default]
+\stoptypescript
+ 
+\starttypescript [serif] [GreekMinion]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:MinionPro-Regular]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [name:MinionPro-It]       [features=agreek]
+  \definefontsynonym [SerifBold]       [name:MinionPro-Bold]     [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [name:MinionPro-BoldIt]   [features=agreek]
+\stoptypescript
+
+\starttypescript [serif] [GreekOldStandard]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [file:OldStandard]         [features=deault]
+  \definefontsynonym [SerifItalic]     [Serif] %name:OldStandard-Italic]    [features=agreek]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+  
+\starttypescript [serif] [GreekOxoniensis]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:Oxoniensis]     [features=oxoniensis]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [name:OxoniensisBold] [features=oxoniensis]
+  \definefontsynonym [SerifBoldItalic] [SerifBold]
+\stoptypescript
+  
+\starttypescript [serif] [GreekOxoniensislun]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:Oxoniensis]     [features=oxoniensislun]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [name:OxoniensisBold] [features=oxoniensislun]
+  \definefontsynonym [SerifBoldItalic] [SerifBold]
+\stoptypescript
+ 
+\starttypescript [serif] [Ibycus]
+  \definefontsynonym [Serif]           [name:IbycusHTG-Regular]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif] 
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [KadmosNew]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [name:KadmosU]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+  
+\starttypescript [serif] [GreekPorson] [name]
+  \definefontsynonym [Serif]           [name:"Porson Greek Polytonic"]  [features=agreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [name:PorsonSB] [features=agreek]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [GreekPorsonlun] [name]
+  \definefontsynonym [Serif]           [name:"Porson Greek Polytonic"]  [features=lunategreek]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [name:PorsonSB] [features=lunategreek]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript
+
+\starttypescript [serif] [Metre] [name]
+  \definefontsynonym [Serif]           [name:metre] [features=default]
+  \definefontsynonym [SerifItalic]     [Serif]
+  \definefontsynonym [SerifBold]       [Serif]
+  \definefontsynonym [SerifBoldItalic] [Serif]
+\stoptypescript

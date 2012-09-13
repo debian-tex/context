@@ -1,0 +1,27 @@
+Todo:
+
+o Page optimation of the output
+
+  - reduce the parskip if the last page is filled less than 25%
+    of the textheight
+  - increase the parskip if the last page is filled more than 25%
+    and less than 50% of the textheight to have it at least filled
+    more than half of the textheight
+
+o support for address database
+
+  - adrentry and addrentry macros from KOMA-Script
+  - xml files with ConTeXts contact structure
+
+o styles
+
+  - english and american letters in block style
+  - formats from other countries
+
+o documentation
+
+  - description about the elements
+  - examples from simple and complex letters
+  - list with all named elements
+  - list with the contents for the labels
+  - guide how to write style and extension files

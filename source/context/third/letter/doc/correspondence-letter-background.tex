@@ -1,0 +1,128 @@
+\startcomponent correspondence-letter-background
+
+\environment correspondence-environment
+
+\chapter{Background}
+
+There are different ways to customize the look of a letter, they are namely the
+\startitemize[text,a][lefttext=,righttext=,stopper={)}]
+\item layout of the page,
+\item the font for the main text and the styles for each element and
+\item the header and the other information blocks.
+\stopitemize
+Another option is the stationary which you use for the printed result, you could
+use either already preprinted paper or what will be described in the following chapter
+create your own with ConTeXt. Three different methods are available to do this:
+
+\startitemize[a,packed][stopper={)}]
+\item color,
+\item images,
+\item user created backgrounds.
+\stopitemize
+
+% backgroundcolor
+
+\start
+
+\setupletterstyle[backgroundcolor=gray]
+
+\startletter
+\input knuth
+\stopletter
+
+\stop
+
+\section{Backgroundcolor}
+
+Setting a color for the background is the first method to customize the layout of the letter background,
+you can see result of the following code in the example on the left page and all other full page letters
+in this document.
+
+\starttyping
+\setupcolors[state=start]
+
+\setupletterstyle[backgroundcolor=gray]
+
+\startletter
+Thus, I came to the conclusion ...
+\stopletter
+\stoptyping
+
+When you use {\em backgroundcolor} in combination with the other methods it's important to know the backgroundcolor
+is always behind the other elements.
+
+% backgroundimage
+
+\start
+
+\setupletterstyle[backgroundimage=954380_42830609]
+
+\startletter
+\input knuth
+\stopletter
+
+\stop
+
+\section{Backgroundimages}
+
+The second mathod is to use a graphic as background for the letter, the example on the left page is created
+with the following code, take care the argument is existing figure or you will get \ConTeXt’s usual placeholder
+for missing figures.
+
+\starttyping
+\setupletterstyle[backgroundimage=example]
+
+\startletter
+Thus, I came to the conclusion ...
+\stopletter
+\stoptyping
+
+When you take a look in the source you will see the module use \type{\overlayfigure} to stretch the graphic
+to the size of the paper, it’s up to the user to provide a graphic with the correct width|/|height ration and
+a resultion which is high enough to aviud artefacts.
+
+% background
+
+\start
+
+\startuseMPgraphic{dactylus}
+draw unitsquare xyscaled (OverlayWidth-2cm,OverlayHeight-2cm) smoothed 1cm withpen pencircle scaled 2 ;
+fill fullcircle scaled 1.5cm shifted (1cm,1cm) withcolor \MPcolor{orange} ;
+\stopuseMPgraphic
+
+\setupletterstyle
+  [backgroundcolor=,
+   background=\useMPgraphic{dactylus}]
+
+\startletter
+\input knuth
+\stopletter
+
+\stop
+
+\section{Backgrounds}
+
+As third and last method you can use the {\em background} parameter which is nothing more than a overlay
+which is placed in the background. A example where a graphic is drawn with \MetaPost\ is shown below with
+the result on the left page.
+
+\starttyping
+\startuseMPgraphic{dactylus}
+draw unitsquare xyscaled (OverlayWidth-2cm,OverlayHeight-2cm)
+    smoothed 1cm withpen pencircle scaled 2 ;
+fill fullcircle scaled 1.5cm shifted (1cm,1cm)
+    withcolor \MPcolor{orange} ;
+\stopuseMPgraphic
+
+\setupletterstyle[background=\useMPgraphic{dactylus}]
+
+\startletter
+Thus, I came to the conclusion ...
+\stopletter
+\stoptyping
+
+You could use this method also to place normal graphic from a external file \type{\externalfigure}
+where you have nore detailed control over the figure size etc. It's also possible to define different
+background for the first and the second page but the user has to take care of this himself.
+
+\stopcomponent

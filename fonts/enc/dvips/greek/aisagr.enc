@@ -1,0 +1,261 @@
+%%% Custom agr (Ancient Greek) Encoding for font AisaUC. Created by script
+%%% agrencoding.pl on Sat Apr 16 19:54:05 2005.
+%
+/agr-AisaUC-encoding[
+/.notdef	%0	
+/greeksigmalunate %	0x03F2	%1	
+/endash %	0x2013	%2	
+/emdash %	0x2014	%3	
+/quoteright %	0x2019	%4	
+/.notdef	%5	
+/.notdef	%6	
+/.notdef	%7	
+/braceleft %	0x007B	%8	
+/braceright %	0x007D	%9	
+/breve %	0x02D8	%10	
+/textdoublebracketleft %	0x27E6	%11	
+/textdoublebracketright %	0x27E7	%12	
+/greekSigmalunate %	0x03F9	%13	
+/Iotadieresis %	0x03AA	%14	
+/Upsilondieresis %	0x03AB	%15	
+/.notdef	%16	
+/.notdef	%17	
+/epsiloncircum %	0xE1B0	%18	
+/omicroncircum %	0xE1C0	%19	
+/epsilonaspercircum %	0xE1B2	%20	
+/omicronaspercircum %	0xE1C2	%21	
+/epsilonleniscircum %	0xE1B1	%22	
+/omicronleniscircum %	0xE1C1	%23	
+/iotadieresiscircum %	0x1FD7	%24	
+/upsilondieresiscircum %	0x1FE7	%25	
+/dieresiscircum %	0x1FC1	%26	
+/.notdef	%27	
+/.notdef	%28	
+/.notdef	%29	
+/.notdef	%30	
+/textbottomdotsmall	%31	
+/space	%32	
+/dotsubnosp %	0x0323	%33	
+/Sampi %	0x03E1	%34	
+/digamma %	0x03DD	%35	
+/stigma %	0x03DB	%36	
+/koppa %	0x03D9	%37	
+/Koppa %	0x03DE	%38	
+/greater %	0x003E	%39	
+/parenleft	%40	
+/parenright	%41	
+/asterisk	%42	
+/dagger %	0x2020	%43	
+/comma	%44	
+/hyphen	%45	
+/period	%46	
+/acutegreek %	0x1FFD	%47	
+/zero  %	0x0030	%48	
+/one  %	0x0031	%49	
+/two  %	0x0032	%50	
+/three  %	0x0033	%51	
+/four  %	0x0034	%52	
+/five  %	0x0035	%53	
+/six  %	0x0036	%54	
+/seven  %	0x0037	%55	
+/eight  %	0x0038	%56	
+/nine  %	0x0039	%57	
+/question  %	0x003F	%58	
+/anoteleia  %	0x0387	%59	
+/asper %	0x1FFE	%60	
+/equal %	0x003D	%61	
+/lenis %	0x1FBF	%62	
+/semicolon %	0x003B	%63	
+/dieresis %	0x00A8	%64	
+/Alpha %	0x0391	%65	
+/Beta %	0x0392	%66	
+/omegaiota %	0x1FF3	%67	
+/Delta %	0x0394	%68	
+/Epsilon %	0x0395	%69	
+/Phi %	0x03A6	%70	
+/Gamma %	0x0393	%71	
+/Eta %	0x0397	%72	
+/Iota %	0x0399	%73	
+/Theta %	0x0398	%74	
+/Kappa %	0x039A	%75	
+/Lambda %	0x039B	%76	
+/Mu %	0x039C	%77	
+/Nu %	0x039D	%78	
+/Omicron %	0x039F	%79	
+/Pi %	0x03A0	%80	
+/Chi %	0x03A7	%81	
+/Rho %	0x03A1	%82	
+/Sigma %	0x03A3	%83	
+/Tau %	0x03A4	%84	
+/Upsilon %	0x03A5	%85	
+/etaiota %	0x1FC3	%86	
+/Omega %	0x03A9	%87	
+/Xi %	0x039E	%88	
+/Psi %	0x03A8	%89	
+/Zeta %	0x0396	%90	
+/bracketleft %	0x005B	%91	
+/gravegreek %	0x1FEF	%92	
+/bracketright %	0x005D	%93	
+/circumgreek %	0x1FC0	%94	
+/.notdef	%95	
+/less %	0x003C	%96	
+/alpha %	0x03B1	%97	
+/beta %	0x03B2	%98	
+/sigma1 %	0x03C2	%99	
+/delta %	0x03B4	%100	
+/epsilon %	0x03B5	%101	
+/phi %	0x03C6	%102	
+/gamma %	0x03C3	%103	
+/eta %	0x03B7	%104	
+/iota %	0x03B9	%105	
+/theta %	0x03B8	%106	
+/kappa %	0x03BA	%107	
+/lambda %	0x03BB	%108	
+/mu %	0x03BC	%109	
+/nu %	0x03BD	%110	
+/omicron %	0x03BF	%111	
+/pi %	0x03C0	%112	
+/chi %	0x03C7	%113	
+/rho %	0x03C1	%114	
+/sigma %	0x03C3	%115	
+/tau %	0x03C4	%116	
+/upsilon %	0x03C5	%117	
+/alphaiota %	0x1FB3	%118	
+/omega %	0x03C9	%119	
+/xi %	0x03BE	%120	
+/psi %	0x03C8	%121	
+/zeta %	0x03B6	%122	
+/floorleft %	0xF1D4	%123	
+/bar %	0x007C	%124	
+/floorright %	0xF1D5	%125	
+/circumgreek %	0x1FC0	%126	
+/.notdef	%127	
+/quotedblleft %	0x201C	%128	
+/quotedblright %	0x201D	%129	
+/exclam %	0x0021	%130	
+/iotaasper %	0x1F31	%131	
+/iotalenis %	0x1F30	%132	
+/iotaacute %	0x1F77	%133	
+/iotaasperacute %	0x1F35	%134	
+/iotalenisacute %	0x1F34	%135	
+/iotagrave %	0x1F76	%136	
+/iotaaspergrave %	0x1F33	%137	
+/iotalenisgrave %	0x1F32	%138	
+/iotacircum %	0x1FD6	%139	
+/iotaaspercircum %	0x1F37	%140	
+/iotaleniscircum %	0x1F36	%141	
+/iotadieresis %	0x03CA	%142	
+/iotadieresisacute %	0x1FD3	%143	
+/iotadieresisgrave %	0x1FD2	%144	
+/aspercircum %	0x1FDF	%145	
+/leniscircum %	0x1FCF	%146	
+/asperacute %	0x1FDE	%147	
+/lenisacute %	0x1FCE	%148	
+/aspergrave %	0x1FDD	%149	
+/lenisgrave %	0x1FCD	%150	
+/dieresistonos %	0x1FEE	%151	
+/epsilonasper %	0x1F11	%152	
+/epsilonlenis %	0x1F10	%153	
+/epsilonacute %	0x1F73	%154	
+/epsilonasperacute %	0x1F15	%155	
+/epsilonlenisacute %	0x1F14	%156	
+/epsilongrave %	0x1F72	%157	
+/epsilonaspergrave %	0x1F13	%158	
+/epsilonlenisgrave %	0x1F12	%159	
+/dieresisgrave %	0x1FED	%160	
+/alphaasper %	0x1F01	%161	
+/alphalenis %	0x1F00	%162	
+/alphaacute %	0x1F71	%163	
+/alphaasperacute %	0x1F05	%164	
+/alphalenisacute %	0x1F04	%165	
+/alphagrave %	0x1F70	%166	
+/alphaaspergrave %	0x1F03	%167	
+/alphalenisgrave %	0x1F02	%168	
+/alphacircum %	0x1FB6	%169	
+/alphaaspercircum %	0x1F07	%170	
+/alphaleniscircum %	0x1F06	%171	
+/alphaiotaasper %	0x1F81	%172	
+/alphaiotalenis %	0x1F80	%173	
+/alphaiotaacute %	0x1FB4	%174	
+/alphaiotaasperacute %	0x1F85	%175	
+/alphaiotalenisacute %	0x1F84	%176	
+/alphaiotagrave %	0x1FB2	%177	
+/alphaiotaaspergrave %	0x1F83	%178	
+/alphaiotalenisgrave %	0x1F82	%179	
+/alphaiotacircum %	0x1FB7	%180	
+/alphaiotaaspercircum %	0x1F87	%181	
+/alphaiotaleniscircum %	0x1F86	%182	
+/rhoasper %	0x1FE4	%183	
+/rholenis %	0x1FE5	%184	
+/etaasper %	0x1F21	%185	
+/etalenis %	0x1F20	%186	
+/etaacute %	0x1F75	%187	
+/etaasperacute %	0x1F25	%188	
+/etalenisacute %	0x1F24	%189	
+/etagrave %	0x1F74	%190	
+/etaaspergrave %	0x1F23	%191	
+/etalenisgrave %	0x1F22	%192	
+/etacircum %	0x1FC6	%193	
+/etaaspercircum %	0x1F27	%194	
+/etaleniscircum %	0x1F26	%195	
+/slash %	0x002F	%196	
+/etaiotaasper %	0x1F91	%197	
+/etaiotalenis %	0x1F90	%198	
+/etaiotaacute %	0x1FC4	%199	
+/etaiotaasperacute %	0x1F95	%200	
+/etaiotalenisacute %	0x1F94	%201	
+/etaiotagrave %	0x1FC2	%202	
+/etaiotaaspergrave %	0x1F93	%203	
+/etaiotalenisgrave %	0x1F92	%204	
+/etaiotacircum %	0x1FC7	%205	
+/etaiotaaspercircum %	0x1F97	%206	
+/etaiotaleniscircum %	0x1F96	%207	
+/omicronasper %	0x1F41	%208	
+/omicronlenis %	0x1F40	%209	
+/omicronacute %	0x1F79	%210	
+/omicronasperacute %	0x1F45	%211	
+/omicronlenisacute %	0x1F44	%212	
+/omicrongrave %	0x1F78	%213	
+/omicronaspergrave %	0x1F43	%214	
+/omicronlenisgrave %	0x1F42	%215	
+/upsilonasper %	0x1F51	%216	
+/upsilonlenis %	0x1F50	%217	
+/upsilonacute %	0x1F7B	%218	
+/upsilonasperacute %	0x1F55	%219	
+/upsilonlenisacute %	0x1F54	%220	
+/upsilongrave %	0x1F7A	%221	
+/upsilonaspergrave %	0x1F53	%222	
+/upsilonlenisgrave %	0x1F52	%223	
+/upsiloncircum %	0x1FE6	%224	
+/upsilonaspercircum %	0x1F57	%225	
+/upsilonleniscircum %	0x1F56	%226	
+/upsilondieresis %	0x03CB	%227	
+/upsilondieresisacute %	0x1FE3	%228	
+/upsilondieresisgrave %	0x1FE2	%229	
+/omegaasper %	0x1F61	%230	
+/omegalenis %	0x1F60	%231	
+/omegaacute %	0x1F7D	%232	
+/omegaasperacute %	0x1F65	%233	
+/omegalenisacute %	0x1F64	%234	
+/omegagrave %	0x1F7C	%235	
+/omegaaspergrave %	0x1F63	%236	
+/omegalenisgrave %	0x1F62	%237	
+/omegacircum %	0x1FF6	%238	
+/omegaaspercircum %	0x1F67	%239	
+/omegaleniscircum %	0x1F66	%240	
+/omegaiotaasper %	0x1FA1	%241	
+/omegaiotalenis %	0x1FA0	%242	
+/omegaiotaacute %	0x1FF4	%243	
+/omegaiotaasperacute %	0x1FA5	%244	
+/omegaiotalenisacute %	0x1FA4	%245	
+/omegaiotagrave %	0x1FF2	%246	
+/omegaiotaaspergrave %	0x1FA3	%247	
+/omegaiotalenisgrave %	0x1FA2	%248	
+/omegaiotacircum %	0x1FF7	%249	
+/omegaiotaaspercircum %	0x1FA7	%250	
+/omegaiotaleniscircum %	0x1FA6	%251	
+/.notdef	%252	
+/.notdef	%253	
+/numeralgreek %	0x0374	%254	
+/numeralgreeksub %	0x0375	%255	
+] def 

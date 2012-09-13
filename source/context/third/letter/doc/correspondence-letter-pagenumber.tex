@@ -1,0 +1,30 @@
+\startcomponent correspondence-letter-pagenumer
+
+\environment correspondence-environment
+
+\start
+
+\startsetups letter:foot
+\midaligned{Page \correspagenumber\ of \numberofcorrespages}
+\stopsetups
+
+\startletter
+\input knuth
+\stopletter
+
+\stop
+
+\chapter{Pagenumbering}
+
+\starttyping
+\correspagenumber
+\numberofcorrespages
+\stoptyping
+
+\starttyping
+\startsetups letter:head
+\rightaligned{Page \correspagenumber\ of \numberofcorrespages}
+\stopsetups
+\stoptyping
+
+\stopcomponent

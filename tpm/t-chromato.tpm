@@ -1,0 +1,30 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+		 xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-chromato.zip">
+    <TPM:Name>t-chromato</TPM:Name>
+    <TPM:Type>Package</TPM:Type>
+    <TPM:Date>2006/09/12 00:00:00</TPM:Date>
+    <TPM:Version>2008.04.05</TPM:Version>
+    <TPM:Creator>Peter</TPM:Creator>
+    <TPM:Title>Macros for chromatograms</TPM:Title>
+    <TPM:Description>
+This module provides commands for showing chromatograms.
+    </TPM:Description>
+    <TPM:Author>Peter Münster</TPM:Author>
+    <TPM:Size>250050</TPM:Size>
+    <TPM:Build/>
+    <TPM:RunFiles size="5676">
+tex/context/third/chromato/t-chromato.tex
+tpm/t-chromato.tpm
+   </TPM:RunFiles>
+    <TPM:DocFiles size="244374">
+doc/context/third/chromato/chromato-doc.pdf
+doc/context/third/chromato/chromato-demo.pdf
+    </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>Package/t-chromato</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>
