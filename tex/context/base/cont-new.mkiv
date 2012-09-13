@@ -1,0 +1,150 @@
+%D \module
+%D   [       file=cont-new,
+%D        version=2006.10.04,
+%D          title=\CONTEXT\ Miscellaneous Macros,
+%D       subtitle=New Macros,
+%D         author=Hans Hagen,
+%D           date=\currentdate,
+%D      copyright={PRAGMA / Hans Hagen \& Ton Otten}]
+%C
+%C This module is part of the \CONTEXT\ macro||package and is
+%C therefore copyrighted by \PRAGMA. See mreadme.pdf for
+%C details.
+
+% 2009-07-15 / vista sp 2 / 2.2G duo dell M90 precision:
+%
+% \dorecurse{10000}{test \page} % 300 pps
+% \dorecurse {2000}{test \page} % 260 pps
+% \dorecurse  {300}{test \page} % 135 pps
+
+% \ctxlua { fonts.define.method = 2 }  % normally 3
+
+\enablemode[mkiv] \setsystemmode{mkiv}
+
+% potential new defaults:
+%
+% \setbreakpoints[compound]
+
+\ctxlua{logs.report=function(s,...) commands.writestatus("!"..s,...) end}
+
+\unprotect
+
+% % % % % % needs testing but saves runtime
+
+\let\checknotes\relax % probably not needed, checking already done
+
+% we need to figure this out (to be discussed)
+
+\unexpanded\def\textminus
+  {\char  \iffontchar\font"2012 "2012 % figuredash
+     \else\iffontchar\font"2013 "2013 % endash
+     \else\iffontchar\font"2212 "2212 % math minus
+                                "002D % hyphen
+     \fi\fi\fi}
+
+\unexpanded\def\textplus
+  {\char"002B } % plus
+
+% \def\registerviewerlayer#1#2% global !
+%   {\setxvalue{(vl:#1)}{\global\dosetattribute{viewerlayer}{\ctxlua{tex.print(viewerlayers.register('#2'))}}}}
+
+% \setevalue{(vl:)}{\global\doresetattribute{viewerlayer}}
+
+\let\\=\crlf % till we fixed all styles
+
+% \def\pagedir{\expandafter\gobblethreearguments}
+% \def\bodydir{\expandafter\gobblethreearguments}
+
+%D Since this can be a showstopper, we report the path at the beginning
+%D as well as at the end of a run.
+
+% \writestatus\m!lua{used config path - \ctxlua{tex.print(caches.configpath())}}
+% \writestatus\m!lua{used cache path  - \ctxlua{tex.print(caches.path)}}
+
+\startluacode
+    statistics.register("result saved in file", function()
+        return string.format( "%s.%s", "\outputfilename", (tex.pdfoutput>0 and "pdf") or "dvi")
+    end)
+\stopluacode
+
+%D For the moment we report some statistics. Later this will become an option,
+%D but for now we need this information.
+
+\def\nomkivstatistics{\ctxlua{statistics.enable = false}} % for taco
+
+\def\resettimer    {\ctxlua{environment.starttime = os.clock()}}
+\def\elapsedtime   {\ctxlua{tex.sprint(os.clock()-environment.starttime)}}
+\let\elapsedseconds \elapsedtime
+
+% we will have a bunch of extra tracers (--dumphash --dumpdelta)
+
+\def\tracersdumphash {\ctxlua{tracers.register_dump_hash(false)}}
+\def\tracersdumpdelta{\ctxlua{tracers.register_dump_hash(true)}}
+
+\resettimer
+
+%D For me.
+
+\def\traceluausage
+  {\dosingleempty\dotraceluausage}
+
+\def\dotraceluausage[#1]%
+  {\ctxlua{debugger.enable()}%
+   \appendtoks\ctxlua{debugger.disable() debugger.showstats(print,\doifnumberelse{#1}{#1}{5000})}\to\everybye}
+
+%D Fonts (experimental AFM loading}
+
+% \ctxlua {
+%     remapper.define('encoding','^lm' ,'^(.*)$','lm-\letterpercent1')
+%     remapper.define('encoding','^qbk','^(.*)$','q-\letterpercent1')
+%     remapper.define('encoding','^qcs','^(.*)$','q-\letterpercent1')
+%     remapper.define('encoding','^qpl','^(.*)$','q-\letterpercent1')
+%     remapper.define('encoding','^qtm','^(.*)$','q-\letterpercent1')
+% }
+
+% \appendtoksonce \loadallXfontmapfiles \to \pdfbackendeveryximage
+% \appendtoksonce \loadallXfontmapfiles \to \pdfbackendeveryxform
+% \appendtoksonce \loadallXfontmapfiles \to \everystarttext
+% \appendtoksonce \loadallXfontmapfiles \to \everybeforepagebody
+
+% \def\loadallXfontmapfiles{\ctxlua{fonts.map.flush("pdftex")}}
+
+% \ctxlua{
+%     do
+%         local pth = "." .. io.fileseparator .. "tmp" .. io.fileseparator .. "\jobname"
+%         texio.write_nl("CREATING "..pth)
+%         os.execute("mkdir " .. pth)
+%     end
+%     resolvers.output_files = { }
+%     callback.register('find_write_file', function(id,name)
+%         resolvers.output_files[name] = file.join(".","tmp","\jobname",name)
+%         texio.write_nl("REDIRECTING OUTPUT "..name.. " TO " .. resolvers.output_files[name])
+%         return resolvers.output_files[name]
+%     end)
+%     callback.register('find_read_file', function(id,name)
+%         local sname = string.gsub(name,"^\letterpercent./","")
+%         if resolvers.output_files[sname] then
+%             return resolvers.output_files[name]
+%         elseif string.find(sname,"^\jobname[\letterpercent.\letterpercent-]") then
+%             local n = file.join(".","tmp","\jobname",sname)
+%             local f = io.open(n)
+%             if f then
+%                 resolvers.output_files[name] = n
+%                 texio.write_nl("REDIRECTING INPUT "..sname.. " TO " .. n)
+%                 f:close()
+%                 return n
+%             else
+%                 return resolvers.findtexfile(name)
+%             end
+%         else
+%             return resolvers.findtexfile(name)
+%         end
+%     end)
+% }
+
+\definestartstop[randomized][\c!before=\dosetattribute{case}{8},\c!after=]
+
+\protect \endinput
+
+% \expanded{\defineactivecharacter \number"2000E} {\textdir TRT\relax}
+% \expanded{\defineactivecharacter \number"2000F} {\textdir TLT\relax}

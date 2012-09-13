@@ -1,0 +1,31 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+		 xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-typearea.zip">
+    <TPM:Name>t-typearea</TPM:Name>
+    <TPM:Type>Package</TPM:Type>
+    <TPM:Date>2006/09/12 00:00:00</TPM:Date>
+    <TPM:Version>2008.04.05</TPM:Version>
+    <TPM:Creator>Peter</TPM:Creator>
+    <TPM:Title>Something like KOMA-TypeArea</TPM:Title>
+    <TPM:Description>
+This module provides a command that tries to calculate the page layout as
+the LaTeX package "typearea" does.
+    </TPM:Description>
+    <TPM:Author>Peter Münster</TPM:Author>
+    <TPM:Size>84058</TPM:Size>
+    <TPM:Build/>
+    <TPM:RunFiles size="4132">
+tex/context/third/typearea/t-typearea.tex
+tpm/t-typearea.tpm
+   </TPM:RunFiles>
+    <TPM:DocFiles size="79926">
+doc/context/third/typearea/typearea-doc.pdf
+doc/context/third/typearea/typearea-demo.pdf
+    </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>Package/t-typearea</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>

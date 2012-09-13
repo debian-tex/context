@@ -1,0 +1,29 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-cmscbf.zip">
+    <TPM:Name>t-cmscbf</TPM:Name>
+    <TPM:Type>Package</TPM:Type>
+    <TPM:Date>2006/09/12 00:00:00</TPM:Date>
+    <TPM:Version>2006.09.12</TPM:Version>
+    <TPM:Creator>Peter</TPM:Creator>
+    <TPM:Title>Bold Small Caps for Computer/Latin Modern</TPM:Title>
+    <TPM:Description>
+This module provides bold small caps for CM/LM font.
+    </TPM:Description>
+    <TPM:Author>Peter Münster</TPM:Author>
+    <TPM:Size>177566</TPM:Size>
+    <TPM:Build/>
+    <TPM:RunFiles size="2441">
+tex/context/third/cmscbf/t-cmscbf.tex
+tpm/t-cmscbf.tpm
+   </TPM:RunFiles>
+    <TPM:DocFiles size="175125">
+doc/context/third/cmscbf/cmscbf-doc.pdf
+doc/context/third/cmscbf/cmscbf-demo.pdf
+    </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>Package/t-cmscbf</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>

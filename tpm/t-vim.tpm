@@ -1,0 +1,33 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-vim">
+    <TPM:Name>t-vim</TPM:Name>
+    <TPM:Type>Module</TPM:Type>
+    <TPM:Date>2007/01/04 00:00:00</TPM:Date>
+    <TPM:Version>2007.01.03</TPM:Version>
+    <TPM:Creator>Aditya Mahajan</TPM:Creator>
+    <TPM:Title>ViM syntax highlighting</TPM:Title>
+    <TPM:Description>
+      This module uses ViM editor's syntax files to pretty print verbatim code in ConTeXt
+    </TPM:Description>
+    <TPM:Author>Aditya Mahaja</TPM:Author>
+    <TPM:Size>442025</TPM:Size>
+    <TPM:Build/>
+     <TPM:RunFiles size="30166">
+       tex/context/third/vim/2context.vim
+       tex/context/third/vim/t-vim.tex
+       tex/context/interface/third/t-vim.xml
+     </TPM:RunFiles>
+     <TPM:DocFiles size="411859">
+       doc/context/third/vim/vim-doc.pdf
+       doc/context/third/vim/vim-demo.pdf
+       doc/context/third/vim/README
+       tpm/t-vim.tpm
+     </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>t-vim</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>
+

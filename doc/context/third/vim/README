@@ -1,0 +1,15 @@
+Name of module:	ViM syntax highlighting
+Author:	Aditya Mahajan and Mojca Miklavec
+
+Description:	ConTeXt has an excellent pretty printing capabilities for many
+languages. The code for pretty printing is written in TeX, and due to catcode
+jugglary verbatim typesetting is perhaps the trickiest part of TeX. This makes
+it difficult for a "normal" user to define syntax highlighting rules for a new
+language. This module, takes the onus of defining syntax highlighting rules
+away from the user and uses ViM editor to generate the syntax highlighting.
+There is a helper 2context.vim script to do the syntax parsing in ViM. This is
+a stop-gap method, and hopefully with luaTeX, things will be much easier.
+
+The module documentation is available in doc/context/third/vim/vim-doc.pdf and
+a demo is at doc/context/third/vim/vim-demo.pdf
+

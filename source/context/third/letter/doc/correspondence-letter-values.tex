@@ -1,0 +1,135 @@
+\startcomponent correspondence-letter-values
+
+\environment correspondence-environment
+
+\chapter{Values and Labels}
+
+\section{Values}
+
+When you write a letter you have to set some values for the reference line like the date
+and other ones like the name and address of the addressee for the address block, these can
+be done with the two commands \type{\setlettervalue} and \type{\setupletter}.
+
+\setup[setlettervalue]\flushatnextpar{\index{\tex{setlettervalue}}}
+
+\setup[setupletter:value]\flushatnextpar{\index{\tex{setupletter}}}
+
+The first command \type{\setlettervalue} takes two commands like \type{\setvalue} or
+\type{\setvariable} and could be used like:
+
+\starttyping
+\setlettervalue{firstname} {Mike}
+\setlettervalue{familyname}{Johnson}
+\stoptyping
+
+There is also a optional argument between the name and the content of the value
+which is explained in the next section.
+
+With the second command \type{\setupletter} you can set multiple values separated
+by commas, it's similar to \type{\setvariables}, the above setting will look then:
+
+\starttyping
+\setupletter
+  [firstname=Mike,
+   familyname=Johnson]
+\stoptyping
+
+As you can seen in the following command overview for \type{\setupletter} the command has
+two arguments while we used in the last example only one, the two argument form is used
+to change the layout for the values in the reference (and others) line like:
+
+\starttyping
+\setupletter
+  [date,name]
+  [titlestyle=\tfx,
+   titlecolor=gray]
+\stoptyping
+
+The complete list of argument are:
+
+\setup[setupletter:setup]\flushatnextpar{\index{\tex{setupletter}}}
+
+\starttyping
+\setupletter[..,..=..,..]
+\setupletter[...,...][..,..=..,..]
+
+\setlettervalue{...}{...}
+\stoptyping
+
+\section{Labels}
+
+When you take a look at the examples in the reference section you can see all of them
+have a label above or on the left or the content but this did only happen because the
+module provides preset texts for them.
+
+When you try to use a non defined label like e.g. {\em skype} you the content of the value
+as seen below but no label above.
+
+The following code
+
+\starttyping
+\setlettervalue{date} {\currentdate}
+\setlettervalue{skype}{corres.context}
+
+\setupletterstyle[reference][list={skype,date}]
+\stoptyping
+
+result in this reference line:
+
+\start
+
+\setlettervalue{date} {\currentdate}
+\setlettervalue{skype}{corres.context}
+
+\setupletterstyle[reference][list={skype,date}]
+
+\startelement
+\letterelement[reference][a]
+\stopelement
+
+\stop
+
+The module use ConTeXt’s labeltext mechanism to define text for various languages
+which can be found in the file \filename{default.nle}. To define your own text use
+the \type{\setuplabeltext} command, to prevent problems with other macros the names
+of the labels are prefixed with {\em letter:}.\footnote{The {\em memo} style makes
+a exception to this concept and use {\em memo:} as prefix for the label names.}
+
+\setup[setuplabeltext]\flushatnextpar{\index{\tex{setuplabeltext}}}
+
+To add now a label for our currently used {\em skype} value put the following
+line in your document and change the language tag to the mainlanguage you use
+in your document.
+
+\starttyping
+\setuplabeltext[en][letter:skype=Skype]
+\stoptyping
+
+The reference looks now like:
+
+\start
+
+\setuplabeltext[en][letter:skype=Skype]
+
+\setlettervalue{date} {\currentdate}
+\setlettervalue{skype}{corres.context}
+
+\setupletterstyle[reference][list={skype,date}]
+
+\startelement
+\letterelement[reference][a]
+\stopelement
+
+\stop
+
+When you use \type{\setlettervalue} to set the content of the values the optional
+argument can be used instead of \type{\setuplabeltext} to define a text for the label
+in the current mainlanguage, a empty argument results in a empty labeltext.
+
+The two step setting for the value {\em skype} can the be done with this setting.
+
+\starttyping
+\setlettervalue{skype}[Skype]{corres.context}
+\stoptyping
+
+\stopcomponent

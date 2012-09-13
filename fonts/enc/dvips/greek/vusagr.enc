@@ -1,0 +1,261 @@
+%%% Custom agr (Ancient Greek) Encoding for font vusilli. Created by script
+%%% agrencoding.pl on Sat Apr 23 20:58:14 2005.
+%
+/agr-vusilli-encoding [
+/.notdef	%0	
+/csigma %	0x03F2	%1	
+/endash %	0x2013	%2	
+/emdash %	0x2014	%3	
+/quoteright %	0x2019	%4	
+/.notdef	%5	
+/.notdef	%6	
+/.notdef	%7	
+/braceleft %	0x007B	%8	
+/braceright %	0x007D	%9	
+/breve %	0x02D8	%10	
+/textdoublebracketleft %	0x27E6	%11	
+/textdoublebracketright %	0x27E7	%12	
+/Csigma %	0x03F9	%13	
+/Iotadieresis %	0x03AA	%14	
+/Upsilondieresis %	0x03AB	%15	
+/.notdef	%16	
+/.notdef	%17	
+/greekepsilonperispomeni %	0xE1B0	%18	
+/greekomicronperispomeni %	0xE1C0	%19	
+/greekepsilondasiaperispomeni %	0xE1B2	%20	
+/greekomicrondasiaperispomeni %	0xE1C2	%21	
+/greekepsilonpsiliperispomeni %	0xE1B1	%22	
+/greekomicronpsiliperispomeni %	0xE1C1	%23	
+/_FD7 %	0x1FD7	%24	
+/_FE7 %	0x1FE7	%25	
+/_FC1 %	0x1FC1	%26	
+/.notdef	%27	
+/.notdef	%28	
+/.notdef	%29	
+/.notdef	%30	
+/textbottomdotsmall	%31	
+/space	%32	
+/dotsubcomb %	0x0323	%33	
+/sampi %	0x03E1	%34	
+/digamma %	0x03DD	%35	
+/stigma %	0x03DB	%36	
+/koppa %	0x03D9	%37	
+/Koppa %	0x03DE	%38	
+/greater %	0x003E	%39	
+/parenleft	%40	
+/parenright	%41	
+/asterisk	%42	
+/dagger %	0x2020	%43	
+/comma	%44	
+/hyphen	%45	
+/period	%46	
+/_FFD %	0x1FFD	%47	
+/zero  %	0x0030	%48	
+/one  %	0x0031	%49	
+/two  %	0x0032	%50	
+/three  %	0x0033	%51	
+/four  %	0x0034	%52	
+/five  %	0x0035	%53	
+/six  %	0x0036	%54	
+/seven  %	0x0037	%55	
+/eight  %	0x0038	%56	
+/nine  %	0x0039	%57	
+/question  %	0x003F	%58	
+/anoteleia  %	0x0387	%59	
+/_FFE %	0x1FFE	%60	
+/equal %	0x003D	%61	
+/_FBF %	0x1FBF	%62	
+/semicolon %	0x003B	%63	
+/dieresis %	0x00A8	%64	
+/Alpha %	0x0391	%65	
+/Beta %	0x0392	%66	
+/_FF3 %	0x1FF3	%67	
+/Delta %	0x0394	%68	
+/Epsilon %	0x0395	%69	
+/Phi %	0x03A6	%70	
+/Gamma %	0x0393	%71	
+/Eta %	0x0397	%72	
+/Iota %	0x0399	%73	
+/Theta %	0x0398	%74	
+/Kappa %	0x039A	%75	
+/Lambda %	0x039B	%76	
+/Mu %	0x039C	%77	
+/Nu %	0x039D	%78	
+/Omicron %	0x039F	%79	
+/Pi %	0x03A0	%80	
+/Chi %	0x03A7	%81	
+/Rho %	0x03A1	%82	
+/Sigma %	0x03A3	%83	
+/Tau %	0x03A4	%84	
+/Upsilon %	0x03A5	%85	
+/_FC3 %	0x1FC3	%86	
+/Omega %	0x03A9	%87	
+/Xi %	0x039E	%88	
+/Psi %	0x03A8	%89	
+/Zeta %	0x0396	%90	
+/bracketleft %	0x005B	%91	
+/_FEF %	0x1FEF	%92	
+/bracketright %	0x005D	%93	
+/_FC0 %	0x1FC0	%94	
+/.notdef	%95	
+/less %	0x003C	%96	
+/alpha %	0x03B1	%97	
+/beta %	0x03B2	%98	
+/sigma1 %	0x03C2	%99	
+/delta %	0x03B4	%100	
+/epsilon %	0x03B5	%101	
+/phi %	0x03C6	%102	
+/gamma %	0x03B3	%103	
+/eta %	0x03B7	%104	
+/iota %	0x03B9	%105	
+/theta %	0x03B8	%106	
+/kappa %	0x03BA	%107	
+/lambda %	0x03BB	%108	
+/mu %	0x03BC	%109	
+/nu %	0x03BD	%110	
+/omicron %	0x03BF	%111	
+/pi %	0x03C0	%112	
+/chi %	0x03C7	%113	
+/rho %	0x03C1	%114	
+/sigma %	0x03C3	%115	
+/tau %	0x03C4	%116	
+/upsilon %	0x03C5	%117	
+/_FB3 %	0x1FB3	%118	
+/omega %	0x03C9	%119	
+/xi %	0x03BE	%120	
+/psi %	0x03C8	%121	
+/zeta %	0x03B6	%122	
+/floorleft %	0xF1D4	%123	
+/bar %	0x007C	%124	
+/floorright %	0xF1D5	%125	
+/_FC0 %	0x1FC0	%126	
+/.notdef	%127	
+/quotedblleft %	0x201C	%128	
+/quotedblright %	0x201D	%129	
+/exclam %	0x0021	%130	
+/_F31 %	0x1F31	%131	
+/_F30 %	0x1F30	%132	
+/_F77 %	0x1F77	%133	
+/_F35 %	0x1F35	%134	
+/_F34 %	0x1F34	%135	
+/_F76 %	0x1F76	%136	
+/_F33 %	0x1F33	%137	
+/_F32 %	0x1F32	%138	
+/_FD6 %	0x1FD6	%139	
+/_F37 %	0x1F37	%140	
+/_F36 %	0x1F36	%141	
+/iotadieresis %	0x03CA	%142	
+/_FD3 %	0x1FD3	%143	
+/_FD2 %	0x1FD2	%144	
+/_FDF %	0x1FDF	%145	
+/_FCF %	0x1FCF	%146	
+/_FDE %	0x1FDE	%147	
+/_FCE %	0x1FCE	%148	
+/_FDD %	0x1FDD	%149	
+/_FCD %	0x1FCD	%150	
+/_FEE %	0x0097	%151	
+/_F11 %	0x1F11	%152	
+/_F10 %	0x1F10	%153	
+/_F73 %	0x1F73	%154	
+/_F15 %	0x1F15	%155	
+/_F14 %	0x1F14	%156	
+/_F72 %	0x1F72	%157	
+/_F13 %	0x1F13	%158	
+/_F12 %	0x1F12	%159	
+/_FED %	0x1FED	%160	
+/_F01 %	0x1F01	%161	
+/_F00 %	0x1F00	%162	
+/_F71 %	0x1F71	%163	
+/_F05 %	0x1F05	%164	
+/_F04 %	0x1F04	%165	
+/_F70 %	0x1F70	%166	
+/_F03 %	0x1F03	%167	
+/_F02 %	0x1F02	%168	
+/_FB6 %	0x1FB6	%169	
+/_F07 %	0x1F07	%170	
+/_F06 %	0x1F06	%171	
+/_F81 %	0x1F81	%172	
+/_F80 %	0x1F80	%173	
+/_FB4 %	0x1FB4	%174	
+/_F85 %	0x1F85	%175	
+/_F84 %	0x1F84	%176	
+/_FB2 %	0x1FB2	%177	
+/_F83 %	0x1F83	%178	
+/_F82 %	0x1F82	%179	
+/_FB7 %	0x1FB7	%180	
+/_F87 %	0x1F87	%181	
+/_F86 %	0x1F86	%182	
+/_FE5 %	0x1FE5	%183	
+/_FE4 %	0x1FE4	%184	
+/_F21 %	0x1F21	%185	
+/_F20 %	0x1F20	%186	
+/_F75 %	0x1F75	%187	
+/_F25 %	0x1F25	%188	
+/_F24 %	0x1F24	%189	
+/_F74 %	0x1F74	%190	
+/_F23 %	0x1F23	%191	
+/_F22 %	0x1F22	%192	
+/_FC6 %	0x1FC6	%193	
+/_F27 %	0x1F27	%194	
+/_F26 %	0x1F26	%195	
+/slash %	0x002F	%196	
+/_F91 %	0x1F91	%197	
+/_F90 %	0x1F90	%198	
+/_FC4 %	0x1FC4	%199	
+/_F95 %	0x1F95	%200	
+/_F94 %	0x1F94	%201	
+/_FC2 %	0x1FC2	%202	
+/_F93 %	0x1F93	%203	
+/_F92 %	0x1F92	%204	
+/_FC7 %	0x1FC7	%205	
+/_F97 %	0x1F97	%206	
+/_F96 %	0x1F96	%207	
+/_F41 %	0x1F41	%208	
+/_F40 %	0x1F40	%209	
+/_F79 %	0x1F79	%210	
+/_F45 %	0x1F45	%211	
+/_F44 %	0x1F44	%212	
+/_F78 %	0x1F78	%213	
+/_F43 %	0x1F43	%214	
+/_F42 %	0x1F42	%215	
+/_F51 %	0x1F51	%216	
+/_F50 %	0x1F50	%217	
+/_F7B %	0x1F7B	%218	
+/_F55 %	0x1F55	%219	
+/_F54 %	0x1F54	%220	
+/_F7A %	0x1F7A	%221	
+/_F53 %	0x1F53	%222	
+/_F52 %	0x1F52	%223	
+/_FE6 %	0x1FE6	%224	
+/_F57 %	0x1F57	%225	
+/_F56 %	0x1F56	%226	
+/upsilondieresis %	0x03CB	%227	
+/_FE3 %	0x1FE3	%228	
+/_FE2 %	0x1FE2	%229	
+/_F61 %	0x1F61	%230	
+/_F60 %	0x1F60	%231	
+/_F7D %	0x1F7D	%232	
+/_F65 %	0x1F65	%233	
+/_F64 %	0x1F64	%234	
+/_F7C %	0x1F7C	%235	
+/_F63 %	0x1F63	%236	
+/_F62 %	0x1F62	%237	
+/_FF6 %	0x1FF6	%238	
+/_F67 %	0x1F67	%239	
+/_F66 %	0x1F66	%240	
+/_FA1 %	0x1FA1	%241	
+/_FA0 %	0x1FA0	%242	
+/_FF4 %	0x1FF4	%243	
+/_FA5 %	0x1FA5	%244	
+/_FA4 %	0x1FA4	%245	
+/_FF2 %	0x1FF2	%246	
+/_FA3 %	0x1FA3	%247	
+/_FA2 %	0x1FA2	%248	
+/_FF7 %	0x1FF7	%249	
+/_FA7 %	0x1FA7	%250	
+/_FA6 %	0x1FA6	%251	
+/.notdef	%252	
+/.notdef	%253	
+/_FFD %	0x0374	%254	
+/primebasegreek %	0x0375	%255	
+] def 

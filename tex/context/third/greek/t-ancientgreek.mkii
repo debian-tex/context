@@ -1,0 +1,221 @@
+%D \module
+%D   [       file=t-ancientgreek,
+%D        version=2006.04.05,
+%D          title=Ancient Greek,
+%D       subtitle=Publications,
+%D         author=Thomas A. Schmitz, Taco Hoekwater
+%D           date=\currentdate,
+%D      copyright=Thomas A. Schmitz]
+%C
+%C This program is free software; you can redistribute it and/or modify it under
+%C the terms of the GNU General Public License as published by the Free Software
+%C Foundation; either version 2 of the License, or (at your option) any later
+%C version.
+
+%D Module t-ancientgreek providing method for polytonic Greek input in
+% \CONTEXT, based on typescripts.
+
+\writestatus{loading}{module ancientgreek}
+
+\startmodule[ancientgreek]
+
+\unprotect
+
+\beginOLDTEX
+
+%D The new mechanism for modules allows setting values. We need to provide
+%D default setups for fonts and scaling. The \tex{setupgreek} command is not
+%D needed any longer; we now set these values when we call the module in this
+%D form:
+%D \starttyping
+%D \usemodule[ancientgreek][font=KadmosNew,scale=1.2,altfont=BosporosNew,altscale=1]
+%D \stoptyping
+
+\setupmodule[scale=1,font=Ibycus,altfont=Leipzig,altscale=1]
+
+%D Next, we load the appropriate unicode vector for polytonic Greek.
+
+\useunicodevector[31]
+
+%D We use the encoding for ancient Greek.
+
+\useencoding[agr]
+
+%D We load the typescript file that contains all definitions for Greek fonts.
+
+\usetypescriptfile[type-agr.tex]
+
+%D The next lines define a Metric font. This is just a quick and dirty hack to
+%D get some metric symbols; we may some day write proper code for it. For the
+%D time being, no frills are needed here since this will always be used for a
+%D few characters only.
+
+\starttypescript[MetricFont]
+\definetypeface[MetricFont][rm][serif][Anaxiphorminx][default][encoding=texnansi,rscale=1.5]
+\stoptypescript
+\usetypescript[MetricFont]
+
+\define[1]\Mf{{\switchtobodyfont[MetricFont]#1}}
+
+\define\aeolbase{\getglyph{Anaxiphorminx}{\char227}\getglyph{Anaxiphorminx}{\char227}}
+
+\define\acephal{\getglyph{Anaxiphorminx}{\char142}}
+
+%D We now define the bodyfont for our font and our altfont:
+
+\starttypescript[greek]
+\definetypeface[greek][rm][serif][\currentmoduleparameter{font}][default][encoding=agr,rscale=\currentmoduleparameter{scale}]
+\stoptypescript
+\usetypescript[greek]
+
+\starttypescript[altgreek]
+\definetypeface[altgreek][rm][serif][\currentmoduleparameter{altfont}][default][encoding=agr,rscale=\currentmoduleparameter{altscale}]
+\stoptypescript
+\usetypescript[altgreek]
+
+%D The following code was suggested by Hans to take care of problems with the
+%D catcode changes within table environments; since \CONTEXT\ now uses
+%D different ways of setting up active characters, it has been made obsolete: 
+
+% \long\def\rescanwithsetup#1#2%
+%   {{\directsetup{#1}\scantokens{#2\ignorespaces}}} 
+
+%D We wrap everything that is needed for obtaining Greek output into a setup
+%D buffer: change the catcodes of accents, switch to the language ancientgreek
+%D so we get proper hyphenation, and switch to the proper bodyfont:
+
+\def\greekpassivate#1{\begingroup
+  \lccode`\~=`#1
+  \lowercase{\endgroup\chardef~}=`#1\relax}
+   
+\startsetups[enablegreek]
+   \let~=\lettertilde
+   \let|=\letterbar
+%   \defineactivecharacter ~ {\lettertilde}
+%   \defineactivecharacter | {\letterbar}
+%   \catcode`~=\other% 
+   \language[agr]
+   \switchtobodyfont[greek]
+\stopsetups 
+   
+\startsetups[enablealtgreek]%
+   \let~=\lettertilde
+   \let|=\letterbar
+%   \catcode`~=\other% 
+%   \catcode`|=\other%
+   \language[ancientgreek]%
+   \switchtobodyfont[altgreek]%
+\stopsetups 
+
+%D Finally, we define a startstop environment and a command to enable these
+%D setups:
+
+\definestartstop[greek][commands=\directsetup{enablegreek}]
+
+\definestartstop[altgreek][commands=\directsetup{enablealtgreek}]
+
+%\def\localgreek{\rescanwithsetup{enablegreek}}
+%
+\def\localgreek#1{\bgroup\directsetup{enablegreek}{#1}\egroup}
+
+
+\def\localaltgreek#1{\bgroup\directsetup{enablealtgreek}{#1}\egroup}
+
+%D We also define a few symbols. Since only very few fonts actually have glyphs
+%D for them, it seemed better to not make them part of the encoding, but take
+%D them from some font that will be present on all (?) TeX systems, Latin
+%D Modern.
+
+\startencoding[special]
+\definecharacter uncuss 104
+\definecharacter uncusd 105
+\definecharacter hlfbrcleft 98
+\definecharacter hlfbrcright 99
+\stopencoding
+
+\loadmapfile[original-youngryu-tx.map]
+
+\starttypescript [serif] [specialsymbols] [name]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [txsy]  [encoding=special]
+\stoptypescript
+
+\starttypescript[gsymbols]
+\definetypeface[gsymbols][rm][serif][specialsymbols][default][encoding=special,rscale=\currentmoduleparameter{scale}]
+\stoptypescript
+\usetypescript[gsymbols]
+
+\starttypescript [serif] [specialsymbolt] [name]
+  \usetypescript[serif][fallback]
+  \definefontsynonym [Serif]           [texnansi-lmr9]  [encoding=texnansi]
+\stoptypescript
+
+\starttypescript[gsymbolt]
+\definetypeface[gsymbolt][rm][serif][specialsymbolt][default][encoding=texnansi,rscale=\currentmoduleparameter{scale}]
+\stoptypescript
+\usetypescript[gsymbolt]
+
+\def\M@semi@lb{\leavevmode
+  \setbox0=\hbox{o}%
+  \setbox0=\hbox to .67\wd0{%
+    \hss
+    \vrule height .5ex width .045em depth .5ex 
+    \lower .5ex \hbox to .6ex{%
+       \leaders\hrule height .045em\hfill}%
+  }%
+  \box0\relax 
+}
+
+\def\M@semi@rb{\leavevmode
+  \setbox0=\hbox{o}%
+  \setbox0=\hbox to .67\wd0{%
+    \lower .5ex \hbox to .6ex{%
+      \leaders\hrule height .045em\hfill}%
+    \vrule height .5ex width .045em depth .5ex
+    \hss
+  }%
+  \box0\relax 
+}
+
+
+\def\anglebracketleft{\bgroup\switchtobodyfont[gsymbols]\uncuss\egroup}
+\def\anglebracketright{\bgroup\switchtobodyfont[gsymbols]\uncusd\egroup}
+\def\doublebracketleft{\bgroup\switchtobodyfont[gsymbolt][\kern-.4ex [\egroup}
+\def\doublebracketright{\bgroup\switchtobodyfont[gsymbolt]]\kern-.425ex ]\egroup}
+\def\halfbracketleft{\M@semi@lb}
+\def\halfbracketright{\M@semi@rb}
+
+\endOLDTEX
+
+\beginXETEX
+
+\setupmodule[scale=1,font=Gentium,altfont=Alkaios,altscale=1]
+
+\usetypescriptfile[type-agr.tex]
+
+\starttypescript[greek]
+\definetypeface[greek][rm][serif][\currentmoduleparameter{font}][default][rscale=\currentmoduleparameter{scale}]
+\stoptypescript
+\usetypescript[greek]
+
+\starttypescript[altgreek]
+\definetypeface[altgreek][rm][serif][\currentmoduleparameter{altfont}][default][rscale=\currentmoduleparameter{altscale}]
+\stoptypescript
+\usetypescript[altgreek]
+
+\definestartstop[greek][commands={\language[agr]\switchtobodyfont[greek]}]
+
+\definestartstop[altgreek][commands={\language[agr]\switchtobodyfont[altgreek]}]
+
+\define[1]\localgreek{\begingroup\language[agr]\switchtobodyfont[greek]#1\endgroup}
+
+\define[1]\localaltgreek{\begingroup\language[agr]\switchtobodyfont[altgreek]#1\endgroup}
+
+\def\anglebracketleft{\startfont[file:texgyreheros-regular]\XeTeXglyph\XeTeXglyphindex "angleleft" \stopfont}
+\def\anglebracketright{\startfont[file:texgyreheros-regular]\XeTeXglyph\XeTeXglyphindex "angleright" \stopfont}
+
+\endXETEX
+
+\protect
+\stopmodule
+\endinput

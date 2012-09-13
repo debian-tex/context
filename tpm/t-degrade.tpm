@@ -1,0 +1,31 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/t-degrade.zip">
+    <TPM:Name>t-degrade</TPM:Name>
+    <TPM:Type>Package</TPM:Type>
+    <TPM:Date>2006/09/12 00:00:00</TPM:Date>
+    <TPM:Version>2006.09.12</TPM:Version>
+    <TPM:Creator>Peter</TPM:Creator>
+    <TPM:Title>Degrading JPEG images</TPM:Title>
+    <TPM:Description>
+This module degrades jepg-images on the fly to a given resolution, if some
+additional software is installed (epstopdf, jpeg2ps, convert, identify,
+bc).
+    </TPM:Description>
+    <TPM:Author>Peter Münster</TPM:Author>
+    <TPM:Size>196368</TPM:Size>
+    <TPM:Build/>
+    <TPM:RunFiles size="5504">
+tex/context/third/degrade/t-degrade.tex
+tpm/t-degrade.tpm
+   </TPM:RunFiles>
+    <TPM:DocFiles size="190864">
+doc/context/third/degrade/degrade-doc.pdf
+doc/context/third/degrade/degrade-demo.pdf
+    </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>Package/t-degrade</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>

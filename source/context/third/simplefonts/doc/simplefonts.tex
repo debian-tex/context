@@ -1,0 +1,46 @@
+\usemodule[simplefonts]%[size=11pt]
+
+\setmainfont[DejaVu Serif]
+\setsansfont[DejaVu Sans]
+\setmonofont[DejaVu Sans Mono]
+
+\starttext
+
+\title{The {\em simplefonts} module}
+
+Writing typescripts for \ConTeXt\ can be a tedious job, … 
+
+\starttyping
+\simplefont[<font>][..,..=..,..]
+\stoptyping
+
+\startlines
+{\simplefont[TeX Gyre Pagella]TeX Gyre Pagella}
+{\simplefont[TeX Gyre Termes]TeX Gyre Termes}
+{\simplefont[TeX Gyre Heros]TeX Gyre Heros}
+{\simplefont[TeX Gyre Bonum]TeX Gyre Bonum}
+{\simplefont[TeX Gyre Schola]TeX Gyre Schola}
+{\simplefont[TeX Gyre Adventor]TeX Gyre Adventor}
+{\simplefont[TeX Gyre Cursor]TeX Gyre Cursor}
+{\simplefont[TeX Gyre Chorus]TeX Gyre Chorus}
+\stoplines
+
+\startluacode
+
+local styles = { "regular", "italic", "bold", "bolditalic" }
+
+tex.sprint(tex.ctxcatcodes,"\\starttabulate[|l|b{\\nohyphens}p|]")
+tex.sprint(tex.ctxcatcodes,"\\NC \\bf style \\NC\\bf extension \\NC\\NR")
+for _, style in global.ipairs(styles) do
+    tex.sprint(tex.ctxcatcodes,"\\NC " .. style .. "\\NC ")
+    for _, extension in global.ipairs(thirddata.simplefonts.extlist["normal"][style]) do
+        tex.sprint(tex.ctxcatcodes,extension .. " ")
+--    global.print(extension)
+    end
+    tex.sprint(tex.ctxcatcodes," \\NC\\NR")
+end
+tex.sprint(tex.ctxcatcodes,"\\stoptabulate")
+
+\stopluacode
+
+\stoptext

@@ -1,0 +1,28 @@
+\startcomponent correspondence-letter-extension
+
+\environment correspondence-environment
+
+\chapter{Extensions}
+
+The letter module provides a special type of files, called extensions.
+They provide functions that could be used by different files like the
+labels for each language (\filename{label.nle}) or extra features for
+one purpose like the page optimation (\filename{optimize.nle}).
+
+You can load extension files either with the letter module and write
+their names as argument to the \type{extension} key or afterwards in
+your file with the \type{useletterextension} command.
+
+\setup[useletterextension]
+
+The module comes itself with the following extensions:
+
+\starttabulate[|f{\bf}l|p|]
+\NC label    \NC Labeltexts for different languages           \NC\NR
+\NC pragma   \NC Example content for Hans own letter module   \NC\NR
+\NC optimize \NC Increase or decrease the distance between
+                 paragraphs to fill a page with at least 25\%
+                 of the text height                           \NC\NR
+\stoptabulate
+
+\stopcomponent

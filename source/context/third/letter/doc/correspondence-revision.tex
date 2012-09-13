@@ -1,0 +1,36 @@
+\startcomponent correspondence-revision
+
+\environment correspondence-environment
+
+\chapter{File versions}
+
+The letter module comes as a package with many different files
+and each of them has their own version tag, you could read this
+version tag at the bottom of each file in the field date.
+
+\start
+
+\setuptabulate[header=repeat]
+
+\starttabulatehead
+\NC \bf File \NC \bf Revision \NC \bf Description            \NC\NR
+\stoptabulatehead
+
+\startmodulecode
+global.context.starttabulate( { "|l|l|l|" } )
+for k,v in global.pairs(correspondence.files) do
+    global.context.NC()
+    global.context("%s",correspondence.files[k]["name"])
+    global.context.NC()
+    global.context("%s",correspondence.files[k]["version"])
+    global.context.NC()
+    global.context("%s",correspondence.files[k]["description"])
+    global.context.NC()
+    global.context.NR()
+end
+global.context.stoptabulate()
+\stopmodulecode
+
+\stop
+
+\stopcomponent

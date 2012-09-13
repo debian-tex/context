@@ -1,0 +1,45 @@
+<!DOCTYPE rdf:RDF SYSTEM "tpm.dtd">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:TPM="http://texlive.dante.de/">
+  <rdf:Description about="http://dl.contextgarden.net/modules/f-urwgaramond.zip">
+    <TPM:Name>f-urwgaramond</TPM:Name>
+    <TPM:Type>Package</TPM:Type>
+    <TPM:Date>2006/08/17 00:00:00</TPM:Date>
+    <TPM:Version>2006.12.23</TPM:Version>
+    <TPM:Creator>Peter</TPM:Creator>
+    <TPM:Title>URW Garamond support</TPM:Title>
+    <TPM:Description>
+Support for the URWGaramond font family. Metrics, a typescript file and a
+module file are provided.
+    </TPM:Description>
+    <TPM:Author>Peter Münster</TPM:Author>
+    <TPM:Size>131101</TPM:Size>
+    <TPM:Build/>
+    <TPM:RunFiles size="44677">
+fonts/map/pdftex/context/texnansi-urw-garamond.map
+fonts/vf/urw/garamond/texnansi-ugmm8a.vf
+fonts/vf/urw/garamond/texnansi-ugmmi8a.vf
+fonts/vf/urw/garamond/texnansi-ugmr8a.vf
+fonts/vf/urw/garamond/texnansi-ugmri8a.vf
+fonts/tfm/urw/garamond/texnansi-raw-ugmm8a.tfm
+fonts/tfm/urw/garamond/texnansi-ugmm8a.tfm
+fonts/tfm/urw/garamond/texnansi-raw-ugmmi8a.tfm
+fonts/tfm/urw/garamond/texnansi-ugmmi8a.tfm
+fonts/tfm/urw/garamond/texnansi-raw-ugmr8a.tfm
+fonts/tfm/urw/garamond/texnansi-ugmr8a.tfm
+fonts/tfm/urw/garamond/texnansi-raw-ugmri8a.tfm
+fonts/tfm/urw/garamond/texnansi-ugmri8a.tfm
+tpm/f-urwgaramond.tpm
+tex/context/third/urwgaramond/t-urwgaramond.tex
+tex/context/third/urwgaramond/type-urwgaramond.tex
+   </TPM:RunFiles>
+    <TPM:DocFiles size="86424">
+doc/fonts/urw/garamond/test.tex
+doc/fonts/urw/garamond/test.pdf
+doc/fonts/urw/garamond/texnansi-urw-garamond.tex
+    </TPM:DocFiles>
+    <TPM:Requires>
+      <TPM:Package name="context"/>
+    </TPM:Requires>
+    <TPM:Provides>Package/f-urwgaramond</TPM:Provides>
+  </rdf:Description>
+</rdf:RDF>
