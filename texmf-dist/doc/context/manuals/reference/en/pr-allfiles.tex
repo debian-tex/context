@@ -1,0 +1,18 @@
+\startcomponent pr-allfiles
+
+\product contextref
+\environment contextref-env
+
+\def\contextfile{\dodoubleempty\docontextfile}
+\def\docontextfile[#1][#2]%
+  {\getparameters[module][file=,title=,subtitle=,plusfiles=,#2]
+   \doiftextelse{\moduleplusfiles}
+     {\expanded{\NC #1 {\ttx(\moduleplusfiles)}
+         \NC \moduletitle \NC \modulesubtitle \NC \NR }}
+     {\expanded{\NC #1                         
+         \NC \moduletitle \NC \modulesubtitle \NC \NR }}}
+
+\chapter{Distributed \CONTEXT\ files}
+\ctxlua{dofile"\currentcomponent.lua"}
+
+\stopcomponent

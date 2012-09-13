@@ -1,0 +1,6 @@
+name lmextra
+category Package
+revision 18651
+relocated 1
+runfiles size=32
+ RELOC/fonts/truetype/hoekwater/lmextra/lmtypewriter10-regular.ttf
