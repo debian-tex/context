@@ -1,0 +1,12 @@
+name context.i386-linux
+category Package
+revision 26861
+shortdesc i386-linux files of context
+binfiles arch=i386-linux size=133
+ bin/i386-linux/context
+ bin/i386-linux/ctxtools
+ bin/i386-linux/luatools
+ bin/i386-linux/mtxrun
+ bin/i386-linux/pstopdf
+ bin/i386-linux/texexec
+ bin/i386-linux/texmfstart

@@ -1,0 +1,16 @@
+name context-gnuplot
+category ConTeXt
+revision 26852
+shortdesc Inclusion of Gnuplot graphs in ConTeXt.
+relocated 1
+longdesc Enables simple creation and inclusion of graphs with Gnuplot.
+longdesc The package writes a script into temporary file, runs Gnuplot
+longdesc and includes the resulting graphic directly into the document.
+longdesc See the ConTeXt Garden package page for further details.
+depend context
+runfiles size=18
+ RELOC/metapost/context/third/gnuplot/mp-gnuplot.mp
+ RELOC/tex/context/third/gnuplot/t-gnuplot.tex
+catalogue-ctan /macros/context/contrib/context-gnuplot
+catalogue-date 2006-08-27 16:41:02 +0100
+catalogue-license gpl

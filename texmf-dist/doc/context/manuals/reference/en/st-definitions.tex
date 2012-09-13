@@ -1,0 +1,28 @@
+\startcomponent st-en-02
+
+\environment contextref-env
+
+\project manual
+
+\chapter[texcommando]{Definitions}
+
+\doifmode{mkiv}{\fixme{No definitions can be placed}\stopcomponent }
+
+\unprotect
+
+\start
+
+\setupsetup
+  [\c!reference=2]
+
+\setupframedtexts
+  [setuptext]
+  [\c!before=,\c!after=,\c!bodyfont=\v!small]
+
+\plaatssetup
+
+\stop
+
+\protect
+
+\stopcomponent
