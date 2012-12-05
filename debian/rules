@@ -34,9 +34,6 @@ binary-indep: build-indep
 	# remove koeieletters.map file, it is not needed here
 	rm $(instbase)/usr/share/texmf/fonts/map/pdftex/context/koeieletters.map
 
-	# install texmfcnf.lua file
-	cp debian/texmfcnf.lua $(instbase)/usr/share/texmf/web2c
-
 	dh_installtex --flavor=format:no_links
 	dh_installdirs usr/bin
 

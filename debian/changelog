@@ -1,3 +1,11 @@
+context (2012.05.30.20120611-2) experimental; urgency=low
+
+  * don't ship texmfcnf.lua, but rely on texlive-base shipping it,
+    adjust dependencies accordingly
+  * adjust Vcs fields for new git location
+
+ -- Norbert Preining <preining@debian.org>  Wed, 05 Dec 2012 12:15:08 +0900
+
 context (2012.05.30.20120611-1) unstable; urgency=low
 
   * new upstream release 2012.05.30 (TL2012 release)
