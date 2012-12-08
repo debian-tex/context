@@ -1,3 +1,10 @@
+context (2012.05.30.20121209-1) experimental; urgency=low
+
+  * new upstream release: fixes for lmodern math font renaming
+  * bump dependency on lmodern >= 2.004.4
+
+ -- Norbert Preining <preining@debian.org>  Sun, 09 Dec 2012 01:18:13 +0900
+
 context (2012.05.30.20120611-2) experimental; urgency=low
 
   * don't ship texmfcnf.lua, but rely on texlive-base shipping it,
