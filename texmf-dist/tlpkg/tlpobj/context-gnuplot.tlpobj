@@ -1,6 +1,6 @@
 name context-gnuplot
 category ConTeXt
-revision 26852
+revision 27837
 shortdesc Inclusion of Gnuplot graphs in ConTeXt.
 relocated 1
 longdesc Enables simple creation and inclusion of graphs with Gnuplot.
