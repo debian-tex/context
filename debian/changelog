@@ -1,3 +1,10 @@
+context (2012.05.30.20121209-2) experimental; urgency=low
+
+  * install doc files below /usr/share/texmf/doc, build-dep on
+    tex-common >= 4.01
+
+ -- Norbert Preining <preining@debian.org>  Wed, 19 Dec 2012 13:36:23 +0900
+
 context (2012.05.30.20121209-1) experimental; urgency=low
 
   * new upstream release: fixes for lmodern math font renaming

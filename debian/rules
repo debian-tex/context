@@ -31,6 +31,8 @@ binary-indep: build-indep
 		$(instbase)/etc/texmf/tex/context/user
 	rmdir $(instbase)/usr/share/texmf/tex/context/user
 
+	# remove GFDL license text, it is referenced in copyright
+	rm $(instbase)/usr/share/texmf/doc/context/manuals/reference/COPYING
 	# remove koeieletters.map file, it is not needed here
 	rm $(instbase)/usr/share/texmf/fonts/map/pdftex/context/koeieletters.map
 
@@ -48,15 +50,10 @@ binary-indep: build-indep
 	(echo "#!/bin/sh"; echo "mtxrun --script texfont \"$@\"" ) > $(instbase)/usr/bin/texfont
 	####(echo "#!/usr/bin/perl"; tail -n +3 texmf-dist/scripts/context/perl/pdftrimwhite.pl ) > $(instbase)/usr/bin/pdftrimwhite
 
-	#
-	# documentation
-	rm -r $(instbase)/usr/share/texmf/doc
-	cp -a texmf-dist/doc/context/* $(instbase)/usr/share/doc/$(package)
-	# remove GFDL license text, it is referenced in copyright
-	rm $(instbase)/usr/share/doc/context/manuals/reference/COPYING
-	# remove the doc under texmf
+	# install man pages
 	dh_installman texmf/doc/man/man1/*.1
-	# disabled
+
+
 	dh_installdocs debian/changelog.Debian.prerelease	\
 			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree \
 			debian/README.MarkIV debian/Release_Notes
