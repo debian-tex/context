@@ -34,7 +34,7 @@ binary-indep: build-indep
 	# remove GFDL license text, it is referenced in copyright
 	rm $(instbase)/usr/share/texmf/doc/context/manuals/reference/COPYING
 	# remove koeieletters.map file, it is not needed here
-	rm $(instbase)/usr/share/texmf/fonts/map/pdftex/context/koeieletters.map
+	#rm $(instbase)/usr/share/texmf/fonts/map/pdftex/context/koeieletters.map
 
 	dh_installtex --flavor=format:no_links
 	dh_installdirs usr/bin
