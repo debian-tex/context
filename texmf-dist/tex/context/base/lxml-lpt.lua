@@ -1,4 +1,4 @@
-if not modules then modules = { } end modules ['lxml-pth'] = {
+if not modules then modules = { } end modules ['lxml-lpt'] = {
     version   = 1.001,
     comment   = "this module is the basis for the lxml-* ones",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
@@ -10,7 +10,7 @@ if not modules then modules = { } end modules ['lxml-pth'] = {
 -- todo: B/C/[get first match]
 
 local concat, remove, insert = table.concat, table.remove, table.insert
-local type, next, tonumber, tostring, setmetatable, loadstring = type, next, tonumber, tostring, setmetatable, loadstring
+local type, next, tonumber, tostring, setmetatable, load, select = type, next, tonumber, tostring, setmetatable, load, select
 local format, upper, lower, gmatch, gsub, find, rep = string.format, string.upper, string.lower, string.gmatch, string.gsub, string.find, string.rep
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 
@@ -539,14 +539,23 @@ local lp_builtin = P (
 -- for the moment we keep namespaces with attributes
 
 local lp_attribute = (P("@") + P("attribute::")) / "" * Cc("(ll.at and ll.at['") * ((R("az","AZ") + S("-_:"))^1) * Cc("'])")
-local lp_fastpos_p = ((P("+")^0 * R("09")^1 * P(-1)) / function(s) return "l==" .. s end)
-local lp_fastpos_n = ((P("-")   * R("09")^1 * P(-1)) / function(s) return "(" .. s .. "<0 and (#list+".. s .. "==l))" end)
+
+-- lp_fastpos_p = (P("+")^0 * R("09")^1 * P(-1)) / function(s) return "l==" .. s end
+-- lp_fastpos_n = (P("-")   * R("09")^1 * P(-1)) / function(s) return "(" .. s .. "<0 and (#list+".. s .. "==l))" end
+
+lp_fastpos_p = P("+")^0 * R("09")^1 * P(-1) / "l==%0"
+lp_fastpos_n = P("-")   * R("09")^1 * P(-1) / "(%0<0 and (#list+%0==l))"
+
 local lp_fastpos   = lp_fastpos_n + lp_fastpos_p
+
 local lp_reserved  = C("and") + C("or") + C("not") + C("div") + C("mod") + C("true") + C("false")
 
-local lp_lua_function  = C(R("az","AZ","__")^1 * (P(".") * R("az","AZ","__")^1)^1) * ("(") / function(t) -- todo: better . handling
-    return t .. "("
-end
+-- local lp_lua_function = C(R("az","AZ","__")^1 * (P(".") * R("az","AZ","__")^1)^1) * ("(") / function(t) -- todo: better . handling
+--     return t .. "("
+-- end
+
+-- local lp_lua_function = (R("az","AZ","__")^1 * (P(".") * R("az","AZ","__")^1)^1) * ("(") / "%0("
+local lp_lua_function = Cs((R("az","AZ","__")^1 * (P(".") * R("az","AZ","__")^1)^1) * ("(")) / "%0"
 
 local lp_function  = C(R("az","AZ","__")^1) * P("(") / function(t) -- todo: better . handling
     if expressions[t] then
@@ -673,7 +682,7 @@ end
 
 local function register_expression(expression)
     local converted = lpegmatch(converter,expression)
-    local runner = loadstring(format(template_e,converted))
+    local runner = load(format(template_e,converted))
     runner = (runner and runner()) or function() errorrunner_e(expression,converted) end
     return { kind = "expression", expression = expression, converted = converted, evaluator = runner }
 end
@@ -681,9 +690,9 @@ end
 local function register_finalizer(protocol,name,arguments)
     local runner
     if arguments and arguments ~= "" then
-        runner = loadstring(format(template_f_y,protocol or xml.defaultprotocol,name,arguments))
+        runner = load(format(template_f_y,protocol or xml.defaultprotocol,name,arguments))
     else
-        runner = loadstring(format(template_f_n,protocol or xml.defaultprotocol,name))
+        runner = load(format(template_f_n,protocol or xml.defaultprotocol,name))
     end
     runner = (runner and runner()) or function() errorrunner_f(name,arguments) end
     return { kind = "finalizer", name = name, arguments = arguments, finalizer = runner }
@@ -1107,6 +1116,7 @@ end
 expressions.child = function(e,pattern)
     return applylpath(e,pattern) -- todo: cache
 end
+
 expressions.count = function(e,pattern) -- what if pattern == empty or nil
     local collected = applylpath(e,pattern) -- todo: cache
     return pattern and (collected and #collected) or 0
@@ -1114,13 +1124,30 @@ end
 
 -- external
 
-expressions.oneof = function(s,...) -- slow
-    local t = {...} for i=1,#t do if s == t[i] then return true end end return false
+-- expressions.oneof = function(s,...)
+--     local t = {...}
+--     for i=1,#t do
+--         if s == t[i] then
+--             return true
+--         end
+--     end
+--     return false
+-- end
+
+expressions.oneof = function(s,...)
+    for i=1,select("#",...) do
+        if s == select(i,...) then
+            return true
+        end
+    end
+    return false
 end
+
 expressions.error = function(str)
     xml.errorhandler(format("unknown function in lpath expression: %s",tostring(str or "?")))
     return false
 end
+
 expressions.undefined = function(s)
     return s == nil
 end
@@ -1197,12 +1224,12 @@ xml.selection     = selection          -- new method, simple handle
 
 -- generic function finalizer (independant namespace)
 
-local function dofunction(collected,fnc)
+local function dofunction(collected,fnc,...)
     if collected then
         local f = functions[fnc]
         if f then
             for c=1,#collected do
-                f(collected[c])
+                f(collected[c],...)
             end
         else
             report_lpath("unknown function '%s'",fnc)
@@ -1356,4 +1383,30 @@ function xml.inspect(collection,pattern)
     for e in xml.collected(collection,pattern or ".") do
         report_lpath("pattern %q\n\n%s\n",pattern,xml.tostring(e))
     end
+end
+
+-- texy (see xfdf):
+
+local function split(e)
+    local dt = e.dt
+    if dt then
+        for i=1,#dt do
+            local dti = dt[i]
+            if type(dti) == "string" then
+                dti = gsub(dti,"^[\n\r]*(.-)[\n\r]*","%1")
+                dti = gsub(dti,"[\n\r]+","\n\n")
+                dt[i] = dti
+            else
+                split(dti)
+            end
+        end
+    end
+    return e
+end
+
+function xml.finalizers.paragraphs(c)
+    for i=1,#c do
+        split(c[i])
+    end
+    return c
 end

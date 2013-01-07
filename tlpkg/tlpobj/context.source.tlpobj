@@ -1,0 +1,8 @@
+name context.source
+category Package
+revision 26865
+shortdesc source files of context
+srcfiles size=4
+ texmf-dist/scripts/context/stubs/source/mtxrun_dll.c
+ texmf-dist/scripts/context/stubs/source/mtxrun_exe.c
+ texmf-dist/scripts/context/stubs/source/readme.txt

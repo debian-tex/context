@@ -1,8 +1,8 @@
 name context.doc
 category Package
-revision 28452
+revision 26865
 shortdesc doc files of context
-docfiles size=2936
+docfiles size=2691
  texmf-dist/doc/context/bib/bibmod-doc.pdf
  texmf-dist/doc/context/bib/bibmod-doc.tex
  texmf-dist/doc/context/document/general/manuals/mreadme.pdf
@@ -13,12 +13,8 @@ docfiles size=2936
  texmf-dist/doc/context/manuals/reference/README
  texmf-dist/doc/context/manuals/reference/TODO
  texmf-dist/doc/context/manuals/reference/en/Makefile
- texmf-dist/doc/context/manuals/reference/en/arranging/1x2xConference.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/1x2xConference.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/1x4.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/1x4.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/1x4xConference.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/1x4xConference.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/1x8.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/1x8.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/2DOWN.pdf
@@ -35,10 +31,6 @@ docfiles size=2936
  texmf-dist/doc/context/manuals/reference/en/arranging/2x16.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/2x2.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/2x2.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/2x2x2.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/2x2x2.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/2x2x3.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/2x2x3.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/2x2x4.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/2x2x4.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/2x4.pdf
@@ -58,27 +50,9 @@ docfiles size=2936
  texmf-dist/doc/context/manuals/reference/en/arranging/2x8xZ.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/2x8xZ.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/2xx.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/2xx2.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/2xx2.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/3SIDE.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/3SIDE.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/Doublewindow.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/Doublewindow.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/Mapflyer-12.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/Mapflyer-12.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/Tryptichon.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/Tryptichon.tex
  texmf-dist/doc/context/manuals/reference/en/arranging/XY.pdf
  texmf-dist/doc/context/manuals/reference/en/arranging/XY.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/Zflyer-10.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/Zflyer-10.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/Zflyer-12.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/Zflyer-12.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/Zflyer-8.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/Zflyer-8.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/figures-base-file.tex
- texmf-dist/doc/context/manuals/reference/en/arranging/test-arranging.pdf
- texmf-dist/doc/context/manuals/reference/en/arranging/test-arranging.tex
  texmf-dist/doc/context/manuals/reference/en/co-backgrounds.tex
  texmf-dist/doc/context/manuals/reference/en/co-blocks.tex
  texmf-dist/doc/context/manuals/reference/en/co-colors.tex
@@ -189,7 +163,6 @@ docfiles size=2936
  texmf-dist/doc/context/manuals/reference/en/cont-yy.tex
  texmf-dist/doc/context/manuals/reference/en/cont-zz.tex
  texmf-dist/doc/context/manuals/reference/en/contextref-env.tex
- texmf-dist/doc/context/manuals/reference/en/contextref.pdf
  texmf-dist/doc/context/manuals/reference/en/contextref.tex
  texmf-dist/doc/context/manuals/reference/en/fonts/demofont.afm
  texmf-dist/doc/context/manuals/reference/en/fonts/demofont.dat
@@ -197,6 +170,7 @@ docfiles size=2936
  texmf-dist/doc/context/manuals/reference/en/fonts/demofont.pfb
  texmf-dist/doc/context/manuals/reference/en/fonts/demofont.tex
  texmf-dist/doc/context/manuals/reference/en/fonts/texnansi-test-test.tex
+ texmf-dist/doc/context/manuals/reference/en/ls-R
  texmf-dist/doc/context/manuals/reference/en/pagedesign/co-en-1p.tex
  texmf-dist/doc/context/manuals/reference/en/pagedesign/co-en-1q.tex
  texmf-dist/doc/context/manuals/reference/en/pagedesign/co-en-2p.tex
@@ -221,19 +195,33 @@ docfiles size=2936
  texmf-dist/doc/context/manuals/reference/en/st-definitions.tex
  texmf-dist/doc/context/manuals/reference/en/st-index.tex
  texmf-dist/doc/context/manuals/reference/en/tables/registers-buffer.tex
- texmf-dist/doc/context/manuals/reference/en/texmf.zip
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/afm/test/test/demofont.afm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/map/dvipdfm/context/dvipdfm-texnansi-test-test.map
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/map/dvips/context/dvips-texnansi-test-test.map
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/map/pdftex/context/texnansi-test-test.map
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-demofont-capitalized-750.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-demofont-extended-1500.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-demofont-slanted-167.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-demofont-unligatured.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-demofont.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-raw-demofont-capitalized-750.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-raw-demofont-extended-1500.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-raw-demofont-slanted-167.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-raw-demofont-unligatured.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/tfm/test/test/texnansi-raw-demofont.tfm
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/type1/test/test/demofont.pfb
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/vf/test/test/texnansi-demofont-capitalized-750.vf
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/vf/test/test/texnansi-demofont-extended-1500.vf
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/vf/test/test/texnansi-demofont-slanted-167.vf
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/vf/test/test/texnansi-demofont-unligatured.vf
+ texmf-dist/doc/context/manuals/reference/en/texmf/fonts/vf/test/test/texnansi-demofont.vf
+ texmf-dist/doc/context/manuals/reference/en/texmf/ls-R
  texmf-dist/doc/context/manuals/reference/en/typography/encodings.pdf
  texmf-dist/doc/context/manuals/reference/en/typography/encodings.tex
  texmf-dist/doc/context/manuals/reference/en/typography/glyphs.pdf
  texmf-dist/doc/context/manuals/reference/en/typography/glyphs.tex
- texmf-dist/doc/context/scripts/perl/texshow.1
- texmf-dist/doc/context/scripts/perl/texshow.html
- texmf/doc/man/man1/context.1
- texmf/doc/man/man1/context.man1.pdf
  texmf/doc/man/man1/ctxtools.1
  texmf/doc/man/man1/ctxtools.man1.pdf
- texmf/doc/man/man1/pstopdf.1
- texmf/doc/man/man1/pstopdf.man1.pdf
  texmf/doc/man/man1/texexec.1
  texmf/doc/man/man1/texexec.man1.pdf
  texmf/doc/man/man1/texmfstart.1

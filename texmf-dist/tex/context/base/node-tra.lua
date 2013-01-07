@@ -16,6 +16,7 @@ local concat = table.concat
 local format, match, gmatch, concat, rep = string.format, string.match, string.gmatch, table.concat, string.rep
 local lpegmatch = lpeg.match
 local write_nl = texio.write_nl
+local clock = os.gettimeofday or os.clock -- should go in environment
 
 local report_nodes = logs.reporter("nodes","tracing")
 
@@ -46,6 +47,7 @@ local copy_node_list  = node.copy_list
 local hpack_node_list = node.hpack
 local free_node_list  = node.flush_list
 local traverse_nodes  = node.traverse
+local traverse_by_id  = node.traverse_id
 
 local nodecodes       = nodes.nodecodes
 local whatcodes       = nodes.whatcodes
@@ -219,7 +221,7 @@ function step_tracers.nofsteps()
     return context(#collection)
 end
 
-function step_tracers.glyphs(n,i)
+function step_tracers.glyphs(n,i) -- no need for hpack
     local c = collection[i]
     if c then
         tex.box[n] = hpack_node_list(copy_node_list(c))
@@ -352,7 +354,7 @@ end
 
 function nodes.handlers.checkglyphs(head,message)
     local t = { }
-    for g in traverse_id(glyph_code,head) do
+    for g in traverse_by_id(glyph_code,head) do
         t[#t+1] = format("U+%04X:%s",g.char,g.subtype)
     end
     if #t > 0 then
@@ -539,7 +541,7 @@ end
 
 nodes.showsimplelist = function(h,depth) showsimplelist(h,depth,0) end
 
-local function listtoutf(h,joiner,textonly)
+local function listtoutf(h,joiner,textonly,last)
     local joiner = (joiner == true and utfchar(0x200C)) or joiner -- zwnj
     local w = { }
     while h do
@@ -557,13 +559,17 @@ local function listtoutf(h,joiner,textonly)
                 mid and listtoutf(mid,joiner,textonly) or ""
             )
         elseif textonly then
-            if id == glue_code and h.width > 0 then
+            if id == glue_code and h.spec and h.spec.width > 0 then
                 w[#w+1] = " "
             end
         else
             w[#w+1] = "[-]"
         end
-        h = h.next
+        if h == last then
+            break
+        else
+            h = h.next
+        end
     end
     return concat(w)
 end
@@ -710,22 +716,141 @@ local get_attribute   = node.has_attribute
 local set_attribute   = node.set_attribute
 local unset_attribute = node.unset_attribute
 
-local attribute  = attributes.private('color')
-local colormodel = attributes.private('colormodel')
-local mapping    = attributes.list[attribute] or { }
+local a_color         = attributes.private('color')
+local a_colormodel    = attributes.private('colormodel')
+local a_state         = attributes.private('state')
+local m_color         = attributes.list[a_color] or { }
 
 function colors.set(n,c,s)
-    local mc = mapping[c]
+    local mc = m_color[c]
     if not mc then
-        unset_attribute(n,attribute)
+        unset_attribute(n,a_color)
     else
-        if not get_attribute(n,colormodel) then
-            set_attribute(n,colormodel,s or 1)
+        if not get_attribute(n,a_colormodel) then
+            set_attribute(n,a_colormodel,s or 1)
         end
-        set_attribute(n,attribute,mc)
+        set_attribute(n,a_color,mc)
     end
+    return n
+end
+
+function colors.setlist(n,c,s)
+    local f = n
+    while n do
+        local mc = m_color[c]
+        if not mc then
+            unset_attribute(n,a_color)
+        else
+            if not get_attribute(n,a_colormodel) then
+                set_attribute(n,a_colormodel,s or 1)
+            end
+            set_attribute(n,a_color,mc)
+        end
+        n = n.next
+    end
+    return f
 end
 
 function colors.reset(n)
-    unset_attribute(n,attribute)
+    unset_attribute(n,a_color)
+    return n
+end
+
+-- maybe
+
+local transparencies   = { }
+tracers.transparencies = transparencies
+
+local a_transparency   = attributes.private('transparency')
+local m_transparency   = attributes.list[a_transparency] or { }
+
+function transparencies.set(n,t)
+    local mt = m_transparency[t]
+    if not mt then
+        unset_attribute(n,a_transparency)
+    else
+        set_attribute(n,a_transparency,mt)
+    end
+    return n
+end
+
+function transparencies.setlist(n,c,s)
+    local f = n
+    while n do
+        local mt = m_transparency[c]
+        if not mt then
+            unset_attribute(n,a_transparency)
+        else
+            set_attribute(n,a_transparency,mt)
+        end
+        n = n.next
+    end
+    return f
+end
+
+function transparencies.reset(n)
+    unset_attribute(n,a_transparency)
+    return n
+end
+
+-- for the moment here
+
+nodes.visualizers = { }
+
+function nodes.visualizers.handler(head)
+    return head, false
+end
+
+-- also moved here
+
+local snapshots  = { }
+nodes.snapshots  = snapshots
+
+local nodeusage  = nodepool.usage
+
+local lasttime   = clock()
+local samples    = { }
+local parameters = {
+    "cs_count",
+    "dyn_used",
+    "elapsed_time",
+    "luabytecode_bytes",
+    "luastate_bytes",
+    "max_buf_stack",
+    "obj_ptr",
+    "pdf_mem_ptr",
+    "pdf_mem_size",
+    "pdf_os_cntr",
+--  "pool_ptr", -- obsolete
+    "str_ptr",
+}
+
+function snapshots.takesample(comment)
+    local c = clock()
+    local t = {
+        elapsed_time = c - lasttime,
+        node_memory  = nodeusage(),
+        comment      = comment,
+    }
+    for i=1,#parameters do
+        local parameter = parameters[i]
+        local ps = status[parameter]
+        if ps then
+            t[parameter] = ps
+        end
+    end
+    samples[#samples+1] = t
+    lasttime = c
+end
+
+function snapshots.getsamples()
+    return samples -- one return value !
+end
+
+function snapshots.resetsamples()
+    samples = { }
+end
+
+function snapshots.getparameters()
+    return parameters
 end

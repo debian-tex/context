@@ -19,10 +19,10 @@ in special kinds of output (for instance <l n='pdf'/>).</p>
 over a string.</p>
 --ldx]]--
 
-local utfchar, utfbyte, utfgsub = utf.char, utf.byte, utf.gsub
 local concat, gmatch, gsub, find = table.concat, string.gmatch, string.gsub, string.find
-local utfcharacters, utfvalues = string.utfcharacters, string.utfvalues
+local utfchar, utfbyte, utfcharacters, utfvalues = utf.char, utf.byte, utf.characters, utf.values
 local allocate = utilities.storage.allocate
+local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 
 local charfromnumber = characters.fromnumber
 
@@ -76,6 +76,7 @@ local decomposed = allocate {
     ["ﬖ"] = "վն",
     ["ﬗ"] = "մխ",
 }
+
 characters.decomposed = decomposed
 
 local function initialize() -- maybe only 'mn'
@@ -193,6 +194,20 @@ local private = {
 
 utffilters.private = private
 
+local tohigh = lpeg.replacer(low)   -- frozen, only for basic tex
+local tolow  = lpeg.replacer(high)  -- frozen, only for basic tex
+
+lpegpatterns.utftohigh = tohigh
+lpegpatterns.utftolow  = tolow
+
+function utffilters.harden(str)
+    return lpegmatch(tohigh,str)
+end
+
+function utffilters.soften(str)
+    return lpegmatch(tolow,str)
+end
+
 local function set(ch)
     local cb
     if type(ch) == "number" then
@@ -201,17 +216,24 @@ local function set(ch)
         cb = utfbyte(ch)
     end
     if cb < 256 then
-        low[ch] = utfchar(0x0F0000 + cb)
-        high[utfchar(0x0F0000 + cb)] = ch
         escapes[ch] = "\\" .. ch
+        low[ch] = utfchar(0x0F0000 + cb)
+        if ch == "%" then
+            ch = "%%" -- nasty, but we need this as in replacements (also in lpeg) % is interpreted
+        end
+        high[utfchar(0x0F0000 + cb)] = ch
     end
 end
 
 private.set = set
 
-function private.escape (str) return    gsub(str,"(.)", escapes) end
-function private.replace(str) return utfgsub(str,"(.)", low    ) end
-function private.revert (str) return utfgsub(str,"(.)", high   ) end
+-- function private.escape (str) return    gsub(str,"(.)", escapes) end
+-- function private.replace(str) return utfgsub(str,"(.)", low    ) end
+-- function private.revert (str) return utfgsub(str,"(.)", high   ) end
+
+private.escape  = utf.remapper(escapes)
+private.replace = utf.remapper(low)
+private.revert  = utf.remapper(high)
 
 for ch in gmatch(special,".") do set(ch) end
 
@@ -480,6 +502,14 @@ if sequencers then
         sequencers.enableaction(textfileactions,"characters.filters.utf.collapse")
         sequencers.enableaction(textfileactions,"characters.filters.utf.decompose")
     end
+
+    directives.register("filters.utf.collapse", function(v)
+        sequencers[v and "enableaction" or "disableaction"](textfileactions,"characters.filters.utf.collapse")
+    end)
+
+    directives.register("filters.utf.decompose", function(v)
+        sequencers[v and "enableaction" or "disableaction"](textfileactions,"characters.filters.utf.decompose")
+    end)
 
 end
 

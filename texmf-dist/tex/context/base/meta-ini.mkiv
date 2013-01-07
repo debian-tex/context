@@ -46,20 +46,22 @@
   {\dosinglegroupempty\meta_start_definitions}
 
 \def\meta_start_definitions#1#2\stopMPdefinitions
-  {\edef\currentMPinstance{#1}%
+  {\let\m_meta_saved_instance\currentMPinstance
+   \edef\currentMPinstance{#1}%
    \ifx\currentMPinstance\empty
      \let\currentMPinstance\defaultMPinstance
    \fi
-   \global\t_meta_instance\expandafter{\the\t_meta_instance#2}}
+   \global\t_meta_definitions\expandafter{\the\t_meta_definitions#2}%
+   \let\currentMPinstance\m_meta_saved_instance}
 
 \let\stopMPdefinitions\relax
 
-\unexpanded\def\startMPextensions#1\stopMPextensions
+\unexpanded\def\startMPextensions#1\stopMPextensions % for all instances, when enabled
   {\global\t_meta_extensions\expandafter{\the\t_meta_extensions#1}}
 
 \let\stopMPextensions\relax
 
-\unexpanded\def\startMPinitializations#1\stopMPinitializations
+\unexpanded\def\startMPinitializations#1\stopMPinitializations % for all instances, when enables
   {\global\t_meta_initializations\expandafter{\the\t_meta_initializations#1}}
 
 \let\stopMPinitializations\relax
@@ -93,7 +95,7 @@
    \edef\currentwidth    {\the\hsize       \space}%
    \edef\currentheight   {\the\vsize       \space}}
 
-\def\t_meta_instance{\csname\??mpinstancetokens\currentMPinstance\endcsname} % token register
+\def\t_meta_definitions{\csname\??mpinstancetokens\currentMPinstance\endcsname} % token register
 
 \installcommandhandler \??mpinstance {MPinstance} \??mpinstance
 
@@ -101,22 +103,15 @@
   [\s!format=metafun,
    \s!extensions=\v!no,
    \s!initializations=\v!no,
+   \c!method=\s!default,
    \c!textstyle=,
    \c!textcolor=]
-
-% \unexpanded\def\defineMPinstance
-%   {\dodoubleargument\meta_define_instance}
-
-% \def\meta_define_instance[#1][#2]%
-%   {\ifcsname\??mpinstancetokens#1\endcsname\else\expandafter\newtoks\csname\??mpinstancetokens#1\endcsname\fi
-%    \t_meta_instance\emptytoks % in case we redefine
-%    \getparameters[\??mpinstance#1][\s!format=mpost,\s!extensions=\v!no,\s!initializations=\v!no,#2]}
 
 \appendtoks
     \ifcsname\??mpinstancetokens\currentMPinstance\endcsname \else
         \expandafter\newtoks\csname\??mpinstancetokens\currentMPinstance\endcsname
     \fi
-    \t_meta_instance\emptytoks % in case we redefine
+    \t_meta_definitions\emptytoks % in case we redefine
 \to \everydefineMPinstance
 
 \unexpanded\def\resetMPinstance[#1]%
@@ -130,19 +125,23 @@
    \ifx\currentMPgraphicname\empty
      \edef\currentMPgraphicname{#1}%
      \let\currentMPinstance\defaultMPinstance
-   \else
+   \else\ifcsname\??mpinstancetokens#1\endcsname
      \edef\currentMPinstance{#1}%
-   \fi
+   \else
+     \let\currentMPinstance\defaultMPinstance
+   \fi\fi
    \edef\currentMPformat{\MPinstanceparameter\s!format}}
 
 \def\currentMPinstance{\defaultMPinstance}
 \def\currentMPformat  {\currentMPinstance}
 
-\defineMPinstance[metafun] [\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes]
-\defineMPinstance[extrafun][\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes]
-\defineMPinstance[mprun]   [\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes]
-\defineMPinstance[metapost][\s!format=mpost]
-\defineMPinstance[nofun]   [\s!format=mpost]
+\defineMPinstance[metafun]   [\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes]
+\defineMPinstance[extrafun]  [\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes]
+\defineMPinstance[doublefun] [\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes,\c!method=\s!double]
+\defineMPinstance[decimalfun][\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes,\c!method=\s!decimal]
+\defineMPinstance[mprun]     [\s!format=metafun,\s!extensions=\v!yes,\s!initializations=\v!yes]
+\defineMPinstance[metapost]  [\s!format=mpost]
+\defineMPinstance[nofun]     [\s!format=mpost]
 
 \newconditional\c_meta_include_extensions
 \newconditional\c_meta_include_initializations
@@ -157,10 +156,34 @@
 \def\MPaskedfigure{false}
 
 \def\meta_flush_current_initializations
-  {\ifconditional\c_meta_include_initializations\the\t_meta_initializations;\fi\theMPrandomseed;}
+  {\ifconditional\c_meta_include_initializations
+     \the\t_meta_initializations
+   \fi
+   \theMPrandomseed;}
 
-\def\meta_flush_current_preamble
-  {\ifconditional\c_meta_include_extensions\the\t_meta_extensions;\the\t_meta_userinclusions;\fi\the\t_meta_instance;}
+% \def\meta_flush_current_preamble
+%   {\ifconditional\c_meta_include_extensions
+%      \the\t_meta_extensions
+%      \the\t_meta_userinclusions
+%    \fi}
+
+\def\meta_flush_current_extensions
+  {\ifconditional\c_meta_include_extensions
+     \the\t_meta_extensions
+   \fi}
+
+\def\meta_flush_current_userinclusions
+  {\ifconditional\c_meta_include_extensions
+     \the\t_meta_userinclusions
+   \fi}
+
+\def\meta_flush_current_definitions
+  {\the\t_meta_definitions}
+
+\def\meta_reset_current_preamble
+  {\ifconditional\c_meta_include_extensions
+     \global\t_meta_extensions\emptytoks
+   \fi}
 
 \def\meta_start_current_graphic
   {\begingroup
@@ -172,7 +195,7 @@
    \edef\p_extensions{\MPinstanceparameter\s!extensions}%
    \ifx\p_extensions\v!yes
      \settrue \c_meta_include_extensions
-     \global\letMPinstanceparameter\s!extensions\v!no % needs checking
+    %\global\letMPinstanceparameter\s!extensions\v!no % needs checking
    \else
      \setfalse\c_meta_include_extensions
    \fi
@@ -189,24 +212,49 @@
    \useMPinstancestyleandcolor\c!textstyle\c!textcolor}
 
 \def\meta_stop_current_graphic
-  {\global\t_meta_instance\emptytoks
+  {\global\t_meta_definitions\emptytoks
    \endgroup}
+
+\def\meta_process_graphic_start
+  {\setbox\b_meta_graphic\hbox\bgroup}
+
+\def\meta_process_graphic_stop
+  {\egroup
+   \meta_place_graphic}
 
 \unexpanded\def\meta_process_graphic#1% todo: extensions and inclusions outside beginfig
   {\meta_start_current_graphic
    \forgetall
-   \setbox\b_meta_graphic\hbox\bgroup % ; added 20100901 (as in mkii)
-     \normalexpanded{\noexpand\ctxlua{metapost.graphic(
-       "\currentMPinstance",
-       "\currentMPformat",
-       \!!bs#1;\!!es,
-       \!!bs\meta_flush_current_initializations;\!!es,
-       \!!bs\meta_flush_current_preamble;\!!es,
-       \MPaskedfigure
-     )}}%
-   \egroup
-   \placeMPgraphic
+   \meta_process_graphic_start
+     \normalexpanded{\noexpand\ctxlua{metapost.graphic {
+       instance        = "\currentMPinstance",
+       format          = "\currentMPformat",
+       data            = \!!bs#1;\!!es,
+       initializations = \!!bs\meta_flush_current_initializations\!!es,
+       extensions      = \!!bs\meta_flush_current_extensions\!!es,
+       inclusions      = \!!bs\meta_flush_current_userinclusions\!!es,
+       definitions     = \!!bs\meta_flush_current_definitions\!!es,
+       figure          = "\MPaskedfigure",
+       method          = "\MPinstanceparameter\c!method",
+     }}}%
+   \meta_process_graphic_stop
+   \meta_reset_current_preamble
    \meta_stop_current_graphic}
+
+\let\meta_process_graphic_figure_start\relax
+\let\meta_process_graphic_figure_stop \relax
+
+\unexpanded\def\processMPfigurefile#1% special case: obeys beginfig .. endfig and makes pages
+  {\begingroup
+   \let\normal_meta_process_graphic_start\meta_process_graphic_start
+   \let\normal_meta_process_graphic_stop \meta_process_graphic_stop
+   \let\meta_process_graphic_start\relax
+   \let\meta_process_graphic_stop \relax
+   \def\meta_process_graphic_figure_start{\startTEXpage\normal_meta_process_graphic_start}%
+   \def\meta_process_graphic_figure_stop {\normal_meta_process_graphic_stop\stopTEXpage}
+   \def\MPaskedfigure{all}%
+   \meta_process_graphic{input "#1" ;}%
+   \endgroup}
 
 \newif\ifsetMPrandomseed \setMPrandomseedtrue % false by default
 
@@ -286,14 +334,17 @@
    \edef\height{#3\space}\let\overlayheight\height
    \ifcsname\??mpclip#1\endcsname
      \meta_start_current_graphic
-       \xdef\MPclippath{\normalexpanded{\noexpand\ctxlua{metapost.theclippath(
-         "\currentMPinstance",
-         "\currentMPformat",
-         \!!bs\getvalue{\??mpclip#1}\!!es,
-         \!!bs\meta_flush_current_initializations\!!es,
-         \!!bs\meta_flush_current_preamble\!!es
-       )}}}%
+       \xdef\MPclippath{\normalexpanded{\noexpand\ctxlua{metapost.theclippath {
+            instance        = "\currentMPinstance",
+            format          = "\currentMPformat",
+            data            = \!!bs\getvalue{\??mpclip#1}\!!es,
+            initializations = \!!bs\meta_flush_current_initializations\!!es,
+            extensions      = \!!bs\meta_flush_current_extensions\!!es,
+            inclusions      = \!!bs\meta_flush_current_userinclusions\!!es,
+            method          = "\MPinstanceparameter\c!method",
+       }}}}%
      \meta_stop_current_graphic
+     \meta_reset_current_preamble
      \ifx\MPclippath\empty
        \xdef\MPclippath{#4}%
      \fi
@@ -344,15 +395,10 @@
 %D \setupMPvariables[meta:button][size=20pt]
 %D \stoptyping
 
-% \startlines
-% \def\xxx{\lineheight}     \doprepareMPvariable{xxx} \xxx
-% \def\xxx{2pt}             \doprepareMPvariable{xxx} \xxx
-% \def\xxx{2}               \doprepareMPvariable{xxx} \xxx
-% \def\xxx{\scratchcounter} \doprepareMPvariable{xxx} \xxx
-% \def\xxx{red}             \doprepareMPvariable{xxx} \xxx
-% \def\xxx{0.4}             \doprepareMPvariable{xxx} \xxx
-% \stoplines
-
+% \lineheight  2pt  2  \scratchcounter  red  0.4  .5\bodyfontsize
+%
+% see cont-loc for test code
+%
 % currently the inheritance of backgrounds does not work and
 % we might drop it anyway (too messy)
 
@@ -362,34 +408,36 @@
 \let \m_meta_current_variable         \empty
 \let \m_meta_current_variable_template\empty
 
-\def \meta_prepare_variable_default   {\MPcolor{black}} % just to be sure we use a color but ...
-\edef\meta_unknown_variable_template  {\??gv:\s!unknown}
+\installcorenamespace{graphicvariable}
 
-\letvalue{\??gv:\s!unknown}\empty
+\def \meta_prepare_variable_default   {\MPcolor{black}} % just to be sure we use a color but ...
+\edef\meta_unknown_variable_template  {\??graphicvariable:\s!unknown}
+
+\letvalue{\??graphicvariable:\s!unknown}\empty
 
 \unexpanded\def\setupMPvariables
   {\dodoubleempty\meta_setup_variables}
 
 \def\meta_setup_variables[#1][#2]%
   {\ifsecondargument
-     \getrawparameters[\??gv#1:][#2]%
+     \getrawparameters[\??graphicvariable#1:][#2]%
    \else
-     \getrawparameters[\??gv:][#1]%
+     \getrawparameters[\??graphicvariable:][#1]%
    \fi}
 
 \unexpanded\def\presetMPvariable
   {\dodoubleargument\meta_preset_variable}
 
 \def\meta_preset_variable[#1][#2=#3]%
-  {\ifcsname\??gv#1:#2\endcsname \else
-     \setvalue{\??gv#1:#2}{#3}%
+  {\ifcsname\??graphicvariable#1:#2\endcsname \else
+     \setvalue{\??graphicvariable#1:#2}{#3}%
    \fi}
 
 \def\MPrawvar#1#2% no checking
-  {\csname\??gv#1:#2\endcsname}
+  {\csname\??graphicvariable#1:#2\endcsname}
 
 \def\MPvariable#1% todo: could be a framed chain
-  {\csname\??gv\currentmpvariableclass:#1\endcsname}
+  {\csname\??graphicvariable\currentmpvariableclass:#1\endcsname}
 
 \unexpanded\def\useMPvariables
   {\dodoubleargument\meta_use_variables}
@@ -403,11 +451,33 @@
 
 \unexpanded\def\meta_prepare_variable#1%
   {\edef\m_meta_current_variable_template
-     {\??gv\currentmpvariableclass:#1}%
+     {\??graphicvariable\currentmpvariableclass:#1}%
    \edef\m_meta_current_variable
      {\csname\ifcsname\m_meta_current_variable_template\endcsname
         \m_meta_current_variable_template\else\meta_unknown_variable_template
       \fi\endcsname}%
+   \ifx\m_meta_current_variable\empty
+     \expandafter\meta_prepare_variable_nop
+   \else
+     \expandafter\meta_prepare_variable_yes
+   \fi}
+
+\unexpanded\def\meta_prepare_instance_variables
+  {\expandafter\processcommalist\expandafter[\m_meta_instance_variables]\meta_prepare_instance_variable}
+
+\unexpanded\def\meta_prepare_instance_variable#1%
+  {\edef\m_meta_current_variable_template
+     {\??graphicvariable\currentmpvariableclass:#1}%
+   \edef\m_meta_current_variable
+     {\csname
+        \ifcsname\m_meta_current_variable_template\endcsname
+          \m_meta_current_variable_template
+        \else\ifcsname\??graphicvariable\currentMPgraphicname:#1\endcsname
+          \??graphicvariable\currentMPgraphicname:#1%
+        \else
+          \meta_unknown_variable_template
+        \fi\fi
+      \endcsname}%
    \ifx\m_meta_current_variable\empty
      \expandafter\meta_prepare_variable_nop
    \else
@@ -506,7 +576,7 @@
 
 \let\meta_relocate_box\relax
 
-\unexpanded\def\placeMPgraphic % the converter also displaces so in fact we revert
+\unexpanded\def\meta_place_graphic % the converter also displaces so in fact we revert
   {\meta_relocate_box
    \box\b_meta_graphic}
 
@@ -540,14 +610,18 @@
 
 \def\meta_unique_graphic#1#2%
   {\meta_begin_graphic_group{#1}%
-   \setupMPvariables[\currentMPgraphicname][#2]%
-   \getvalue{\??mpgraphic\currentMPgraphicname}\empty
+%    \setupMPvariables[\currentMPgraphicname][#2]%
+   \setupMPvariables[#1][#2]%
+   \getvalue{\??mpgraphic#1}\empty
    \meta_end_graphic_group}
 
 \def\meta_handle_use_graphic#1#2#3%
   {\begingroup
    \edef\currentmpvariableclass{#1}%
-   \meta_prepare_variables{#2}%
+   \edef\m_meta_instance_variables{#2}%
+   \ifx\m_meta_instance_variables\empty \else
+     \meta_prepare_instance_variables
+   \fi
    \meta_enable_include % redundant
    \meta_process_graphic{#3}%
    \endgroup}
@@ -571,7 +645,10 @@
 \def\meta_handle_reusable_graphic#1#2#3%
   {\begingroup
    \edef\currentmpvariableclass{#1}%
-   \meta_prepare_variables{#2}%
+   \edef\m_meta_instance_variables{#2}%
+   \ifx\m_meta_instance_variables\empty \else
+     \meta_prepare_instance_variables
+   \fi
    \meta_enable_include % redundant
    \global\advance\c_meta_object_counter\plusone
    \setobject{MP}{\number\c_meta_object_counter}\hbox{\meta_process_graphic{#3}}% was vbox, graphic must end up as hbox
@@ -592,8 +669,9 @@
 
 \def\meta_use_graphic#1#2%
   {\meta_begin_graphic_group{#1}%
-   \doifsomething{#2}{\setupMPvariables[\currentMPgraphicname][#2]}%
-   \getvalue{\??mpgraphic\currentMPgraphicname}\empty
+%    \doifsomething{#2}{\setupMPvariables[\currentMPgraphicname][#2]}%
+   \doifsomething{#2}{\setupMPvariables[#1][#2]}%
+   \getvalue{\??mpgraphic#1}\empty
    \meta_end_graphic_group}
 
 \let\reuseMPgraphic   \useMPgraphic   % we can save a setup here if needed
@@ -628,8 +706,9 @@
 \def\meta_unique_page_graphic#1#2%
   {\meta_begin_graphic_group{#1}%
    \let\overlaystamp\overlaypagestamp
-   \setupMPvariables[\m_meta_page_prefix:\currentMPgraphicname][#2]% prefix is new here
-   \getvalue{\??mpgraphic\m_meta_page_prefix:\currentMPgraphicname}{}%
+%    \setupMPvariables[\m_meta_page_prefix:\currentMPgraphicname][#2]% prefix is new here
+   \setupMPvariables[\m_meta_page_prefix:#1][#2]% prefix is new here
+   \getvalue{\??mpgraphic\m_meta_page_prefix:#1}{}%
    \meta_end_graphic_group}
 
 %D One way of defining a stamp is:
@@ -651,7 +730,7 @@
   {\processcommalist[#1]\meta_extend_overlay_stamp}
 
 \def\meta_extend_overlay_stamp#1%
-  {\meta_prepare_variable{#1}%
+  {\meta_prepare_instance_variable{#1}%
    \edef\overlaystamp{\overlaystamp:\MPvariable{#1}}}
 
 %D \macros
@@ -722,9 +801,9 @@
 \unexpanded\def\startMPenvironment
   {\begingroup
    \catcode\endoflineasciicode \ignorecatcode
-   \dosingleempty\dostartMPenvironment}
+   \dosingleempty\meta_start_environment}
 
-\def\dostartMPenvironment[#1]#2\stopMPenvironment
+\def\meta_start_environment[#1]#2\stopMPenvironment
   {\endgroup
    \edef\m_meta_option{#1}
    \ifx\m_meta_option\s!reset
@@ -903,10 +982,6 @@
     OverlayLineWidth:=\overlaylinewidth;
     %
     \m_meta_colo_initializations
-%     OverlayLineColor:=\MPcolor{\overlaylinecolor};
-%     OverlayColor:=\MPcolor{\overlaycolor};
-%     vardef OverlayLineColor=\MPcolor{\overlaylinecolor} enddef;
-%     vardef OverlayColor=\MPcolor{\overlaycolor} enddef;
     %
     BaseLineSkip:=\the\baselineskip;
     LineHeight:=\the\baselineskip;
@@ -1172,11 +1247,9 @@
 %D
 %D Here is a generic setup command:
 
-\newtoks\everysetupMPgraphics
+\installcorenamespace{MPgraphics}
 
-\unexpanded\def\setupMPgraphics[#1]%
-  {\getparameters[\??mp][#1]%
-   \the\everysetupMPgraphics}
+\installsetuponlycommandhandler \??MPgraphics {MPgraphics}
 
 %D Here we hook in the outer color. When \type {color} is set to \type
 %D {global} we get the outer color automatically. If you change this
@@ -1184,7 +1257,7 @@
 %D behave in unexpected ways.
 
 \appendtoks
-    \doifelse\@@mpcolor\v!global{\MPcolormethod\plusone}{\MPcolormethod\zerocount}%
+    \doifelse{\directMPgraphicsparameter\c!color}\v!global{\MPcolormethod\plusone}{\MPcolormethod\zerocount}%
 \to \everysetupMPgraphics
 
 \setupMPgraphics

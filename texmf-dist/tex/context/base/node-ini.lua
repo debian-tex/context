@@ -13,7 +13,6 @@ modules.</p>
 
 -- this module is being reconstructed
 
-local utf = unicode.utf8
 local next, type = next, type
 local format, match, gsub = string.format, string.match, string.gsub
 local concat, remove = table.concat, table.remove
@@ -73,25 +72,29 @@ nodes.handlers = nodes.handlers or { }
 -- there will be more of this:
 
 local skipcodes = allocate {
-    [ 0] = "userskip",
-    [ 1] = "lineskip",
-    [ 2] = "baselineskip",
-    [ 3] = "parskip",
-    [ 4] = "abovedisplayskip",
-    [ 5] = "belowdisplayskip",
-    [ 6] = "abovedisplayshortskip",
-    [ 7] = "belowdisplayshortskip",
-    [ 8] = "leftskip",
-    [ 9] = "rightskip",
-    [10] = "topskip",
-    [11] = "splittopskip",
-    [12] = "tabskip",
-    [13] = "spaceskip",
-    [14] = "xspaceskip",
-    [15] = "parfillskip",
-    [16] = "thinmuskip",
-    [17] = "medmuskip",
-    [18] = "thickmuskip",
+    [  0] = "userskip",
+    [  1] = "lineskip",
+    [  2] = "baselineskip",
+    [  3] = "parskip",
+    [  4] = "abovedisplayskip",
+    [  5] = "belowdisplayskip",
+    [  6] = "abovedisplayshortskip",
+    [  7] = "belowdisplayshortskip",
+    [  8] = "leftskip",
+    [  9] = "rightskip",
+    [ 10] = "topskip",
+    [ 11] = "splittopskip",
+    [ 12] = "tabskip",
+    [ 13] = "spaceskip",
+    [ 14] = "xspaceskip",
+    [ 15] = "parfillskip",
+    [ 16] = "thinmuskip",
+    [ 17] = "medmuskip",
+    [ 18] = "thickmuskip",
+    [100] = "leaders",
+    [101] = "cleaders",
+    [102] = "xleaders",
+    [103] = "gleaders",
 }
 
 local penaltycodes = allocate { -- unfortunately not used

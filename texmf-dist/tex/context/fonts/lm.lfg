@@ -1,3 +1,6 @@
+-- In order to be ale to use beta math fonts, we use our own file name and
+-- always remap.
+
 return {
     name = "latin modern",
     version = "1.00",
@@ -9,6 +12,16 @@ return {
             aftercopying = {
                 mathematics.tweaks.fixbadprime, -- prime is too low
             },
+        },
+    },
+    filenames = {
+        ["latinmodern-math-regular.otf"] = {
+            "latinmodern-math.otf", -- the beta
+            "lmmath-regular.otf",
+            "latinmodernmath-regular.otf",
+            "lmmath-regular.otf",
+            "lmodernmath-regular.otf",
+            "lmodern-math.otf",
         },
     },
     designsizes = {

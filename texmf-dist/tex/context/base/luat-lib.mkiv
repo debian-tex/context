@@ -13,10 +13,10 @@
 
 \writestatus{loading}{ConTeXt Lua Macros / Libraries}
 
-\registerctxluafile{util-str}{1.001}
 \registerctxluafile{util-tab}{1.001}
-\registerctxluafile{util-pck}{1.001}
 \registerctxluafile{util-sto}{1.001} % could also be done in trac-deb.mkiv
+\registerctxluafile{util-str}{1.001} % uses util-sto
+\registerctxluafile{util-pck}{1.001}
 \registerctxluafile{util-seq}{1.001}
 %registerctxluafile{util-mrg}{1.001} % not needed in context itself, only mtxrun
 \registerctxluafile{util-lua}{1.001}
@@ -29,6 +29,10 @@
 \registerctxluafile{trac-set}{1.001}
 \registerctxluafile{trac-log}{1.001}
 %registerctxluafile{trac-pro}{1.001}
+
+\registerctxluafile{util-tpl}{1.001} % needs tracker
+
+\registerctxluafile{util-sta}{1.001}
 
 \registerctxluafile{data-ini}{1.001}
 \registerctxluafile{data-exp}{1.001}
@@ -65,6 +69,7 @@
 \registerctxluafile{luat-exe}{1.001}
 \registerctxluafile{luat-iop}{1.001}
 \registerctxluafile{luat-bwc}{1.001}
+\registerctxluafile{trac-lmx}{1.001} % might become l-lmx or luat-lmx
 \registerctxluafile{luat-mac}{1.001}
 
 \registerctxluafile{lxml-tab}{1.001}

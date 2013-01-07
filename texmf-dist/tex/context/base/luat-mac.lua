@@ -20,6 +20,8 @@ local lpegmatch, patterns = lpeg.match, lpeg.patterns
 local insert, remove = table.insert, table.remove
 local rep, sub = string.rep, string.sub
 local setmetatable = setmetatable
+local filesuffix = file.suffix
+local convertlmxstring = lmx and lmx.convertstring
 
 local pushtarget, poptarget = logs.pushtarget, logs.poptarget
 
@@ -126,6 +128,8 @@ local function matcherror(str,pos)
     report_macros("runaway definition at: %s",sub(str,pos-30,pos))
 end
 
+local csname_endcsname = P("\\csname") * (identifier + (1 - P("\\endcsname")))^1
+
 local grammar = { "converter",
     texcode     = pushlocal
                 * startcode
@@ -144,7 +148,8 @@ local grammar = { "converter",
     definition  = pushlocal
                 * definer
                 * escapedname
-                * (declaration + furthercomment + commentline + (1-leftbrace))^0
+--                 * (declaration + furthercomment + commentline + (1-leftbrace))^0
+                * (declaration + furthercomment + commentline + csname_endcsname + (1-leftbrace))^0
                 * V("braced")
                 * poplocal,
     setcode     = pushlocal
@@ -199,17 +204,95 @@ function macros.version(data)
     return lpegmatch(checker,data)
 end
 
-function macros.processmkvi(str,filename)
-    if (filename and file.suffix(filename) == "mkvi") or lpegmatch(checker,str) == "mkvi" then
-        local result = lpegmatch(parser,str,1,true) or str
-        pushtarget("log")
-        report_macros("processed file '%s', delta %s",filename,#str-#result)
-        poptarget("log")
-        return result
-    else
-        return str
-    end
+-- function macros.processmkvi(str,filename)
+--     if filename and filesuffix(filename) == "mkvi" or lpegmatch(checker,str) == "mkvi" then
+--         local oldsize = #str
+--         str = lpegmatch(parser,str,1,true) or str
+--         pushtarget("log")
+--         report_macros("processed mkvi file %q, delta %s",filename,oldsize-#str)
+--         poptarget("log")
+--     end
+--     return str
+-- end
+--
+-- utilities.sequencers.appendaction(resolvers.openers.helpers.textfileactions,"system","resolvers.macros.processmkvi")
+
+-- the document variables hack is temporary
+
+local processors = { }
+
+function processors.mkvi(str,filename)
+    local oldsize = #str
+    str = lpegmatch(parser,str,1,true) or str
+    pushtarget("log")
+    report_macros("processed mkvi file %q, delta %s",filename,oldsize-#str)
+    poptarget("log")
+    return str
 end
+
+function processors.mkix(str,filename) -- we could intercept earlier so that caching works better
+    if not document then               -- because now we hash the string as well as the
+        document = { }
+    end
+    if not document.variables then
+        document.variables = { }
+    end
+    local oldsize = #str
+    str = convertlmxstring(str,document.variables,false) or str
+    pushtarget("log")
+    report_macros("processed mkix file %q, delta %s",filename,oldsize-#str)
+    poptarget("log")
+    return str
+end
+
+function processors.mkxi(str,filename)
+    if not document then
+        document = { }
+    end
+    if not document.variables then
+        document.variables = { }
+    end
+    local oldsize = #str
+    str = convertlmxstring(str,document.variables,false) or str
+    str = lpegmatch(parser,str,1,true) or str
+    pushtarget("log")
+    report_macros("processed mkxi file %q, delta %s",filename,oldsize-#str)
+    poptarget("log")
+    return str
+end
+
+function macros.processmk(str,filename)
+    if filename then
+        local suffix = filesuffix(filename)
+        local processor = processors[suffix] or processors[lpegmatch(checker,str)]
+        if processor then
+            str = processor(str,filename)
+        end
+    end
+    return str
+end
+
+function macros.processmkvi(str,filename)
+    if filename and filesuffix(filename) == "mkvi" or lpegmatch(checker,str) == "mkvi" then
+        local oldsize = #str
+        str = lpegmatch(parser,str,1,true) or str
+        pushtarget("log")
+        report_macros("processed mkvi file %q, delta %s",filename,oldsize-#str)
+        poptarget("log")
+    end
+    return str
+end
+
+local sequencers = utilities.sequencers
+
+if sequencers then
+
+    sequencers.appendaction(resolvers.openers.helpers.textfileactions,"system","resolvers.macros.processmk")
+    sequencers.appendaction(resolvers.openers.helpers.textfileactions,"system","resolvers.macros.processmkvi")
+
+end
+
+-- bonus
 
 if resolvers.schemes then
 
@@ -218,7 +301,7 @@ if resolvers.schemes then
         local path = hashed.path
         if path and path ~= "" then
             local str = resolvers.loadtexfile(path)
-            if file.suffix(path) == "mkvi" or lpegmatch(checker,str) == "mkvi" then
+            if filesuffix(path) == "mkvi" or lpegmatch(checker,str) == "mkvi" then
                 -- already done automatically
                 io.savedata(cachename,str)
             else
@@ -233,9 +316,6 @@ if resolvers.schemes then
     end
 
     resolvers.schemes.install('mkvi',handler,1) -- this will cache !
-
-    utilities.sequencers.appendaction(resolvers.openers.helpers.textfileactions,"system","resolvers.macros.processmkvi")
- -- utilities.sequencers.disableaction(resolvers.openers.helpers.textfileactions,"resolvers.macros.processmkvi")
 
 end
 
@@ -292,6 +372,22 @@ end
 --     % { }{{ %%
 --     \bgroup\italic#content\egroup
 --   }
+-- ]]))
+--
+-- print(macros.preprocessed([[
+-- \unexpanded\def\start#tag#stoptag%
+--   {\initialize{#tag}%
+--    \normalexpanded
+--      {\def\yes[#one]#two\csname\e!stop#stoptag\endcsname{\command_yes[#one]{#two}}%
+--       \def\nop      #one\csname\e!stop#stoptag\endcsname{\command_nop      {#one}}}%
+--    \doifnextoptionalelse\yes\nop}
+-- ]]))
+--
+-- print(macros.preprocessed([[
+-- \normalexpanded{\long\def\expandafter\noexpand\csname\e!start\v!interactionmenu\endcsname[#tag]#content\expandafter\noexpand\csname\e!stop\v!interactionmenu\endcsname}%
+--   {\def\currentinteractionmenu{#tag}%
+--    \expandafter\settrue\csname\??menustate\interactionmenuparameter\c!category\endcsname
+--    \setinteractionmenuparameter\c!menu{#content}}
 -- ]]))
 --
 -- Just an experiment:

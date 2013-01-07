@@ -14,7 +14,7 @@ slower but look nicer this way.</p>
 <p>Some code may move to a module in the language namespace.</p>
 --ldx]]--
 
-local utf = unicode.utf8
+local command, context = commands, context
 
 local floor, date, time, concat = math.floor, os.date, os.time, table.concat
 local lower, format, rep, match = string.lower, string.format, string.rep, string.match
@@ -22,30 +22,29 @@ local utfchar, utfbyte = utf.char, utf.byte
 local tonumber, tostring = tonumber, tostring
 
 local settings_to_array = utilities.parsers.settings_to_array
-local allocate = utilities.storage.allocate
+local allocate          = utilities.storage.allocate
 
-local context    = context
+local context            = context
 
-local variables  = interfaces.variables
+local variables          = interfaces.variables
 
-converters       = converters or { }
-local converters = converters
+converters               = converters or { }
+local converters         = converters
 
-languages        = languages  or { }
-local languages  = languages
+languages                = languages  or { }
+local languages          = languages
 
-local function number(n)
-    return tonumber(n)
-end
-
-converters.number = number
+converters.number  = tonumber
+converters.numbers = tonumber
 
 function commands.number(n) context(n) end
+
+commands.numbers = commands.number
 
 -- to be reconsidered ... languages namespace here, might become local plus a register command
 
 local counters = allocate {
-    ['**'] = {
+    ['default'] = { -- no metatable as we do a test on keys
         0x0061, 0x0062, 0x0063, 0x0064, 0x0065,
         0x0066, 0x0067, 0x0068, 0x0069, 0x006A,
         0x006B, 0x006C, 0x006D, 0x006E, 0x006F,
@@ -135,7 +134,7 @@ counters['kr']   = counters['korean']
 counters['kr-p'] = counters['korean-parent']
 counters['kr-c'] = counters['korean-circle']
 
-local fallback = utf.byte('0')
+local fallback = utfbyte('0')
 
 local function chr(n,m)
     return (n > 0 and n < 27 and utfchar(n+m)) or ""
@@ -197,32 +196,28 @@ local function do_alphabetic(n,mapping,mapper,t)
     end
 end
 
-local function alphabetic(n,code)
-    return do_alphabetic(n,counters[code] or counters['**'],lowercharacter)
+function converters.alphabetic(n,code)
+    return do_alphabetic(n,counters[code] or counters.default,lowercharacter)
 end
 
-local function Alphabetic(n,code)
-    return do_alphabetic(n,counters[code] or counters['**'],uppercharacter)
+function converters.Alphabetic(n,code)
+    return do_alphabetic(n,counters[code] or counters.default,uppercharacter)
 end
 
-local function character (n) return chr (n,96) end
-local function Character (n) return chr (n,64) end
-local function characters(n) return chrs(n,96) end
-local function Characters(n) return chrs(n,64) end
+local lower_offset = 96
+local upper_offset = 64
 
-converters.alphabetic = alphabetic
-converters.Alphabetic = Alphabetic
-converters.character  = character
-converters.Character  = Character
-converters.characters = characters
-converters.Characters = Characters
+function converters.character (n) return chr (n,lower_offset) end
+function converters.Character (n) return chr (n,upper_offset) end
+function converters.characters(n) return chrs(n,lower_offset) end
+function converters.Characters(n) return chrs(n,upper_offset) end
 
-function commands.alphabetic(n,c) context(alphabetic(n,c)) end
-function commands.Alphabetic(n,c) context(Alphabetic(n,c)) end
-function commands.character (n)   context(character (n))   end
-function commands.Character (n)   context(Character (n))   end
-function commands.characters(n)   context(characters(n))   end
-function commands.Characters(n)   context(Characters(n))   end
+function commands.alphabetic(n,c) context(do_alphabetic(n,counters[c],lowercharacter)) end
+function commands.Alphabetic(n,c) context(do_alphabetic(n,counters[c],uppercharacter)) end
+function commands.character (n)   context(chr (n,lower_offset)) end
+function commands.Character (n)   context(chr (n,upper_offset)) end
+function commands.characters(n)   context(chrs(n,lower_offset)) end
+function commands.Characters(n)   context(chrs(n,upper_offset)) end
 
 local days = {
     [false] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
@@ -245,52 +240,35 @@ local function nofdays(year,month)
     return days[isleapyear(year)][month]
 end
 
-local function year  () return date("%Y") end
-local function month () return date("%m") end
-local function hour  () return date("%H") end
-local function minute() return date("%M") end
-local function second() return date("%S") end
-
 local function textime()
     return tonumber(date("%H")) * 60 + tonumber(date("%M"))
 end
+
+function converters.year  () return date("%Y") end
+function converters.month () return date("%m") end
+function converters.hour  () return date("%H") end
+function converters.minute() return date("%M") end
+function converters.second() return date("%S") end
 
 converters.weekday    = weekday
 converters.isleapyear = isleapyear
 converters.leapyear   = leapyear
 converters.nofdays    = nofdays
-converters.year       = year
-converters.month      = month
-converters.hour       = hour
-converters.minute     = minute
-converters.second     = second
 converters.textime    = textime
 
-function commands.weekday(day,month,year)
-    context(weekday(day,month,year))
-end
+function commands.weekday (day,month,year) context(weekday (day,month,year)) end
+function commands.leapyear(year)           context(leapyear(year))           end -- rather useless
+function commands.nofdays (year,month)     context(nofdays (year,month))     end
 
-function commands.isleapyear(year)
-    context(isleapyear(year))
-end
-
-function commands.leapyear(year)
-    context(leapyear(year))
-end
-
-function commands.nofdays(year,month)
-    context(nofdays(year,month))
-end
-
-function commands.year   () context(year   ()) end
-function commands.month  () context(month  ()) end
-function commands.hour   () context(hour   ()) end
-function commands.minute () context(minute ()) end
-function commands.second () context(second ()) end
+function commands.year   () context(date("%Y")) end
+function commands.month  () context(date("%m")) end
+function commands.hour   () context(date("%H")) end
+function commands.minute () context(date("%M")) end
+function commands.second () context(date("%S")) end
 function commands.textime() context(textime()) end
 
 function commands.doifleapyearelse(year)
-    commands.testcase(leapyear(year))
+    commands.doifelse(isleapyear(year))
 end
 
 local roman = {
@@ -307,13 +285,9 @@ local function toroman(n)
     end
 end
 
-local Romannumerals = toroman
-
-local function romannumerals(n) return lower(toroman(n)) end
-
 converters.toroman       = toroman
 converters.Romannumerals = toroman
-converters.romannumerals = romannumerals
+converters.romannumerals = function(n) return lower(toroman(n)) end
 
 function commands.romannumerals(n) context(lower(toroman(n))) end
 function commands.Romannumerals(n) context(      toroman(n))  end
@@ -366,11 +340,8 @@ end
 
 converters.toabjad = toabjad
 
-local function abjadnumerals     (n) return toabjad(n,false) end
-local function abjadnodotnumerals(n) return toabjad(n,true ) end
-
-converters.abjadnumerals      = abjadnumerals
-converters.abjadnodotnumerals = abjadnodotnumerals
+function converters.abjadnumerals     (n) return toabjad(n,false) end
+function converters.abjadnodotnumerals(n) return toabjad(n,true ) end
 
 function commands.abjadnumerals     (n) context(toabjad(n,false)) end
 function commands.abjadnodotnumerals(n) context(toabjad(n,true )) end
@@ -515,23 +486,18 @@ end
 
 converters.tochinese = tochinese
 
-local function chinesenumerals   (n) return tochinese(n,"normal") end
-local function chinesecapnumerals(n) return tochinese(n,"cap"   ) end
-local function chineseallnumerals(n) return tochinese(n,"all"   ) end
-
-converters.chinesenumerals    = chinesenumerals
-converters.chinesecapnumerals = chinesecapnumerals
-converters.chineseallnumerals = chineseallnumerals
+function converters.chinesenumerals   (n) return tochinese(n,"normal") end
+function converters.chinesecapnumerals(n) return tochinese(n,"cap"   ) end
+function converters.chineseallnumerals(n) return tochinese(n,"all"   ) end
 
 function commands.chinesenumerals   (n) context(tochinese(n,"normal")) end
 function commands.chinesecapnumerals(n) context(tochinese(n,"cap"   )) end
 function commands.chineseallnumerals(n) context(tochinese(n,"all"   )) end
 
 converters.sequences = converters.sequences or { }
+local sequences      = converters.sequences
 
-storage.register("converters/sequences", converters.sequences, "converters.sequences")
-
-local sequences = converters.sequences
+storage.register("converters/sequences", sequences, "converters.sequences")
 
 function converters.define(name,set)
     sequences[name] = settings_to_array(set)
@@ -683,7 +649,7 @@ end
 --     context(escapes[n] or utfchar(n))
 -- end
 --
--- local lccodes, uccodes = characters.lccode, characters.uccode
+-- local lccodes, uccodes, safechar = characters.lccode, characters.uccode, commands.safechar
 --
 -- local function do_alphabetic(n,mapping,chr)
 --     local max = #mapping
@@ -691,7 +657,7 @@ end
 --         do_alphabetic(floor((n-1)/max),mapping,chr)
 --         n = (n-1)%max+1
 --     end
---     characters.flush(chr(n,mapping))
+--     safechar(chr(n,mapping))
 -- end
 --
 -- local function lowercased(n,mapping) return characters.lccode(mapping[n] or fallback) end
@@ -704,8 +670,6 @@ end
 -- function converters.Alphabetic(n,code)
 --     do_alphabetic(n,counters[code] or counters['**'],uppercased)
 -- end
-
--- --
 
 local ordinals = {
     english = function(n)
@@ -753,6 +717,255 @@ function commands.ordinal(n,language)
     end
 end
 
+-- verbose numbers
+
+-- verbose numbers
+
+local data         = allocate()
+local verbose      = { data = data }
+converters.verbose = verbose
+
+-- verbose english
+
+local words = {
+        [0] = "zero",
+        [1] = "one",
+        [2] = "two",
+        [3] = "three",
+        [4] = "four",
+        [5] = "five",
+        [6] = "six",
+        [7] = "seven",
+        [8] = "eight",
+        [9] = "nine",
+       [10] = "ten",
+       [11] = "eleven",
+       [12] = "twelve",
+       [13] = "thirteen",
+       [14] = "fourteen",
+       [15] = "fifteen",
+       [16] = "sixteen",
+       [17] = "seventeen",
+       [18] = "eighteen",
+       [19] = "nineteen",
+       [20] = "twenty",
+       [30] = "thirty",
+       [40] = "forty",
+       [50] = "fifty",
+       [60] = "sixty",
+       [70] = "seventy",
+       [80] = "eighty",
+       [90] = "ninety",
+      [100] = "hundred",
+     [1000] = "thousand",
+   [1000^2] = "million",
+   [1000^3] = "billion",
+   [1000^4] = "trillion",
+}
+
+local function translate(n)
+    local w = words[n]
+    if w then
+        return w
+    end
+    local t = { }
+    local function compose_one(n)
+        local w = words[n]
+        if w then
+            t[#t+1] = w
+            return
+        end
+        local a, b = floor(n/100), n % 100
+        if a == 10 then
+            t[#t+1] = words[1]
+            t[#t+1] = words[1000]
+        elseif a > 0 then
+            t[#t+1] = words[a]
+            t[#t+1] = words[100]
+            -- don't say 'nine hundred zero'
+            if b == 0 then
+                return
+            end
+        end
+        if words[b] then
+            t[#t+1] = words[b]
+        else
+            a, b = floor(b/10), n % 10
+            t[#t+1] = words[a*10]
+            t[#t+1] = words[b]
+        end
+    end
+    local function compose_two(n,m)
+        if n > (m-1) then
+            local a, b = floor(n/m), n % m
+            if a > 0 then
+                compose_one(a)
+            end
+            t[#t+1] = words[m]
+            n = b
+        end
+        return n
+    end
+    n = compose_two(n,1000^4)
+    n = compose_two(n,1000^3)
+    n = compose_two(n,1000^2)
+    n = compose_two(n,1000^1)
+    if n > 0 then
+        compose_one(n)
+    end
+    return #t > 0 and concat(t," ") or tostring(n)
+end
+
+data.english = {
+    words     = words,
+    translate = translate,
+}
+
+data.en = data.english
+
+-- print(translate(11111111))
+-- print(translate(2221101))
+-- print(translate(1111))
+-- print(translate(1218))
+-- print(translate(1234))
+-- print(translate(12345))
+-- print(translate(12345678900000))
+
+-- verbose spanish (unchecked)
+
+local words = {
+        [1] = "uno",
+        [2] = "dos",
+        [3] = "tres",
+        [4] = "cuatro",
+        [5] = "cinco",
+        [6] = "seis",
+        [7] = "siete",
+        [8] = "ocho",
+        [9] = "nueve",
+       [10] = "diez",
+       [11] = "once",
+       [12] = "doce",
+       [13] = "trece",
+       [14] = "catorce",
+       [15] = "quince",
+       [16] = "dieciséis",
+       [17] = "diecisiete",
+       [18] = "dieciocho",
+       [19] = "diecinueve",
+       [20] = "veinte",
+       [21] = "veintiuno",
+       [22] = "veintidós",
+       [23] = "veintitrés",
+       [24] = "veinticuatro",
+       [25] = "veinticinco",
+       [26] = "veintiséis",
+       [27] = "veintisiete",
+       [28] = "veintiocho",
+       [29] = "veintinueve",
+       [30] = "treinta",
+       [40] = "cuarenta",
+       [50] = "cincuenta",
+       [60] = "sesenta",
+       [70] = "setenta",
+       [80] = "ochenta",
+       [90] = "noventa",
+      [100] = "ciento",
+      [200] = "doscientos",
+      [300] = "trescientos",
+      [400] = "cuatrocientos",
+      [500] = "quinientos",
+      [600] = "seiscientos",
+      [700] = "setecientos",
+      [800] = "ochocientos",
+      [900] = "novecientos",
+     [1000] = "mil",
+   [1000^2] = "millón",
+   [1000^3] = "mil millónes",
+   [1000^4] = "billón",
+}
+
+local function translate(n)
+    local w = words[n]
+    if w then
+        return w
+    end
+    local t = { }
+    local function compose_one(n)
+        local w = words[n]
+        if w then
+            t[#t+1] = w
+            return
+        end
+        -- a, b = hundreds, remainder
+        local a, b = floor(n/100), n % 100
+        -- one thousand
+        if a == 10 then
+            t[#t+1] = words[1]
+            t[#t+1] = words[1000]
+        -- x hundred (n.b. this will not give thirteen hundred because
+        -- compose_one(n) is only called after
+        -- `n = compose(two(n, 1000^1))`.
+        elseif a > 0 then
+            t[#t+1] = words[a*100]
+        end
+        -- the remainder
+        if words[b] then
+            t[#t+1] = words[b]
+        else
+            -- a, b = tens, remainder
+            a, b = floor(b/10), n % 10
+            t[#t+1] = words[a*10]
+            t[#t+1] = "y"
+            t[#t+1] = words[b]
+        end
+    end
+    -- compose_two handles x billion, ... x thousand. When 1000 or less is
+    -- left, compose_one takes over.
+    local function compose_two(n,m)
+        if n > (m-1) then
+            local a, b = floor(n/m), n % m
+            if a > 0 then
+                compose_one(a)
+            end
+            t[#t+1] = words[m]
+            n = b
+        end
+        return n
+    end
+    n = compose_two(n,1000^4)
+    n = compose_two(n,1000^3)
+    n = compose_two(n,1000^2)
+    n = compose_two(n,1000^1)
+    if n > 0 then
+        compose_one(n)
+    end
+    return #t > 0 and concat(t," ") or tostring(n)
+end
+
+data.spanish = {
+    words     = words,
+    translate = translate,
+}
+
+data.es = data.spanish
+
+-- print(translate(31))
+-- print(translate(101))
+-- print(translate(199))
+
+-- verbose handler:
+
+function converters.verbose.translate(n,language)
+    local t = language and data[language]
+    return t and t.translate(n) or n
+end
+
+function commands.verbose(n,language)
+    local t = language and data[language]
+    context(t and t.translate(n) or n)
+end
+
 -- --
 
 local v_day      = variables.day
@@ -775,18 +988,18 @@ local days = { -- not variables.sunday
 }
 
 local months = { -- not variables.januari
-     "january",
-     "february",
-     "march",
-     "april",
-     "may",
-     "june",
-     "july",
-     "august",
-     "september",
-     "october",
-     "november",
-     "december",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
 }
 
 function commands.dayname(n)
@@ -813,11 +1026,12 @@ end
 
 function commands.currentdate(str,currentlanguage) -- second argument false : no label
     local list = utilities.parsers.settings_to_array(str)
+    local splitlabel = languages.labels.split or string.itself -- we need to get the loading order right
     local year, month, day = tex.year, tex.month, tex.day
     local auto = true
     for i=1,#list do
         local entry = list[i]
-        local tag, plus = languages.labels.split(entry)
+        local tag, plus = splitlabel(entry)
         local ordinal, mnemonic, whatordinal = false, false, nil
         if not tag then
             tag = entry

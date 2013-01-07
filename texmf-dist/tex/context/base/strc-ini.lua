@@ -20,17 +20,24 @@ but it does not make sense to store all processdata.
 
 ]]--
 
-local format, concat = string.format, table.concat
+local format = string.format
 local lpegmatch = lpeg.match
 local count = tex.count
-local type, next, tonumber = type, next, tonumber
+local type, next, tonumber, select = type, next, tonumber, select
 local settings_to_array, settings_to_hash = utilities.parsers.settings_to_array, utilities.parsers.settings_to_hash
 local allocate = utilities.storage.allocate
 
-local ctxcatcodes       = tex.ctxcatcodes
-local xmlcatcodes       = tex.xmlcatcodes
-local notcatcodes       = tex.notcatcodes
-local txtcatcodes       = tex.txtcatcodes
+local catcodenumbers    = catcodes.numbers -- better use the context(...) way to switch
+
+local ctxcatcodes       = catcodenumbers.ctxcatcodes
+local xmlcatcodes       = catcodenumbers.xmlcatcodes
+local notcatcodes       = catcodenumbers.notcatcodes
+local txtcatcodes       = catcodenumbers.txtcatcodes
+
+local context, commands = context, commands
+
+local pushcatcodes = context.pushcatcodes
+local popcatcodes  = context.popcatcodes
 
 local trace_processors  = false
 local report_processors = logs.reporter("processors","structure")
@@ -162,9 +169,9 @@ end
 helpers.simplify = simplify
 
 function helpers.merged(...)
-    local h, t = { ... }, { }
-    for k=1, #h do
-        local v = h[k]
+    local t = { }
+    for k=1, select("#",...) do
+        local v = select(k,...)
         if v and v ~= "" and not t[k] then
             t[k] = v
         end
@@ -226,7 +233,15 @@ end
                     if trace_processors then
                         report_processors("cct: %s, txt: %s",catcodes,title)
                     end
-                    context.sprint(catcodes,title) -- was: texsprint(catcodes,title)
+                    --
+                    -- context.sprint(catcodes,title)
+                    --
+                    -- doesn't work when a newline is in there \section{Test\ A} so we do
+                    -- it this way:
+                    --
+                    pushcatcodes(catcodes)
+                    context(title)
+                    popcatcodes()
                 end
             end
         else

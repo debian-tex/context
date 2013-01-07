@@ -13,15 +13,21 @@ if not modules then modules = { } end modules ['trac-inf'] = {
 
 local format, lower = string.format, string.lower
 local clock = os.gettimeofday or os.clock -- should go in environment
-local write_nl = texio.write_nl
+local write_nl = texio and texio.write_nl or print
 
 statistics       = statistics or { }
 local statistics = statistics
 
 statistics.enable    = true
-statistics.threshold = 0.05
+statistics.threshold = 0.01
 
 local statusinfo, n, registered, timers = { }, 0, { }, { }
+
+table.setmetatableindex(timers,function(t,k)
+    local v = { timing = 0, loadtime = 0 }
+    t[k] = v
+    return v
+end)
 
 local function hastiming(instance)
     return instance and timers[instance]
@@ -33,14 +39,7 @@ end
 
 local function starttiming(instance)
     local timer = timers[instance or "notimer"]
-    if not timer then
-        timer = { }
-        timers[instance or "notimer"] = timer
-    end
-    local it = timer.timing
-    if not it then
-        it = 0
-    end
+    local it = timer.timing or 0
     if it == 0 then
         timer.starttime = clock()
         if not timer.loadtime then
@@ -96,7 +95,7 @@ statistics.elapsedtime    = elapsedtime
 statistics.elapsedindeed  = elapsedindeed
 statistics.elapsedseconds = elapsedseconds
 
--- general function
+-- general function .. we might split this module
 
 function statistics.register(tag,fnc)
     if statistics.enable and type(fnc) == "function" then

@@ -18,8 +18,6 @@ if not modules then modules = { } end modules ['math-noa'] = {
 -- 20D6 -> 2190
 -- 20D7 -> 2192
 
-local utf = unicode.utf8
-
 local utfchar, utfbyte = utf.char, utf.byte
 local format, rep  = string.format, string.rep
 local concat = table.concat
@@ -37,6 +35,7 @@ local trace_normalizing   = false  trackers.register("math.normalizing", functio
 local trace_collapsing    = false  trackers.register("math.collapsing",  function(v) trace_collapsing  = v end)
 local trace_goodies       = false  trackers.register("math.goodies",     function(v) trace_goodies     = v end)
 local trace_variants      = false  trackers.register("math.variants",    function(v) trace_variants    = v end)
+local trace_alternates    = false  trackers.register("math.alternates",  function(v) trace_alternates  = v end)
 local trace_italics       = false  trackers.register("math.italics",     function(v) trace_italics     = v end)
 local trace_families      = false  trackers.register("math.families",    function(v) trace_families    = v end)
 
@@ -48,6 +47,7 @@ local report_normalizing  = logs.reporter("mathematics","normalizing")
 local report_collapsing   = logs.reporter("mathematics","collapsing")
 local report_goodies      = logs.reporter("mathematics","goodies")
 local report_variants     = logs.reporter("mathematics","variants")
+local report_alternates   = logs.reporter("mathematics","alternates")
 local report_italics      = logs.reporter("mathematics","italics")
 local report_families     = logs.reporter("mathematics","families")
 
@@ -56,21 +56,29 @@ local has_attribute       = node.has_attribute
 local mlist_to_hlist      = node.mlist_to_hlist
 local font_of_family      = node.family_font
 local insert_node_after   = node.insert_after
+local insert_node_before  = node.insert_before
 local free_node           = node.free
 local new_node            = node.new -- todo: pool: math_noad math_sub
 
 local new_kern            = nodes.pool.kern
+local new_rule            = nodes.pool.rule
+local concat_nodes        = nodes.concat
+
+local topoints            = number.points
 
 local fonthashes          = fonts.hashes
 local fontdata            = fonthashes.identifiers
 local fontcharacters      = fonthashes.characters
 local fontproperties      = fonthashes.properties
 local fontitalics         = fonthashes.italics
-local fontquads           = fonthashes.quads
+local fontemwidths        = fonthashes.emwidths
+local fontexheights       = fonthashes.exheights
 
 local variables           = interfaces.variables
 local texattribute        = tex.attribute
 local unsetvalue          = attributes.unsetvalue
+
+local chardata            = characters.data
 
 noads                     = noads or { }  -- todo: only here
 local noads               = noads
@@ -86,9 +94,12 @@ local tasks               = nodes.tasks
 local nodecodes           = nodes.nodecodes
 local noadcodes           = nodes.noadcodes
 
-local noad_ord            = noadcodes.ord
-local noad_rel            = noadcodes.rel
-local noad_punct          = noadcodes.punct
+local noad_ord             = noadcodes.ord
+local noad_rel             = noadcodes.rel
+local noad_punct           = noadcodes.punct
+local noad_opdisplaylimits = noadcodes.opdisplaylimits
+local noad_oplimits        = noadcodes.oplimits
+local noad_opnolimits      = noadcodes.opnolimits
 
 local math_noad           = nodecodes.noad           -- attr nucleus sub sup
 local math_accent         = nodecodes.accent         -- attr nucleus sub sup accent
@@ -102,6 +113,9 @@ local math_delim          = nodecodes.delim          -- attr small_fam small_cha
 local math_style          = nodecodes.style          -- attr style
 local math_choice         = nodecodes.choice         -- attr display text script scriptscript
 local math_fence          = nodecodes.fence          -- attr subtype
+
+local hlist_code          = nodecodes.hlist
+local glyph_code          = nodecodes.glyph
 
 local left_fence_code     = 1
 
@@ -354,72 +368,133 @@ end
 
 -- respacing
 
-local mathpunctuation = attributes.private("mathpunctuation")
-
-local respace = { } processors.respace = respace
-
-local chardata = characters.data
+-- local mathpunctuation = attributes.private("mathpunctuation")
+--
+-- local respace = { } processors.respace = respace
 
 -- only [nd,ll,ul][po][nd,ll,ul]
 
-respace[math_char] = function(pointer,what,n,parent) -- not math_noad .. math_char ... and then parent
-    pointer = parent
-    if pointer and pointer.subtype == noad_ord then
-        local a = has_attribute(pointer,mathpunctuation)
-        if a and a > 0 then
-            set_attribute(pointer,mathpunctuation,0)
-            local current_nucleus = pointer.nucleus
-            if current_nucleus.id == math_char then
-                local current_char = current_nucleus.char
-                local fc = chardata[current_char]
-                fc = fc and fc.category
-                if fc == "nd" or fc == "ll" or fc == "lu" then
-                    local next_noad = pointer.next
-                    if next_noad and next_noad.id == math_noad and next_noad.subtype == noad_punct then
-                        local next_nucleus = next_noad.nucleus
-                        if next_nucleus.id == math_char then
-                            local next_char = next_nucleus.char
-                            local nc = chardata[next_char]
-                            nc = nc and nc.category
-                            if nc == "po" then
-                                local last_noad = next_noad.next
-                                if last_noad and last_noad.id == math_noad and last_noad.subtype == noad_ord then
-                                    local last_nucleus = last_noad.nucleus
-                                    if last_nucleus.id == math_char then
-                                        local last_char = last_nucleus.char
-                                        local lc = chardata[last_char]
-                                        lc = lc and lc.category
-                                        if lc == "nd" or lc == "ll" or lc == "lu" then
-                                            local ord = new_node(math_noad) -- todo: pool
-                                            ord.subtype, ord.nucleus, ord.sub, ord.sup, ord.attr = noad_ord, next_noad.nucleus, next_noad.sub, next_noad.sup, next_noad.attr
-                                        --  next_noad.nucleus, next_noad.sub, next_noad.sup, next_noad.attr = nil, nil, nil, nil
-                                            next_noad.nucleus, next_noad.sub, next_noad.sup = nil, nil, nil -- else crash with attributes ref count
-                                        --~ next_noad.attr = nil
-                                            ord.next = last_noad
-                                            pointer.next = ord
-                                            free_node(next_noad)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
+-- respace[math_char] = function(pointer,what,n,parent) -- not math_noad .. math_char ... and then parent
+--     pointer = parent
+--     if pointer and pointer.subtype == noad_ord then
+--         local a = has_attribute(pointer,mathpunctuation)
+--         if a and a > 0 then
+--             set_attribute(pointer,mathpunctuation,0)
+--             local current_nucleus = pointer.nucleus
+--             if current_nucleus.id == math_char then
+--                 local current_char = current_nucleus.char
+--                 local fc = chardata[current_char]
+--                 fc = fc and fc.category
+--                 if fc == "nd" or fc == "ll" or fc == "lu" then
+--                     local next_noad = pointer.next
+--                     if next_noad and next_noad.id == math_noad and next_noad.subtype == noad_punct then
+--                         local next_nucleus = next_noad.nucleus
+--                         if next_nucleus.id == math_char then
+--                             local next_char = next_nucleus.char
+--                             local nc = chardata[next_char]
+--                             nc = nc and nc.category
+--                             if nc == "po" then
+--                                 local last_noad = next_noad.next
+--                                 if last_noad and last_noad.id == math_noad and last_noad.subtype == noad_ord then
+--                                     local last_nucleus = last_noad.nucleus
+--                                     if last_nucleus.id == math_char then
+--                                         local last_char = last_nucleus.char
+--                                         local lc = chardata[last_char]
+--                                         lc = lc and lc.category
+--                                         if lc == "nd" or lc == "ll" or lc == "lu" then
+--                                             local ord = new_node(math_noad) -- todo: pool
+--                                             ord.subtype, ord.nucleus, ord.sub, ord.sup, ord.attr = noad_ord, next_noad.nucleus, next_noad.sub, next_noad.sup, next_noad.attr
+--                                         --  next_noad.nucleus, next_noad.sub, next_noad.sup, next_noad.attr = nil, nil, nil, nil
+--                                             next_noad.nucleus, next_noad.sub, next_noad.sup = nil, nil, nil -- else crash with attributes ref count
+--                                         --~ next_noad.attr = nil
+--                                             ord.next = last_noad
+--                                             pointer.next = ord
+--                                             free_node(next_noad)
+--                                         end
+--                                     end
+--                                 end
+--                             end
+--                         end
+--                     end
+--                 end
+--             end
+--         end
+--     end
+-- end
 
-function handlers.respace(head,style,penalties)
-    processnoads(head,respace,"respace")
-    return true
-end
+-- local comma  = 0x002C
+-- local period = 0x002E
+--
+-- respace[math_char] = function(pointer,what,n,parent)
+--     pointer = parent
+--     if pointer and pointer.subtype == noad_punct then
+--         local current_nucleus = pointer.nucleus
+--         if current_nucleus.id == math_char then
+--             local current_nucleus = pointer.nucleus
+--             if current_nucleus.id == math_char then
+--                 local current_char = current_nucleus.char
+--                 local a = has_attribute(pointer,mathpunctuation)
+--                 if not a or a == 0 then
+--                     if current_char == comma then
+--                         -- default tex: 2,5 or 2, 5 --> 2, 5
+--                     elseif current_char == period then
+--                         -- default tex: 2.5 or 2. 5 --> 2.5
+--                         pointer.subtype = noad_ord
+--                     end
+--                 elseif a == 1 then
+--                     local next_noad = pointer.next
+--                     if next_noad and next_noad.id == math_noad then
+--                         local next_nucleus = next_noad.nucleus
+--                         if next_nucleus.id == math_char and next_nucleus.char == 0 then
+--                             nodes.remove(pointer,next_noad,true)
+--                         end
+--                         if current_char == comma then
+--                             -- default tex: 2,5 or 2, 5 --> 2, 5
+--                         elseif current_char == period then
+--                             -- default tex: 2.5 or 2. 5 --> 2.5
+--                             pointer.subtype = noad_ord
+--                         end
+--                     end
+--                 elseif a == 2 then
+--                     if current_char == comma or current_char == period then
+--                         local next_noad = pointer.next
+--                         if next_noad and next_noad.id == math_noad then
+--                             local next_nucleus = next_noad.nucleus
+--                             if next_nucleus.id == math_char and next_nucleus.char == 0 then
+--                                 if current_char == comma then
+--                                     -- adaptive: 2, 5 --> 2, 5
+--                                 elseif current_char == period then
+--                                     -- adaptive: 2. 5 --> 2. 5
+--                                 end
+--                                 nodes.remove(pointer,next_noad,true)
+--                             else
+--                                 if current_char == comma then
+--                                     -- adaptive: 2,5  --> 2,5
+--                                     pointer.subtype = noad_ord
+--                                 elseif current_char == period then
+--                                     -- adaptive: 2.5  --> 2.5
+--                                     pointer.subtype = noad_ord
+--                                 end
+--                             end
+--                         end
+--                     end
+--                 end
+--             end
+--         end
+--     end
+-- end
+--
+-- function handlers.respace(head,style,penalties)
+--     processnoads(head,respace,"respace")
+--     return true
+-- end
 
 -- The following code is dedicated to Luigi Scarso who pointed me
 -- to the fact that \not= is not producing valid pdf-a code.
 -- The code does not solve this for virtual characters but it does
 -- a decent job on collapsing so that fonts that have the right
--- glyph will have a decent unicode point.
+-- glyph will have a decent unicode point. In the meantime this code
+-- has been moved elsewhere.
 
 local collapse = { } processors.collapse = collapse
 
@@ -428,10 +503,20 @@ local mathpairs = characters.mathpairs
 mathpairs[0x2032] = { [0x2032] = 0x2033, [0x2033] = 0x2034 } -- (prime,prime) (prime,doubleprime)
 mathpairs[0x2033] = { [0x2032] = 0x2034 }                    -- (doubleprime,prime)
 
+mathpairs[0x222B] = { [0x222B] = 0x222C, [0x222C] = 0x222D }
+mathpairs[0x222C] = { [0x222B] = 0x222D }
+
+local validpair = {
+    [noad_rel]             = true,
+    [noad_ord]             = true,
+    [noad_opdisplaylimits] = true,
+    [noad_oplimits]        = true,
+    [noad_opnolimits]      = true,
+}
+
 local function collapsepair(pointer,what,n,parent) -- todo: switch to turn in on and off
     if parent then
-        local subtype = parent.subtype
-        if subtype == noad_rel or subtype == noad_ord then -- ord is new
+        if validpair[parent.subtype] then
             local current_nucleus = parent.nucleus
             if not parent.sub and not parent.sup and current_nucleus.id == math_char then
                 local current_char = current_nucleus.char
@@ -439,8 +524,7 @@ local function collapsepair(pointer,what,n,parent) -- todo: switch to turn in on
                 if mathpair then
                     local next_noad = parent.next
                     if next_noad and next_noad.id == math_noad then
-                        local next_subtype = next_noad.subtype
-                        if next_subtype == noad_rel or next_subtype == noad_ord then -- ord is new
+                        if validpair[next_noad.subtype] then
                             local next_nucleus = next_noad.nucleus
                             if next_nucleus.id == math_char then
                                 local next_char = next_nucleus.char
@@ -654,6 +738,10 @@ alternate[math_char] = function(pointer)
             local what = mathalternatesattributes[a]
             local alt = getalternate(tfmdata,pointer.char,what.feature,what.value)
             if alt then
+                if trace_alternates then
+                    report_alternates("alternate %s, value: %s, replacing glyph 0x%05X by glyph 0x%05X",
+                        tostring(what.feature),tostring(what.value),pointer.char,alt)
+                end
                 pointer.char = alt
             end
         end
@@ -758,61 +846,184 @@ local a_mathitalics = attributes.private("mathitalics")
 local italics        = { }
 local default_factor = 1/20
 
+local function getcorrection(method,font,char) -- -- or character.italic -- (this one is for tex)
+
+    local correction, fromvisual
+
+    if method == 1 then
+        -- only font data triggered by fontitalics
+        local italics = fontitalics[font]
+        if italics then
+            local character = fontcharacters[font][char]
+            if character then
+                correction = character.italic_correction
+                if correction and correction ~= 0 then
+                    return correction, false
+                end
+            end
+        end
+    elseif method == 2 then
+        -- only font data triggered by fontdata
+        local character = fontcharacters[font][char]
+        if character then
+            correction = character.italic_correction
+            if correction and correction ~= 0 then
+                return correction, false
+            end
+        end
+    elseif method == 3 then
+        -- only quad based by selective
+        local visual = chardata[char].visual
+        if not visual then
+            -- skip
+        elseif visual == "it" or visual == "bi" then
+            correction = fontproperties[font].mathitalic_defaultvalue or default_factor*fontemwidths[font]
+            if correction and correction ~= 0 then
+                return correction, true
+            end
+        end
+    elseif method == 4 then
+        -- combination of 1 and 3
+        local italics = fontitalics[font]
+        if italics then
+            local character = fontcharacters[font][char]
+            if character then
+                correction = character.italic_correction
+                if correction and correction ~= 0 then
+                    return correction, false
+                end
+            end
+        end
+        if not correction then
+            local visual = chardata[char].visual
+            if not visual then
+                -- skip
+            elseif visual == "it" or visual == "bi" then
+                correction = fontproperties[font].mathitalic_defaultvalue or default_factor*fontemwidths[font]
+                if correction and correction ~= 0 then
+                    return correction, true
+                end
+            end
+        end
+    end
+
+end
+
+local function insert_kern(current,kern)
+    local sub  = new_node(math_sub) -- todo: pool
+    local noad = new_node(math_noad) -- todo: pool
+    sub.head = kern
+    kern.next = noad
+    noad.nucleus = current
+    return sub
+end
+
+local setcolor     = nodes.tracers.colors.set
+local italic_kern  = new_kern
+local c_positive_d = "trace:db"
+local c_negative_d = "trace:dr"
+
+trackers.register("math.italics", function(v)
+    if v then
+        italic_kern = function(k,font)
+            local ex = 1.5 * fontexheights[font]
+            if k > 0 then
+                return setcolor(new_rule(k,ex,ex),c_positive_d)
+            else
+                return concat_nodes {
+                    old_kern(k),
+                    setcolor(new_rule(-k,ex,ex),c_negative_d),
+                    old_kern(k),
+                }
+            end
+        end
+    else
+        italic_kern = new_kern
+    end
+end)
+
 italics[math_char] = function(pointer,what,n,parent)
     local method = has_attribute(pointer,a_mathitalics)
     if method and method > 0 then
         local char = pointer.char
         local font = font_of_family(pointer.fam) -- todo: table
-        local correction
-        if method == 1 then
-            -- only font data triggered by fontitalics
-            local italics = fontitalics[font]
-            if italics then
-                local character = fontcharacters[font][char]
-                correction = character and character.italic_correction -- or character.italic (this one is for tex)
+        local correction, visual = getcorrection(method,font,char)
+        if correction then
+            local pid = parent.id
+            local sub, sup
+            if pid == math_noad then
+                sup = parent.sup
+                sub = parent.sub
             end
-        elseif method == 2 then
-            -- only font data triggered by fontdata
-            local character = fontcharacters[font][char]
-            correction = character and character.italic_correction -- or character.italic (this one is for tex)
-        elseif method == 3 then
-            -- only quad based by selective
-            local visual = chardata[char].visual
-            if not visual then
-                -- skip
-            elseif visual == "it" or visual == "bi" then
-                correction = fontproperties[font].mathitalic_defaultvalue or default_factor*fontquads[font]
-            end
-        elseif method == 4 then
-            -- combination of 1 and 3
-            local italics = fontitalics[font]
-            if italics then
-                local character = fontcharacters[font][char]
-                correction = character and character.italic_correction -- or character.italic (this one is for tex)
-            end
-            if not correction then
-                local visual = chardata[char].visual
-                if not visual then
-                    -- skip
-                elseif visual == "it" or visual == "bi" then
-                    correction = fontproperties[font].mathitalic_defaultvalue or default_factor*fontquads[font]
+            if sup or sub then
+                local subtype = parent.subtype
+                if subtype == noad_oplimits then
+                    if sup then
+                        parent.sup = insert_kern(sup,italic_kern(correction,font))
+                        if trace_italics then
+                            report_italics("method %s: adding %s italic correction for upper limit of %s (0x%05X)",
+                                method,topoints(correction),utfchar(char),char)
+                        end
+                    end
+                    if sub then
+                        local correction = - correction
+                        parent.sub = insert_kern(sub,italic_kern(correction,font))
+                        if trace_italics then
+                            report_italics("method %s: adding %s italic correction for lower limit of %s (0x%05X)",
+                                method,topoints(correction),utfchar(char),char)
+                        end
+                    end
+                else
+                    if sup then
+                        parent.sup = insert_kern(sup,italic_kern(correction,font))
+                        if trace_italics then
+                            report_italics("method %s: adding %s italic correction before superscript after %s (0x%05X)",
+                                method,topoints(correction),utfchar(char),char)
+                        end
+                    end
                 end
-            end
-        end
-        if correction and correction ~= 0 then
-            local next_noad = parent.next
-            if next_noad and next_noad.id == math_noad then
-                local next_subtype = next_noad.subtype
-                if next_subtype == noad_punct or next_subtype == noad_ord then
-                    local next_nucleus = next_noad.nucleus
-                    if next_nucleus.id == math_char then
-                        local next_char = next_nucleus.char
-                        if not chardata[next_char].italic then -- or category
-                            if trace_italics then
-                                report_italics("method %s: adding %s italic correction between %s (0x%05X) and %s (0x%05X)",
-                                    method,number.points(correction),utfchar(char),char,utfchar(next_char),next_char)
+            else
+                local next_noad = parent.next
+                if not next_noad then
+                    if n== 1 then -- only at the outer level .. will become an option (always,endonly,none)
+                        if trace_italics then
+                            report_italics("method %s: adding %s italic correction between %s (0x%05X) and end math",
+                            method,topoints(correction),utfchar(char),char)
+                        end
+                        insert_node_after(parent,parent,italic_kern(correction,font))
+                    end
+                elseif next_noad.id == math_noad then
+                    local next_subtype = next_noad.subtype
+                    if next_subtype == noad_punct or next_subtype == noad_ord then
+                        local next_nucleus = next_noad.nucleus
+                        if next_nucleus.id == math_char then
+                            local next_char = next_nucleus.char
+                            local next_data = chardata[next_char]
+                            local visual = next_data.visual
+                            if visual == "it" or visual == "bi" then
+                             -- if trace_italics then
+                             --     report_italics("method %s: skipping %s italic correction between italic %s (0x%05X) and italic %s (0x%05X)",
+                             --         method,topoints(correction),utfchar(char),char,utfchar(next_char),next_char)
+                             -- end
+                            else
+                                local category = next_data.category
+                                if category == "nd" or category == "ll" or category == "lu" then
+                                    if trace_italics then
+                                        report_italics("method %s: adding %s italic correction between italic %s (0x%05X) and non italic %s (0x%05X)",
+                                            method,topoints(correction),utfchar(char),char,utfchar(next_char),next_char)
+                                    end
+                                    insert_node_after(parent,parent,italic_kern(correction,font))
+                             -- elseif next_data.height > (fontexheights[font]/2) then
+                             --     if trace_italics then
+                             --         report_italics("method %s: adding %s italic correction between %s (0x%05X) and ascending %s (0x%05X)",
+                             --             method,topoints(correction),utfchar(char),char,utfchar(next_char),next_char)
+                             --     end
+                             --     insert_node_after(parent,parent,italic_kern(correction,font))
+                             -- elseif trace_italics then
+                             --  -- report_italics("method %s: skipping %s italic correction between %s (0x%05X) and %s (0x%05X)",
+                             --  --     method,topoints(correction),utfchar(char),char,utfchar(next_char),next_char)
+                                end
                             end
-                            insert_node_after(parent,parent,new_kern(correction))
                         end
                     end
                 end

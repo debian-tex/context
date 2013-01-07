@@ -7,6 +7,7 @@ if not modules then modules = { } end modules ['data-tex'] = {
 }
 
 local char = string.char
+local insert, remove = table.insert, table.remove
 
 local trace_locating = false trackers.register("resolvers.locating", function(v) trace_locating = v end)
 
@@ -17,7 +18,7 @@ local resolvers = resolvers
 local sequencers    = utilities.sequencers
 local methodhandler = resolvers.methodhandler
 local splitlines    = string.splitlines
-local utffiletype   = unicode.filetype
+local utffiletype   = utf.filetype
 
 -- local fileprocessor = nil
 -- local lineprocessor = nil
@@ -51,6 +52,10 @@ appendgroup(textlineactions,"after" ) -- user
 local ctrl_d = char( 4) -- unix
 local ctrl_z = char(26) -- windows
 
+resolvers.inputstack = resolvers.inputstack or { }
+
+local inputstack = resolvers.inputstack
+
 function helpers.textopener(tag,filename,filehandle,coding)
     local lines
     local t_filehandle = type(filehandle)
@@ -61,7 +66,8 @@ function helpers.textopener(tag,filename,filehandle,coding)
     elseif t_filehandle == "table" then
         lines = filehandle
     else
-        lines = filehandle:read("*a")
+        lines = filehandle:read("*a") -- io.readall(filehandle) ... but never that large files anyway
+     -- lines = io.readall(filehandle)
         filehandle:close()
     end
     if type(lines) == "string" then
@@ -70,13 +76,13 @@ function helpers.textopener(tag,filename,filehandle,coding)
             report_tex("%s opener, '%s' opened using method '%s'",tag,filename,coding)
         end
         if coding == "utf-16-be" then
-            lines = unicode.utf16_to_utf8_be(lines)
+            lines = utf.utf16_to_utf8_be(lines)
         elseif coding == "utf-16-le" then
-            lines = unicode.utf16_to_utf8_le(lines)
+            lines = utf.utf16_to_utf8_le(lines)
         elseif coding == "utf-32-be" then
-            lines = unicode.utf32_to_utf8_be(lines)
+            lines = utf.utf32_to_utf8_be(lines)
         elseif coding == "utf-32-le" then
-            lines = unicode.utf32_to_utf8_le(lines)
+            lines = utf.utf32_to_utf8_le(lines)
         else -- utf8 or unknown (could be a mkvi file)
             local runner = textfileactions.runner
             if runner then
@@ -92,6 +98,7 @@ function helpers.textopener(tag,filename,filehandle,coding)
         lines[noflines] = nil
     end
     logs.show_open(filename)
+    insert(inputstack,filename)
     return {
         filename    = filename,
         noflines    = noflines,
@@ -101,6 +108,7 @@ function helpers.textopener(tag,filename,filehandle,coding)
                 report_tex("%s closer, '%s' closed",tag,filename)
             end
             logs.show_close(filename)
+            remove(inputstack)
             t = nil
         end,
         reader      = function(self)

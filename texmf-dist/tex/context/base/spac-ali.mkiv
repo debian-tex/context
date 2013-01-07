@@ -178,10 +178,10 @@
 
 \let\dohyphens\relax
 
-\newconstant\c_spac_tolerance_default  \c_spac_tolerance_default = 1500 % shouldn't that be 200
-\newconstant\c_spac_tolerance_minimum  \c_spac_tolerance_minimum = 1500
-\newconstant\c_spac_tolerance_normal   \c_spac_tolerance_normal  = 3000
-\newconstant\c_spac_tolerance_extreme  \c_spac_tolerance_extreme = 4500
+\newconstant\c_spac_tolerance_default  \c_spac_tolerance_default 1500 % shouldn't that be 200
+\newconstant\c_spac_tolerance_minimum  \c_spac_tolerance_minimum 1500
+\newconstant\c_spac_tolerance_normal   \c_spac_tolerance_normal  3000
+\newconstant\c_spac_tolerance_extreme  \c_spac_tolerance_extreme 4500
 
 \def\spac_align_set_raggedness_left  {\plustwo\bodyfontsize}
 \def\spac_align_set_raggedness_right {\plustwo\bodyfontsize}
@@ -262,13 +262,13 @@
 \def\v_spac_align_fill_amount_double   {\plustwo  fil}
 \def\v_spac_align_fill_amount_space    {\plustwo  fil} % can be added to xspace if we have a key
 \def\v_spac_align_fill_amount_half             {.5fil}
-\let\v_spac_align_space_amount         \interwordspace
+\let\v_spac_align_space_amount        \interwordspace
 \def\v_spac_align_space_amount_x          {.5\emwidth}
 
 \newskip\s_zero_plus_one_fil \s_zero_plus_one_fil = 0pt plus 1fil
 \newskip\s_zero_plus_zero    \s_zero_plus_zero    = 0pt plus 0pt
 
-% \!!plus ... slower than inline
+% \s!plus ... slower than inline
 
 \unexpanded\def\spac_align_set_horizontal_none % should also relax \updateraggedskips
   {\raggedstatus\zerocount
@@ -285,8 +285,8 @@
   {\setraggedness\spac_align_set_raggedness_left
    \raggedstatus\plusone
    \attribute\alignstateattribute\plusone
-   \leftskip   \plusone\leftskip \!!plus\spac_align_set_raggedness_left
-   \rightskip  \plusone\rightskip\!!plus\zeropoint
+   \leftskip   \plusone\leftskip \s!plus\spac_align_set_raggedness_left
+   \rightskip  \plusone\rightskip\s!plus\zeropoint
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_zero
@@ -297,8 +297,8 @@
   {\setraggedness\spac_align_set_raggedness_middle
    \raggedstatus\plustwo
    \attribute\alignstateattribute\plustwo
-   \leftskip   \plusone\leftskip \!!plus\spac_align_set_raggedness_middle
-   \rightskip  \plusone\rightskip\!!plus\spac_align_set_raggedness_middle
+   \leftskip   \plusone\leftskip \s!plus\spac_align_set_raggedness_middle
+   \rightskip  \plusone\rightskip\s!plus\spac_align_set_raggedness_middle
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_zero
@@ -309,8 +309,8 @@
   {\setraggedness\spac_align_set_raggedness_right
    \raggedstatus\plusthree
    \attribute\alignstateattribute\plusthree
-   \leftskip   \plusone\leftskip \!!plus\zeropoint
-   \rightskip  \plusone\rightskip\!!plus\spac_align_set_raggedness_right
+   \leftskip   \plusone\leftskip \s!plus\zeropoint
+   \rightskip  \plusone\rightskip\s!plus\spac_align_set_raggedness_right
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_one_fil
@@ -320,8 +320,8 @@
 \unexpanded\def\spac_align_set_horizontal_very_left
   {\raggedstatus\plusone
    \attribute\alignstateattribute\plusone
-   \leftskip   \plusone\leftskip \!!plus\v_spac_align_fill_amount
-   \rightskip  \plusone\rightskip\!!plus\zeropoint
+   \leftskip   \plusone\leftskip \s!plus\v_spac_align_fill_amount
+   \rightskip  \plusone\rightskip\s!plus\zeropoint
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_zero
@@ -331,8 +331,8 @@
 \unexpanded\def\spac_align_set_horizontal_very_center
   {\raggedstatus\plustwo
    \attribute\alignstateattribute\plustwo
-   \leftskip   \plusone\leftskip \!!plus\v_spac_align_fill_amount
-   \rightskip  \plusone\rightskip\!!plus\v_spac_align_fill_amount
+   \leftskip   \plusone\leftskip \s!plus\v_spac_align_fill_amount
+   \rightskip  \plusone\rightskip\s!plus\v_spac_align_fill_amount
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_zero
@@ -342,8 +342,8 @@
 \unexpanded\def\spac_align_set_horizontal_very_right
   {\raggedstatus\plusthree
    \attribute\alignstateattribute\plusthree
-   \leftskip   \plusone\leftskip \!!plus\zeropoint
-   \rightskip  \plusone\rightskip\!!plus\v_spac_align_fill_amount
+   \leftskip   \plusone\leftskip \s!plus\zeropoint
+   \rightskip  \plusone\rightskip\s!plus\v_spac_align_fill_amount
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_zero
@@ -354,8 +354,8 @@
   {\setraggedness\spac_align_set_raggedness_middle
    \raggedstatus\plustwo
    \attribute\alignstateattribute\plustwo
-   \leftskip   \plusone\leftskip \!!plus\v_spac_align_fill_amount_half
-   \rightskip  \plusone\rightskip\!!plus\v_spac_align_fill_amount_half
+   \leftskip   \plusone\leftskip \s!plus\v_spac_align_fill_amount_half
+   \rightskip  \plusone\rightskip\s!plus\v_spac_align_fill_amount_half
    \spaceskip  \v_spac_align_space_amount
    \xspaceskip \v_spac_align_space_amount_x
    \parfillskip\s_zero_plus_zero
@@ -365,11 +365,11 @@
 \unexpanded\def\spac_align_set_horizontal_centered_last_line
   {\raggedstatus\zerocount
    \attribute\alignstateattribute\attributeunsetvalue
-   \leftskip   \plusone\leftskip \!!plus\v_spac_align_fill_amount\relax
-   \rightskip  \plusone\rightskip\!!plus\v_spac_align_fill_amount_negative\relax
+   \leftskip   \plusone\leftskip \s!plus\v_spac_align_fill_amount\relax
+   \rightskip  \plusone\rightskip\s!plus\v_spac_align_fill_amount_negative\relax
    \spaceskip  \zeropoint\relax
    \xspaceskip \zeropoint\relax
-   \parfillskip\zeropoint\!!plus\v_spac_align_fill_amount_double\relax
+   \parfillskip\zeropoint\s!plus\v_spac_align_fill_amount_double\relax
    \parindent  \zeropoint
    \relax}
 
@@ -377,8 +377,8 @@
   {\tttf % brrr
    \raggedstatus\plusthree
    \attribute\alignstateattribute\plusthree
-   \leftskip   \plusone\leftskip \!!plus\zeropoint\relax
-   \rightskip  \plusone\rightskip\!!plus\spac_align_set_raggedness_right\relax
+   \leftskip   \plusone\leftskip \s!plus\zeropoint\relax
+   \rightskip  \plusone\rightskip\s!plus\spac_align_set_raggedness_right\relax
    \spaceskip  \zeropoint\relax
    \xspaceskip \zeropoint\relax
    \parfillskip\s_zero_plus_zero
@@ -386,7 +386,7 @@
    \relax}
 
 \unexpanded\def\spac_align_set_horizontal_extra
-  {\xspaceskip\zeropoint\!!plus\v_spac_align_fill_amount_space\relax}
+  {\xspaceskip\zeropoint\s!plus\v_spac_align_fill_amount_space\relax}
 
 \def\spac_align_flush_horizontal
   {\ifcase\c_spac_align_state_horizontal
@@ -636,6 +636,19 @@
 \setvalue{\??aligncommand\v!verytolerant   }{\t_spac_align_collected\expandafter{\the\t_spac_align_collected\spac_align_set_very_tolerant}}
 \setvalue{\??aligncommand\v!stretch        }{\t_spac_align_collected\expandafter{\the\t_spac_align_collected\spac_align_set_stretch}}
 
+%D For Wolfgang:
+
+\newtoks \t_spac_every_swap_align
+
+\appendtoks
+    \setvalue{\??aligncommand\v!right}{\c_spac_align_state_horizontal\plusthree}%
+    \setvalue{\??aligncommand\v!left }{\c_spac_align_state_horizontal\plustwo  }%
+\to \t_spac_every_swap_align
+
+\unexpanded\def\enablereversealignment
+  {\the\t_spac_every_swap_align
+   \t_spac_every_swap_align\emptytoks}
+
 % Visible commands:
 
 \let\notragged       \spac_align_set_horizontal_none
@@ -650,6 +663,10 @@
 \let\ttraggedright   \spac_align_set_horizontal_right_tt            % a plain command
 
 \let\forgetragged    \spac_align_set_horizontal_none
+
+\appendtoks
+    \spac_align_set_horizontal_none
+\to \everyforgetall
 
 % Box commands.
 
@@ -735,11 +752,11 @@
 
 \def\dosetraggedskips#1#2#3#4#5#6#7%
   {\raggedstatus                 #1\relax
-   \leftskip   1\leftskip \!!plus#2\relax
-   \rightskip  1\rightskip\!!plus#3\relax
+   \leftskip   1\leftskip \s!plus#2\relax
+   \rightskip  1\rightskip\s!plus#3\relax
    \spaceskip                    #4\relax
    \xspaceskip                   #5\relax
-   \parfillskip \zeropoint\!!plus#6\relax
+   \parfillskip \zeropoint\s!plus#6\relax
    \parindent                    #7\relax
    \attribute\alignstateattribute\ifcase\raggedstatus\attributeunsetvalue\else\raggedstatus\fi}
 
@@ -813,7 +830,7 @@
    \dontleavehmode % added in marrakesch at TUG 2006\begingroup
    \begingroup
    \setlocalhsize % new
-   \def\\{\endgroup\par\doalignline{#1}{#2}\begingroup}%
+   \def\\{\egroup\par\doalignline{#1}{#2}\bgroup}%
    \dowithnextbox
      {\hbox to \localhsize
         {\ifcase\alignstrutmode\or\strut\fi
@@ -832,12 +849,43 @@
 
 % direct commands
 
-\unexpanded\def\leftaligned {\doalignline\relax \hss  }
-\unexpanded\def\midaligned  {\doalignline\hss   \hss  }
-\unexpanded\def\rightaligned{\doalignline\hss   \relax}
-\unexpanded\def\maxaligned  {\doalignline\relax \relax}
+\installcorenamespace{alignwrapper}
 
-\let\centeraligned\midaligned
+\setuvalue{\??alignwrapper\v!left  }{\doalignline\relax \hss  }
+\setuvalue{\??alignwrapper\v!middle}{\doalignline\hss   \hss  }
+\setuvalue{\??alignwrapper\v!right }{\doalignline\hss   \relax}
+\setuvalue{\??alignwrapper\v!max   }{\doalignline\relax \relax}
+
+\def\spac_align_wrapper_handle#1%
+  {\csname\??alignwrapper\ifcsname\??alignwrapper#1\endcsname#1\else\v!middle\fi\endcsname}
+
+\unexpanded\def\spac_align_wrapper_start[#1]%
+  {\spac_align_wrapper_handle{#1}%
+   \bgroup\ignorespaces}
+
+\unexpanded\def\spac_align_wrapper_stop
+  {\removeunwantedspaces\egroup}
+
+\unexpanded\def\startlinealignment
+  {\dosingleempty\spac_align_wrapper_start}
+
+\let\stoplinealignment\spac_align_wrapper_stop
+
+\unexpanded\def\startleftaligned  {\spac_align_wrapper_start[\v!left  ]}  \let\stopleftaligned  \spac_align_wrapper_stop
+\unexpanded\def\startmiddlealigned{\spac_align_wrapper_start[\v!middle]}  \let\stopmiddlealigned\spac_align_wrapper_stop
+\unexpanded\def\startrightaligned {\spac_align_wrapper_start[\v!right ]}  \let\stoprightaligned \spac_align_wrapper_stop
+\unexpanded\def\startmaxaligned   {\spac_align_wrapper_start[\v!max   ]}  \let\stopmaxaligned   \spac_align_wrapper_stop
+
+\let\startmidaligned   \startmiddlealigned  \let\stopmidaligned   \stopmiddlealigned
+\let\startcenteraligned\startmiddlealigned  \let\stopcenteraligned\stopmiddlealigned
+
+\unexpanded\def\leftaligned  {\spac_align_wrapper_handle\v!left  }
+\unexpanded\def\middlealigned{\spac_align_wrapper_handle\v!middle}
+\unexpanded\def\rightaligned {\spac_align_wrapper_handle\v!right }
+\unexpanded\def\maxaligned   {\spac_align_wrapper_handle\v!max   }
+
+\let\midaligned   \middlealigned
+\let\centeraligned\middlealigned
 
 \installcorenamespace{alignline}
 
@@ -859,7 +907,7 @@
    \dontleavehmode % added in marrakesch at TUG 2006\begingroup
    \begingroup
    \setlocalhsize
-   \def\\{\endgroup\par\doxalignline#1#2#3#4#5#6\begingroup}% inefficient
+   \def\\{\egroup\par\doxalignline#1#2#3#4#5#6\bgroup}% inefficient
    \dowithnextbox
      {\hbox to \localhsize
         {#1\hskip\ifdone#2\else#3\fi#4%

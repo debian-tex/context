@@ -22,7 +22,7 @@ if not modules then modules = { } end modules ['luatex-fonts'] = {
 --
 -- Todo: all global namespaces in called modules will get local shortcuts.
 
-utf = unicode.utf8
+utf = utf or unicode.utf8
 
 if not generic_context then
 
@@ -132,9 +132,10 @@ else
     -- mess up ConTeXt code for the sake of general generality. Around
     -- version 1.0 there will be an official api defined.
 
+    loadmodule('l-lpeg.lua')
+    loadmodule('l-function.lua')
     loadmodule('l-string.lua')
     loadmodule('l-table.lua')
-    loadmodule('l-lpeg.lua')
     loadmodule('l-boolean.lua')
     loadmodule('l-math.lua')
     loadmodule('l-file.lua')
@@ -176,9 +177,9 @@ else
     loadmodule('font-otf.lua')
     loadmodule('font-otb.lua')
     loadmodule('node-inj.lua')         -- will be replaced (luatex >= .70)
+    loadmodule('font-ota.lua')
     loadmodule('font-otn.lua')
  -- loadmodule('luatex-fonts-chr.lua')
-    loadmodule('font-ota.lua')
     loadmodule('luatex-fonts-lua.lua')
     loadmodule('font-def.lua')
     loadmodule('luatex-fonts-def.lua')

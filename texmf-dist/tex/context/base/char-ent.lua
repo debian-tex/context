@@ -1,14 +1,13 @@
-if not modules then modules = { } end modules ['math-ent'] = {
+if not modules then modules = { } end modules ['char-ent'] = {
     version   = 1.001,
     comment   = "companion to math-ini.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "derived from the mathml 2.0 specification",
+    dataonly  = true,
 }
 
 -- http://www.w3.org/2003/entities/2007/w3centities-f.ent
 -- http://www.w3.org/2003/entities/2007/htmlmathml-f.ent
-
--- this might go into char-def
 
 local entities = utilities.storage.allocate {
     ["AElig"] = "Æ", -- U+000C6
@@ -568,7 +567,8 @@ local entities = utilities.storage.allocate {
     ["Ugr"] = "Υ", -- U+003A5
     ["Ugrave"] = "Ù", -- U+000D9
     ["Umacr"] = "Ū", -- U+0016A
-    ["UnderBar"] = "_", -- U+0005F
+ -- ["UnderBar"] = "_", -- U+0005F
+    ["UnderBar"] = "‾", -- U+0203E
     ["UnderBrace"] = "⏟", -- U+023DF
     ["UnderBracket"] = "⎵", -- U+023B5
     ["UnderParenthesis"] = "⏝", -- U+023DD

@@ -6,9 +6,11 @@ if not modules then modules = { } end modules ['trac-set'] = { -- might become u
     license   = "see context related readme files"
 }
 
+-- maybe this should be util-set.lua
+
 local type, next, tostring = type, next, tostring
 local concat = table.concat
-local format, find, lower, gsub, escapedpattern = string.format, string.find, string.lower, string.gsub, string.escapedpattern
+local format, find, lower, gsub, topattern = string.format, string.find, string.lower, string.gsub, string.topattern
 local is_boolean = string.is_boolean
 local settings_to_hash = utilities.parsers.settings_to_hash
 local allocate = utilities.storage.allocate
@@ -29,33 +31,41 @@ local trace_initialize = false -- only for testing during development
 function setters.initialize(filename,name,values) -- filename only for diagnostics
     local setter = data[name]
     if setter then
+        frozen = true -- don't permitoverload
+-- trace_initialize = true
         local data = setter.data
         if data then
-            for key, value in next, values do
-             -- key = gsub(key,"_",".")
-                value = is_boolean(value,value)
+            for key, newvalue in next, values do
+                local newvalue = is_boolean(newvalue,newvalue)
                 local functions = data[key]
                 if functions then
-                    if #functions > 0 and not functions.value then
+                    local oldvalue = functions.value
+                    if functions.frozen then
                         if trace_initialize then
-                            setter.report("executing %s (%s -> %s)",key,filename,tostring(value))
+                            setter.report("%s: %q is frozen to %q",filename,key,tostring(oldvalue))
+                        end
+                    elseif #functions > 0 and not oldvalue then
+--                     elseif #functions > 0 and oldvalue == nil then
+                        if trace_initialize then
+                            setter.report("%s: %q is set to %q",filename,key,tostring(newvalue))
                         end
                         for i=1,#functions do
-                            functions[i](value)
+                            functions[i](newvalue)
                         end
-                        functions.value = value
+                        functions.value = newvalue
+                        functions.frozen = functions.frozen or frozen
                     else
                         if trace_initialize then
-                            setter.report("skipping %s (%s -> %s)",key,filename,tostring(value))
+                            setter.report("%s: %q is kept as %q",filename,key,tostring(oldvalue))
                         end
                     end
                 else
                     -- we do a simple preregistration i.e. not in the
                     -- list as it might be an obsolete entry
-                    functions = { default = value }
+                    functions = { default = newvalue, frozen = frozen }
                     data[key] = functions
                     if trace_initialize then
-                        setter.report("storing %s (%s -> %s)",key,filename,tostring(value))
+                        setter.report("%s: %q default to %q",filename,key,tostring(newvalue))
                     end
                 end
             end
@@ -67,46 +77,52 @@ end
 -- user interface code
 
 local function set(t,what,newvalue)
-    local data, done = t.data, t.done
-    if type(what) == "string" then
-        what = settings_to_hash(what) -- inefficient but ok
-    end
-    if type(what) ~= "table" then
-        return
-    end
-    if not done then -- catch ... why not set?
-        done = { }
-        t.done = done
-    end
-    for w, value in next, what do
-        if value == "" then
-            value = newvalue
-        elseif not value then
-            value = false -- catch nil
-        else
-            value = is_boolean(value,value)
+    local data = t.data
+    if not data.frozen then
+        local done = t.done
+        if type(what) == "string" then
+            what = settings_to_hash(what) -- inefficient but ok
         end
-        w = "^" .. escapedpattern(w,true) .. "$" -- new: anchored
-        for name, functions in next, data do
-            if done[name] then
-                -- prevent recursion due to wildcards
-            elseif find(name,w) then
-                done[name] = true
-                for i=1,#functions do
-                    functions[i](value)
+        if type(what) ~= "table" then
+            return
+        end
+        if not done then -- catch ... why not set?
+            done = { }
+            t.done = done
+        end
+        for w, value in next, what do
+            if value == "" then
+                value = newvalue
+            elseif not value then
+                value = false -- catch nil
+            else
+                value = is_boolean(value,value)
+            end
+            w = topattern(w,true,true)
+            for name, functions in next, data do
+                if done[name] then
+                    -- prevent recursion due to wildcards
+                elseif find(name,w) then
+                    done[name] = true
+                    for i=1,#functions do
+                        functions[i](value)
+                    end
+                    functions.value = value
                 end
-                functions.value = value
             end
         end
     end
 end
 
 local function reset(t)
-    for name, functions in next, t.data do
-        for i=1,#functions do
-            functions[i](false)
+    local data = t.data
+    if not data.frozen then
+        for name, functions in next, data do
+            for i=1,#functions do
+                functions[i](false)
+            end
+            functions.value = false
         end
-        functions.value = false
     end
 end
 
@@ -136,7 +152,8 @@ function setters.register(t,what,...)
         end
     end
     local default = functions.default -- can be set from cnf file
-    for _, fnc in next, { ... } do
+    for i=1,select("#",...) do
+        local fnc = select(i,...)
         local typ = type(fnc)
         if typ == "string" then
             if trace_initialize then
@@ -205,7 +222,7 @@ function setters.show(t)
             local value, default, modules = functions.value, functions.default, #functions
             value   = value   == nil and "unset" or tostring(value)
             default = default == nil and "unset" or tostring(default)
-            t.report("%-30s   modules: %2i   default: %6s   value: %6s",name,modules,default,value)
+            t.report("%-50s   modules: %2i   default: %-12s   value: %-12s",name,modules,default,value)
         end
     end
     t.report()
@@ -218,6 +235,8 @@ end
 
 local enable, disable, register, list, show = setters.enable, setters.disable, setters.register, setters.list, setters.show
 
+local write_nl = texio and texio.write_nl or print
+
 local function report(setter,...)
     local report = logs and logs.report
     if report then
@@ -227,17 +246,29 @@ local function report(setter,...)
     end
 end
 
-function setters.new(name)
+local function default(setter,name)
+    local d = setter.data[name]
+    return d and d.default
+end
+
+local function value(setter,name)
+    local d = setter.data[name]
+    return d and (d.value or d.default)
+end
+
+function setters.new(name) -- we could use foo:bar syntax (but not used that often)
     local setter -- we need to access it in setter itself
     setter = {
         data     = allocate(), -- indexed, but also default and value fields
         name     = name,
-        report   = function(...) report  (setter,...) end,
-        enable   = function(...) enable  (setter,...) end,
-        disable  = function(...) disable (setter,...) end,
-        register = function(...) register(setter,...) end,
-        list     = function(...) list    (setter,...) end,
-        show     = function(...) show    (setter,...) end,
+        report   = function(...)        report  (setter,...) end,
+        enable   = function(...)        enable  (setter,...) end,
+        disable  = function(...)        disable (setter,...) end,
+        register = function(...)        register(setter,...) end,
+        list     = function(...)        list    (setter,...) end,
+        show     = function(...)        show    (setter,...) end,
+        default  = function(...) return default (setter,...) end,
+        value    = function(...) return value   (setter,...) end,
     }
     data[name] = setter
     return setter
@@ -297,17 +328,27 @@ end)
 
 -- experiment
 
-local flags = environment and environment.engineflags
+if environment then
 
-if flags then
-    if trackers and flags.trackers then
-        setters.initialize("flags","trackers", settings_to_hash(flags.trackers))
-     -- t_enable(flags.trackers)
+    -- The engineflags are known earlier than environment.arguments but maybe we
+    -- need to handle them both as the later are parsed differently. The c: prefix
+    -- is used by mtx-context to isolate the flags from those that concern luatex.
+
+    local engineflags = environment.engineflags
+
+    if engineflags then
+        local list = engineflags["c:trackers"] or engineflags["trackers"]
+        if type(list) == "string" then
+            setters.initialize("commandline flags","trackers",settings_to_hash(list))
+         -- t_enable(list)
+        end
+        local list = engineflags["c:directives"] or engineflags["directives"]
+        if type(list) == "string" then
+            setters.initialize("commandline flags","directives", settings_to_hash(list))
+         -- d_enable(list)
+        end
     end
-    if directives and flags.directives then
-        setters.initialize("flags","directives", settings_to_hash(flags.directives))
-     -- d_enable(flags.directives)
-    end
+
 end
 
 -- here

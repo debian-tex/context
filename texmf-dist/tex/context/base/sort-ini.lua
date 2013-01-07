@@ -43,11 +43,8 @@ with any demand so nothing here is frozen.</p>
 have language etc properties that then can be used.</p>
 ]]--
 
-
-local utf = unicode.utf8
 local gsub, rep, sub, sort, concat = string.gsub, string.rep, string.sub, table.sort, table.concat
-local utfbyte, utfchar = utf.byte, utf.char
-local utfcharacters, utfvalues = string.utfcharacters, string.utfvalues
+local utfbyte, utfchar, utfcharacters, utfvalues = utf.byte, utf.char, utf.characters, utf.values
 local next, type, tonumber, rawget, rawset = next, type, tonumber, rawget, rawset
 
 local allocate          = utilities.storage.allocate
@@ -246,7 +243,7 @@ local function preparetables(data)
                         local b = utfbyte(k)
                         n = decomposed[b] or { b }
                         if trace_tests then
-                            report_sorters(" 6 split: %s",utf.string(b))
+                            report_sorters(" 6 split: %s",utf.tostring(b))
                         end
                     end
                     if n then
@@ -527,9 +524,10 @@ local function numify(s)
     return utfchar(s)
 end
 
-function sorters.strip(str) -- todo: only letters and such utf.gsub("([^%w%d])","")
-    if str then
-        str = gsub(str,"\\[\"\'~^`]*","") -- \"e
+function sorters.strip(str) -- todo: only letters and such
+    if str and str ~= "" then
+        -- todo: make a lpeg
+        str = gsub(str,"\\[\"\'~^`]*","") -- \"e -- hm, too greedy
         str = gsub(str,"\\%S*","") -- the rest
         str = gsub(str,"%s","\001") -- can be option
         str = gsub(str,"[%s%[%](){}%$\"\']*","")

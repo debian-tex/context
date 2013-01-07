@@ -2,7 +2,7 @@
 %D   [       file=x-mathml,
 %D        version=2008.05.29,
 %D          title=\CONTEXT\ XML Modules,
-%D       subtitle=Loading \MATHML\ Filters,
+%D       subtitle=\MATHML,
 %D         author=Hans Hagen,
 %D           date=\currentdate,
 %D      copyright={PRAGMA ADE \& \CONTEXT\ Development Team}]
@@ -17,6 +17,9 @@
 % xml, tex and lua. I could rewrite the lot but it also shows how context evolves.
 %
 % no m:text strip (needs checking, maybe nbsp is mandate
+%
+% todo: more will be moved to lua (less hassle)
+% todo: move left/right to the lua end
 
 \writestatus{loading}{ConTeXt XML Macros / MathML Renderer}
 
@@ -29,16 +32,16 @@
 
 \registerctxluafile{x-mathml}{}
 
-\def\ctxmodulemathml#1{\directlua\zerocount{moduledata.mathml.#1}}
+\def\ctxmodulemathml#1{\ctxlua{moduledata.mathml.#1}}
 
 \startxmlsetups xml:mml:define
-    \xmlsetsetup{\xmldocument} {(formula|subformula)} {mml:formula}
-    \xmlfilter  {\xmldocument} {omt:*/function(remapopenmath)}
-    \xmlfilter  {\xmldocument} {mml:bind/function(remapmmlbind)}
-    \xmlfilter  {\xmldocument} {mml:csymbol/function(remapmmlcsymbol)}
-    \xmlsetsetup{\xmldocument} {mml:*} {mml:*}
-    \xmlsetsetup{\xmldocument} {mml:apply/mml:apply/mml:inverse/../..} {mml:apply:inverse}
-    \xmlstrip   {\xmldocument} {(mml:mi|mml:mo|mml:mn|mml:csymbol)}
+    \xmlsetsetup{#1} {(formula|subformula)} {mml:formula}
+    \xmlfilter  {#1} {omt:*/function(remapopenmath)}
+    \xmlfilter  {#1} {mml:bind/function(remapmmlbind)}
+    \xmlfilter  {#1} {mml:csymbol/function(remapmmlcsymbol)}
+    \xmlsetsetup{#1} {mml:*} {mml:*}
+    \xmlsetsetup{#1} {mml:apply/mml:apply/mml:inverse/../..} {mml:apply:inverse}
+    \xmlstrip   {#1} {(mml:mi|mml:mo|mml:mn|mml:csymbol)}
 \stopxmlsetups
 
 \xmlregisterns{omt}{openmath}
@@ -46,7 +49,10 @@
 
 \xmlregistersetup{xml:mml:define}
 
-\def\MMLhack{\let\MMLpar\par \let\par\relax \everyvbox{\let\par\MMLpar}}
+\unexpanded\def\MMLhack
+  {\let\MMLpar\par
+   \let\par\relax
+   \everyvbox{\let\par\MMLpar}}
 
 \xmlmapvalue {mml:math:mode}    {display} {\displaymathematics} % we had this already
 \xmlmapvalue {mml:math:mode}    {inline}  {\inlinemathematics }
@@ -117,7 +123,6 @@
 % \advance\delimiternesting\plusone \MMLright#1}\fi}
 % \def\mmlmiddledelimiter#1{\ifconditional\mmlignoredelimiter#1\else\normalordelimiter{#1}{%
 % \ifcase\delimiternesting\MMLleft\else\MMLmiddle\fi#1}\fi}
-
 
 %D Remark: from now on this is a module and no longer an xtag
 %D filter. There is an intermediate cleaner module but it has
@@ -1676,7 +1681,7 @@
                 \ifdefined\asciimath
                     \expanded{\asciimath{\xmlflush{#1}}}
                 \else
-                    \hbox{\tt no am loaded}%
+                    \hbox{\tt no am loaded}
                 \fi
             } {
                 \xmlall{#1}{../!mml:annotation}
@@ -2071,26 +2076,46 @@
     \xmlflush{#1}
 \stopxmlsetups
 
+% \startxmlsetups mml:mrow
+%     \begingroup
+%         \edef\nofmmlrows{\xmlcount{#1}{/mml:mo}}%
+%         \ifnum\nofmmlrows=\plustwo
+%             \xmldoifelse {#1} {/mml:mo[position()==1 or position()==\nofmmlrows]} {% we need a {}
+%                 \def\MMLleft  {\left }
+%                 \def\MMLright {\right}
+%                 \def\MMLmiddle{\middle}
+%                 \enabledelimiter
+%                 \checkdelimiters{\xmlall{#1}{/mml:mo}}
+%                 \fakeleftdelimiter
+%                 \xmlflush{#1}
+%                 \fakerightdelimiter
+%                 \disabledelimiter
+%             } {
+%                 \xmlflush{#1}
+%             }
+%         \else
+%             \xmlflush{#1}
+%         \fi
+%     \endgroup
+% \stopxmlsetups
+%
+% fails on { ... so we need
+
 \startxmlsetups mml:mrow
     \begingroup
-        \edef\nofmmlrows{\xmlcount{#1}{/mml:mo}}%
-        \ifnum\nofmmlrows=\plustwo
-            \xmldoifelse {#1} {/mml:mo[position()==1 or position()==\nofmmlrows]} {% we need a {}
-                \def\MMLleft  {\left }
-                \def\MMLright {\right}
-                \def\MMLmiddle{\middle}
-                \enabledelimiter
-                \checkdelimiters{\xmlall{#1}{/mml:mo}}
-                \fakeleftdelimiter
-                \xmlflush{#1}
-                \fakerightdelimiter
-                \disabledelimiter
-            } {
-                \xmlflush{#1}
-            }
-        \else
+        \xmldoifelse {#1} {/mml:mo[first() or last()]} {% we need a {}
+            \def\MMLleft  {\left }
+            \def\MMLright {\right}
+            \def\MMLmiddle{\middle}
+            \enabledelimiter
+            \checkdelimiters{\xmlall{#1}{/mml:mo}}
+            \fakeleftdelimiter
             \xmlflush{#1}
-        \fi
+            \fakerightdelimiter
+            \disabledelimiter
+        } {
+            \xmlflush{#1}
+        }
     \endgroup
 \stopxmlsetups
 
@@ -2104,27 +2129,45 @@
 
 \setupMMLappearance[scripts][\c!alternative=\v!a] % {} rond base
 
+% brrr no { } when limop .. todo: better in lua
+% speed up with ifx and setups or just in lua
+
 \startxmlsetups mml:msub
-    \doifelse\MMLscriptsalternative\v!a {
-        {\mmlfirst{#1}}\normalsubscript{\mmlsecond{#1}}
-    } {
+    \edef\mmlnucleus{\xmlraw{#1}{/mml:*[1]}}
+    \doifelse {\utfmathclass\mmlnucleus} {limop} {
          \mmlfirst{#1} \normalsubscript{\mmlsecond{#1}}
+    } {
+        \doifelse\MMLscriptsalternative\v!a {
+            {\mmlfirst{#1}}\normalsubscript{\mmlsecond{#1}}
+        } {
+             \mmlfirst{#1} \normalsubscript{\mmlsecond{#1}}
+        }
     }
 \stopxmlsetups
 
 \startxmlsetups mml:msup
-    \doifelse\MMLscriptsalternative\v!a {
-        {\mmlfirst{#1}}\normalsuperscript{\mmlsecond{#1}}
-    } {
+    \edef\mmlnucleus{\xmlraw{#1}{/mml:*[1]}}
+    \doifelse {\utfmathclass\mmlnucleus} {limop} {
          \mmlfirst{#1} \normalsuperscript{\mmlsecond{#1}}
+    } {
+        \doifelse\MMLscriptsalternative\v!a {
+            {\mmlfirst{#1}}\normalsuperscript{\mmlsecond{#1}}
+        } {
+             \mmlfirst{#1} \normalsuperscript{\mmlsecond{#1}}
+        }
     }
 \stopxmlsetups
 
 \startxmlsetups mml:msubsup
-    \doifelse\MMLscriptsalternative\v!a {
-        {\mmlfirst{#1}}\normalsubscript{\mmlsecond{#1}}\normalsuperscript{\mmlthird{#1}}
+    \edef\mmlnucleus{\xmlraw{#1}{/mml:*[1]}}
+    \doifelse {\utfmathclass\mmlnucleus} {limop} {
+         \mmlfirst{#1}\normalsubscript{\mmlsecond{#1}}\normalsuperscript{\mmlthird{#1}}
     } {
-         \mmlfirst{#1} \normalsubscript{\mmlsecond{#1}}\normalsuperscript{\mmlthird{#1}}
+        \doifelse\MMLscriptsalternative\v!a {
+            {\mmlfirst{#1}}\normalsubscript{\mmlsecond{#1}}\normalsuperscript{\mmlthird{#1}}
+        } {
+             \mmlfirst{#1}\normalsubscript{\mmlsecond{#1}}\normalsuperscript{\mmlthird{#1}}
+        }
     }
 \stopxmlsetups
 
@@ -2132,41 +2175,44 @@
   {\ifx#1\empty
      \expandafter\secondoftwoarguments
    \else\ifcsname#1\endcsname
-     \expandafter\expandafter\expandafter\firstoftwoarguments
+     \doubleexpandafter\firstoftwoarguments
    \else
-     \expandafter\expandafter\expandafter\secondoftwoarguments
+     \doubleexpandafter\secondoftwoarguments
    \fi\fi
    {\csname#1\endcsname}}
 
 \startxmlsetups mml:mover
-%     \mathop {
-        \edef\mmlovertoken{\xmlraw{#1}{/mml:*[2]}}
-        \doifelse{\utfmathclass\mmlovertoken}{accent} {
-            \edef\mmlovercommand{\utfmathcommand\mmlovertoken}
-            \mmlexecuteifdefined\mmlovercommand\mathematics{\mmlfirst{#1}}
-        } {
-            \edef\mmlbasetoken{\xmlraw{#1}{/mml:*[1]}}
-            \edef\mmlbasecommand{\utfmathfiller\mmlbasetoken}
-            \edef\mmlovercommand{\utfmathfiller\mmlovertoken}
-            \vbox {
-                \mathsurround\zeropoint \ialign {
-                    \hss##\hss\crcr
-                    \noalign{\kern3\onepoint}%
-                    \mmlexecuteifdefined\mmlovercommand{\mathematics{\mmlsecond{#1}}}\crcr
-                    \noalign{\kern3\onepoint\nointerlineskip}%
-                    \mmlexecuteifdefined\mmlbasecommand{\mathematics{\mmlfirst{#1}}}\crcr
-                }
+    \edef\mmlovertoken{\xmlraw{#1}{/mml:*[2]}}
+    \doifelseutfmathaccentfiltered\mmlovertoken{topaccent} {
+        \edef\mmlovercommand{\utfmathcommandfiltered\mmlovertoken{topaccent}}
+        \mmlexecuteifdefined\mmlovercommand\mathematics{\mmlfirst{#1}}
+    } {
+        \edef\mmlbasetoken{\xmlraw{#1}{/mml:*[1]}}
+        \edef\mmlbasecommand{\utfmathfiller\mmlbasetoken}
+        \edef\mmlovercommand{\utfmathfiller\mmlovertoken}
+        \vbox {
+            \mathsurround\zeropoint \ialign {
+                \hss$##$\hss
+                \crcr
+                \noalign{\kern3\onepoint}%
+                \mmlexecuteifdefined\mmlovercommand{\mmlsecond{#1}}
+                \crcr
+                \noalign{\kern3\onepoint\nointerlineskip}%
+                \mmlexecuteifdefined\mmlbasecommand{\mmlfirst{#1}}
+                \crcr
             }
         }
-%     }
+    }
 %     \limits % spoils spacing
 \stopxmlsetups
+
+% messy: <munder><mo>(</mo><mo>&UnderBar;</mo></munder>
 
 \startxmlsetups mml:munder
 %     \mathop {
         \edef\mmlundertoken{\xmlraw{#1}{/mml:*[2]}}
-        \doifelse{\utfmathclass\mmlundertoken}{accent} {
-            \edef\mmlundercommand{\utfmathcommand\mmlundertoken}
+        \doifelseutfmathaccentfiltered\mmlundertoken{botaccent} {
+            \edef\mmlundercommand{\utfmathcommandfiltered\mmlundertoken{botaccent}}
             \mmlexecuteifdefined\mmlundercommand\mathematics{\mmlfirst{#1}}
         } {
             \edef\mmlbasetoken   {\xmlraw{#1}{/mml:*[1]}}
@@ -2174,10 +2220,13 @@
             \edef\mmlundercommand{\utfmathfiller\mmlundertoken}
             \vtop {
                 \mathsurround\zeropoint \ialign {
-                    \hss##\hss\crcr
-                    \mmlexecuteifdefined\mmlbasecommand {\mathematics{\mmlfirst{#1}}}\crcr
+                    \hss$##$\hss
+                    \crcr
+                    \mmlexecuteifdefined\mmlbasecommand {\mmlfirst{#1}}
+                    \crcr
                     \noalign{\kern3\onepoint\nointerlineskip}%
-                    \mmlexecuteifdefined\mmlundercommand{\mathematics{\mmlsecond{#1}}}\crcr
+                    \mmlexecuteifdefined\mmlundercommand{\mmlsecond{#1}}
+                    \crcr
                     \noalign{\kern3\onepoint}
                 }
             }
@@ -2218,10 +2267,10 @@
         \!!deptha \xmlattdef{#1}{depth} \!!zeropoint
         \ifdim\!!heighta=\zeropoint
             \ifdim\!!deptha=\zeropoint\else
-                \hbox{\vrule\!!depth\!!deptha\!!height\zeropoint\!!width\zeropoint}%
+                \hbox{\vrule\s!depth\!!deptha\s!height\zeropoint\s!width\zeropoint}%
             \fi
         \else
-            \hbox{\vrule\!!depth\zeropoint\!!height\!!heighta\!!width\zeropoint}%
+            \hbox{\vrule\s!depth\zeropoint\s!height\!!heighta\s!width\zeropoint}%
         \fi
         \ifdim\!!widtha=\zeropoint\else
             \hskip\!!widtha
@@ -2255,7 +2304,7 @@
 %         \setbox\scratchbox\hbox{\mathematics{\mathstyle{\mmllinetext}}}% not ok
 %         \!!widtha\wd\scratchbox
 %     \fi
-%     \hbox{\vrule\!!width\!!widtha\!!depth\!!deptha\!!height\!!heighta}
+%     \hbox{\vrule\s!width\!!widtha\s!depth\!!deptha\s!height\!!heighta}
 % \stopxmlsetups
 
 \startxmlsetups mml:mglyph % probably never ok (hbox is needed in order to switch to normal font)

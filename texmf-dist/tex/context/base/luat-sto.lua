@@ -12,7 +12,9 @@ local type, next, setmetatable, getmetatable, collectgarbage = type, next, setme
 local gmatch, format, write_nl = string.gmatch, string.format, texio.write_nl
 local serialize, concat, sortedhash = table.serialize, table.concat, table.sortedhash
 local bytecode = lua.bytecode
+local strippedloadstring = utilities.lua.strippedloadstring
 
+local trace_storage  = false
 local report_storage = logs.reporter("system","storage")
 
 storage            = storage or { }
@@ -32,6 +34,9 @@ storage.nofmodules = storage.nofmodules or 0
 storage.mark       = utilities.storage.mark
 storage.allocate   = utilities.storage.allocate
 storage.marked     = utilities.storage.marked
+storage.strip      = false
+
+directives.register("system.compile.strip", function(v) storage.strip = v end)
 
 function storage.register(...)
     local t = { ... }
@@ -52,6 +57,7 @@ local function dump()
         local d = data[i]
         local message, original, target = d[1], d[2] ,d[3]
         local c, code, name = 0, { }, nil
+        -- we have a nice definer for this
         for str in gmatch(target,"([^%.]+)") do
             if name then
                 name = name .. "." .. str
@@ -62,11 +68,14 @@ local function dump()
         end
         max = max + 1
         if trace_storage then
-            report_storage('saving %s in slot %s',message,max)
-            c = c + 1 ; code[c] = format("report_storage('restoring %s from slot %s')",message,max)
+            c = c + 1 ; code[c] = format("print('restoring %s from slot %s')",message,max)
         end
         c = c + 1 ; code[c] = serialize(original,name)
-        bytecode[max] = loadstring(concat(code,"\n"))
+        if trace_storage then
+            report_storage('saving %s in slot %s (%s bytes)',message,max,#code[c])
+        end
+        -- we don't need tracing in such tables
+        bytecode[max] = strippedloadstring(concat(code,"\n"),storage.strip,format("slot %s (%s)",max,name))
         collectgarbage("step")
     end
     storage.max = max
@@ -103,9 +112,43 @@ end
 --~ end
 
 statistics.register("stored bytecode data", function()
-    local modules = (storage.nofmodules > 0 and storage.nofmodules) or (status.luabytecodes - lua.firstbytecode - 1)
-    local dumps = (storage.noftables > 0 and storage.noftables) or storage.max-storage.min + 1
-    return format("%s modules, %s tables, %s chunks",modules,dumps,modules+dumps)
+    local nofmodules = (storage.nofmodules > 0 and storage.nofmodules) or (status.luabytecodes - lua.firstbytecode - 1)
+    local nofdumps   = (storage.noftables  > 0 and storage.noftables ) or storage.max-storage.min + 1
+    local tofmodules = storage.tofmodules or 0
+    local tofdumps   = storage.toftables  or 0
+    if environment.initex then
+        local luautilities      = utilities.lua
+        local nofstrippedbytes  = luautilities.nofstrippedbytes
+        local nofstrippedchunks = luautilities.nofstrippedchunks
+        if nofstrippedbytes > 0 then
+            return format("%s modules, %s tables, %s chunks, %s chunks stripped (%s bytes)",
+                nofmodules,
+                nofdumps,
+                nofmodules + nofdumps,
+                nofstrippedchunks,
+                nofstrippedbytes
+            )
+        elseif nofstrippedchunks > 0 then
+            return format("%s modules, %s tables, %s chunks, %s chunks stripped",
+                nofmodules,
+                nofdumps,
+                nofmodules + nofdumps,
+                nofstrippedchunks
+            )
+        else
+            return format("%s modules, %s tables, %s chunks",
+                nofmodules,
+                nofdumps,
+                nofmodules + nofdumps
+            )
+        end
+    else
+        return format("%s modules (%0.3f sec), %s tables (%0.3f sec), %s chunks (%0.3f sec)",
+            nofmodules, tofmodules,
+            nofdumps, tofdumps,
+            nofmodules + nofdumps, tofmodules + tofdumps
+        )
+    end
 end)
 
 if lua.bytedata then

@@ -128,12 +128,13 @@ local checkedword  = context.checkedword
 local styleofword  = context.styleofword
 local setwordlist  = context.setwordlist
 local validwords   = false
+local validminimum = 3
 
 -- % language=uk
 
 local knownpreamble = Cmt(#P("% "), function(input,i,_) -- todo : utfbomb
     if i < 10 then
-        validwords = false
+        validwords, validminimum = false, 3
         local s, e, word = find(input,'^(.+)[\n\r]',i) -- combine with match
         if word then
             local interface = match(word,"interface=([a-z]+)")
@@ -141,7 +142,7 @@ local knownpreamble = Cmt(#P("% "), function(input,i,_) -- todo : utfbomb
                 currentcommands  = commands[interface] or commands.en or { }
             end
             local language = match(word,"language=([a-z]+)")
-            validwords = language and setwordlist(language)
+            validwords, validminimum = setwordlist(language)
         end
     end
     return false
@@ -224,7 +225,7 @@ local p_unit                 = P("pt") + P("bp") + P("sp") + P("mm") + P("cm") +
 --
 -- local p_word = Cmt(iwordpattern, function(_,i,s)
 --     if validwords then
---         return checkedword(validwords,s,i)
+--         return checkedword(validwords,validminimum,s,i)
 --     else
 --         return true, { "text", i }
 --     end
@@ -232,7 +233,7 @@ local p_unit                 = P("pt") + P("bp") + P("sp") + P("mm") + P("cm") +
 --
 -- So we use this one instead:
 
-local p_word = Ct( iwordpattern / function(s) return styleofword(validwords,s) end * Cp() ) -- the function can be inlined
+local p_word = Ct( iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() ) -- the function can be inlined
 
 ----- p_text = (1 - p_grouping - p_special - p_extra - backslash - space + hspace)^1
 
@@ -343,7 +344,7 @@ local function stopinlinelua_b(_,i,s) -- {
     if luastatus == "display" then
         return false
     elseif luastatus == "inline" then
-        lualevel = lualevel + 1
+        lualevel = lualevel + 1 -- ?
         return false
     else
         return true
@@ -372,15 +373,16 @@ contextlexer._reset_parser = function()
     lualevel  = 0
 end
 
-local luaenvironment         = P("luacode")
+local luaenvironment         = P("luacode") + P("lua")
 
 local inlinelua              = P("\\") * (
                                     P("ctx") * ( P("lua") + P("command") + P("late") * (P("lua") + P("command")) )
                                   + P("cld") * ( P("command") + P("context") )
+                                  + P("luaexpr")
                                )
 
 local startlua               = P("\\start") * Cmt(luaenvironment,startdisplaylua)
-                             + inlinelua * space^0 * Cmt(P("{"),startinlinelua)
+                             + inlinelua * space^0 * ( Cmt(P("{"),startinlinelua) )
 
 local stoplua                = P("\\stop") * Cmt(luaenvironment,stopdisplaylua)
                              + Cmt(P("{"),stopinlinelua_b)
@@ -389,7 +391,8 @@ local stoplua                = P("\\stop") * Cmt(luaenvironment,stopdisplaylua)
 local startluacode           = token("embedded", startlua)
 local stopluacode            = #stoplua * token("embedded", stoplua)
 
-local metafuncall            = ( P("reusable") + P("usable") + P("unique") + P("use") ) * ("MPgraphic")
+local metafuncall            = ( P("reusable") + P("usable") + P("unique") + P("use") + P("reuse") ) * ("MPgraphic")
+                             + P("uniqueMPpagegraphic")
 
 local metafunenvironment     = metafuncall -- ( P("use") + P("reusable") + P("unique") ) * ("MPgraphic")
                              + P("MP") * ( P("code")+ P("page") + P("inclusions") + P("initializations") + P("definitions") + P("extensions") + P("graphic") )

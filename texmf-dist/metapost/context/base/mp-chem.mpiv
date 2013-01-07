@@ -3,15 +3,15 @@
 %D        version=2009.05.13,
 %D          title=\CONTEXT\ \METAPOST\ graphics,
 %D       subtitle=chemicals,
-%D         author=Hans Hagen,
+%D         author=Hans Hagen \& Alan Braslau,
 %D           date=\currentdate,
-%D      copyright=\PRAGMA]
+%D      copyright={PRAGMA ADE \& \CONTEXT\ Development Team}]
 %C
 %C This module is part of the \CONTEXT\ macro||package and is
 %C therefore copyrighted by \PRAGMA. See licen-en.pdf for
 %C details.
 
-%D This module in incomplete and experimental.
+%D This module is incomplete and experimental.
 
 % either consistent setting or not
 
@@ -20,821 +20,1654 @@ if known context_chem : endinput ; fi ;
 boolean context_chem ; context_chem := true ;
 
 numeric
-    chem_width, chem_radical_min, chem_radical_max, chem_text_max, chem_circle_radius,
-    chem_rotation, chem_adjacent, chem_stack, chem_substituent, chem_direction, chem_setting_scale,
-    chem_setting_offset, chem_text_offset, chem_picture_offset, chem_center_offset, chem_substituent_offset,
-    chem_setting_l, chem_setting_r, chem_setting_t, chem_setting_b ;
+    chem_num[], % scratch
+    chem_text_min, chem_text_max,
+    chem_rotation, chem_adjacent, chem_stack_n,
+    chem_substituent, chem_substituent.lft, chem_substituent.rt,
+    chem_setting_offset, chem_text_offset, chem_picture_offset,
+    chem_center_offset, chem_dbl_offset,
+    chem_bb_angle, chem_axis_rulethickness,
+    chem_setting_l, chem_setting_r, chem_setting_t, chem_setting_b,
+    chem_setting_rotation, chem_emwidth, chem_b_length,
+    chem_front_b[] ;
 
 boolean
-    chem_setting_axis,
-    chem_setting_fixedwidth, chem_setting_fixedheight,
-    chem_doing_pb, chem_text_trace ;
+    chem_setting_axis, chem_setting_fitwidth, chem_setting_fitheight,
+    chem_doing_pb, chem_text_trace, chem_bd_wedge,
+    chem_star[], chem_front[], chem_stacked[], chem_tetra[] ;
+
+string
+    chem_previous ;
 
 path
-    chem_setting_bbox ;
+    chem_setting_bbox,
+    chem_path[], % scratch
+    chem_b_path[], chem_c_path[],
+    chem_r_path[], chem_r_path.lft[], chem_r_path.rt[] ;
 
 pair
-    chem_shift,
-    chem_adjacent_p, chem_substituent_p, chem_direction_p, chem_move_p ;
+    chem_origin, chem_mirror,
+    chem_pair[], % scratch
+    chem_sb_pair, chem_sb_pair.m, chem_sb_pair.p, chem_sb_pair.b ;
 
-numeric
-    chem_width[], chem_angle[], chem_start[], chem_initialrot[], chem_initialmov[] ;
+picture
+    chem_pic, % scratch
+    % The use of dashpattern is found to dot the starting point with chem_sb_dash.m...
+    %chem_sb_dash, chem_sb_dash.m, chem_sb_dash.p, chem_sb_dash.b,
+    chem_axis_color ;
 
-pair
-    chem_stack_d[],
-    chem_b_zero[], chem_n_zero[],
-    chem_r_max[], chem_r_min[],
-    chem_r_zero[], chem_mr_zero[], chem_pr_zero[], chem_crz_zero[],
-    chem_rt_zero[], chem_rtt_zero[], chem_rbt_zero[],
-    chem_mid_zero[] ;
+transform
+    chem_t ; % scratch
 
-path
-    chem_b_path[], chem_bx_path[], chem_eb_path[], chem_sr_path[], chem_br_path[],
-    chem_sb_path[], chem_msb_path[], chem_psb_path[],
-    chem_s_path[], chem_ss_path[], chem_mss_path[], chem_pss_path[],
-    chem_e_path[], chem_sd_path[], chem_bb_path[], chem_oe_path[],
-    chem_bd_path[], chem_bw_path[],
-    chem_ddt_path[], chem_ddb_path[], chem_ldt_path[], chem_ldb_path[], chem_rdt_path[], chem_rdb_path[],
-    chem_dbl_path[], chem_dbr_path[],
-    chem_ad_path[], chem_au_path[],
-    chem_r_path[], chem_rl_path[], chem_rr_path[],
-    chem_rb_path[], chem_prb_path[], chem_mrb_path[],
-    chem_srl_path[], chem_srr_path[],
-    chem_msr_path[], chem_psr_path[],
-    chem_mr_path[], chem_pr_path[],
-    chem_c_path[], chem_cc_path[],
-    chem_midt_path[], chem_midb_path[], chem_midst_path[], chem_midsb_path[] ;
+color lightblue ; lightblue := (173/255,216/255,230/255) ;
 
-chem_setting_scale      :=  1 ;
-chem_base_width         := 40pt ;
-chem_text_offset        :=  3pt ;
-chem_center_offset      :=  6pt ;
-chem_picture_offset     := 10pt ;
-chem_substituent_offset := 10pt ;
-chem_radical_min        :=  1.25 ;
-chem_radical_max        :=  1.50 ;
-chem_text_min           :=  0.75 ;
-chem_text_max           :=  1.75 ;
-chem_circle_radius      :=  0.80 ;
-chem_circle_radius      :=  1.10 ;
-chem_rotation           :=  1 ;
-chem_adjacent           :=  0 ;
-chem_substituent        :=  0 ;
-chem_direction          :=  0 ;
-chem_stack_n            :=  0 ;
-chem_doing_pb           :=  false ;
-chem_shift              := origin ;
-chem_dot_factor         := 4 ;
-chem_text_trace         := false ;
-chem_bd_n               := 4 ;
-chem_bw_n               := 4 ;
-chem_bd_angle           := 4 ;
-chem_bb_angle           := 4 ;
+chem_axis_color         := image(draw origin withcolor lightblue) ;
+chem_setting_axis       := false ;
+chem_axis_rulethickness := 1pt ;
+chem_emwidth            := 10pt ; % EmWidth or \the\emwidth does not work...
+chem_b_length           := 3  chem_emwidth ;
+chem_text_offset        := -.3chem_emwidth ; % -.71chem_emwidth ; % 1/sqrt(2)
+chem_center_offset      := .5  chem_emwidth ;
+chem_picture_offset     :=     chem_emwidth ;
+chem_dbl_offset         := .05 ;
+chem_bb_angle           := angle(1,2chem_dbl_offset) ;
+chem_text_min           := 0.75 ;
+chem_text_max           := 1.25 ;
+chem_dot_factor         := 4 ; % *linewidth
+chem_sb_pair            := (0.25,0.75) ; %chem_sb_dash   := dashpattern(off 0.25 on 0.5 off 0.25) ;
+chem_sb_pair.m          := (0.25,1   ) ; %chem_sb_dash.m := dashpattern(off 0.25 on 0.75) ;
+chem_sb_pair.p          := (0   ,0.75) ; %chem_sb_dash.p := dashpattern(on  0.75 off 0.25) ;
+chem_sb_pair.b          := (0,   1   ) ; %chem_sb_dash.b := dashpattern(on  1) ;
 
-vardef chem_start_structure(expr n, l, r, t, b, scale, axis, fixedwidth, fixedheight, offset) =
-    chem_setting_axis := axis ;
-    chem_setting_l := l * scale ;
-    chem_setting_r := r * scale ;
-    chem_setting_t := t * scale ;
-    chem_setting_b := b * scale ;
-    chem_setting_fixedwidth := fixedwidth ;
-    chem_setting_fixedheight := fixedheight ;
-    chem_setting_offset := offset ;
-    if scale <> chem_setting_scale :
-        chem_setting_scale := scale ;
-        chem_init_all ;
-    fi ;
-    chem_rotation    := 1 ;
-    chem_adjacent    := 0 ;
-    chem_substituent := 0 ;
-    chem_direction   := 0 ;
-    chem_stack_n     := 0 ;
-    chem_doing_pb    := false ;
-    chem_shift       := origin ;
+chem_text_trace         := false ; % debugging
+chem_bd_wedge           := false ; % true is incorrect, but quite common...
+
+def chem_reset =
+    chem_rotation         := 0 ;
+    chem_mirror           := origin ;
+    chem_adjacent         := 0 ;
+    chem_substituent      := 0 ;
+    chem_substituent.lft  := 0 ;
+    chem_substituent.rt   := 0 ;
+    chem_stack_n          := 0 ;
+    chem_doing_pb         := false ;
+    chem_origin           := origin ;
+    chem_previous         := "one" ;
+    pair chem_mark_pair[] ;
 enddef ;
 
-def chem_stop_structure =
-    currentpicture := currentpicture shifted - chem_shift ;
+chem_reset ;
+
+newinternal numeric
+    one, carbon, alkyl, newmanstagger, newmaneclipsed,
+    three, four, five, six, seven, eight, nine,
+    fivefront, sixfront, chair, boat ;
+
+vardef chem_init_some (suffix $) (expr e) =
+    if not known chem_star[$]    : chem_star[$]    := false ; fi
+    if not known chem_front[$]   : chem_front[$]   := false ; fi
+    if not known chem_stacked[$] : chem_stacked[$] := false ; fi
+    if not known chem_tetra[$]   : chem_tetra[$]   := false ; fi
+
+    % We define all paths as closed, so that they may be indexed mod length.
+    if path(e) :
+        chem_b_path[$] := e if not cycle(e) : -- cycle fi ;
+        chem_num0 := length(chem_b_path[$]) ;
+    else : % polygon
+        chem_num0 := e ;
+        chem_num1 := 360/chem_num0 ;
+        chem_b_path[$] :=
+            (
+                for i=0 upto chem_num0-1 :
+                    dir(if chem_star[$] : -i else : (.5-i) fi *chem_num1) --
+                endfor
+                cycle
+            )
+            if chem_front[$] :
+                rotated (chem_num1-90)
+            fi
+            if not chem_star[$] :
+                scaled (.5/(sind .5chem_num1))
+            fi ;
+    fi ;
+
+    if chem_front[$] and (not known chem_front_b[$]) :
+        chem_front_b[$] := floor(.5(length chem_b_path[$])) + 1 ;
+    fi
+
+    chem_num2 := 0 ;
+    chem_c_path[$] :=
+        reverse(fullcircle) rotated angle(point 0 of chem_b_path[$])
+        if not chem_star[$] :
+             hide (for i=0 upto chem_num0-1:
+                       if abs(point i+.5 of chem_b_path[$]) <
+                          abs(point chem_num2+.5 of chem_b_path[$]) :
+                           chem_num2 := i ;
+                       fi
+                   endfor)
+             scaled (2*(abs(point chem_num2+.5 of chem_b_path[$]) - chem_dbl_offset))
+        fi ;
+
+    chem_r_path[$] :=
+        if chem_star[$] :
+            chem_b_path[$]
+        else :
+            (
+                for i=0 upto chem_num0-1 :
+                    (unitvector point i of chem_b_path[$])
+                    shifted point i of chem_b_path[$] --
+                endfor
+                cycle
+            )
+        fi ;
+
+    chem_r_path.lft[$] :=
+        (
+        for i=0 upto chem_num0-1 :
+            if chem_front[$] :
+                up
+                scaled .5
+                shifted point i of chem_b_path[$]
+            elseif chem_star[$] :
+                point i   of chem_b_path[$]
+            else :
+                point i+1 of chem_b_path[$]
+                rotatedabout(point i of chem_b_path[$],180)
+            fi --
+        endfor
+        cycle
+        ) ;
+    chem_r_path.rt[$] :=
+        (
+        for i=0 upto chem_num0-1 :
+            if chem_front[$] :
+                down
+                scaled .5
+                shifted point i of chem_b_path[$]
+            elseif chem_star[$] :
+                point i+2 of chem_b_path[$]
+            else :
+                point i-1 of chem_b_path[$]
+                rotatedabout(point i of chem_b_path[$],180)
+            fi --
+        endfor
+        cycle
+        ) ;
+
+enddef ;
+
+% The following is used only once:
+def chem_init_all =
+begingroup
+    save a, b, c, d, e ; numeric a, b, c, d, e ;
+    save lft, rt ; path lft, rt ;
+
+    % tetrahedrial angle
+    a := 2angle(1,sqrt 2) ;
+
+    % solve for chair
+    2b = 180 - .5a ;
+    4c = 180 - .5a ;
+    d + e = 360 - 2a ;
+    d = 5e ; % this is the one tunable parameter which fixes the perspective.
+    z2 = z1 shifted dir(90+a+d) ;
+    z3 = z2 shifted dir(270-a) ;
+    z4 = z3 shifted dir(90+a) ;
+    z6 = z1 shifted dir(90+a) ;
+    z5 = z6 shifted dir(270-a) ;
+    z4 = z1 xyscaled (-1,-1) ;
+    z5 = z2 xyscaled (-1,-1) ;
+
+    save indx ; numeric indx ; indx = 2 ; % starting value doesn't matter, really.
+    % polygons
+    three          := incr indx ; % 3 (these numbers don't matter - they are just indices)
+    four           := incr indx ; % 4
+    five           := incr indx ; % 5
+    six            := incr indx ; % 6
+    seven          := incr indx ; % 7
+    eight          := incr indx ; % 8
+    nine           := incr indx ; % 9
+
+    chem_init_some(three,3) ;
+    chem_init_some(four, 4) ;
+    chem_init_some(five, 5) ;
+    chem_init_some(six,  6) ;
+    chem_init_some(seven,7) ;
+    chem_init_some(eight,8) ;
+    chem_init_some(nine, 9) ;
+
+    % star-form
+    one            := incr indx ; % 10
+    carbon         := incr indx ; % 11
+    alkyl          := incr indx ; % 12
+    newmanstagger  := incr indx ; % 13
+    newmaneclipsed := incr indx ; % 14
+
+    chem_star[one]            := true ;
+    chem_star[carbon]         := true ; chem_tetra[carbon]         := true ;
+    chem_star[alkyl]          := true ; chem_tetra[alkyl]          := true ;
+    chem_star[newmanstagger]  := true ; chem_tetra[newmanstagger]  := true ;
+    chem_star[newmaneclipsed] := true ; chem_tetra[newmaneclipsed] := true ;
+    chem_stacked[newmanstagger]  := true ;
+    chem_stacked[newmaneclipsed] := true ;
+    chem_init_some(one,            8) ;
+    chem_init_some(carbon,         dir(0)--dir(360-a)--dir(180-.5a+b)--dir(180-.5a)) ;
+    chem_init_some(alkyl,          dir(0)--dir(360-a)--dir(360-a-90)--dir(90)) ;
+    chem_init_some(newmanstagger,  dir(30)--dir(270)--dir(150)--dir(330)--dir(210)--dir(90)) ;
+    chem_init_some(newmaneclipsed, dir(30)--dir(270)--dir(150)--dir(0)--dir(240)--dir(120)) ;
+
+    % front views
+    fivefront      := incr indx ; % 15
+    sixfront       := incr indx ; % 16
+    chair          := incr indx ; % 17
+    boat           := incr indx ; % 18
+
+    chem_front[fivefront]    := true ; chem_front_b[fivefront] := 3 ;
+    chem_front[sixfront]     := true ; chem_front_b[sixfront]  := 3 ;
+    chem_init_some(fivefront,5) ;
+    chem_init_some(sixfront, 6) ;
+    % chair
+    chem_front[chair]        := true ; chem_front_b[chair]     := 4 ;
+    chem_init_some(chair,          z1--z2--z3--z4--z5--z6) ;
+    lft := dir(90-a)--down--dir(90+a+d)--down--dir(90+a)--down ;
+    rt  := up--dir(270+a)--up--dir(270-a)--up--dir(90+e) ;
+    chem_r_path.lft[chair] :=
+        for i=0 upto 5 : point i of lft shifted point i of chem_b_path[chair] -- endfor
+        cycle ;
+    chem_r_path.rt[chair] :=
+        for i=0 upto 5 : point i of rt shifted point i of chem_b_path[chair] -- endfor
+        cycle ;
+    % boat
+    chem_front[boat]         := true ; chem_front_b[boat]      := 4 ;
+    chem_init_some(boat,
+        for i=1 upto 4 : point i-1 of chem_b_path[sixfront] -- endfor
+        point 2 of chem_b_path[sixfront] yscaled .5 --
+        point 1 of chem_b_path[sixfront] yscaled .5
+    ) ;
+    lft := dir(30+.5a)--dir(330+.5a)--dir(210-.5a)--dir(150-.5a)--dir(120)--dir(60) ;
+    rt  := dir(30-.5a)--dir(330-.5a)--dir(210+.5a)--dir(150+.5a)--dir(120+a)--dir(60-a) ;
+    chem_r_path.lft[boat] :=
+        for i=0 upto 5 : point i of lft shifted point i of chem_b_path[boat] -- endfor
+        cycle ;
+    chem_r_path.rt[boat] :=
+        for i=0 upto 5 : point i of rt shifted point i of chem_b_path[boat] -- endfor
+        cycle ;
+endgroup
+enddef ;
+
+chem_init_all ; % WHY does this not work unless defined and then called?
+
+
+% Like most often in ConTeXt, we will trap but then silently ignore mistaken use,
+% unless of course the error be too harmful...
+
+% \startchemical
+def chem_start_structure(expr i, l, r, t, b, scale, rotation, fitwidth, fitheight,
+                                 emwidth, offset, axis, rulethickness, axiscolor) =
+
+    chem_emwidth            := emwidth ; % EmWidth or \the\emwidth does not work...
+    chem_b_length           := if scale<>0: scale* fi 3chem_emwidth ;
+    chem_setting_fitwidth   := if boolean fitwidth :  fitwidth  else : (fitwidth<>0) fi ;
+    chem_setting_fitheight  := if boolean fitheight : fitheight else : (fithheight<>0) fi ;;
+    chem_setting_l          := l * chem_b_length ;
+    chem_setting_r          := r * chem_b_length ;
+    chem_setting_t          := t * chem_b_length ;
+    chem_setting_b          := b * chem_b_length ;
+    chem_setting_rotation   := rotation ;
+    chem_setting_offset     := offset ;
+    chem_setting_axis       := if boolean axis : axis else : (axis<>0) fi ;
+    chem_axis_rulethickness := .75*(rulethickness) ; % axis 50% thinner than frame and bonds.
+    % We store the following as a picture in order to allow ALL color models...
+    chem_axis_color         := image(draw origin withcolor axiscolor) ; % \MPcolor{axiscolor}) ;
+
+    chem_reset ;
+enddef ;
+
+% \stopchemical
+
+vardef chem_stop_structure =
+    % Make sure that all of the saved stack has been restored... (this was a gotcha!)
+    forever :
+        exitif chem_stack_n=0 ;
+        chem_restore ;
+    endfor
+
+    currentpicture := (currentpicture shifted -chem_origin) rotated chem_setting_rotation ;
     % axis here
-    if chem_setting_fixedwidth :
+    if chem_setting_fitwidth :
         chem_setting_l := - xpart llcorner currentpicture ;
         chem_setting_r :=   xpart urcorner currentpicture ;
     fi ;
-    if chem_setting_fixedheight :
+    if chem_setting_fitheight :
         chem_setting_t :=   ypart urcorner currentpicture ;
         chem_setting_b := - ypart llcorner currentpicture ;
     fi ;
     chem_setting_bbox :=
         (-chem_setting_l,-chem_setting_b) -- ( chem_setting_r,-chem_setting_b) --
         ( chem_setting_r, chem_setting_t) -- (-chem_setting_l, chem_setting_t) -- cycle ;
-    % maybe put it behind the picture
-    if chem_setting_axis :
-        save stp ; stp := chem_base_width/ 2 * chem_setting_scale ;
-        save siz ; siz := chem_base_width/10 * chem_setting_scale ;
-        draw (-chem_setting_l,0) -- (chem_setting_r,0) withcolor blue ;
-        draw (0,-chem_setting_b) -- (0,chem_setting_t) withcolor blue ;
-        for i = 0 step  stp until  chem_setting_r : draw (i,-siz) -- (i,siz) withcolor blue ; endfor ;
-        for i = 0 step -stp until -chem_setting_l : draw (i,-siz) -- (i,siz) withcolor blue ; endfor ;
-        for i = 0 step  stp until  chem_setting_t : draw (-siz,i) -- (siz,i) withcolor blue ; endfor ;
-        for i = 0 step -stp until -chem_setting_b : draw (-siz,i) -- (siz,i) withcolor blue ; endfor ;
-        draw chem_setting_bbox withcolor blue ;
+    if chem_setting_axis : % put it behind the picture
+        chem_pic := currentpicture ; currentpicture := nullpicture ;
+        chem_num0 := .5chem_b_length ;
+        chem_num1 := .2chem_num0 ;
+        draw (-chem_setting_l,0) -- (chem_setting_r,0)
+            withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
+        draw (0,-chem_setting_b) -- (0,chem_setting_t)
+            withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
+        for i = 0 step  chem_num0 until  chem_setting_r :
+            draw (i,-chem_num1) -- (i,chem_num1)
+            withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
+        endfor
+        for i = 0 step -chem_num0 until -chem_setting_l :
+            draw (i,-chem_num1) -- (i,chem_num1)
+            withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
+        endfor
+        for i = 0 step  chem_num0 until  chem_setting_t :
+            draw (-chem_num1,i) -- (chem_num1,i)
+            withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
+        endfor
+        for i = 0 step -chem_num0 until -chem_setting_b :
+            draw (-chem_num1,i) -- (chem_num1,i)
+            withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
+        endfor
+        % frame=on : draw chem_setting_bbox withcolor colorpart(chem_axis_color) ;
+        addto currentpicture also chem_pic ;
     fi ;
     setbounds currentpicture to chem_setting_bbox ;
 enddef ;
 
-def chem_start_component = enddef ;
-def chem_stop_component  = enddef ;
+% \chemical
 
-def chem_pb =
-% draw boundingbox currentpicture withpen pencircle scaled 1mm withcolor blue ;
-% draw origin withpen pencircle scaled 2mm withcolor blue ;
+boolean chem_trace_nesting ; chem_trace_nesting := false ;
+
+vardef chem_start_component = enddef ;
+vardef chem_stop_component  = enddef ;
+
+vardef chem_pb = % PB :
+    if chem_trace_nesting :
+        draw boundingbox currentpicture
+                    withpen pencircle scaled 1mm withcolor colorpart(chem_axis_color) ;
+        draw origin withpen pencircle scaled 2mm withcolor colorpart(chem_axis_color) ;
+    fi ;
     chem_doing_pb := true ;
 enddef ;
 
-def chem_pe =
-% draw boundingbox currentpicture withpen pencircle scaled .5mm withcolor red ;
-% draw origin withpen pencircle scaled 1mm withcolor red ;
-    currentpicture := currentpicture shifted - chem_shift ;
-% draw origin withpen pencircle scaled .5mm withcolor green ;
-    chem_shift := origin ;
+vardef chem_pe = % PE
+    if chem_trace_nesting :
+        draw boundingbox currentpicture withpen pencircle scaled .5mm withcolor red ;
+        draw origin withpen pencircle scaled 1mm withcolor red ;
+    fi ;
+    currentpicture := currentpicture shifted -chem_origin ;
+    if chem_trace_nesting :
+        draw origin withpen pencircle scaled .5mm withcolor green ;
+    fi ;
+    chem_origin := origin ;
     chem_doing_pb := false ;
 enddef ;
 
-vardef chem_do (expr p) =
-    if chem_doing_pb :
+vardef chem_do (expr pos) =
+    if (unknown chem_doing_pb) or (not chem_doing_pb) :
+        pos
+    else :
         chem_doing_pb := false ;
-%         save pp ; pair pp ; pp := point 1 of ((origin -- p) enlonged chem_picture_offset) ;
-%         currentpicture := currentpicture shifted - pp ;
-%         chem_shift := chem_shift - center pp ;
-        currentpicture := currentpicture shifted - p ;
-        chem_shift := chem_shift - p ;
+        currentpicture := currentpicture shifted -pos ;
+        chem_origin    := chem_origin    shifted -pos ;
         origin %  nullpicture
-    else :
-        p
     fi
 enddef ;
 
-vardef chem_b (expr n, f, t, r, c) =
-    chem_draw (n, chem_b_path[n], f, t, r, c)  ;
-enddef ;
-
-vardef chem_sb (expr n, f, t, r, c) =
-    chem_draw (n, chem_sb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_s (expr n, f, t, r, c) =
-    chem_draw (n, chem_s_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_ss (expr n, f, t, r, c) =
-    chem_draw (n, chem_ss_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_mid (expr n, r, c) =
-    chem_draw_fixed (n, chem_midt_path[n], r, c) ;
-    chem_draw_fixed (n, chem_midb_path[n], r, c) ;
-enddef ;
-
-vardef chem_mids (expr n, r, c) =
-    chem_draw_fixed (n, chem_midst_path[n], r, c) ;
-    chem_draw_fixed (n, chem_midsb_path[n], r, c) ;
-enddef ;
-
-vardef chem_mss (expr n, f, t, r, c) =
-    chem_draw (n, chem_mss_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_pss (expr n, f, t, r, c) =
-    chem_draw (n, chem_pss_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_msb (expr n, f, t, r, c) =
-    chem_draw (n, chem_msb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_psb (expr n, f, t, r, c) =
-    chem_draw (n, chem_psb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_eb  (expr n, f, t, r, c) =
-    chem_draw (n, chem_eb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_db (expr n, f, t, r, c) =
-    if n = 1 :
-        chem_draw (n, chem_msb_path [n], f, t, r, c) ;
-        chem_draw (n, chem_psb_path [n], f, t, r, c) ;
-    else :
-        chem_draw (n, chem_dbl_path  [n], f, t, r, c) ;
-        chem_draw (n, chem_dbr_path  [n], f, t, r, c) ;
-    fi ;
-enddef ;
-
-vardef chem_er (expr n, f, t, r, c) =
-    chem_draw (n, chem_rl_path[n], f, t, r, c) ;
-    chem_draw (n, chem_rr_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_dr (expr n, f, t, r, c) =
-    chem_draw (n, chem_srl_path[n], f, t, r, c) ;
-    chem_draw (n, chem_srr_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_ad (expr n, f, t, r, c) =
-    chem_draw_arrow(n, chem_ad_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_au (expr n, f, t, r, c) =
-    chem_draw_arrow(n, chem_au_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_r (expr n, f, t, r, c) =
-    if n < 0 :
-        chem_draw_vertical (n, chem_r_path[n], f, t, r, c) ;
-    else :
-        chem_draw (n, chem_r_path[n], f, t, r, c) ;
-    fi ;
-enddef ;
-
-vardef chem_rd (expr n, f, t, r, c) =
-    chem_dashed_normal (n, chem_r_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_mrd (expr n, f, t, r, c) =
-    chem_dashed_normal (n, chem_mr_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_prd (expr n, f, t, r, c) =
-    chem_dashed_normal (n, chem_pr_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_br (expr n, f, t, r, c) =
-    chem_fill (n, chem_br_path[n], f, t, r, c )
-enddef ;
-
-vardef chem_rb (expr n, f, t, r, c) =
-    chem_fill (n, chem_rb_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_mrb (expr n, f, t, r, c) =
-    chem_fill (n, chem_mrb_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_prb (expr n, f, t, r, c) =
-    chem_fill (n, chem_prb_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_mr (expr n, f, t, r, c) =
-    if n < 0 :
-        chem_draw_vertical(n, chem_mr_path[n], f, t, r, c)
-    else :
-        chem_draw (n, chem_mr_path[n], f, t, r, c)
-    fi
-enddef ;
-
-vardef chem_pr (expr n, f, t, r, c) =
-    if n < 0 :
-        chem_draw_vertical(n, chem_pr_path[n], f, t, r, c)
-    else :
-        chem_draw (n, chem_pr_path[n], f, t, r, c)
-    fi
-enddef ;
-
-vardef chem_sr (expr n, f, t, r, c) =
-    chem_draw (n, chem_sr_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_msr (expr n, f, t, r, c) =
-    chem_draw (n, chem_msr_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_psr (expr n, f, t, r, c) =
-    chem_draw (n, chem_psr_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_c (expr n, f, t, r, c) =
-    chem_draw (n, chem_c_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_cc (expr n, f, t, r, c) =
-    chem_draw (n, chem_cc_path[n], f, f, r, c)
-enddef ;
-
-vardef chem_cd (expr n, f, t, r, c) =
-    chem_dashed_connected (n, chem_c_path[n], f, t, r, c)
-enddef ;
-
-vardef chem_ccd (expr n, f, t, r, c) =
-    chem_dashed_normal (n, chem_cc_path[n], f, f, r, c)
-enddef ;
-
-vardef chem_rn  (expr n, i, t) =
-    chem_rt (n,i,t) ;
-enddef ;
-
-vardef chem_rtn (expr n, i, t) =
-    chem_rtt(n,i,t) ;
-enddef ;
-
-vardef chem_rbn (expr n, i, t) =
-    chem_rbt(n,i,t) ;
-enddef ;
-
-vardef chem_tb (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_msb_path[n], f, t, r, c) ;
-    chem_draw (n, chem_sb_path [n], f, t, r, c) ;
-    chem_draw (n, chem_psb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_ep (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_e_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_es (expr n, f, t, r, c) = % one
-    chem_draw_dot (n, center chem_e_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_ed (expr n, f, t, r, c) = % one
-    chem_draw_dot (n, point 0 of chem_e_path[n], f, t, r, c) ;
-    chem_draw_dot (n, point 1 of chem_e_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_et (expr n, f, t, r, c) = % one
-    chem_draw_dot (n, point 0 of chem_e_path[n], f, t, r, c) ;
-    chem_draw_dot (n, center     chem_e_path[n], f, t, r, c) ;
-    chem_draw_dot (n, point 1 of chem_e_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_sd (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_ddt_path[n], f, t, r, c) ;
-    chem_draw (n, chem_ddb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_rdd (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_ldt_path[n], f, t, r, c) ;
-    chem_draw (n, chem_ldb_path[n], f, t, r, c) ;
-    chem_draw (n, chem_psb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_ldd (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_msb_path[n], f, t, r, c) ;
-    chem_draw (n, chem_rdt_path[n], f, t, r, c) ;
-    chem_draw (n, chem_rdb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_hb (expr n, f, t, r, c) = % one
-    chem_draw_dot (n, point 0 of chem_sb_path[n], f, t, r, c) ;
-    chem_draw_dot (n, center     chem_sb_path[n], f, t, r, c) ;
-    chem_draw_dot (n, point 1 of chem_sb_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_bb (expr n, f, t, r, c) = % one
-    if n < 0 :
-        chem_fill (n, chem_bb_path[n], 1, 1, r, c) ;
-        chem_b (n, f, t, r, c) ;
-    else :
-        chem_fill (n, chem_bb_path[n], f, t, r, c) ;
-    fi ;
-enddef ;
-
-vardef chem_oe (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_oe_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_bd (expr n, f, t, r, c) = % one
-    for i=0 upto 5 :
-        chem_draw (n, subpath (2i,2i+1) of chem_bd_path[n], f, t, r, c) ;
-    endfor ;
-enddef ;
-
-vardef chem_bw (expr n, f, t, r, c) = % one
-    chem_draw (n, chem_bw_path[n], f, t, r, c) ;
-enddef ;
-
-vardef chem_z_zero@#(text t) =
-    chem_text@#(t, chem_do(origin)) ;
-enddef ;
-
-vardef chem_cz_zero@#(text t) =
-    chem_text@#(t, chem_do(origin)) ;
-enddef ;
-
-vardef chem_z@#(expr n, p) (text t) =
-    if p = 0 :
-        chem_text@#(t, chem_do(origin)) ;
-    else :
-        chem_text@#(t, chem_do(chem_b_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_cz@#(expr n, p) (text t) =
-    if n = 1 :
-        chem_c_text(t, chem_do(chem_crz_zero[n] rotated chem_ang(n,p))) ;
-    else :
-        chem_text@#(t, chem_do(chem_b_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_midz@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_mid_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_rz@#(expr n, p) (text t) =
-    if n < 0 :
-        % quite special
-        chem_text@#(t, chem_do(chem_r_zero[n] shifted (chem_b_zero[n] rotated chem_ang(n,p)))) ;
-    else :
-        chem_text@#(t, chem_do(chem_r_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_crz@#(expr n, p) (text tx) =
-    chem_text(tx, chem_do(chem_crz_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_mrz@#(expr n, p) (text t) =
-    if n < 0 :
-        % quite special
-        chem_text@#(t, chem_do(chem_mr_zero[n] shifted (chem_b_zero[n] rotated chem_ang(n,p)))) ;
-    else :
-        chem_text@#(t, chem_do(chem_mr_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_prz@#(expr n, p) (text t) =
-    if n < 0 :
-        % quite special
-        chem_text@#(t, chem_do(chem_pr_zero[n] shifted (chem_b_zero[n] rotated chem_ang(n,p)))) ;
-    else :
-        chem_text@#(t, chem_do(chem_pr_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_rt@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_rtt@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rtt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_rbt@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rbt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_zt@#(expr n, p) (text t) =
-    if n = 1 :
-        chem_text@#(t, chem_do(chem_rt_zero[n] rotated chem_ang(n,p))) ;
-    else :
-        chem_text@#(t, chem_do(chem_n_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_zn@#(expr n, p) (text t) =
-    if n = 1 :
-        chem_text@#(t, chem_do(chem_rt_zero[n] rotated chem_ang(n,p))) ;
-    else :
-        chem_text@#(t, chem_do(chem_n_zero[n] rotated chem_ang(n,p))) ;
-    fi ;
-enddef ;
-
-vardef chem_zbt@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rtt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_zbn@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rtt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_ztt@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rbt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_ztn@#(expr n, p) (text t) =
-    chem_text@#(t, chem_do(chem_rbt_zero[n] rotated chem_ang(n,p))) ;
-enddef ;
-
-vardef chem_symbol(expr t) =
-    draw textext(t) ;
-enddef ;
-
-vardef chem_text@#(expr txt, z) = % adapted copy of thelabel@
-    save p ; picture p ;
-    p := textext(txt) ;
-    p := p
-        if (mfun_labtype@# >= 10) : shifted (0,ypart center p) fi
-        shifted (z + chem_text_offset*mfun_laboff@# - (mfun_labxf@#*lrcorner p + mfun_labyf@#*ulcorner p + (1-mfun_labxf@#-mfun_labyf@#)*llcorner p)) ;
-    if chem_text_trace :
-        draw z             withpen pencircle scaled 2pt withcolor red ;
-        draw boundingbox p withpen pencircle scaled 1pt withcolor red ;
-    fi ;
-    draw p
-enddef ;
-
-vardef chem_c_text(expr txt, z) = % adapted copy of thelabel@
-    save p ; picture p ; p := textext(txt) ;
-    save b ; path b ; b := (boundingbox p) shifted z ;
-    save a ; pair a ; a := (origin--z) intersection_point b ;
-    if intersection_found :
-        draw p shifted (z enlonged arclength(a -- center b)) ;
-    else :
-        draw p shifted z ;
-    fi
-%     draw b withcolor green ;
-%     draw a withcolor red ;
-enddef ;
-
-vardef chem_ang (expr n, d) =
-    ((-1 * (d-1) * chem_angle[n]) + (-chem_rotation+1) * 90 + chem_start[n]) % no ;
-enddef ;
-
-vardef chem_rot (expr n, d) =
-    chem_rotation := d ;
-enddef ;
-
-vardef chem_adj (expr n, d) =
-    chem_adjacent := d ;
-enddef ;
-
-vardef chem_sub (expr n, d) =
-    chem_substituent := d ;
-enddef ;
-
-vardef chem_dir (expr n, d) =
-    if n = 1 :
-        chem_direction_p := (origin - 2*center(chem_b_path[n] rotated chem_ang(n,d+1))) ;
-        currentpicture := currentpicture shifted chem_direction_p ;
-        chem_shift := chem_shift + chem_direction_p ;
-    fi ;
-enddef ;
-
-vardef chem_mov (expr n, d) =
-    if d = 0 :
-        currentpicture := currentpicture shifted - chem_shift ;
-        chem_shift := origin ;
-    else :
-        chem_move_p := (origin - 2*center(chem_b_path[n] rotated chem_ang(n,d+chem_initialmov[n]))) ;
-        currentpicture := currentpicture shifted chem_move_p ;
-        chem_shift := chem_shift + chem_move_p ;
-    fi ;
-enddef ;
-
-vardef chem_off (expr n, d) =
-    if (d = 1) or (d = 2) or (d = 8) :     % positive
-        currentpicture := currentpicture shifted (-chem_setting_offset,0) ;
-        chem_shift := chem_shift + (-chem_setting_offset,0)
-    elseif (d = 4) or (d = 5) or (d = 6) : % negative
-        currentpicture := currentpicture shifted ( chem_setting_offset,0) ;
-        chem_shift := chem_shift + ( chem_setting_offset,0)
-    fi ;
-enddef ;
-
-vardef chem_set(expr n, m) =
-    if chem_adjacent > 0 :
-        chem_adjacent_d := xpart chem_b_zero[n] + xpart chem_b_zero[m] ;
-        if     chem_adjacent = 1 : chem_adjacent_p := (-chem_adjacent_d, 0) ;
-        elseif chem_adjacent = 2 : chem_adjacent_p := (0, -chem_adjacent_d) ;
-        elseif chem_adjacent = 3 : chem_adjacent_p := ( chem_adjacent_d, 0) ;
-        elseif chem_adjacent = 4 : chem_adjacent_p := (0,  chem_adjacent_d) ;
-        else                     : chem_adjacent_p := origin ;
-        fi ;
-        currentpicture := currentpicture shifted chem_adjacent_p ;
-        chem_shift := chem_shift + chem_adjacent_p ;
-        chem_adjacent := 0 ;
-    fi ;
-    if chem_substituent > 0 :
-        if m = 1 :
-            chem_substituent_d := xpart chem_crz_zero[n] + chem_substituent_offset ;
-        else :
-            chem_substituent_d := xpart chem_crz_zero[n] +  xpart chem_b_zero[m] ;
-        fi ;
-        if     chem_substituent = 1 : chem_substituent_p := (-chem_substituent_d, 0) ; % - ?
-        elseif chem_substituent = 2 : chem_substituent_p := (0,  chem_substituent_d) ;
-        elseif chem_substituent = 3 : chem_substituent_p := ( chem_substituent_d, 0) ;
-        elseif chem_substituent = 4 : chem_substituent_p := (0, -chem_substituent_d) ;
-        else                        : chem_substituent_p := origin ;
-        fi ;
-        currentpicture := currentpicture shifted chem_substituent_p ;
-        chem_shift := chem_shift + chem_substituent_p ;
-        chem_substituent := 0 ;
-    fi ;
-    chem_rotation := chem_initialrot[m] ;
-enddef ;
-
-vardef chem_draw (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    for i:=from_point upto to_point:
-        draw (path_fragment rotated chem_ang(n,i)) withpen pencircle scaled linewidth withcolor linecolor ;
-    endfor ;
-enddef ;
-
-vardef chem_fill (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    for i:=from_point upto to_point:
-        fill (path_fragment rotated chem_ang(n,i)) withpen pencircle scaled 0 withcolor linecolor ;
-    endfor ;
-enddef ;
-
-vardef chem_dashed_normal (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    for i:=from_point upto to_point:
-        draw (path_fragment rotated chem_ang(n,i)) withpen pencircle scaled linewidth withcolor linecolor dashed evenly ;
-    endfor ;
-enddef ;
-
-vardef chem_dashed_connected (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    draw for i:=from_point upto to_point:
-        (path_fragment rotated chem_ang(n,i)) if i < to_point : -- fi
-    endfor withpen pencircle scaled linewidth withcolor linecolor dashed evenly ;
-enddef ;
-
-vardef chem_draw_dot (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    for i:=from_point upto to_point:
-        draw (path_fragment rotated chem_ang(n,i)) withpen pencircle scaled (chem_dot_factor*linewidth) withcolor linecolor ;
-    endfor ;
-enddef ;
-
-vardef chem_draw_fixed (expr n, path_fragment, linewidth, linecolor) =
-    draw (path_fragment rotated chem_ang(n,1)) withpen pencircle scaled linewidth withcolor linecolor ;
-enddef ;
-
-vardef chem_draw_arrow (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    for i:=from_point upto to_point:
-        drawarrow (path_fragment rotated chem_ang(n,i)) withpen pencircle scaled linewidth withcolor linecolor ;
-    endfor ;
-enddef ;
-
-vardef chem_draw_vertical (expr n, path_fragment, from_point, to_point, linewidth, linecolor) =
-    % quite special
-    for i:=from_point upto to_point:
-        draw (path_fragment shifted (chem_b_zero[n] rotated chem_ang(n,i))) withpen pencircle scaled linewidth withcolor linecolor ;
-    endfor ;
-enddef ;
 
 picture chem_stack_p[] ;
-pair chem_stack_shift[] ;
+pair    chem_stack_origin[], chem_stack_mirror[] ;
+numeric chem_stack_rotation[] ;
+string  chem_stack_previous[] ;
 
-vardef chem_save =
-    chem_stack_n := chem_stack_n + 1 ;
-    chem_stack_p[chem_stack_n] := currentpicture ;
-    chem_stack_shift[chem_stack_n] := chem_shift ;
-    chem_shift := origin ;
-% chem_adjacent := 0 ;
-% chem_substituent := 0 ;
-% chem_rotation := 1 ;
+vardef chem_save = % SAVE
+    chem_stack_p       [incr chem_stack_n] := currentpicture ;
+    chem_stack_origin  [     chem_stack_n] := chem_origin ; chem_origin := origin ;
+    chem_stack_rotation[     chem_stack_n] := chem_rotation ;
+    chem_stack_mirror  [     chem_stack_n] := chem_mirror ;
+    chem_stack_previous[     chem_stack_n] := chem_previous ;
     currentpicture := nullpicture ;
 enddef ;
 
-vardef chem_restore =
-    if chem_stack_n > 0 :
-        currentpicture := currentpicture shifted - chem_shift ;
-        addto chem_stack_p[chem_stack_n] also currentpicture ;
-        currentpicture := chem_stack_p[chem_stack_n] ;
+vardef chem_restore = % RESTORE
+    if chem_stack_n>0 :
+        currentpicture := currentpicture shifted -chem_origin ;
+        addto             chem_stack_p       [chem_stack_n] also currentpicture ;
+        currentpicture := chem_stack_p       [chem_stack_n] ;
         chem_stack_p[chem_stack_n] := nullpicture ;
-        chem_shift := chem_stack_shift[chem_stack_n] ;
+        chem_origin    := chem_stack_origin  [chem_stack_n] ;
+        chem_rotation  := chem_stack_rotation[chem_stack_n] ;
+        chem_mirror    := chem_stack_mirror  [chem_stack_n] ;
+        chem_previous  := chem_stack_previous[chem_stack_n] ;
         chem_stack_n := chem_stack_n - 1 ;
     fi ;
 enddef ;
 
-def chem_init_some(expr n, ratio, start, initialrot, initialmov)  =
-    chem_width     [n] := ratio * chem_base_width * chem_setting_scale ;
-    chem_angle     [n] := 360/abs(n) ;
-    chem_start     [n] := start ;
-    chem_initialrot[n] := initialrot ;
-    chem_initialmov[n] := initialmov ;
-    chem_b_zero    [n] := (chem_width[n],0) rotated (chem_angle[n]/2) ;
-    chem_n_zero    [n] := (chem_text_min*chem_width[n],0) rotated (chem_angle[n]/2) ;
-    chem_r_max     [n] := chem_radical_max*chem_b_zero[n] ;
-    chem_r_path    [n] := chem_b_zero[n] -- chem_r_max[n] ;
-    chem_mr_path   [n] := chem_r_path [n] rotatedaround(chem_b_zero[n], (180-chem_angle[n])/2) ;
-    chem_pr_path   [n] := chem_r_path [n] rotatedaround(chem_b_zero[n],-(180-chem_angle[n])/2) ;
-    chem_r_zero    [n] := point 1 of chem_r_path [n] ;
-    chem_mr_zero   [n] := point 1 of chem_mr_path[n] ;
-    chem_pr_zero   [n] := point 1 of chem_pr_path[n] ;
-    chem_crz_zero  [n] := point 1 of (chem_r_path[n] enlonged chem_center_offset) ;
-    chem_au_path   [n] := subpath (0.2,0.8) of (chem_r_max[n] -- (chem_r_max[n] rotated chem_angle[n])) ;
-    chem_ad_path   [n] := reverse(chem_au_path[n]) ;
-    chem_rt_zero   [n] := (((chem_radical_max+chem_radical_min)/2)*chem_width[n],0) rotated (chem_angle[n]/2) ;
-    chem_rtt_zero  [n] := chem_rt_zero[n] rotated + 10 ;
-    chem_rbt_zero  [n] := chem_rt_zero[n] rotated - 10 ;
-    chem_b_path    [n] := reverse(chem_b_zero[n] -- (chem_b_zero[n] rotated -chem_angle[n])) ;
-    chem_bx_path   [n] := reverse(chem_b_zero[n] -- (chem_b_zero[n] rotated -chem_angle[n])) ; % ?
-    chem_sb_path   [n] := subpath (0.25,0.75) of chem_b_path[n] ;
-    chem_s_path    [n] := point 0 of chem_b_path[n] -- point 0 of (chem_b_path[n] rotated (2chem_angle[n])) ;
-    chem_ss_path   [n] := subpath (0.25,0.75) of (chem_s_path[n]) ;
-    chem_pss_path  [n] := subpath (0.00,0.75) of (chem_s_path[n]) ;
-    chem_mss_path  [n] := subpath (0.25,1.00) of (chem_s_path[n]) ;
-    chem_mid_zero  [n] := origin shifted (-.25chem_width[n],0) ;
-    chem_midst_path[n] := chem_mid_zero[n] -- (chem_width[n],0) rotated ( chem_angle[n] + chem_angle[n]/2) ;
-    chem_midsb_path[n] := chem_mid_zero[n] -- (chem_width[n],0) rotated (-chem_angle[n] - chem_angle[n]/2) ;
-    chem_midt_path [n] := subpath (0.25,1.00) of chem_midst_path [n] ;
-    chem_midb_path [n] := subpath (0.25,1.00) of chem_midsb_path [n] ;
-    chem_msb_path  [n] := subpath (0.00,0.75) of chem_b_path[n] ;
-    chem_psb_path  [n] := subpath (0.25,1.00) of chem_b_path[n] ;
-    chem_dbl_path  [n] := chem_sb_path[n] shifted - (0.05[origin,center chem_sb_path[n]]) ; % parallel
-    chem_dbr_path  [n] := chem_sb_path[n] shifted + (0.05[origin,center chem_sb_path[n]]) ;
-    chem_eb_path   [n] := chem_sb_path[n] shifted - (0.25[origin,center chem_sb_path[n]]) ;
-    chem_sr_path   [n] := chem_radical_min*chem_b_zero[n] -- chem_r_max[n] ;
-    chem_rl_path   [n] := chem_r_path[n]  paralleled  (chem_base_width/20) ;
-    chem_rr_path   [n] := chem_r_path[n]  paralleled -(chem_base_width/20) ;
-    chem_srl_path  [n] := chem_sr_path[n] paralleled  (chem_base_width/20)  ;
-    chem_srr_path  [n] := chem_sr_path[n] paralleled -(chem_base_width/20)  ;
-    chem_br_path   [n] := point 1 of chem_sb_path[n] --
-        point 0 of chem_sb_path[n] rotatedaround(point 1 of chem_sb_path[n], -4) --
-        point 0 of chem_sb_path[n] rotatedaround(point 1 of chem_sb_path[n],  4) -- cycle ;
-    chem_rb_path   [n] := chem_b_zero[n] -- chem_r_max[n] rotated -2 -- chem_r_max[n] -- chem_r_max[n] rotated 2 --  cycle ;
-    chem_mrb_path  [n] := chem_rb_path[n] rotatedaround(chem_b_zero[n], (180-chem_angle[n])/2) ;
-    chem_prb_path  [n] := chem_rb_path[n] rotatedaround(chem_b_zero[n],-(180-chem_angle[n])/2) ;
-    chem_msr_path  [n] := chem_sr_path[n] rotatedaround(chem_b_zero[n], (180-chem_angle[n])/2) ;
-    chem_psr_path  [n] := chem_sr_path[n] rotatedaround(chem_b_zero[n],-(180-chem_angle[n])/2) ;
-    % not yet ok:
-%     chem_c_path    [n] := subpath (30/45, -30/45) of (fullcircle            scaled (1.25*chem_circle_radius*chem_width[n]));
-%     chem_cc_path   [n] := subpath (30/45,8-30/45) of (fullcircle rotated 90 scaled (1.25*chem_circle_radius*chem_width[n]));
-    chem_c_path    [n] := subpath (30/45, -30/45) of (fullcircle            scaled (chem_width[n]));
-    chem_cc_path   [n] := subpath (30/45,8-30/45) of (fullcircle rotated 90 scaled (chem_width[n]));
+% chem_adj and chem_sub are to be followed by chem_set(n) which does all the work...
+
+vardef chem_adj (suffix $) (expr d, s) = % ADJ
+    % scale s is ignored (for now?)
+    if not chem_front[$] :
+        chem_substituent     := 0 ;
+        chem_substituent.lft := 0 ;
+        chem_substituent.rt  := 0 ;
+        chem_adjacent := d ;
+    fi
 enddef ;
 
-def chem_init_three      = chem_init_some(3,30/52  ,-60,1,2) ; enddef ; % 60
-def chem_init_four       = chem_init_some(4,30/42.5,  0,1,0) ; enddef ; % 45
-def chem_init_five       = chem_init_some(5,30/35  ,  0,1,0) ; enddef ; % 36
-def chem_init_six        = chem_init_some(6, 1     ,  0,1,0) ; enddef ; % 30
-def chem_init_eight      = chem_init_some(8,30/22.5,  0,1,0) ; enddef ; % 22.5
-
-% bb R -R R Z -RZ +RZ
-
-def chem_init_some_front(expr n, ratio, start, initialrot, initialmov) =
-    chem_init_some(n, ratio, start, initialrot, initialmov) ;
-    chem_bb_path [n] := chem_b_path[n] rotated -chem_angle[n] -- chem_b_path[n] -- chem_b_path[n] rotated chem_angle[n] --
-                       (reverse(chem_b_path[n] shortened (chem_base_width/20))) paralleled (chem_base_width/20) --
-                        cycle ;
-    chem_r_max   [n] := chem_radical_max*chem_b_zero[n] ;
-    chem_mr_path [n] := origin -- origin shifted (0,-.25chem_base_width) ;
-    chem_pr_path [n] := origin -- origin shifted (0, .25*chem_base_width) ;
-    chem_r_path  [n] := point 1 of chem_mr_path[n] -- point 1 of chem_pr_path[n] ;
-    chem_mr_zero [n] := point 1 of chem_mr_path[n] ;
-    chem_pr_zero [n] := point 1 of chem_pr_path[n] ;
+vardef chem_lsub (suffix $) (expr d, s) =  % LSUB
+    chem_sub.lft($,d,s) ;
 enddef ;
 
-def chem_init_five_front = chem_init_some_front(-5,30/35,0,2,0) ; enddef ; % 36
-def chem_init_six_front  = chem_init_some_front(-6, 1   ,0,2,0) ; enddef ; % 30
-
-vardef chem_init_one =
-    chem_width     [1] := .75 * chem_base_width * chem_setting_scale ;
-    chem_angle     [1] := 360/8 ;
-    chem_start     [1] := 0 ;
-    chem_initialrot[1] := 1 ;
-    chem_initialmov[1] := 1 ;
-    chem_b_zero    [1] := (1.75*chem_width[1],0) ;
-    chem_r_min     [1] := chem_radical_min*chem_b_zero[1] ;
-    chem_r_max     [1] := chem_radical_max*chem_b_zero[1] ;
-    chem_r_path    [1] := (.5*chem_width[1],0) -- (1.25*chem_width[1],0) ;
-    chem_r_zero    [1] := point 1 of chem_r_path [1] ;
-    chem_b_path    [1] := chem_r_path[1] rotated + (chem_angle[1]) ; % used for move here
-    chem_b_zero    [1] := chem_r_zero[1] ;
-    chem_crz_zero  [1] := chem_r_zero[1] enlonged chem_center_offset ;
-    chem_e_path    [1] := (.5*chem_width[1],-.25*chem_width[1]) -- (.5*chem_width[1],.25*chem_width[1]) ;
-    chem_sb_path   [1] := chem_r_path [1] ;
-    chem_msb_path  [1] := chem_r_path [1] shifted (0,-.1chem_width[1]) ;
-    chem_psb_path  [1] := chem_r_path [1] shifted (0, .1chem_width[1]) ;
-    chem_ddt_path  [1] := subpath(0,.4) of chem_r_path [1] ;
-    chem_ddb_path  [1] := subpath(.6,1) of chem_r_path [1] ;
-    chem_ldt_path  [1] := chem_ddt_path [1] shifted (0,-.1chem_width[1]) ; % parallel
-    chem_ldb_path  [1] := chem_ddb_path [1] shifted (0,-.1chem_width[1]) ;
-    chem_rdt_path  [1] := chem_ddt_path [1] shifted (0, .1chem_width[1]) ;
-    chem_rdb_path  [1] := chem_ddb_path [1] shifted (0, .1chem_width[1]) ;
-    save pr ; pair pr[] ;
-    pr0 := point 0 of chem_r_path[1] ;
-    pr1 := point 1 of chem_r_path[1] ;
-    chem_bb_path   [1] := pr0 -- (pr1 rotatedaround(pr0,-chem_bb_angle)) -- (pr1 rotatedaround(pr0,chem_bb_angle)) -- cycle ;
-    chem_oe_path   [1] := ((-20,0)--(10,0){up}..(20,10)..(30,0)..(40,-10)..(50.0,0)..(60,10)..(70,0)..(80,-10)..{up}(90,0)--(120,0))
-        xsized (.75*chem_width[1]) shifted pr0 ;
-    chem_rt_zero   [1] := point .5 of chem_r_path[1] ;
-    chem_rtt_zero  [1] := chem_rt_zero[1] rotated + (chem_angle[1]/2) ;
-    chem_rbt_zero  [1] := chem_rt_zero[1] rotated - (chem_angle[1]/2) ;
-    % added by Alan Braslau (adapted to use shared variables):
-    save p ; pair p[] ;
-    p0 := pr1 rotatedaround(pr0, -chem_bd_angle) ;
-    p1 := pr1 rotatedaround(pr0, +chem_bd_angle) ;
-    p2 := p0 shifted - pr1 ;
-    p3 := p1 shifted - pr1 ;
-    chem_bd_path   [1] :=
-        p0 -- p1 for i=chem_bd_n downto 0 :
-            -- p2 shifted (i/chem_bd_n)[pr1,pr0]
-            -- p3 shifted (i/chem_bd_n)[pr1,pr0]
-        endfor ;
-    chem_bw_path   [1] :=
-        for i=0 upto chem_bw_n - 1 :
-            ((i)    /chem_bw_n)[pr0,pr1] .. ((i+.25)/chem_bw_n)[pr0,pr1] shifted  p2 ..
-            ((i+.50)/chem_bw_n)[pr0,pr1] .. ((i+.75)/chem_bw_n)[pr0,pr1] shifted -p2 ..
-        endfor pr1 ;
+vardef chem_rsub (suffix $) (expr d, s) =  % RSUB
+    chem_sub.rt ($,d,s) ;
 enddef ;
 
-def chem_init_all =
-    chem_init_one ;
-    chem_init_three ;
-    chem_init_four ;
-    chem_init_five ;
-    chem_init_six ;
-    chem_init_eight ;
-    chem_init_five_front ;
-    chem_init_six_front ;
+vardef chem_sub@# (suffix $) (expr d, s) = % SUB
+    % scale s is ignored (for now?)
+    chem_adjacent        := 0 ;
+    chem_substituent     := 0 ;
+    chem_substituent.lft := 0 ;
+    chem_substituent.rt  := 0 ;
+    % then :
+    chem_substituent@#   := d ;
 enddef ;
 
-chem_init_all ;
+def chem_transformed (suffix $) = % not vardef!
+    scaled chem_b_length
+    if not chem_front[$] :
+        if chem_mirror<>origin : reflectedabout(origin,chem_mirror) fi
+        rotated chem_rotation
+    fi
+enddef ;
+
+vardef chem_draw (expr what, r, c) (text extra) =
+    draw what
+        withpen pencircle scaled r
+        withcolor c %\MPcolor{c}
+        extra ;
+enddef ;
+
+vardef chem_fill (expr what, r, c) (text extra) =
+    fill what
+        withpen pencircle scaled r
+        withcolor c %\MPcolor{c}
+        extra ;
+enddef ;
+
+vardef chem_drawarrow (expr what, r, c) (text extra) =
+    drawarrow what
+        withpen pencircle scaled r
+        withcolor c %\MPcolor{c}
+        extra ;
+enddef ;
+
+vardef chem_set (suffix $) =
+    forsuffixes P = scantokens chem_previous :
+
+    % This is a fairly complicated optimization and ajustement. It took some
+    % thinking to get right, so beware!
+
+    if (chem_adjacent<>0) and chem_star[P] and chem_star[$] :
+        % nop
+        chem_adjacent := 0 ;
+    elseif (chem_adjacent<>0) and (chem_front[P] or chem_front[$]) :
+        % not allowed for FRONT
+        chem_adjacent := 0 ;
+    elseif chem_adjacent<>0 :
+        chem_substituent     := 0 ;
+        chem_substituent.lft := 0 ;
+        chem_substituent.rt  := 0 ;
+        % move to the bond midpoint of the first structure
+        chem_pair0 := center (
+            if chem_star[P] :
+                origin -- point (chem_adjacent-1)
+            else :
+                subpath (chem_adjacent-1,chem_adjacent)
+            fi
+            of chem_b_path[P]
+        ) chem_transformed(P) ;
+        % find the closest opposite bond of the second structure
+        chem_pair1 := chem_pair0 rotated if chem_star[P] : 90 else : 180 fi ;
+        chem_num0 := abs(chem_pair1) ;
+        chem_num1 := if chem_tetra[$] : 1 else : length chem_b_path[$] fi ;
+        % only consider even indices (cardinal points) for ONE
+        chem_num2 := if chem_star[$] and not chem_tetra[$] : 2 else : 1 fi ;
+        for i=0 step chem_num2 until chem_num1 :
+            chem_pair2 := (
+                (
+                    unitvector
+                    center (
+                        if chem_star[$] :
+                            origin -- point i
+                        else :
+                            subpath (i,i+1)
+                        fi
+                        of chem_b_path[$])
+                    )
+                    scaled chem_num0
+                ) chem_transformed($) ;
+            if i=0 :
+                chem_pair3 := chem_pair2 ;
+                chem_num3 := 0 ;
+            elseif (abs(chem_pair1 shifted -chem_pair2)) < (abs(chem_pair1 shifted -chem_pair3)) :
+                chem_pair3 := chem_pair2 ;
+                chem_num3 := i ;
+            fi
+        endfor
+        if chem_star[$] :
+            chem_pair4 := chem_pair0 shifted
+                          -((point (chem_adjacent-1) of chem_b_path[P]) chem_transformed(P)) ;
+        fi
+        % adjust the bond angles
+        chem_rotation := (chem_rotation + angle(chem_pair1)-angle(chem_pair3)) mod 360 ;
+        if not chem_star[$] :
+            chem_pair4 :=
+                if chem_star[P] :
+                    (point chem_num3
+                else :
+                    center(subpath (chem_num3,chem_num3+1)
+                fi
+                of chem_b_path[$])
+                chem_transformed($) ;
+        fi
+        if not chem_star[P] :
+            chem_pair4 := chem_pair4 shifted -chem_pair0 ;
+        fi
+        currentpicture := currentpicture shifted chem_pair4 ;
+        chem_origin    := chem_origin    shifted chem_pair4 ;
+        chem_adjacent  := 0 ;
+    fi ;
+
+    % Insure that only one, if any, will be nonzero
+    if ((chem_substituent     <> 0) and (chem_substituent.lft <> 0)) or
+       ((chem_substituent     <> 0) and (chem_substituent.rt  <> 0)) or
+       ((chem_substituent.lft <> 0) and (chem_substituent.rt  <> 0)) :
+        chem_substituent     := 0 ;
+        chem_substituent.lft := 0 ;
+        chem_substituent.rt  := 0 ;
+    fi
+    if (chem_substituent <> 0) or (chem_substituent.lft <> 0) or (chem_substituent.rt <> 0) :
+        % move origin to radical endpoint of the first structure
+        if chem_substituent.lft > 0 :
+            chem_pair0 := point chem_substituent.lft-1 of chem_r_path.lft[P] ;
+            chem_substituent := chem_substituent.lft ;
+            chem_substituent.lft := 0 ;
+        elseif chem_substituent.rt > 0 :
+            chem_pair0 := point chem_substituent.rt-1 of chem_r_path.rt[P] ;
+            chem_substituent := chem_substituent.rt ;
+            chem_substituent.rt := 0 ;
+        else :
+            chem_pair0 := point chem_substituent-1 of chem_r_path[P] ;
+        fi
+        chem_pair1 := chem_pair0 if not chem_star[P] :
+                                 shifted -(point chem_substituent-1 of chem_b_path[P]) fi ;
+        chem_t := identity chem_transformed(P) ;
+        chem_pair0 := chem_pair0 transformed chem_t ; % radical
+        chem_pair1 := chem_pair1 transformed chem_t ; % recentered (see below)
+        currentpicture := currentpicture shifted -chem_pair0 ;
+        chem_origin    := chem_origin    shifted -chem_pair0 ;
+        if (not (chem_star[P] and chem_star[$])) or chem_tetra[P] or chem_tetra[$] :
+            if chem_tetra[P] and chem_tetra[$] and ((chem_substituent=1) or (chem_substituent=2)):
+                chem_rotation := (chem_rotation + 180) mod 360 ; % trans-alkane
+                chem_pair2 := (point .5 of chem_b_path[$]) ; % bisector, not chem_transformed
+                if chem_mirror=origin :
+                    chem_mirror := chem_pair2 ;
+                else :
+                    chem_num0 := angle(chem_mirror)-angle(chem_pair2) ;
+                    if (chem_num0>0) and (chem_num0> 180) :
+                        chem_num0 :=  360 - chem_num0 ;
+                    elseif (chem_num0<0) and (chem_num0<-180) :
+                        chem_num0 := -360 - chem_num0 ;
+                    fi
+                    chem_rotation := (chem_rotation + 2chem_num0) mod 360 ;
+                    chem_mirror := origin ;
+                fi
+            fi
+            chem_t := identity chem_transformed($) ;
+            chem_pair1 := chem_pair1 rotated 180 ; % opposite direction of radical bond
+            % find the closest node
+            chem_num0 := abs(chem_pair1) ;         % distance
+            % search to find the nearest node of $; only consider 1 and 2 for CARBON,ALKYL
+            chem_num1 := if chem_tetra[$] : 1 else : length chem_b_path[$] fi ;
+            % only consider even indices (cardinal points) for ONE
+            chem_num2 := if chem_star[$] and not chem_tetra[$] : 2 else : 1 fi ;
+            for i=0 step chem_num2 until chem_num1 :
+                chem_pair2 := (unitvector(point i of chem_b_path[$]) scaled chem_num0)
+                              transformed chem_t ;
+                if i=0 :
+                    chem_pair3 := chem_pair2 ;
+                    chem_num3  := 0 ;
+                elseif (abs(chem_pair1 shifted -chem_pair2)) <
+                       (abs(chem_pair1 shifted -chem_pair3)) :
+                    chem_pair3 := chem_pair2 ;
+                    chem_num3  := i ;
+                fi
+            endfor
+            if not chem_front[$] : % adjust rotation
+                chem_rotation := (chem_rotation + angle(chem_pair1)-angle(chem_pair3)) mod 360 ;
+            fi ;
+            chem_t := identity chem_transformed($) ;
+            chem_pair4 := (point chem_num3 of chem_b_path[$]) transformed chem_t ;
+            if not chem_star[$] :
+                currentpicture := currentpicture shifted chem_pair4 ;
+                chem_origin    := chem_origin    shifted chem_pair4 ;
+            fi
+        fi
+        chem_substituent := 0 ;
+    fi ;
+    endfor
+    chem_previous := str $ ;
+enddef ;
+
+% line (f_rom, t_o, r_ule, c_olor)
+
+vardef chem_b@# (suffix $) (expr f,     t,   r,     c) = % B
+    if chem_star[$] :
+        chem_r@#($,f,t,r,c) ;
+    elseif length(str @#)>0 :
+        chem_sb@#($,f,t,r,c) ;
+    else :
+        chem_draw(
+            (subpath (f-1,t) of chem_b_path[$]) chem_transformed($),
+            r,c,) ;
+    fi
+enddef ;
+
+vardef chem_sb@# (suffix $) (expr f, t, r, c) = % SB
+    if chem_star[$] :
+        chem_sr@#($,f,t,r,c) ;
+    else :
+        %chem_draw(
+        %    (subpath (f-1,t) of chem_b_path[$]) chem_transformed($),
+        %    r,c,dashed chem_sb_dash@# scaled chem_b_length) ;
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath (chem_sb_pair@# shifted (i-1,i-1)) of chem_b_path[$])
+                transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_sd@# (suffix $) (expr f, t, r, c) = % SD
+    if chem_star[$] :
+        chem_rd@#($,f,t,r,c) ;
+    else :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath (chem_sb_pair@# shifted (i-1,i-1)) of chem_b_path[$])
+                transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_r_fragment@# (suffix $) (expr i) =
+    (
+        if chem_star[$] :
+             origin
+        else :
+             point i-1 of chem_b_path[$]
+        fi --
+        point i-1 of chem_r_path@#[$]
+    ) % no ;
+enddef ;
+
+vardef chem_r@# (suffix $) (expr f, t, r, c) = % R
+    if length(str @#)>0 :
+        chem_sr@#($,f,t,r,c) ;
+    else :
+        chem_sr.b($,f,t,r,c) ;
+    fi
+enddef ;
+
+vardef chem_er@# (suffix $) (expr f, t, r, c) = % ER
+    if length(str @#)>0:
+        chem_dr@#($,f,t,r,c) ;
+    else :
+        chem_dr.b($,f,t,r,c) ;
+    fi
+enddef ;
+
+vardef chem_dr@# (suffix $) (expr f, t, r, c) = % DR
+    if not chem_front[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := (subpath chem_sb_pair@# of chem_r_fragment($,i)) ;
+            chem_draw(
+                (chem_path0 paralleled  chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled -chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_lr@# (suffix $) (expr f, t, r, c) = % LR
+    if length(str @#)>0 :
+        chem_lsr@#($,f,t,r,c) ;
+    else :
+        chem_lsr.b($,f,t,r,c) ;
+    fi
+enddef ;
+
+vardef chem_rr@# (suffix $) (expr f, t, r, c) = % RR
+    if length(str @#)>0 :
+        chem_rsr@#($,f,t,r,c) ;
+    else :
+        chem_rsr.b($,f,t,r,c) ;
+    fi
+enddef ;
+
+vardef chem_eb@# (suffix $) (expr f, t, r, c) = % EB
+    if not chem_star[$] :
+        %chem_draw(
+        %    ((subpath (f-1,t) of chem_b_path[$]) paralleled -2chem_dbl_offset)
+        %    chem_transformed($),
+        %    r,c,dashed chem_sb_dash scaled chem_b_length) ;
+        for i=f upto t :
+            chem_t := identity chem_transformed($) ;
+            chem_draw(
+                ((subpath (chem_sb_pair@# shifted (i-1,i-1)) of chem_b_path[$])
+                paralleled -2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_ad@# (suffix $) (expr f, t, r, c) = % AD
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_drawarrow(
+                ((subpath (chem_sb_pair@# shifted (i-1,i-1)) of chem_b_path[$])
+                paralleled 2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_au@# (suffix $) (expr f, t, r, c) = % AU
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_drawarrow(
+                reverse(
+                (subpath (chem_sb_pair@# shifted (i-1,i-1)) of chem_b_path[$])
+                paralleled 2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_es@# (suffix $) (expr f, t, r, c) = % ES
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                ((point i-1 of chem_r_path[$]) scaled (xpart chem_sb_pair)) transformed chem_t,
+                chem_dot_factor*r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_ed@# (suffix $) (expr f, t, r, c) = % ED
+    chem_t := identity chem_transformed($) ;
+    for i=f upto t :
+        if chem_star[$] :
+            chem_path0 := subpath chem_sb_pair of chem_r_fragment($,i) ;
+            chem_draw(
+                (point 0 of (chem_path0 paralleled -chem_dbl_offset)) transformed chem_t,
+                chem_dot_factor*r,c,) ;
+            chem_draw(
+                (point 0 of (chem_path0 paralleled  chem_dbl_offset)) transformed chem_t,
+                chem_dot_factor*r,c,) ;
+        else :
+            chem_draw(
+                ((subpath (chem_sb_pair shifted (i-1,i-1)) of chem_b_path[$])
+                paralleled -2chem_dbl_offset) transformed chem_t,
+                r,c,dashed evenly) ;
+        fi
+    endfor
+enddef ;
+
+vardef chem_ep@# (suffix $) (expr f, t, r, c) = % EP
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair of chem_r_fragment($,i) ;
+            chem_draw(
+                (point 0 of (chem_path0 paralleled -chem_dbl_offset) --
+                 point 0 of (chem_path0 paralleled  chem_dbl_offset)) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_et@# (suffix $) (expr f, t, r, c) = % ET
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair of chem_r_fragment($,i) ;
+            chem_draw(
+                (point 0 of (chem_path0 paralleled -2chem_dbl_offset)) transformed chem_t,
+                chem_dot_factor*r,c,) ;
+            chem_draw(
+                (point 0 of chem_path0) transformed chem_t,
+                chem_dot_factor*r,c,) ;
+            chem_draw(
+                (point 0 of (chem_path0 paralleled  2chem_dbl_offset)) transformed chem_t,
+                chem_dot_factor*r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_db@# (suffix $) (expr f, t, r, c) = % DB
+    if chem_star[$] :
+        chem_dr@#($,f,t,r,c) ;
+    elseif not chem_front[$] :
+        chem_t := identity chem_transformed($) ;
+        %chem_draw(
+        %    ((subpath (f-1,t) of chem_b_path[$]) paralleled -chem_dbl_offset)
+        %    transformed chem_t,
+        %    r,c,dashed chem_sb_dash@# scaled chem_b_length) ;
+        %chem_draw(
+        %    ((subpath (f-1,t) of chem_b_path[$]) paralleled  chem_dbl_offset)
+        %    transformed chem_t,
+        %    r,c,dashed chem_sb_dash@# scaled chem_b_length) ;
+        for i=f upto t :
+            chem_path0 := subpath (chem_sb_pair@# shifted (i-1,i-1)) of chem_b_path[$] ;
+            chem_draw(
+                (chem_path0 paralleled -chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled  chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+            % todo : this should be cut-off where it overlaps a neighboring standard bond.
+        endfor
+    fi
+enddef ;
+
+vardef chem_tb@# (suffix $) (expr f, t, r, c) = % TB
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_draw(
+                (chem_path0 paralleled -2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                chem_path0 transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled  2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_sr@# (suffix $) (expr f, t, r, c) = % SR
+    chem_t := identity chem_transformed($) ;
+    if chem_stacked[$] :
+        chem_num0 := length chem_b_path[$] ; chem_num1 := floor(.5chem_num0) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath (if i>chem_num1: .5,ypart fi chem_sb_pair@#) of chem_r_fragment($,i))
+                transformed chem_t,
+                r,c,) ;
+        endfor
+    else :
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of chem_r_fragment($,i))
+                transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rd@# (suffix $) (expr f, t, r, c) = % RD
+    chem_t := identity chem_transformed($) ;
+    if chem_stacked[$] :
+        chem_num0 := length chem_b_path[$] ; chem_num1 := floor(.5chem_num0) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath (if i>chem_num1: .5,ypart fi chem_sb_pair@#) of chem_r_fragment($,i))
+                transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    else :
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of chem_r_fragment($,i))
+                transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rh@# (suffix $) (expr f, t, r, c) = % RH
+    chem_t := identity chem_transformed($) ;
+    for i=f upto t :
+        chem_draw(
+            (subpath chem_sb_pair@# of chem_r_fragment($,i))
+            transformed chem_t,
+            chem_dot_factor*r,c,dashed withdots scaled ((.5chem_b_length/3)/5bp)) ;
+            % not symmetric - needs to be tweaked...
+    endfor
+enddef ;
+
+vardef chem_lrh@# (suffix $) (expr f, t, r, c) = % LRH
+    chem_t := identity chem_transformed($) ;
+    for i=f upto t :
+        chem_draw(
+            (subpath chem_sb_pair@# of chem_r_fragment.lft($,i))
+            transformed chem_t,
+            chem_dot_factor*r,c,dashed withdots scaled ((.5chem_b_length/3)/5bp)) ;
+            % not symmetric - needs to be tweaked...
+    endfor
+enddef ;
+
+vardef chem_rrh@# (suffix $) (expr f, t, r, c) = % RRH
+    chem_t := identity chem_transformed($) ;
+    for i=f upto t :
+        chem_draw(
+            (subpath chem_sb_pair@# of chem_r_fragment.rt($,i))
+            transformed chem_t,
+            chem_dot_factor*r,c,dashed withdots scaled ((.5chem_b_length/3)/5bp)) ;
+            % not symmetric - needs to be tweaked...
+    endfor
+enddef ;
+
+vardef chem_hb@# (suffix $) (expr f, t, r, c) = % HB
+    if chem_star[$] :
+        chem_rh@#($,f,t,r,c)
+    fi
+enddef ;
+
+vardef chem_bb@# (suffix $) (expr f, t, r, c) = % BB
+    if chem_star[$] :
+        chem_rb@#($,f,t,r,c) ;
+    elseif chem_front[$] :
+        chem_t := identity chem_transformed($) ;
+        chem_draw(
+            (subpath (f-1,t) of chem_b_path[$]) transformed chem_t,
+            r,c,) ;
+        chem_num0 := length chem_b_path[$] ; % total number of bonds
+        chem_num1 := chem_front_b[$] ;       % number of bonds to be made bold
+        % bold bonds within f and t
+        chem_num2 := if f<0 :((f+1) mod chem_num0) + chem_num0 else : ((f-1) mod chem_num0) + 1 fi ;
+        chem_num3 := if t<0 :((t+1) mod chem_num0) + chem_num0 else : ((t-1) mod chem_num0) + 1 fi ;
+        if chem_num3<chem_num2 :
+            chem_num4 := chem_num3 ;
+            chem_num3 := chem_num2 ;
+            chem_num2 := chem_num4 ;
+        fi
+        if chem_num2<chem_num1 : % Are there any bonds to be made bold?
+            if chem_num2=1 :     % Skip the first bold bond.
+                chem_fill(
+                    (point chem_num2-1 of chem_b_path[$] --
+                     point chem_num2   of chem_b_path[$] shifted (0,-chem_dbl_offset) --
+                     point chem_num2   of chem_b_path[$] shifted (0, chem_dbl_offset) --
+                     cycle) transformed chem_t,
+                    r,c,) ;
+            fi
+            if (chem_num2<=chem_num1-1) and (chem_num3>1) :
+                chem_path0 := subpath (if chem_num2>2 :         chem_num2-1 else : 1 fi,
+                                       if chem_num3<chem_num1 : chem_num3   else : chem_num1-1 fi)
+                    of chem_b_path[$] ;
+                chem_fill(
+                    (chem_path0          paralleled -chem_dbl_offset --
+                     reverse(chem_path0) paralleled -chem_dbl_offset --
+                    cycle) transformed chem_t,
+                    r,c,) ;
+            fi
+            if chem_num3>=chem_num1 :
+                chem_fill(
+                    (point chem_num1 of chem_b_path[$] --
+                     point chem_num1-1 of chem_b_path[$] shifted (0,-chem_dbl_offset) --
+                     point chem_num1-1 of chem_b_path[$] shifted (0, chem_dbl_offset) --
+                     cycle) transformed chem_t,
+                    r,c,) ;
+            fi
+        fi
+    fi
+enddef ;
+
+vardef chem_rb@# (suffix $) (expr f, t, r, c) = % RB
+    chem_t := identity chem_transformed($) ;
+    for i=f upto t :
+        chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+        chem_fill(
+            (point 0 of chem_path0 --
+             point 1 of chem_path0
+                 rotatedaround(point 0 of chem_path0, -chem_bb_angle) --
+             point 1 of chem_path0
+                 rotatedaround(point 0 of chem_path0,  chem_bb_angle) --
+             cycle) transformed chem_t,
+            r,c,) ;
+    endfor
+enddef ;
+
+vardef chem_lrb@# (suffix $) (expr f, t, r, c) = % LRB
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment.lft($,i) ;
+            chem_fill(
+                (point 0 of chem_path0 --
+                 point 1 of chem_path0
+                     rotatedaround(point 0 of chem_path0, -chem_bb_angle) --
+                 point 1 of chem_path0
+                     rotatedaround(point 0 of chem_path0,  chem_bb_angle) --
+                 cycle) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rrb@# (suffix $) (expr f, t, r, c) = % RRB
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment.rt($,i) ;
+            chem_fill(
+                (point 0 of chem_path0 --
+                 point 1 of chem_path0
+                     rotatedaround(point 0 of chem_path0, -chem_bb_angle) --
+                 point 1 of chem_path0
+                     rotatedaround(point 0 of chem_path0,  chem_bb_angle) --
+                 cycle) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_lsr@# (suffix $) (expr f, t, r, c) = % LSR
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of chem_r_fragment.lft($,i)) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rsr@# (suffix $) (expr f, t, r, c) = % RSR
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of chem_r_fragment.rt($,i)) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_lrd@# (suffix $) (expr f, t, r, c) = % LRD
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of chem_r_fragment.lft($,i)) transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rrd@# (suffix $) (expr f, t, r, c) = % RRD
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of chem_r_fragment.rt($,i)) transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_s@# (suffix $) (expr f, t, r, c) = % S
+    if length(str @#)>0 :
+       chem_ss@#($,f,t,r,c) ;
+    else :
+       chem_ss.b($,f,t,r,c) ;
+    fi
+enddef ;
+
+vardef chem_ss@# (suffix $) (expr f, t, r, c) = % SS
+    if not (chem_star[$] or chem_front[$]) :
+        chem_draw(
+            subpath chem_sb_pair@# of (point f-2 of chem_b_path[$] -- point t of chem_b_path[$])
+            chem_transformed($),
+            r,c,) ;
+    fi
+enddef ;
+
+vardef chem_mid@# (suffix $) (expr f, t, r, c) = % MID
+    if length(str @#)>0 :
+        chem_mids@#($,f,t,r,c) ;
+    else :
+        chem_mids.b($,f,t,r,c) ;
+    fi
+enddef ;
+
+vardef chem_mids@# (suffix $) (expr f, t, r, c) = % MIDS
+    if not (chem_star[$] or chem_front[$]) :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_draw(
+                (subpath chem_sb_pair@# of (origin -- point i-1 of chem_b_path[$]))
+                transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_cd  (suffix $) (expr r, c) =  % CD
+    chem_draw(
+        chem_c_path[$] chem_transformed($),
+        r,c,dashed evenly) ;
+enddef ;
+
+vardef chem_c (suffix $) (expr r, c) = % C
+    chem_draw(
+        chem_c_path[$] chem_transformed($),
+        r,c,) ;
+enddef ;
+
+vardef chem_ccd  (suffix $) (expr f, t, r, c) = % CCD
+    chem_num0 := ypart((origin--center(subpath (f-2,f-1) of chem_b_path[$]))
+               intersectiontimes chem_c_path[$]) ;
+    chem_num1 := ypart((origin--center(subpath (t-1,t)   of chem_b_path[$]))
+               intersectiontimes chem_c_path[$]) ;
+    if chem_num1>chem_num0 :
+        chem_num0 := chem_num0 + length chem_c_path[$] ;
+    fi
+    chem_draw(
+        subpath (chem_num1,chem_num0) of chem_c_path[$] chem_transformed($),
+        r,c,dashed evenly) ;
+enddef ;
+
+vardef chem_cc (suffix $) (expr f, t, r, c) = % CC
+    chem_num0 := ypart((origin--center(subpath (f-2,f-1) of chem_b_path[$]))
+               intersectiontimes chem_c_path[$]) ;
+    chem_num1 := ypart((origin--center(subpath (t-1,t)   of chem_b_path[$]))
+               intersectiontimes chem_c_path[$]) ;
+    if chem_num1>chem_num0 :
+        chem_num0 := chem_num0 + length chem_c_path[$] ;
+    fi
+    chem_draw(
+        subpath (chem_num1,chem_num0) of chem_c_path[$] chem_transformed($),
+        r,c,) ;
+enddef ;
+
+vardef chem_ldb@# (suffix $) (expr f, t, r, c) = % LD
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_draw(
+                chem_path0 transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled  2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rdb@# (suffix $) (expr f, t, r, c) = % LD
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_draw(
+                chem_path0 transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled -2chem_dbl_offset) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_ldd@# (suffix $) (expr f, t, r, c) = % LDD
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_draw(
+                chem_path0 transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled  2chem_dbl_offset) transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_rdd@# (suffix $) (expr f, t, r, c) = % RDD
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_draw(
+                chem_path0 transformed chem_t,
+                r,c,) ;
+            chem_draw(
+                (chem_path0 paralleled -2chem_dbl_offset) transformed chem_t,
+                r,c,dashed evenly) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_oe@# (suffix $) (expr f, t, r, c) = % OE
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_path1 := chem_path0 paralleled -.5chem_dbl_offset ;
+            chem_path2 := chem_path0 paralleled  .5chem_dbl_offset ;
+            chem_draw(
+                (  point 0 of chem_path0 --
+                .2[point 0 of chem_path0, point infinity of chem_path0]..
+                .3[point 0 of chem_path1, point infinity of chem_path1]..
+                .4[point 0 of chem_path0, point infinity of chem_path0]..
+                .5[point 0 of chem_path2, point infinity of chem_path2]..
+                .6[point 0 of chem_path0, point infinity of chem_path0]..
+                .7[point 0 of chem_path1, point infinity of chem_path1]..
+                .8[point 0 of chem_path0, point infinity of chem_path0]--
+                   point infinity of chem_path0) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_bw@# (suffix $) (expr f, t, r, c) = % BW
+    if chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+            chem_path1 := chem_path0 paralleled -.5chem_dbl_offset ;
+            chem_path2 := chem_path0 paralleled  .5chem_dbl_offset ;
+            chem_draw(
+                (  point 0 of chem_path0..
+                .1[point 0 of chem_path1, point infinity of chem_path1]..
+                .2[point 0 of chem_path0, point infinity of chem_path0]..
+                .3[point 0 of chem_path2, point infinity of chem_path2]..
+                .4[point 0 of chem_path0, point infinity of chem_path0]..
+                .5[point 0 of chem_path1, point infinity of chem_path1]..
+                .6[point 0 of chem_path0, point infinity of chem_path0]..
+                .7[point 0 of chem_path2, point infinity of chem_path2]..
+                .8[point 0 of chem_path0, point infinity of chem_path0]..
+                .9[point 0 of chem_path1, point infinity of chem_path1]..
+                   point infinity of chem_path0) transformed chem_t,
+                r,c,) ;
+        endfor
+    fi
+enddef ;
+
+vardef chem_bd@# (suffix $) (expr f, t, r, c) = % BD
+    if chem_star[$] : chem_rbd#@($,f,t,r,c) ; fi
+enddef ;
+
+vardef chem_rbd@# (suffix $) (expr f, t, r, c) = % RBD
+    chem_t := identity chem_transformed($) ;
+    for i=f upto t :
+        chem_path0 := subpath chem_sb_pair@# of chem_r_fragment($,i) ;
+        if chem_bd_wedge :
+            chem_path1 := chem_path0 rotated -chem_bb_angle ;
+            chem_path2 := chem_path0 rotated  chem_bb_angle ;
+        else :
+            chem_path1 := chem_path0 paralleled -chem_dbl_offset ;
+            chem_path2 := chem_path0 paralleled  chem_dbl_offset ;
+        fi
+        for j=0 upto 3 :
+            chem_draw(
+                (point (j/3) of chem_path1 -- point (j/3) of chem_path2) transformed chem_t,
+                2r,c,) ;
+        endfor
+    endfor
+enddef ;
+
+vardef chem_lrbd@# (suffix $) (expr f, t, r, c) = % LRBD
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment.lft($,i) ;
+            if chem_bd_wedge :
+                chem_path1 := chem_path0 rotated -chem_bb_angle ;
+                chem_path2 := chem_path0 rotated  chem_bb_angle ;
+            else :
+                chem_path1 := chem_path0 paralleled -.5chem_dbl_offset ;
+                chem_path2 := chem_path0 paralleled  .5chem_dbl_offset ;
+            fi
+            for j=0 upto 3 :
+                chem_draw(
+                    (point (j/3) of chem_path1 -- point (j/3) of chem_path2) transformed chem_t,
+                    2r,c,) ;
+            endfor
+        endfor
+    fi
+enddef ;
+
+vardef chem_rrbd@# (suffix $) (expr f, t, r, c) = % RRBD
+    if not chem_star[$] :
+        chem_t := identity chem_transformed($) ;
+        for i=f upto t :
+            chem_path0 := subpath chem_sb_pair@# of chem_r_fragment.rt($,i) ;
+            if chem_bd_wedge :
+                chem_path1 := chem_path0 rotated -chem_bb_angle ;
+                chem_path2 := chem_path0 rotated  chem_bb_angle ;
+            else :
+                chem_path1 := chem_path0 paralleled -.5chem_dbl_offset ;
+                chem_path2 := chem_path0 paralleled  .5chem_dbl_offset ;
+            fi
+            for j=0 upto 3 :
+                chem_draw(
+                    (point (j/3) of chem_path1 -- point (j/3) of chem_path2) transformed chem_t,
+                    2r,c,) ;
+            endfor
+        endfor
+    fi
+enddef ;
+
+% text, number (no alignment on number);
+
+vardef chem_z@#(suffix $) (expr p) (text t) = % Z
+    draw chem_text@#
+        (t,chem_do(
+            if p=0 :
+                origin
+            else :
+                (point p-1 of chem_b_path[$]) chem_transformed($)
+            fi
+        )) ;
+enddef ;
+
+vardef chem_cz@#(suffix $) (expr p) (text t) = chem_z@#($,p,t) ; enddef ; % CZ ?
+
+vardef chem_midz@#(suffix $) (expr p) (text t) = % MIDZ
+    if not (chem_star[$] or chem_front[$]) :
+        draw chem_text@#
+            (t,chem_do(
+                (xpart chem_sb_pair, 0) scaled (xpart point 0 of chem_b_path[$])
+                chem_transformed($)
+            )) ;
+    fi
+enddef ;
+
+vardef chem_rz@#(suffix $) (expr p) (text t) = % RZ
+     draw chem_text@#
+         (t, chem_do((point p-1 of chem_r_path[$]) chem_transformed($))) ;
+enddef ;
+
+vardef chem_lrz@#(suffix $) (expr p) (text t) = % LRZ
+    if not chem_star[$] :
+        draw chem_text@#
+            (t,
+             chem_do((point p-1 of chem_r_path.lft[$]) chem_transformed($))) ;
+    fi
+enddef ;
+
+vardef chem_rrz@#(suffix $) (expr p) (text t) = % RRZ
+    if not chem_star[$] :
+        draw chem_text@#
+            (t, chem_do((point p-1 of chem_r_path.rt[$]) chem_transformed($))) ;
+    fi
+enddef ;
+
+vardef chem_zn@#(suffix $) (expr p) (text t) =  % ZN
+    chem_zt($,p,t) ;
+enddef ;
+
+vardef chem_zt@#(suffix $) (expr p) (text t) = % ZT
+    draw chem_text@#(t,chem_do ((point p-1 of chem_b_path[$]) chem_transformed($)
+                                 scaled chem_text_min)) ;
+enddef ;
+
+vardef chem_zln@#(suffix $) (expr p) (text t) = % ZLN
+    chem_zlt($,p,t) ;
+enddef ;
+
+vardef chem_zlt@#(suffix $) (expr p) (text t) = % ZLT
+    draw chem_text@#(t, chem_do((point p-1.5 of chem_b_path[$]) chem_transformed($)
+                                scaled chem_text_min)) ;
+enddef ;
+
+vardef chem_zrn@#(suffix $) (expr p) (text t) = % ZRN
+    chem_zrt($,p,t) ;
+enddef ;
+
+vardef chem_zrt@#(suffix $) (expr p) (text t) = % ZRT
+    draw chem_text@#(t, chem_do((point p-0.5 of chem_b_path[$]) chem_transformed($)
+                                 scaled chem_text_min)) ;
+enddef ;
+
+vardef chem_crz@#(suffix $) (expr p) (text t) = % CRZ ????
+    if chem_star[$] :
+        draw chem_text@#(t, chem_do((point p-1 of chem_b_path[$] enlonged chem_center_offset)
+                                   chem_transformed($))) ;
+    fi
+enddef ;
+
+vardef chem_rn@#(suffix $) (expr i, t) =  % RN
+    chem_rt($,i,t) ;
+enddef ;
+
+vardef chem_rt@#(suffix $) (expr p) (text t) = % RT
+    draw chem_text@#(t, chem_do((center chem_r_fragment($,p)) chem_transformed($))) ;
+enddef ;
+
+vardef chem_lrn@#(suffix $) (expr i, t) = % LRN
+    chem_lrt($,i,t) ;
+enddef ;
+
+vardef chem_lrt@#(suffix $) (expr p) (text t) = % LRT
+    draw chem_text@#(t, chem_do((center chem_r_fragment.lft($,p)) chem_transformed($))) ;
+enddef ;
+
+vardef chem_rrn@# (suffix $) (expr i, t) = % RRN
+    chem_rrt($,i,t) ;
+enddef ;
+
+vardef chem_rrt@#(suffix $) (expr p) (text t) = % RRT
+    draw chem_text@#(t, chem_do((center chem_r_fragment.rt($,p)) chem_transformed($))) ;
+enddef ;
+
+vardef chem_symbol(expr t) = draw textext(t) ; enddef ;
+
+vardef chem_align@#(expr pic) =
+    pic
+        if (mfun_labtype@# >= 10) :
+            shifted (0,ypart center pic)
+        fi
+        shifted (-(mfun_labxf@#*lrcorner pic + mfun_labyf@#*ulcorner pic + (1-mfun_labxf@#-mfun_labyf@#)*llcorner pic))
+enddef ;
+
+vardef chem_text@#(expr txt, z) =
+    chem_pic := textext(txt) ;
+        if length(str @#)=0 :
+            chem_pic := chem_align(chem_pic) ;
+        elseif (str @#) = "auto" :
+            if z<>origin :
+                chem_num0 := abs(angle(z rotated chem_setting_rotation)) ;
+                if chem_num0<=60 :
+                    chem_pic := chem_align.rt (chem_pic) xshifted  chem_text_offset ;
+                elseif chem_num0>=120 :
+                    chem_pic := chem_align.lft(chem_pic) xshifted -chem_text_offset ;
+                else :
+                    chem_pic := chem_align    (chem_pic) ;
+                fi
+            else :
+                    chem_pic := chem_align    (chem_pic) ;
+            fi
+        else :
+            chem_pic := chem_align@#(chem_pic) shifted (chem_text_offset*mfun_laboff@#) ;
+        fi
+    chem_pic := (chem_pic rotated -chem_setting_rotation) shifted z ;
+
+    if chem_text_trace :
+        draw z                    withpen pencircle scaled 2pt withcolor red ;
+        draw boundingbox chem_pic withpen pencircle scaled 1pt withcolor red ;
+    fi
+
+    chem_pic
+enddef ;
+
+% transform
+
+% rotations and reflections
+
+vardef chem_rot (suffix $) (expr d, s) = % ROT
+    if not chem_front[$] :
+        if d=0 :
+            chem_rotation := 0
+        else :
+            chem_num0 := if chem_stacked[$] : 3 else : 0 fi ;
+            chem_num1 := .5(angle(point d+chem_num0 of chem_b_path[$]) -
+                            angle(point d+chem_num0-1 of chem_b_path[$])) ;
+            chem_rotation := (chem_rotation + s*chem_num1) mod 360 ;
+        fi
+    fi
+enddef ;
+
+vardef chem_mir (suffix $) (expr d, s)  = % MIR
+    % We take the scale factor s to multiply the rotation, but only ONCE.
+    % For example: CARBON,.5MIR12 will give a rotation by 104°
+    if not chem_front[$] :
+        if d=0 : % inversion
+            if chem_mirror=origin :
+                chem_rotation := (chem_rotation + 180*s) mod 360 ;
+            else :
+                chem_mirror := chem_mirror rotated 90 ;
+            fi
+        else :
+            chem_pair0 := (point d-1 of chem_b_path[$]) scaled s ; % not chem_transformed
+            if chem_mirror=origin :
+                chem_mirror := chem_pair0 ;
+            else :
+                chem_num0 := angle(chem_mirror)-angle(chem_pair0) ;
+                if (chem_num0>0) and (chem_num0> 180) :
+                    chem_num0 :=  360 - chem_num0 ;
+                elseif (chem_num0<0) and (chem_num0<-180) :
+                    chem_num0 := -360 - chem_num0 ;
+                fi
+                chem_num0 := chem_num0 * s ;
+                chem_rotation := (chem_rotation + 2chem_num0) mod 360 ;
+                chem_mirror := origin ;
+            fi
+        fi
+    fi
+enddef ;
+
+% translations
+
+vardef chem_dir (suffix $) (expr d, s) = % DIR (same as MOV(d-1)MOV(d+1))
+    if not chem_front[$] :
+        if d=0 :
+            currentpicture := currentpicture shifted -chem_origin ;
+            chem_origin    := origin ;
+        else :
+            chem_pair0 :=
+                 (((point d-2 of chem_b_path[$]) shifted (point d of chem_b_path[$])) scaled s)
+                 chem_transformed($) ;
+            currentpicture := currentpicture shifted -chem_pair0 ;
+            chem_origin    := chem_origin    shifted -chem_pair0 ;
+        fi
+   fi
+enddef ;
+
+vardef chem_mov (suffix $) (expr d, s) = % MOV
+    if d=0 :
+        currentpicture := currentpicture shifted -chem_origin ;
+        chem_origin    := origin ;
+    else :
+        chem_pair0 := ((point d-1 of chem_b_path[$]) scaled s) chem_transformed($) ;
+        currentpicture := currentpicture shifted -chem_pair0 ;
+        chem_origin    := chem_origin    shifted -chem_pair0 ;
+    fi ;
+enddef ;
+
+vardef chem_mark (suffix $) (expr d, s) = % MARK
+    % scale s is ignored
+    if d<>0 :
+        chem_mark_pair[d] := -chem_origin ;
+    fi
+enddef ;
+
+vardef chem_marked (expr d) =
+    if d=0 :
+        chem_origin
+    elseif known chem_mark_pair[d] :
+        chem_mark_pair[d] shifted chem_origin
+    else :
+        origin
+    fi
+enddef ;
+
+vardef chem_number@#(suffix $) (expr p) (text t) = chem_label@#($,p,t) enddef ; % NUMBER
+vardef chem_label@# (suffix $) (expr p) (text t) = % LABEL
+    draw chem_text@#(t,chem_do(chem_marked(p))) ;
+enddef ;
+
+vardef chem_move (suffix $) (expr d, s) = % MOVE
+    chem_pair0 := chem_marked(d) scaled s ;
+    currentpicture := currentpicture shifted -chem_pair0 ;
+    chem_origin    := chem_origin    shifted -chem_pair0 ;
+enddef ;
+
+vardef chem_diff (suffix $) (expr d, s) = % DIFF
+    chem_pair0 := (chem_marked(d) shifted -chem_origin) scaled s ;
+    currentpicture := currentpicture shifted -chem_pair0 ;
+    chem_origin    := chem_origin    shifted -chem_pair0 ;
+enddef ;
+
+vardef chem_line (suffix $) (expr f, t, r, c) = % LINE
+    draw if f=t : origin else : chem_marked(f) fi -- chem_marked(t)
+        % no chem_transformed
+        withpen pencircle scaled r
+        withcolor c %\MPcolor{c}
+enddef ;
+
+vardef chem_dash (suffix $) (expr f, t, r, c) = % DASH
+    draw if f=t : origin else : chem_marked(f) fi -- chem_marked(t)
+        % no chem_transformed
+        withpen pencircle scaled r
+        withcolor c %\MPcolor{c}
+        dashed evenly ;
+enddef ;
+
+vardef chem_arrow (suffix $) (expr f, t, r, c) = % ARROW
+    drawarrow if f=t : origin else : chem_marked(f) fi -- chem_marked(t)
+        % no chem_transformed
+        withpen pencircle scaled r
+        withcolor c %\MPcolor{c}
+enddef ;
+
+
+vardef chem_rm (suffix $) (expr d, s) = % RM
+    if (not chem_front[$]) and (d<>0) :
+        chem_pair0 := ((point d-1 of chem_r_path[$]) scaled s) chem_transformed($) ;
+        currentpicture := currentpicture shifted -chem_pair0 ;
+        chem_origin    := chem_origin    shifted -chem_pair0 ;
+    fi ;
+enddef ;
+
+vardef chem_off (suffix $) (expr d, s) = % OFF
+    if d=0 :
+        currentpicture := currentpicture shifted -chem_origin ;
+        chem_origin    := origin ;
+    else :
+        chem_pair0 := (unitvector(point d-1 of chem_b_path[one])) scaled chem_setting_offset*s ;
+        % not chem_transformed
+        currentpicture := currentpicture shifted -chem_pair0 ;
+        chem_origin    := chem_origin    shifted -chem_pair0 ;
+    fi ;
+enddef ;
