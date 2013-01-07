@@ -7,10 +7,9 @@ if not modules then modules = { } end modules ['data-ini'] = {
 }
 
 local gsub, find, gmatch, char = string.gsub, string.find, string.gmatch, string.char
-local concat = table.concat
 local next, type = next, type
 
-local filedirname, filebasename, fileextname, filejoin = file.dirname, file.basename, file.extname, file.join
+local filedirname, filebasename, filejoin = file.dirname, file.basename, file.join
 
 local trace_locating   = false  trackers.register("resolvers.locating",   function(v) trace_locating   = v end)
 local trace_detail     = false  trackers.register("resolvers.details",    function(v) trace_detail     = v end)
@@ -97,6 +96,10 @@ end
 do
 
     local args = environment.originalarguments or arg -- this needs a cleanup
+
+    if not environment.ownmain then
+        environment.ownmain = status and string.match(string.lower(status.banner),"this is ([%a]+)") or "luatex"
+    end
 
     local ownbin  = environment.ownbin  or args[-2] or arg[-2] or args[-1] or arg[-1] or arg[0] or "luatex"
     local ownpath = environment.ownpath or os.selfdir
@@ -214,22 +217,11 @@ end
 
 environment.texroot = file.collapsepath(texroot)
 
--- Tracing. Todo ...
-
-function resolvers.settrace(n) -- no longer number but: 'locating' or 'detail'
-    if n then
-        trackers.disable("resolvers.*")
-        trackers.enable("resolvers."..n)
-    end
+if profiler then
+    directives.register("system.profile",function()
+        profiler.start("luatex-profile.log")
+    end)
 end
-
-resolvers.settrace(osgetenv("MTX_INPUT_TRACE"))
-
--- todo:
-
--- if profiler and osgetenv("MTX_PROFILE_RUN") == "YES" then
---     profiler.start("luatex-profile.log")
--- end
 
 -- a forward definition
 

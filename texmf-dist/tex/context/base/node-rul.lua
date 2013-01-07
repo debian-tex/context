@@ -62,59 +62,59 @@ end
 
 local floor = math.floor
 
-local trace_ruled    = false  trackers.register("nodes.rules", function(v) trace_ruled = v end)
+local trace_ruled        = false  trackers.register("nodes.rules", function(v) trace_ruled = v end)
+local report_ruled       = logs.reporter("nodes","rules")
 
-local report_ruled   = logs.reporter("nodes","rules")
+local n_tostring         = nodes.idstostring
+local n_tosequence       = nodes.tosequence
 
-local n_tostring      = nodes.idstostring
-local n_tosequence    = nodes.tosequence
+local a_ruled            = attributes.private('ruled')
+local a_color            = attributes.private('color')
+local a_transparency     = attributes.private('transparency')
+local a_colorspace       = attributes.private('colormodel')
 
-local a_ruled         = attributes.private('ruled')
-local a_color         = attributes.private('color')
-local a_transparency  = attributes.private('transparency')
-local a_colorspace    = attributes.private('colormodel')
+local insert_node_before = node.insert_before
+local insert_node_after  = node.insert_after
+local striprange         = nodes.striprange
+local list_dimensions    = node.dimensions
+local has_attribute      = node.has_attribute
+local set_attribute      = node.set_attribute
 
-local insert_before   = node.insert_before
-local insert_after    = node.insert_after
-local striprange      = nodes.striprange
-local list_dimensions = node.dimensions
-local has_attribute   = node.has_attribute
-local set_attribute   = node.set_attribute
+local hpack_nodes        = node.hpack
 
-local hpack_nodes     = node.hpack
+local fontdata           = fonts.hashes.identifiers
+local variables          = interfaces.variables
+local dimenfactor        = fonts.helpers.dimenfactor
+local splitdimen         = number.splitdimen
 
-local fontdata        = fonts.hashes.identifiers
-local variables       = interfaces.variables
-local dimenfactor     = fonts.helpers.dimenfactor
+local nodecodes          = nodes.nodecodes
+local skipcodes          = nodes.skipcodes
+local whatcodes          = nodes.whatcodes
+local kerncodes          = nodes.kerncodes
 
-local nodecodes       = nodes.nodecodes
-local skipcodes       = nodes.skipcodes
-local whatcodes       = nodes.whatcodes
-local kerncodes       = nodes.kerncodes
+local glyph_code         = nodecodes.glyph
+local disc_code          = nodecodes.disc
+local glue_code          = nodecodes.glue
+local penalty_code       = nodecodes.penalty
+local kern_code          = nodecodes.kern
+local hlist_code         = nodecodes.hlist
+local vlist_code         = nodecodes.vlist
+local rule_code          = nodecodes.rule
+local whatsit_code       = nodecodes.whatsit
 
-local glyph_code      = nodecodes.glyph
-local disc_code       = nodecodes.disc
-local glue_code       = nodecodes.glue
-local penalty_code    = nodecodes.penalty
-local kern_code       = nodecodes.kern
-local hlist_code      = nodecodes.hlist
-local vlist_code      = nodecodes.vlist
-local rule_code       = nodecodes.rule
-local whatsit_code    = nodecodes.whatsit
+local userskip_code      = skipcodes.userskip
+local spaceskip_code     = skipcodes.spaceskip
+local xspaceskip_code    = skipcodes.xspaceskip
 
-local userskip_code   = skipcodes.userskip
-local spaceskip_code  = skipcodes.spaceskip
-local xspaceskip_code = skipcodes.xspaceskip
+local dir_code           = whatcodes.dir
 
-local dir_code        = whatcodes.dir
+local kerning_code       = kerncodes.kern
 
-local kerning_code    = kerncodes.kern
+local nodepool           = nodes.pool
 
-local nodepool        = nodes.pool
-
-local new_rule        = nodepool.rule
-local new_kern        = nodepool.kern
-local new_glue        = nodepool.glue
+local new_rule           = nodepool.rule
+local new_kern           = nodepool.kern
+local new_glue           = nodepool.glue
 
 -- we can use this one elsewhere too
 --
@@ -258,26 +258,43 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
         return head
     end
     local w = list_dimensions(parent.glue_set,parent.glue_sign,parent.glue_order,f,l.next)
-    local method, offset, continue, dy, rulethickness, unit, order, max, ma, ca, ta =
-        d.method, d.offset, d.continue, d.dy, d.rulethickness, d.unit, d.order, d.max, d.ma, d.ca, d.ta
-    local e = dimenfactor(unit,fontdata[f.font]) -- what if no glyph node
+    local method, offset, continue, dy, order, max = d.method, d.offset, d.continue, d.dy, d.order, d.max
+    local rulethickness, unit = d.rulethickness, d.unit
+    local ma, ca, ta = d.ma, d.ca, d.ta
     local colorspace   = (ma > 0 and ma) or has_attribute(f,a_colorspace) or 1
     local color        = (ca > 0 and ca) or has_attribute(f,a_color)
     local transparency = (ta > 0 and ta) or has_attribute(f,a_transparency)
     local foreground = order == variables.foreground
-    rulethickness= rulethickness/2
+
+    local e = dimenfactor(unit,fontdata[f.font]) -- what if no glyph node
+
+    local rt = tonumber(rulethickness)
+    if rt then
+        rulethickness = e * rulethickness / 2
+    else
+        local n, u = splitdimen(rulethickness)
+        if n and u then -- we need to intercept ex and em and % and ...
+            rulethickness = n * dimenfactor(u,fontdata[f.font]) / 2
+        else
+            rulethickness = 1/5
+        end
+    end
+
     if level > max then
         level = max
     end
     if method == 0 then -- center
         offset = 2*offset
-        m = (offset+(level-1)*dy+rulethickness)*e/2
+--         m = (offset+(level-1)*dy+rulethickness)*e/2
+        m = (offset+(level-1)*dy)*e/2 + rulethickness/2
     else
         m = 0
     end
     for i=1,level do
-        local ht =  (offset+(i-1)*dy+rulethickness)*e - m
-        local dp = -(offset+(i-1)*dy-rulethickness)*e + m
+--         local ht =  (offset+(i-1)*dy+rulethickness)*e - m
+--         local dp = -(offset+(i-1)*dy-rulethickness)*e + m
+        local ht =  (offset+(i-1)*dy)*e + rulethickness - m
+        local dp = -(offset+(i-1)*dy)*e + rulethickness + m
         local r = new_rule(w,ht,dp)
         local v = has_attribute(f,a_viewerlayer)
         -- quick hack
@@ -294,12 +311,12 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
         end
         local k = new_kern(-w)
         if foreground then
-            insert_after(head,l,k)
-            insert_after(head,k,r)
+            insert_node_after(head,l,k)
+            insert_node_after(head,k,r)
             l = r
         else
-            head = insert_before(head,f,r)
-            insert_after(head,r,k)
+            head = insert_node_before(head,f,r)
+            insert_node_after(head,r,k)
         end
         if trace_ruled then
             report_ruled("level: %s, width: %i, height: %i, depth: %i, nodes: %s, text: %s",

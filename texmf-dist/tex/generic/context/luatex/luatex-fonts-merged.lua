@@ -1,1097 +1,6 @@
 -- merged file : luatex-fonts-merged.lua
 -- parent file : luatex-fonts.lua
--- merge date  : 05/30/12 11:26:34
-
-do -- begin closure to overcome local limits and interference
-
-if not modules then modules = { } end modules ['l-string'] = {
-    version   = 1.001,
-    comment   = "companion to luat-lib.mkiv",
-    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
-    copyright = "PRAGMA ADE / ConTeXt Development Team",
-    license   = "see context related readme files"
-}
-
-local string = string
-local sub, gsub, find, match, gmatch, format, char, byte, rep, lower = string.sub, string.gsub, string.find, string.match, string.gmatch, string.format, string.char, string.byte, string.rep, string.lower
-local lpegmatch, S, C, Ct = lpeg.match, lpeg.S, lpeg.C, lpeg.Ct
-
--- some functions may disappear as they are not used anywhere
-
-if not string.split then
-
-    -- this will be overloaded by a faster lpeg variant
-
-    function string.split(str,pattern)
-        local t = { }
-        if #str > 0 then
-            local n = 1
-            for s in gmatch(str..pattern,"(.-)"..pattern) do
-                t[n] = s
-                n = n + 1
-            end
-        end
-        return t
-    end
-
-end
-
-function string.unquoted(str)
-    return (gsub(str,"^([\"\'])(.*)%1$","%2"))
-end
-
---~ function stringunquoted(str)
---~     if find(str,"^[\'\"]") then
---~         return sub(str,2,-2)
---~     else
---~         return str
---~     end
---~ end
-
-function string.quoted(str)
-    return format("%q",str) -- always "
-end
-
-function string.count(str,pattern) -- variant 3
-    local n = 0
-    for _ in gmatch(str,pattern) do -- not for utf
-        n = n + 1
-    end
-    return n
-end
-
-function string.limit(str,n,sentinel) -- not utf proof
-    if #str > n then
-        sentinel = sentinel or "..."
-        return sub(str,1,(n-#sentinel)) .. sentinel
-    else
-        return str
-    end
-end
-
-local space    = S(" \t\v\n")
-local nospace  = 1 - space
-local stripper = space^0 * C((space^0 * nospace^1)^0) -- roberto's code
-
-function string.strip(str)
-    return lpegmatch(stripper,str) or ""
-end
-
-function string.is_empty(str)
-    return not find(str,"%S")
-end
-
-local patterns_escapes = {
-    ["%"] = "%%",
-    ["."] = "%.",
-    ["+"] = "%+", ["-"] = "%-", ["*"] = "%*",
-    ["["] = "%[", ["]"] = "%]",
-    ["("] = "%(", [")"] = "%)",
- -- ["{"] = "%{", ["}"] = "%}"
- -- ["^"] = "%^", ["$"] = "%$",
-}
-
-local simple_escapes = {
-    ["-"] = "%-",
-    ["."] = "%.",
-    ["?"] = ".",
-    ["*"] = ".*",
-}
-
-function string.escapedpattern(str,simple)
-    return (gsub(str,".",simple and simple_escapes or patterns_escapes))
-end
-
-function string.topattern(str,lowercase,strict)
-    if str == "" then
-        return ".*"
-    else
-        str = gsub(str,".",simple_escapes)
-        if lowercase then
-            str = lower(str)
-        end
-        if strict then
-            return "^" .. str .. "$"
-        else
-            return str
-        end
-    end
-end
-
--- obsolete names:
-
-string.quote   = string.quoted
-string.unquote = string.unquoted
-
-end -- closure
-
-do -- begin closure to overcome local limits and interference
-
-if not modules then modules = { } end modules ['l-table'] = {
-    version   = 1.001,
-    comment   = "companion to luat-lib.mkiv",
-    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
-    copyright = "PRAGMA ADE / ConTeXt Development Team",
-    license   = "see context related readme files"
-}
-
-local type, next, tostring, tonumber, ipairs, table, string = type, next, tostring, tonumber, ipairs, table, string
-local concat, sort, insert, remove = table.concat, table.sort, table.insert, table.remove
-local format, find, gsub, lower, dump, match = string.format, string.find, string.gsub, string.lower, string.dump, string.match
-local getmetatable, setmetatable = getmetatable, setmetatable
-local getinfo = debug.getinfo
-
--- Starting with version 5.2 Lua no longer provide ipairs, which makes
--- sense. As we already used the for loop and # in most places the
--- impact on ConTeXt was not that large; the remaining ipairs already
--- have been replaced. In a similar fashion we also hardly used pairs.
---
--- Just in case, we provide the fallbacks as discussed in Programming
--- in Lua (http://www.lua.org/pil/7.3.html):
-
-if not ipairs then
-
-    -- for k, v in ipairs(t) do                ... end
-    -- for k=1,#t            do local v = t[k] ... end
-
-    local function iterate(a,i)
-        i = i + 1
-        local v = a[i]
-        if v ~= nil then
-            return i, v --, nil
-        end
-    end
-
-    function ipairs(a)
-        return iterate, a, 0
-    end
-
-end
-
-if not pairs then
-
-    -- for k, v in pairs(t) do ... end
-    -- for k, v in next, t  do ... end
-
-    function pairs(t)
-        return next, t -- , nil
-    end
-
-end
-
--- Also, unpack has been moved to the table table, and for compatiility
--- reasons we provide both now.
-
-if not table.unpack then
-    table.unpack = _G.unpack
-elseif not unpack then
-    _G.unpack = table.unpack
-end
-
--- extra functions, some might go (when not used)
-
-function table.strip(tab)
-    local lst, l = { }, 0
-    for i=1,#tab do
-        local s = gsub(tab[i],"^%s*(.-)%s*$","%1")
-        if s == "" then
-            -- skip this one
-        else
-            l = l + 1
-            lst[l] = s
-        end
-    end
-    return lst
-end
-
-function table.keys(t)
-    local keys, k = { }, 0
-    for key, _ in next, t do
-        k = k + 1
-        keys[k] = key
-    end
-    return keys
-end
-
-local function compare(a,b)
-    local ta, tb = type(a), type(b) -- needed, else 11 < 2
-    if ta == tb then
-        return a < b
-    else
-        return tostring(a) < tostring(b)
-    end
-end
-
-local function sortedkeys(tab)
-    local srt, category, s = { }, 0, 0 -- 0=unknown 1=string, 2=number 3=mixed
-    for key,_ in next, tab do
-        s = s + 1
-        srt[s] = key
-        if category == 3 then
-            -- no further check
-        else
-            local tkey = type(key)
-            if tkey == "string" then
-                category = (category == 2 and 3) or 1
-            elseif tkey == "number" then
-                category = (category == 1 and 3) or 2
-            else
-                category = 3
-            end
-        end
-    end
-    if category == 0 or category == 3 then
-        sort(srt,compare)
-    else
-        sort(srt)
-    end
-    return srt
-end
-
-local function sortedhashkeys(tab) -- fast one
-    local srt, s = { }, 0
-    for key,_ in next, tab do
-        if key then
-            s= s + 1
-            srt[s] = key
-        end
-    end
-    sort(srt)
-    return srt
-end
-
-table.sortedkeys     = sortedkeys
-table.sortedhashkeys = sortedhashkeys
-
-local function nothing() end
-
-local function sortedhash(t)
-    if t then
-        local n, s = 0, sortedkeys(t) -- the robust one
-        local function kv(s)
-            n = n + 1
-            local k = s[n]
-            return k, t[k]
-        end
-        return kv, s
-    else
-        return nothing
-    end
-end
-
-table.sortedhash  = sortedhash
-table.sortedpairs = sortedhash
-
-function table.append(t, list)
-    local n = #t
-    for i=1,#list do
-        n = n + 1
-        t[n] = list[i]
-    end
-    return t
-end
-
-function table.prepend(t, list)
-    local nl = #list
-    local nt = nl + #t
-    for i=#t,1,-1 do
-        t[nt] = t[i]
-        nt = nt - 1
-    end
-    for i=1,#list do
-        t[i] = list[i]
-    end
-    return t
-end
-
-function table.merge(t, ...) -- first one is target
-    t = t or { }
-    local lst = { ... }
-    for i=1,#lst do
-        for k, v in next, lst[i] do
-            t[k] = v
-        end
-    end
-    return t
-end
-
-function table.merged(...)
-    local tmp, lst = { }, { ... }
-    for i=1,#lst do
-        for k, v in next, lst[i] do
-            tmp[k] = v
-        end
-    end
-    return tmp
-end
-
-function table.imerge(t, ...)
-    local lst, nt = { ... }, #t
-    for i=1,#lst do
-        local nst = lst[i]
-        for j=1,#nst do
-            nt = nt + 1
-            t[nt] = nst[j]
-        end
-    end
-    return t
-end
-
-function table.imerged(...)
-    local tmp, ntmp, lst = { }, 0, {...}
-    for i=1,#lst do
-        local nst = lst[i]
-        for j=1,#nst do
-            ntmp = ntmp + 1
-            tmp[ntmp] = nst[j]
-        end
-    end
-    return tmp
-end
-
-local function fastcopy(old,metatabletoo) -- fast one
-    if old then
-        local new = { }
-        for k,v in next, old do
-            if type(v) == "table" then
-                new[k] = fastcopy(v,metatabletoo) -- was just table.copy
-            else
-                new[k] = v
-            end
-        end
-        if metatabletoo then
-            -- optional second arg
-            local mt = getmetatable(old)
-            if mt then
-                setmetatable(new,mt)
-            end
-        end
-        return new
-    else
-        return { }
-    end
-end
-
--- todo : copy without metatable
-
-local function copy(t, tables) -- taken from lua wiki, slightly adapted
-    tables = tables or { }
-    local tcopy = {}
-    if not tables[t] then
-        tables[t] = tcopy
-    end
-    for i,v in next, t do -- brrr, what happens with sparse indexed
-        if type(i) == "table" then
-            if tables[i] then
-                i = tables[i]
-            else
-                i = copy(i, tables)
-            end
-        end
-        if type(v) ~= "table" then
-            tcopy[i] = v
-        elseif tables[v] then
-            tcopy[i] = tables[v]
-        else
-            tcopy[i] = copy(v, tables)
-        end
-    end
-    local mt = getmetatable(t)
-    if mt then
-        setmetatable(tcopy,mt)
-    end
-    return tcopy
-end
-
-table.fastcopy = fastcopy
-table.copy     = copy
-
-function table.derive(parent)
-    local child = { }
-    if parent then
-        setmetatable(child,{ __index = parent })
-    end
-    return child
-end
-
-function table.tohash(t,value)
-    local h = { }
-    if t then
-        if value == nil then value = true end
-        for _, v in next, t do -- no ipairs here
-            h[v] = value
-        end
-    end
-    return h
-end
-
-function table.fromhash(t)
-    local hsh, h = { }, 0
-    for k, v in next, t do -- no ipairs here
-        if v then
-            h = h + 1
-            hsh[h] = k
-        end
-    end
-    return hsh
-end
-
-local noquotes, hexify, handle, reduce, compact, inline, functions
-
-local reserved = table.tohash { -- intercept a language inconvenience: no reserved words as key
-    'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function', 'if',
-    'in', 'local', 'nil', 'not', 'or', 'repeat', 'return', 'then', 'true', 'until', 'while',
-}
-
-local function simple_table(t)
-    if #t > 0 then
-        local n = 0
-        for _,v in next, t do
-            n = n + 1
-        end
-        if n == #t then
-            local tt, nt = { }, 0
-            for i=1,#t do
-                local v = t[i]
-                local tv = type(v)
-                if tv == "number" then
-                    nt = nt + 1
-                    if hexify then
-                        tt[nt] = format("0x%04X",v)
-                    else
-                        tt[nt] = tostring(v) -- tostring not needed
-                    end
-                elseif tv == "boolean" then
-                    nt = nt + 1
-                    tt[nt] = tostring(v)
-                elseif tv == "string" then
-                    nt = nt + 1
-                    tt[nt] = format("%q",v)
-                else
-                    tt = nil
-                    break
-                end
-            end
-            return tt
-        end
-    end
-    return nil
-end
-
--- Because this is a core function of mkiv I moved some function calls
--- inline.
---
--- twice as fast in a test:
---
--- local propername = lpeg.P(lpeg.R("AZ","az","__") * lpeg.R("09","AZ","az", "__")^0 * lpeg.P(-1) )
-
--- problem: there no good number_to_string converter with the best resolution
-
-local function dummy() end
-
-local function do_serialize(root,name,depth,level,indexed)
-    if level > 0 then
-        depth = depth .. " "
-        if indexed then
-            handle(format("%s{",depth))
-        else
-            local tn = type(name)
-            if tn == "number" then -- or find(k,"^%d+$") then
-                if hexify then
-                    handle(format("%s[0x%04X]={",depth,name))
-                else
-                    handle(format("%s[%s]={",depth,name))
-                end
-            elseif tn == "string" then
-                if noquotes and not reserved[name] and find(name,"^%a[%w%_]*$") then
-                    handle(format("%s%s={",depth,name))
-                else
-                    handle(format("%s[%q]={",depth,name))
-                end
-            elseif tn == "boolean" then
-                handle(format("%s[%s]={",depth,tostring(name)))
-            else
-                handle(format("%s{",depth))
-            end
-        end
-    end
-    -- we could check for k (index) being number (cardinal)
-    if root and next(root) then
-        local first, last = nil, 0 -- #root cannot be trusted here (will be ok in 5.2 when ipairs is gone)
-        if compact then
-            -- NOT: for k=1,#root do (we need to quit at nil)
-            for k,v in ipairs(root) do -- can we use next?
-                if not first then first = k end
-                last = last + 1
-            end
-        end
-        local sk = sortedkeys(root)
-        for i=1,#sk do
-            local k = sk[i]
-            local v = root[k]
-            --~ if v == root then
-                -- circular
-            --~ else
-            local t, tk = type(v), type(k)
-            if compact and first and tk == "number" and k >= first and k <= last then
-                if t == "number" then
-                    if hexify then
-                        handle(format("%s 0x%04X,",depth,v))
-                    else
-                        handle(format("%s %s,",depth,v)) -- %.99g
-                    end
-                elseif t == "string" then
-                    if reduce and tonumber(v) then
-                        handle(format("%s %s,",depth,v))
-                    else
-                        handle(format("%s %q,",depth,v))
-                    end
-                elseif t == "table" then
-                    if not next(v) then
-                        handle(format("%s {},",depth))
-                    elseif inline then -- and #t > 0
-                        local st = simple_table(v)
-                        if st then
-                            handle(format("%s { %s },",depth,concat(st,", ")))
-                        else
-                            do_serialize(v,k,depth,level+1,true)
-                        end
-                    else
-                        do_serialize(v,k,depth,level+1,true)
-                    end
-                elseif t == "boolean" then
-                    handle(format("%s %s,",depth,tostring(v)))
-                elseif t == "function" then
-                    if functions then
-                        handle(format('%s loadstring(%q),',depth,dump(v)))
-                    else
-                        handle(format('%s "function",',depth))
-                    end
-                else
-                    handle(format("%s %q,",depth,tostring(v)))
-                end
-            elseif k == "__p__" then -- parent
-                if false then
-                    handle(format("%s __p__=nil,",depth))
-                end
-            elseif t == "number" then
-                if tk == "number" then -- or find(k,"^%d+$") then
-                    if hexify then
-                        handle(format("%s [0x%04X]=0x%04X,",depth,k,v))
-                    else
-                        handle(format("%s [%s]=%s,",depth,k,v)) -- %.99g
-                    end
-                elseif tk == "boolean" then
-                    if hexify then
-                        handle(format("%s [%s]=0x%04X,",depth,tostring(k),v))
-                    else
-                        handle(format("%s [%s]=%s,",depth,tostring(k),v)) -- %.99g
-                    end
-                elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                    if hexify then
-                        handle(format("%s %s=0x%04X,",depth,k,v))
-                    else
-                        handle(format("%s %s=%s,",depth,k,v)) -- %.99g
-                    end
-                else
-                    if hexify then
-                        handle(format("%s [%q]=0x%04X,",depth,k,v))
-                    else
-                        handle(format("%s [%q]=%s,",depth,k,v)) -- %.99g
-                    end
-                end
-            elseif t == "string" then
-                if reduce and tonumber(v) then
-                    if tk == "number" then -- or find(k,"^%d+$") then
-                        if hexify then
-                            handle(format("%s [0x%04X]=%s,",depth,k,v))
-                        else
-                            handle(format("%s [%s]=%s,",depth,k,v))
-                        end
-                    elseif tk == "boolean" then
-                        handle(format("%s [%s]=%s,",depth,tostring(k),v))
-                    elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                        handle(format("%s %s=%s,",depth,k,v))
-                    else
-                        handle(format("%s [%q]=%s,",depth,k,v))
-                    end
-                else
-                    if tk == "number" then -- or find(k,"^%d+$") then
-                        if hexify then
-                            handle(format("%s [0x%04X]=%q,",depth,k,v))
-                        else
-                            handle(format("%s [%s]=%q,",depth,k,v))
-                        end
-                    elseif tk == "boolean" then
-                        handle(format("%s [%s]=%q,",depth,tostring(k),v))
-                    elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                        handle(format("%s %s=%q,",depth,k,v))
-                    else
-                        handle(format("%s [%q]=%q,",depth,k,v))
-                    end
-                end
-            elseif t == "table" then
-                if not next(v) then
-                    if tk == "number" then -- or find(k,"^%d+$") then
-                        if hexify then
-                            handle(format("%s [0x%04X]={},",depth,k))
-                        else
-                            handle(format("%s [%s]={},",depth,k))
-                        end
-                    elseif tk == "boolean" then
-                        handle(format("%s [%s]={},",depth,tostring(k)))
-                    elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                        handle(format("%s %s={},",depth,k))
-                    else
-                        handle(format("%s [%q]={},",depth,k))
-                    end
-                elseif inline then
-                    local st = simple_table(v)
-                    if st then
-                        if tk == "number" then -- or find(k,"^%d+$") then
-                            if hexify then
-                                handle(format("%s [0x%04X]={ %s },",depth,k,concat(st,", ")))
-                            else
-                                handle(format("%s [%s]={ %s },",depth,k,concat(st,", ")))
-                            end
-                        elseif tk == "boolean" then -- or find(k,"^%d+$") then
-                            handle(format("%s [%s]={ %s },",depth,tostring(k),concat(st,", ")))
-                        elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                            handle(format("%s %s={ %s },",depth,k,concat(st,", ")))
-                        else
-                            handle(format("%s [%q]={ %s },",depth,k,concat(st,", ")))
-                        end
-                    else
-                        do_serialize(v,k,depth,level+1)
-                    end
-                else
-                    do_serialize(v,k,depth,level+1)
-                end
-            elseif t == "boolean" then
-                if tk == "number" then -- or find(k,"^%d+$") then
-                    if hexify then
-                        handle(format("%s [0x%04X]=%s,",depth,k,tostring(v)))
-                    else
-                        handle(format("%s [%s]=%s,",depth,k,tostring(v)))
-                    end
-                elseif tk == "boolean" then -- or find(k,"^%d+$") then
-                    handle(format("%s [%s]=%s,",depth,tostring(k),tostring(v)))
-                elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                    handle(format("%s %s=%s,",depth,k,tostring(v)))
-                else
-                    handle(format("%s [%q]=%s,",depth,k,tostring(v)))
-                end
-            elseif t == "function" then
-                if functions then
-                    local f = getinfo(v).what == "C" and dump(dummy) or dump(v)
-                 -- local f = getinfo(v).what == "C" and dump(function(...) return v(...) end) or dump(v)
-                    if tk == "number" then -- or find(k,"^%d+$") then
-                        if hexify then
-                            handle(format("%s [0x%04X]=loadstring(%q),",depth,k,f))
-                        else
-                            handle(format("%s [%s]=loadstring(%q),",depth,k,f))
-                        end
-                    elseif tk == "boolean" then
-                        handle(format("%s [%s]=loadstring(%q),",depth,tostring(k),f))
-                    elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                        handle(format("%s %s=loadstring(%q),",depth,k,f))
-                    else
-                        handle(format("%s [%q]=loadstring(%q),",depth,k,f))
-                    end
-                end
-            else
-                if tk == "number" then -- or find(k,"^%d+$") then
-                    if hexify then
-                        handle(format("%s [0x%04X]=%q,",depth,k,tostring(v)))
-                    else
-                        handle(format("%s [%s]=%q,",depth,k,tostring(v)))
-                    end
-                elseif tk == "boolean" then -- or find(k,"^%d+$") then
-                    handle(format("%s [%s]=%q,",depth,tostring(k),tostring(v)))
-                elseif noquotes and not reserved[k] and find(k,"^%a[%w%_]*$") then
-                    handle(format("%s %s=%q,",depth,k,tostring(v)))
-                else
-                    handle(format("%s [%q]=%q,",depth,k,tostring(v)))
-                end
-            end
-            --~ end
-        end
-    end
-   if level > 0 then
-        handle(format("%s},",depth))
-    end
-end
-
--- replacing handle by a direct t[#t+1] = ... (plus test) is not much
--- faster (0.03 on 1.00 for zapfino.tma)
-
-local function serialize(_handle,root,name,specification) -- handle wins
-    local tname = type(name)
-    if type(specification) == "table" then
-        noquotes  = specification.noquotes
-        hexify    = specification.hexify
-        handle    = _handle or specification.handle or print
-        reduce    = specification.reduce or false
-        functions = specification.functions
-        compact   = specification.compact
-        inline    = specification.inline and compact
-        if functions == nil then
-            functions = true
-        end
-        if compact == nil then
-            compact = true
-        end
-        if inline == nil then
-            inline = compact
-        end
-    else
-        noquotes  = false
-        hexify    = false
-        handle    = _handle or print
-        reduce    = false
-        compact   = true
-        inline    = true
-        functions = true
-    end
-    if tname == "string" then
-        if name == "return" then
-            handle("return {")
-        else
-            handle(name .. "={")
-        end
-    elseif tname == "number" then
-        if hexify then
-            handle(format("[0x%04X]={",name))
-        else
-            handle("[" .. name .. "]={")
-        end
-    elseif tname == "boolean" then
-        if name then
-            handle("return {")
-        else
-            handle("{")
-        end
-    else
-        handle("t={")
-    end
-    if root then
-        -- The dummy access will initialize a table that has a delayed initialization
-        -- using a metatable. (maybe explicitly test for metatable)
-        if getmetatable(root) then -- todo: make this an option, maybe even per subtable
-            local dummy = root._w_h_a_t_e_v_e_r_
-            root._w_h_a_t_e_v_e_r_ = nil
-        end
-        -- Let's forget about empty tables.
-        if next(root) then
-            do_serialize(root,name,"",0)
-        end
-    end
-    handle("}")
-end
-
---~ name:
---~
---~ true     : return     { }
---~ false    :            { }
---~ nil      : t        = { }
---~ string   : string   = { }
---~ 'return' : return     { }
---~ number   : [number] = { }
-
-function table.serialize(root,name,specification)
-    local t, n = { }, 0
-    local function flush(s)
-        n = n + 1
-        t[n] = s
-    end
-    serialize(flush,root,name,specification)
-    return concat(t,"\n")
-end
-
-table.tohandle = serialize
-
--- sometimes tables are real use (zapfino extra pro is some 85M) in which
--- case a stepwise serialization is nice; actually, we could consider:
---
--- for line in table.serializer(root,name,reduce,noquotes) do
---    ...(line)
--- end
---
--- so this is on the todo list
-
-local maxtab = 2*1024
-
-function table.tofile(filename,root,name,specification)
-    local f = io.open(filename,'w')
-    if f then
-        if maxtab > 1 then
-            local t, n = { }, 0
-            local function flush(s)
-                n = n + 1
-                t[n] = s
-                if n > maxtab then
-                    f:write(concat(t,"\n"),"\n") -- hm, write(sometable) should be nice
-                    t, n = { }, 0 -- we could recycle t if needed
-                end
-            end
-            serialize(flush,root,name,specification)
-            f:write(concat(t,"\n"),"\n")
-        else
-            local function flush(s)
-                f:write(s,"\n")
-            end
-            serialize(flush,root,name,specification)
-        end
-        f:close()
-        io.flush()
-    end
-end
-
-local function flattened(t,f,depth)
-    if f == nil then
-        f = { }
-        depth = 0xFFFF
-    elseif tonumber(f) then
-        -- assume then only two arguments are given
-        depth = f
-        f = { }
-    elseif not depth then
-        depth = 0xFFFF
-    end
-    for k, v in next, t do
-        if type(k) ~= "number" then
-            if depth > 0 and type(v) == "table" then
-                flattened(v,f,depth-1)
-            else
-                f[k] = v
-            end
-        end
-    end
-    local n = #f
-    for k=1,#t do
-        local v = t[k]
-        if depth > 0 and type(v) == "table" then
-            flattened(v,f,depth-1)
-            n = #f
-        else
-            n = n + 1
-            f[n] = v
-        end
-    end
-    return f
-end
-
-table.flattened = flattened
-
-local function unnest(t,f) -- only used in mk, for old times sake
-    if not f then          -- and only relevant for token lists
-        f = { }
-    end
-    for i=1,#t do
-        local v = t[i]
-        if type(v) == "table" then
-            if type(v[1]) == "table" then
-                unnest(v,f)
-            else
-                f[#f+1] = v
-            end
-        else
-            f[#f+1] = v
-        end
-    end
-    return f
-end
-
-function table.unnest(t) -- bad name
-    return unnest(t)
-end
-
-local function are_equal(a,b,n,m) -- indexed
-    if a and b and #a == #b then
-        n = n or 1
-        m = m or #a
-        for i=n,m do
-            local ai, bi = a[i], b[i]
-            if ai==bi then
-                -- same
-            elseif type(ai)=="table" and type(bi)=="table" then
-                if not are_equal(ai,bi) then
-                    return false
-                end
-            else
-                return false
-            end
-        end
-        return true
-    else
-        return false
-    end
-end
-
-local function identical(a,b) -- assumes same structure
-    for ka, va in next, a do
-        local vb = b[ka]
-        if va == vb then
-            -- same
-        elseif type(va) == "table" and  type(vb) == "table" then
-            if not identical(va,vb) then
-                return false
-            end
-        else
-            return false
-        end
-    end
-    return true
-end
-
-table.identical = identical
-table.are_equal = are_equal
-
--- maybe also make a combined one
-
-function table.compact(t)
-    if t then
-        for k,v in next, t do
-            if not next(v) then
-                t[k] = nil
-            end
-        end
-    end
-end
-
-function table.contains(t, v)
-    if t then
-        for i=1, #t do
-            if t[i] == v then
-                return i
-            end
-        end
-    end
-    return false
-end
-
-function table.count(t)
-    local n = 0
-    for k, v in next, t do
-        n = n + 1
-    end
-    return n
-end
-
-function table.swapped(t,s) -- hash
-    local n = { }
-    if s then
---~         for i=1,#s do
---~             n[i] = s[i]
---~         end
-        for k, v in next, s do
-            n[k] = v
-        end
-    end
---~     for i=1,#t do
---~         local ti = t[i] -- don't ask but t[i] can be nil
---~         if ti then
---~             n[ti] = i
---~         end
---~     end
-    for k, v in next, t do
-        n[v] = k
-    end
-    return n
-end
-
-function table.reversed(t)
-    if t then
-        local tt, tn = { }, #t
-        if tn > 0 then
-            local ttn = 0
-            for i=tn,1,-1 do
-                ttn = ttn + 1
-                tt[ttn] = t[i]
-            end
-        end
-        return tt
-    end
-end
-
-function table.sequenced(t,sep,simple) -- hash only
-    local s, n = { }, 0
-    for k, v in sortedhash(t) do
-        if simple then
-            if v == true then
-                n = n + 1
-                s[n] = k
-            elseif v and v~= "" then
-                n = n + 1
-                s[n] = k .. "=" .. tostring(v)
-            end
-        else
-            n = n + 1
-            s[n] = k .. "=" .. tostring(v)
-        end
-    end
-    return concat(s, sep or " | ")
-end
-
-function table.print(t,...)
-    if type(t) ~= "table" then
-        print(tostring(t))
-    else
-        table.tohandle(print,t,...)
-    end
-end
-
--- -- -- obsolete but we keep them for a while and might comment them later -- -- --
-
--- roughly: copy-loop : unpack : sub == 0.9 : 0.4 : 0.45 (so in critical apps, use unpack)
-
-function table.sub(t,i,j)
-    return { unpack(t,i,j) }
-end
-
--- slower than #t on indexed tables (#t only returns the size of the numerically indexed slice)
-
-function table.is_empty(t)
-    return not t or not next(t)
-end
-
-function table.has_one_entry(t)
-    return t and not next(t,next(t))
-end
-
--- new
-
-function table.loweredkeys(t) -- maybe utf
-    local l = { }
-    for k, v in next, t do
-        l[lower(k)] = v
-    end
-    return l
-end
-
--- new, might move (maybe duplicate)
-
-function table.unique(old)
-    local hash = { }
-    local new = { }
-    local n = 0
-    for i=1,#old do
-        local oi = old[i]
-        if not hash[oi] then
-            n = n + 1
-            new[n] = oi
-            hash[oi] = true
-        end
-    end
-    return new
-end
-
--- function table.sorted(t,...)
---     table.sort(t,...)
---     return t -- still sorts in-place
--- end
-
-end -- closure
+-- merge date  : 01/02/13 18:19:13
 
 do -- begin closure to overcome local limits and interference
 
@@ -1103,12 +12,16 @@ if not modules then modules = { } end modules ['l-lpeg'] = {
     license   = "see context related readme files"
 }
 
-
 -- a new lpeg fails on a #(1-P(":")) test and really needs a + P(-1)
+
+-- move utf    -> l-unicode
+-- move string -> l-string or keep it here
 
 local lpeg = require("lpeg")
 
 -- tracing (only used when we encounter a problem in integration of lpeg in luatex)
+
+-- some code will move to unicode and string
 
 local report = texio and texio.write_nl or print
 
@@ -1146,8 +59,8 @@ local report = texio and texio.write_nl or print
 -- function lpeg.Cmt  (l) local p = lpcmt (l) report("LPEG Cmt =")  lpprint(l) return p end
 -- function lpeg.Carg (l) local p = lpcarg(l) report("LPEG Carg =") lpprint(l) return p end
 
-local type = type
-local byte, char, gmatch = string.byte, string.char, string.gmatch
+local type, next = type, next
+local byte, char, gmatch, format = string.byte, string.char, string.gmatch, string.format
 
 -- Beware, we predefine a bunch of patterns here and one reason for doing so
 -- is that we get consistent behaviour in some of the visualizers.
@@ -1155,12 +68,8 @@ local byte, char, gmatch = string.byte, string.char, string.gmatch
 lpeg.patterns  = lpeg.patterns or { } -- so that we can share
 local patterns = lpeg.patterns
 
-local P, R, S, V, match = lpeg.P, lpeg.R, lpeg.S, lpeg.V, lpeg.match
-local Ct, C, Cs, Cc = lpeg.Ct, lpeg.C, lpeg.Cs, lpeg.Cc
-local lpegtype = lpeg.type
-
-local utfcharacters    = string.utfcharacters
-local utfgmatch        = unicode and unicode.utf8.gmatch
+local P, R, S, V, Ct, C, Cs, Cc, Cp, Cmt = lpeg.P, lpeg.R, lpeg.S, lpeg.V, lpeg.Ct, lpeg.C, lpeg.Cs, lpeg.Cc, lpeg.Cp, lpeg.Cmt
+local lpegtype, lpegmatch = lpeg.type, lpeg.match
 
 local anything         = P(1)
 local endofstring      = P(-1)
@@ -1187,9 +96,12 @@ local utfbom_8         = P('\239\187\191')
 local utfbom           = utfbom_32_be + utfbom_32_le
                        + utfbom_16_be + utfbom_16_le
                        + utfbom_8
-local utftype          = utfbom_32_be / "utf-32-be" + utfbom_32_le  / "utf-32-le"
-                       + utfbom_16_be / "utf-16-be" + utfbom_16_le  / "utf-16-le"
-                       + utfbom_8     / "utf-8"     + alwaysmatched / "unknown"
+local utftype          = utfbom_32_be * Cc("utf-32-be") + utfbom_32_le  * Cc("utf-32-le")
+                       + utfbom_16_be * Cc("utf-16-be") + utfbom_16_le  * Cc("utf-16-le")
+                       + utfbom_8     * Cc("utf-8")     + alwaysmatched * Cc("utf-8") -- assume utf8
+local utfoffset        = utfbom_32_be * Cc(4) + utfbom_32_le * Cc(4)
+                       + utfbom_16_be * Cc(2) + utfbom_16_le * Cc(2)
+                       + utfbom_8     * Cc(3) + Cc(0)
 
 local utf8next         = R("\128\191")
 
@@ -1199,6 +111,7 @@ patterns.utf8three     = R("\224\239") * utf8next * utf8next
 patterns.utf8four      = R("\240\244") * utf8next * utf8next * utf8next
 patterns.utfbom        = utfbom
 patterns.utftype       = utftype
+patterns.utfoffset     = utfoffset
 
 local utf8char         = patterns.utf8one + patterns.utf8two + patterns.utf8three + patterns.utf8four
 local validutf8char    = utf8char^0 * endofstring * Cc(true) + Cc(false)
@@ -1208,12 +121,34 @@ patterns.utf8char      = utf8char
 patterns.validutf8     = validutf8char
 patterns.validutf8char = validutf8char
 
+local eol              = S("\n\r")
+local spacer           = S(" \t\f\v")  -- + char(0xc2, 0xa0) if we want utf (cf mail roberto)
+local whitespace       = eol + spacer
+local nonspacer        = 1 - spacer
+local nonwhitespace    = 1 - whitespace
+
+patterns.eol           = eol
+patterns.spacer        = spacer
+patterns.whitespace    = whitespace
+patterns.nonspacer     = nonspacer
+patterns.nonwhitespace = nonwhitespace
+
+local stripper         = spacer^0 * C((spacer^0     * nonspacer^1)^0) -- from example by roberto
+
+----- collapser        = Cs(spacer^0/"" * ((spacer^1 * P(-1) / "") + (spacer^1/" ") + P(1))^0)
+local collapser        = Cs(spacer^0/"" * nonspacer^0 * ((spacer^0/" " * nonspacer^1)^0))
+
+patterns.stripper      = stripper
+patterns.collapser     = collapser
+
 patterns.digit         = digit
 patterns.sign          = sign
 patterns.cardinal      = sign^0 * digit^1
 patterns.integer       = sign^0 * digit^1
-patterns.float         = sign^0 * digit^0 * P('.') * digit^1
-patterns.cfloat        = sign^0 * digit^0 * P(',') * digit^1
+patterns.unsigned      = digit^0 * P('.') * digit^1
+patterns.float         = sign^0 * patterns.unsigned
+patterns.cunsigned     = digit^0 * P(',') * digit^1
+patterns.cfloat        = sign^0 * patterns.cunsigned
 patterns.number        = patterns.float + patterns.integer
 patterns.cnumber       = patterns.cfloat + patterns.integer
 patterns.oct           = P("0") * R("07")^1
@@ -1227,16 +162,11 @@ patterns.letter        = patterns.lowercase + patterns.uppercase
 patterns.space         = space
 patterns.tab           = P("\t")
 patterns.spaceortab    = patterns.space + patterns.tab
-patterns.eol           = S("\n\r")
-patterns.spacer        = S(" \t\f\v")  -- + char(0xc2, 0xa0) if we want utf (cf mail roberto)
 patterns.newline       = newline
 patterns.emptyline     = newline^1
-patterns.nonspacer     = 1 - patterns.spacer
-patterns.whitespace    = patterns.eol + patterns.spacer
-patterns.nonwhitespace = 1 - patterns.whitespace
 patterns.equal         = P("=")
 patterns.comma         = P(",")
-patterns.commaspacer   = P(",") * patterns.spacer^0
+patterns.commaspacer   = P(",") * spacer^0
 patterns.period        = P(".")
 patterns.colon         = P(":")
 patterns.semicolon     = P(";")
@@ -1246,23 +176,31 @@ patterns.squote        = squote
 patterns.dquote        = dquote
 patterns.nosquote      = (escaped + (1-squote))^0
 patterns.nodquote      = (escaped + (1-dquote))^0
-patterns.unsingle      = (squote/"") * patterns.nosquote * (squote/"")
-patterns.undouble      = (dquote/"") * patterns.nodquote * (dquote/"")
+patterns.unsingle      = (squote/"") * patterns.nosquote * (squote/"") -- will change to C in the middle
+patterns.undouble      = (dquote/"") * patterns.nodquote * (dquote/"") -- will change to C in the middle
 patterns.unquoted      = patterns.undouble + patterns.unsingle -- more often undouble
 patterns.unspacer      = ((patterns.spacer^1)/"")^0
+
+patterns.singlequoted  = squote * patterns.nosquote * squote
+patterns.doublequoted  = dquote * patterns.nodquote * dquote
+patterns.quoted        = patterns.doublequoted + patterns.singlequoted
+
+patterns.propername    = R("AZ","az","__") * R("09","AZ","az", "__")^0 * P(-1)
 
 patterns.somecontent   = (anything - newline - space)^1 -- (utf8char - newline - space)^1
 patterns.beginline     = #(1-newline)
 
--- print(string.unquoted("test"))
--- print(string.unquoted([["t\"est"]]))
--- print(string.unquoted([["t\"est"x]]))
--- print(string.unquoted("\'test\'"))
--- print(string.unquoted('"test"'))
--- print(string.unquoted('"test"'))
+local function anywhere(pattern) --slightly adapted from website
+    return P { P(pattern) + 1 * V(1) }
+end
 
-function lpeg.anywhere(pattern) --slightly adapted from website
-    return P { P(pattern) + 1 * V(1) } -- why so complex?
+lpeg.anywhere = anywhere
+
+function lpeg.instringchecker(p)
+    p = anywhere(p)
+    return function(str)
+        return lpegmatch(p,str) and true or false
+    end
 end
 
 function lpeg.splitter(pattern, action)
@@ -1311,13 +249,13 @@ function string.splitup(str,separator)
     if not separator then
         separator = ","
     end
-    return match(splitters_m[separator] or splitat(separator),str)
+    return lpegmatch(splitters_m[separator] or splitat(separator),str)
 end
 
---~ local p = splitat("->",false)  print(match(p,"oeps->what->more"))  -- oeps what more
---~ local p = splitat("->",true)   print(match(p,"oeps->what->more"))  -- oeps what->more
---~ local p = splitat("->",false)  print(match(p,"oeps"))              -- oeps
---~ local p = splitat("->",true)   print(match(p,"oeps"))              -- oeps
+-- local p = splitat("->",false)  print(lpegmatch(p,"oeps->what->more"))  -- oeps what more
+-- local p = splitat("->",true)   print(lpegmatch(p,"oeps->what->more"))  -- oeps what->more
+-- local p = splitat("->",false)  print(lpegmatch(p,"oeps"))              -- oeps
+-- local p = splitat("->",true)   print(lpegmatch(p,"oeps"))              -- oeps
 
 local cache = { }
 
@@ -1327,16 +265,20 @@ function lpeg.split(separator,str)
         c = tsplitat(separator)
         cache[separator] = c
     end
-    return match(c,str)
+    return lpegmatch(c,str)
 end
 
 function string.split(str,separator)
-    local c = cache[separator]
-    if not c then
-        c = tsplitat(separator)
-        cache[separator] = c
+    if separator then
+        local c = cache[separator]
+        if not c then
+            c = tsplitat(separator)
+            cache[separator] = c
+        end
+        return lpegmatch(c,str)
+    else
+        return { str }
     end
-    return match(c,str)
 end
 
 local spacing  = patterns.spacer^0 * newline -- sort of strip
@@ -1346,29 +288,15 @@ local content  = (empty + nonempty)^1
 
 patterns.textline = content
 
---~ local linesplitter = Ct(content^0)
---~
---~ function string.splitlines(str)
---~     return match(linesplitter,str)
---~ end
-
 local linesplitter = tsplitat(newline)
 
 patterns.linesplitter = linesplitter
 
 function string.splitlines(str)
-    return match(linesplitter,str)
+    return lpegmatch(linesplitter,str)
 end
 
-local utflinesplitter = utfbom^-1 * tsplitat(newline)
-
-patterns.utflinesplitter = utflinesplitter
-
-function string.utfsplitlines(str)
-    return match(utflinesplitter,str or "")
-end
-
---~ lpeg.splitters = cache -- no longer public
+-- lpeg.splitters = cache -- no longer public
 
 local cache = { }
 
@@ -1380,7 +308,7 @@ function lpeg.checkedsplit(separator,str)
         c = Ct(separator^0 * other * (separator^1 * other)^0)
         cache[separator] = c
     end
-    return match(c,str)
+    return lpegmatch(c,str)
 end
 
 function string.checkedsplit(str,separator)
@@ -1391,10 +319,10 @@ function string.checkedsplit(str,separator)
         c = Ct(separator^0 * other * (separator^1 * other)^0)
         cache[separator] = c
     end
-    return match(c,str)
+    return lpegmatch(c,str)
 end
 
---~ from roberto's site:
+-- from roberto's site:
 
 local function f2(s) local c1, c2         = byte(s,1,2) return   c1 * 64 + c2                       -    12416 end
 local function f3(s) local c1, c2, c3     = byte(s,1,3) return  (c1 * 64 + c2) * 64 + c3            -   925824 end
@@ -1406,10 +334,10 @@ patterns.utf8byte = utf8byte
 
 --~ local str = " a b c d "
 
---~ local s = lpeg.stripper(lpeg.R("az"))   print("["..lpeg.match(s,str).."]")
---~ local s = lpeg.keeper(lpeg.R("az"))     print("["..lpeg.match(s,str).."]")
---~ local s = lpeg.stripper("ab")           print("["..lpeg.match(s,str).."]")
---~ local s = lpeg.keeper("ab")             print("["..lpeg.match(s,str).."]")
+--~ local s = lpeg.stripper(lpeg.R("az"))   print("["..lpegmatch(s,str).."]")
+--~ local s = lpeg.keeper(lpeg.R("az"))     print("["..lpegmatch(s,str).."]")
+--~ local s = lpeg.stripper("ab")           print("["..lpegmatch(s,str).."]")
+--~ local s = lpeg.keeper("ab")             print("["..lpegmatch(s,str).."]")
 
 local cache = { }
 
@@ -1442,37 +370,82 @@ function lpeg.keeper(str)
 end
 
 function lpeg.frontstripper(str) -- or pattern (yet undocumented)
-    return (P(str) + P(true)) * Cs(P(1)^0)
+    return (P(str) + P(true)) * Cs(anything^0)
 end
 
 function lpeg.endstripper(str) -- or pattern (yet undocumented)
-    return Cs((1 - P(str) * P(-1))^0)
+    return Cs((1 - P(str) * endofstring)^0)
 end
 
 -- Just for fun I looked at the used bytecode and
 -- p = (p and p + pp) or pp gets one more (testset).
 
-function lpeg.replacer(one,two)
+-- todo: cache when string
+
+function lpeg.replacer(one,two,makefunction,isutf) -- in principle we should sort the keys
+    local pattern
+    local u = isutf and utf8char or 1
     if type(one) == "table" then
         local no = #one
-        if no > 0 then
-            local p
+        local p = P(false)
+        if no == 0 then
+            for k, v in next, one do
+                p = p + P(k) / v
+            end
+            pattern = Cs((p + u)^0)
+        elseif no == 1 then
+            local o = one[1]
+            one, two = P(o[1]), o[2]
+         -- pattern = Cs(((1-one)^1 + one/two)^0)
+            pattern = Cs((one/two + u)^0)
+        else
             for i=1,no do
                 local o = one[i]
-                local pp = P(o[1]) / o[2]
-                if p then
-                    p = p + pp
-                else
-                    p = pp
-                end
+                p = p + P(o[1]) / o[2]
             end
-            return Cs((p + 1)^0)
+            pattern = Cs((p + u)^0)
         end
     else
-        two = two or ""
-        return Cs((P(one)/two + 1)^0)
+        pattern = Cs((P(one)/(two or "") + u)^0)
+    end
+    if makefunction then
+        return function(str)
+            return lpegmatch(pattern,str)
+        end
+    else
+        return pattern
     end
 end
+
+function lpeg.finder(lst,makefunction)
+    local pattern
+    if type(lst) == "table" then
+        pattern = P(false)
+        if #lst == 0 then
+            for k, v in next, lst do
+                pattern = pattern + P(k) -- ignore key, so we can use a replacer table
+            end
+        else
+            for i=1,#lst do
+                pattern = pattern + P(lst[i])
+            end
+        end
+    else
+        pattern = P(lst)
+    end
+    pattern = (1-pattern)^0 * pattern
+    if makefunction then
+        return function(str)
+            return lpegmatch(pattern,str)
+        end
+    else
+        return pattern
+    end
+end
+
+-- print(lpeg.match(lpeg.replacer("e","a"),"test test"))
+-- print(lpeg.match(lpeg.replacer{{"e","a"}},"test test"))
+-- print(lpeg.match(lpeg.replacer({ e = "a", t = "x" }),"test test"))
 
 local splitters_f, splitters_s = { }, { }
 
@@ -1501,102 +474,45 @@ function lpeg.balancer(left,right)
     return P { left * ((1 - left - right) + V(1))^0 * right }
 end
 
---~ print(1,match(lpeg.firstofsplit(":"),"bc:de"))
---~ print(2,match(lpeg.firstofsplit(":"),":de")) -- empty
---~ print(3,match(lpeg.firstofsplit(":"),"bc"))
---~ print(4,match(lpeg.secondofsplit(":"),"bc:de"))
---~ print(5,match(lpeg.secondofsplit(":"),"bc:")) -- empty
---~ print(6,match(lpeg.secondofsplit(":",""),"bc"))
---~ print(7,match(lpeg.secondofsplit(":"),"bc"))
---~ print(9,match(lpeg.secondofsplit(":","123"),"bc"))
+-- print(1,lpegmatch(lpeg.firstofsplit(":"),"bc:de"))
+-- print(2,lpegmatch(lpeg.firstofsplit(":"),":de")) -- empty
+-- print(3,lpegmatch(lpeg.firstofsplit(":"),"bc"))
+-- print(4,lpegmatch(lpeg.secondofsplit(":"),"bc:de"))
+-- print(5,lpegmatch(lpeg.secondofsplit(":"),"bc:")) -- empty
+-- print(6,lpegmatch(lpeg.secondofsplit(":",""),"bc"))
+-- print(7,lpegmatch(lpeg.secondofsplit(":"),"bc"))
+-- print(9,lpegmatch(lpeg.secondofsplit(":","123"),"bc"))
 
---~ -- slower:
---~
---~ function lpeg.counter(pattern)
---~     local n, pattern = 0, (lpeg.P(pattern)/function() n = n + 1 end  + lpeg.anything)^0
---~     return function(str) n = 0 ; lpegmatch(pattern,str) ; return n end
---~ end
+-- -- slower:
+--
+-- function lpeg.counter(pattern)
+--     local n, pattern = 0, (lpeg.P(pattern)/function() n = n + 1 end  + lpeg.anything)^0
+--     return function(str) n = 0 ; lpegmatch(pattern,str) ; return n end
+-- end
 
 local nany = utf8char/""
 
 function lpeg.counter(pattern)
     pattern = Cs((P(pattern)/" " + nany)^0)
     return function(str)
-        return #match(pattern,str)
+        return #lpegmatch(pattern,str)
     end
-end
-
-if utfgmatch then
-
-    function lpeg.count(str,what) -- replaces string.count
-        if type(what) == "string" then
-            local n = 0
-            for _ in utfgmatch(str,what) do
-                n = n + 1
-            end
-            return n
-        else -- 4 times slower but still faster than / function
-            return #match(Cs((P(what)/" " + nany)^0),str)
-        end
-    end
-
-else
-
-    local cache = { }
-
-    function lpeg.count(str,what) -- replaces string.count
-        if type(what) == "string" then
-            local p = cache[what]
-            if not p then
-                p = Cs((P(what)/" " + nany)^0)
-                cache[p] = p
-            end
-            return #match(p,str)
-        else -- 4 times slower but still faster than / function
-            return #match(Cs((P(what)/" " + nany)^0),str)
-        end
-    end
-
-end
-
-local patterns_escapes = { -- also defines in l-string
-    ["%"] = "%%",
-    ["."] = "%.",
-    ["+"] = "%+", ["-"] = "%-", ["*"] = "%*",
-    ["["] = "%[", ["]"] = "%]",
-    ["("] = "%)", [")"] = "%)",
- -- ["{"] = "%{", ["}"] = "%}"
- -- ["^"] = "%^", ["$"] = "%$",
-}
-
-local simple_escapes = { -- also defines in l-string
-    ["-"] = "%-",
-    ["."] = "%.",
-    ["?"] = ".",
-    ["*"] = ".*",
-}
-
-local p = Cs((S("-.+*%()[]") / patterns_escapes + anything)^0)
-local s = Cs((S("-.+*%()[]") / simple_escapes   + anything)^0)
-
-function string.escapedpattern(str,simple)
-    return match(simple and s or p,str)
 end
 
 -- utf extensies
+
+local utfcharacters = utf and utf.characters or string.utfcharacters
+local utfgmatch     = unicode and unicode.utf8.gmatch
+local utfchar       = utf and utf.char or (unicode and unicode.utf8 and unicode.utf8.char)
 
 lpeg.UP = lpeg.P
 
 if utfcharacters then
 
     function lpeg.US(str)
-        local p
+        local p = P(false)
         for uc in utfcharacters(str) do
-            if p then
-                p = p + P(uc)
-            else
-                p = P(uc)
-            end
+            p = p + P(uc)
         end
         return p
     end
@@ -1605,13 +521,9 @@ if utfcharacters then
 elseif utfgmatch then
 
     function lpeg.US(str)
-        local p
+        local p = P(false)
         for uc in utfgmatch(str,".") do
-            if p then
-                p = p + P(uc)
-            else
-                p = P(uc)
-            end
+            p = p + P(uc)
         end
         return p
     end
@@ -1619,23 +531,17 @@ elseif utfgmatch then
 else
 
     function lpeg.US(str)
-        local p
+        local p = P(false)
         local f = function(uc)
-            if p then
-                p = p + P(uc)
-            else
-                p = P(uc)
-            end
+            p = p + P(uc)
         end
-        match((utf8char/f)^0,str)
+        lpegmatch((utf8char/f)^0,str)
         return p
     end
 
 end
 
-local range = Cs(utf8byte) * (Cs(utf8byte) + Cc(false))
-
-local utfchar = unicode and unicode.utf8 and unicode.utf8.char
+local range = utf8byte * utf8byte + Cc(false) -- utf8byte is already a capture
 
 function lpeg.UR(str,more)
     local first, last
@@ -1643,47 +549,50 @@ function lpeg.UR(str,more)
         first = str
         last = more or first
     else
-        first, last = match(range,str)
+        first, last = lpegmatch(range,str)
         if not last then
             return P(str)
         end
     end
     if first == last then
         return P(str)
-    elseif utfchar and last - first < 8 then -- a somewhat arbitrary criterium
-        local p
+    elseif utfchar and (last - first < 8) then -- a somewhat arbitrary criterium
+        local p = P(false)
         for i=first,last do
-            if p then
-                p = p + P(utfchar(i))
-            else
-                p = P(utfchar(i))
-            end
+            p = p + P(utfchar(i))
         end
         return p -- nil when invalid range
     else
         local f = function(b)
             return b >= first and b <= last
         end
+        -- tricky, these nested captures
         return utf8byte / f -- nil when invalid range
     end
 end
 
---~ lpeg.print(lpeg.R("ab","cd","gh"))
---~ lpeg.print(lpeg.P("a","b","c"))
---~ lpeg.print(lpeg.S("a","b","c"))
+-- print(lpeg.match(lpeg.Cs((C(lpeg.UR("αω"))/{ ["χ"] = "OEPS" })^0),"αωχαω"))
 
---~ print(lpeg.count("äáàa",lpeg.P("á") + lpeg.P("à")))
---~ print(lpeg.count("äáàa",lpeg.UP("áà")))
---~ print(lpeg.count("äáàa",lpeg.US("àá")))
---~ print(lpeg.count("äáàa",lpeg.UR("aá")))
---~ print(lpeg.count("äáàa",lpeg.UR("àá")))
---~ print(lpeg.count("äáàa",lpeg.UR(0x0000,0xFFFF)))
+-- lpeg.print(lpeg.R("ab","cd","gh"))
+-- lpeg.print(lpeg.P("a","b","c"))
+-- lpeg.print(lpeg.S("a","b","c"))
 
-function lpeg.oneof(list,...) -- lpeg.oneof("elseif","else","if","then")
+-- print(lpeg.count("äáàa",lpeg.P("á") + lpeg.P("à")))
+-- print(lpeg.count("äáàa",lpeg.UP("áà")))
+-- print(lpeg.count("äáàa",lpeg.US("àá")))
+-- print(lpeg.count("äáàa",lpeg.UR("aá")))
+-- print(lpeg.count("äáàa",lpeg.UR("àá")))
+-- print(lpeg.count("äáàa",lpeg.UR(0x0000,0xFFFF)))
+
+function lpeg.is_lpeg(p)
+    return p and lpegtype(p) == "pattern"
+end
+
+function lpeg.oneof(list,...) -- lpeg.oneof("elseif","else","if","then") -- assume proper order
     if type(list) ~= "table" then
         list = { list, ... }
     end
- -- sort(list) -- longest match first
+ -- table.sort(list) -- longest match first
     local p = P(list[1])
     for l=2,#list do
         p = p + P(list[l])
@@ -1691,20 +600,34 @@ function lpeg.oneof(list,...) -- lpeg.oneof("elseif","else","if","then")
     return p
 end
 
-function lpeg.is_lpeg(p)
-    return p and lpegtype(p) == "pattern"
-end
-
 -- For the moment here, but it might move to utilities. Beware, we need to
 -- have the longest keyword first, so 'aaa' comes beforte 'aa' which is why we
 -- loop back from the end cq. prepend.
 
-local sort, fastcopy, sortedkeys = table.sort, table.fastcopy, table.sortedkeys -- dependency!
+local sort = table.sort
+
+local function copyindexed(old)
+    local new = { }
+    for i=1,#old do
+        new[i] = old
+    end
+    return new
+end
+
+local function sortedkeys(tab)
+    local keys, s = { }, 0
+    for key,_ in next, tab do
+        s = s + 1
+        keys[s] = key
+    end
+    sort(keys)
+    return keys
+end
 
 function lpeg.append(list,pp,delayed,checked)
     local p = pp
     if #list > 0 then
-        local keys = fastcopy(list)
+        local keys = copyindexed(list)
         sort(keys)
         for i=#keys,1,-1 do
             local k = keys[i]
@@ -1801,8 +724,10 @@ end
 
 local function make(t)
     local p
---     for k, v in next, t do
-    for k, v in table.sortedhash(t) do
+    local keys = sortedkeys(t)
+    for i=1,#keys do
+        local k = keys[i]
+        local v = t[k]
         if not p then
             if next(v) then
                 p = P(k) * make(v)
@@ -1820,7 +745,7 @@ local function make(t)
     return p
 end
 
-function lpeg.utfchartabletopattern(list)
+function lpeg.utfchartabletopattern(list) -- goes to util-lpg
     local tree = { }
     for i=1,#list do
         local t = tree
@@ -1852,6 +777,1261 @@ end
 --     utfchar(0x205F), -- math thinspace
 -- } )
 
+-- a few handy ones:
+--
+-- faster than find(str,"[\n\r]") when match and # > 7 and always faster when # > 3
+
+patterns.containseol = lpeg.finder(eol) -- (1-eol)^0 * eol
+
+end -- closure
+
+do -- begin closure to overcome local limits and interference
+
+if not modules then modules = { } end modules ['l-functions'] = {
+    version   = 1.001,
+    comment   = "companion to luat-lib.mkiv",
+    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
+    copyright = "PRAGMA ADE / ConTeXt Development Team",
+    license   = "see context related readme files"
+}
+
+functions = functions or { }
+
+function functions.dummy() end
+
+end -- closure
+
+do -- begin closure to overcome local limits and interference
+
+if not modules then modules = { } end modules ['l-string'] = {
+    version   = 1.001,
+    comment   = "companion to luat-lib.mkiv",
+    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
+    copyright = "PRAGMA ADE / ConTeXt Development Team",
+    license   = "see context related readme files"
+}
+
+local string = string
+local sub, gmatch, format, char, byte, rep, lower = string.sub, string.gmatch, string.format, string.char, string.byte, string.rep, string.lower
+local lpegmatch, patterns = lpeg.match, lpeg.patterns
+local P, S, C, Ct, Cc, Cs = lpeg.P, lpeg.S, lpeg.C, lpeg.Ct, lpeg.Cc, lpeg.Cs
+
+-- Some functions are already defined in l-lpeg and maybe some from here will
+-- move there (unless we also expose caches).
+
+-- if not string.split then
+--
+--     function string.split(str,pattern)
+--         local t = { }
+--         if #str > 0 then
+--             local n = 1
+--             for s in gmatch(str..pattern,"(.-)"..pattern) do
+--                 t[n] = s
+--                 n = n + 1
+--             end
+--         end
+--         return t
+--     end
+--
+-- end
+
+-- function string.unquoted(str)
+--     return (gsub(str,"^([\"\'])(.*)%1$","%2")) -- interesting pattern
+-- end
+
+local unquoted = patterns.squote * C(patterns.nosquote) * patterns.squote
+               + patterns.dquote * C(patterns.nodquote) * patterns.dquote
+
+function string.unquoted(str)
+    return lpegmatch(unquoted,str) or str
+end
+
+-- print(string.unquoted("test"))
+-- print(string.unquoted([["t\"est"]]))
+-- print(string.unquoted([["t\"est"x]]))
+-- print(string.unquoted("\'test\'"))
+-- print(string.unquoted('"test"'))
+-- print(string.unquoted('"test"'))
+
+function string.quoted(str)
+    return format("%q",str) -- always "
+end
+
+function string.count(str,pattern) -- variant 3
+    local n = 0
+    for _ in gmatch(str,pattern) do -- not for utf
+        n = n + 1
+    end
+    return n
+end
+
+function string.limit(str,n,sentinel) -- not utf proof
+    if #str > n then
+        sentinel = sentinel or "..."
+        return sub(str,1,(n-#sentinel)) .. sentinel
+    else
+        return str
+    end
+end
+
+local stripper  = patterns.stripper
+local collapser = patterns.collapser
+
+function string.strip(str)
+    return lpegmatch(stripper,str) or ""
+end
+
+function string.collapsespaces(str)
+    return lpegmatch(collapser,str) or ""
+end
+
+-- function string.is_empty(str)
+--     return not find(str,"%S")
+-- end
+
+local pattern = P(" ")^0 * P(-1)
+
+function string.is_empty(str)
+    if str == "" then
+        return true
+    else
+        return lpegmatch(pattern,str) and true or false
+    end
+end
+
+
+-- if not string.escapedpattern then
+--
+--     local patterns_escapes = {
+--         ["%"] = "%%",
+--         ["."] = "%.",
+--         ["+"] = "%+", ["-"] = "%-", ["*"] = "%*",
+--         ["["] = "%[", ["]"] = "%]",
+--         ["("] = "%(", [")"] = "%)",
+--      -- ["{"] = "%{", ["}"] = "%}"
+--      -- ["^"] = "%^", ["$"] = "%$",
+--     }
+--
+--     local simple_escapes = {
+--         ["-"] = "%-",
+--         ["."] = "%.",
+--         ["?"] = ".",
+--         ["*"] = ".*",
+--     }
+--
+--     function string.escapedpattern(str,simple)
+--         return (gsub(str,".",simple and simple_escapes or patterns_escapes))
+--     end
+--
+--     function string.topattern(str,lowercase,strict)
+--         if str == "" then
+--             return ".*"
+--         else
+--             str = gsub(str,".",simple_escapes)
+--             if lowercase then
+--                 str = lower(str)
+--             end
+--             if strict then
+--                 return "^" .. str .. "$"
+--             else
+--                 return str
+--             end
+--         end
+--     end
+--
+-- end
+
+--- needs checking
+
+local anything     = patterns.anything
+local allescapes   = Cc("%") * S(".-+%?()[]*") -- also {} and ^$ ?
+local someescapes  = Cc("%") * S(".-+%()[]")   -- also {} and ^$ ?
+local matchescapes = Cc(".") * S("*?")         -- wildcard and single match
+
+local pattern_a = Cs ( ( allescapes + anything )^0 )
+local pattern_b = Cs ( ( someescapes + matchescapes + anything )^0 )
+local pattern_c = Cs ( Cc("^") * ( someescapes + matchescapes + anything )^0 * Cc("$") )
+
+function string.escapedpattern(str,simple)
+    return lpegmatch(simple and pattern_b or pattern_a,str)
+end
+
+function string.topattern(str,lowercase,strict)
+    if str == "" then
+        return ".*"
+    elseif strict then
+        str = lpegmatch(pattern_c,str)
+    else
+        str = lpegmatch(pattern_b,str)
+    end
+    if lowercase then
+        return lower(str)
+    else
+        return str
+    end
+end
+
+-- print(string.escapedpattern("12+34*.tex",false))
+-- print(string.escapedpattern("12+34*.tex",true))
+-- print(string.topattern     ("12+34*.tex",false,false))
+-- print(string.topattern     ("12+34*.tex",false,true))
+
+function string.valid(str,default)
+    return (type(str) == "string" and str ~= "" and str) or default or nil
+end
+
+-- handy fallback
+
+string.itself  = function(s) return s end
+
+-- also handy (see utf variant)
+
+local pattern = Ct(C(1)^0) -- string and not utf !
+
+function string.totable(str)
+    return lpegmatch(pattern,str)
+end
+
+-- handy from within tex:
+
+local replacer = lpeg.replacer("@","%%") -- Watch the escaped % in lpeg!
+
+function string.tformat(fmt,...)
+    return format(lpegmatch(replacer,fmt),...)
+end
+
+-- obsolete names:
+
+string.quote   = string.quoted
+string.unquote = string.unquoted
+
+end -- closure
+
+do -- begin closure to overcome local limits and interference
+
+if not modules then modules = { } end modules ['l-table'] = {
+    version   = 1.001,
+    comment   = "companion to luat-lib.mkiv",
+    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
+    copyright = "PRAGMA ADE / ConTeXt Development Team",
+    license   = "see context related readme files"
+}
+
+local type, next, tostring, tonumber, ipairs, select = type, next, tostring, tonumber, ipairs, select
+local table, string = table, string
+local concat, sort, insert, remove = table.concat, table.sort, table.insert, table.remove
+local format, lower, dump = string.format, string.lower, string.dump
+local getmetatable, setmetatable = getmetatable, setmetatable
+local getinfo = debug.getinfo
+local lpegmatch, patterns = lpeg.match, lpeg.patterns
+local floor = math.floor
+
+-- extra functions, some might go (when not used)
+
+local stripper = patterns.stripper
+
+function table.strip(tab)
+    local lst, l = { }, 0
+    for i=1,#tab do
+        local s = lpegmatch(stripper,tab[i]) or ""
+        if s == "" then
+            -- skip this one
+        else
+            l = l + 1
+            lst[l] = s
+        end
+    end
+    return lst
+end
+
+function table.keys(t)
+    if t then
+        local keys, k = { }, 0
+        for key, _ in next, t do
+            k = k + 1
+            keys[k] = key
+        end
+        return keys
+    else
+        return { }
+    end
+end
+
+local function compare(a,b)
+    local ta, tb = type(a), type(b) -- needed, else 11 < 2
+    if ta == tb then
+        return a < b
+    else
+        return tostring(a) < tostring(b)
+    end
+end
+
+local function sortedkeys(tab)
+    if tab then
+        local srt, category, s = { }, 0, 0 -- 0=unknown 1=string, 2=number 3=mixed
+        for key,_ in next, tab do
+            s = s + 1
+            srt[s] = key
+            if category == 3 then
+                -- no further check
+            else
+                local tkey = type(key)
+                if tkey == "string" then
+                    category = (category == 2 and 3) or 1
+                elseif tkey == "number" then
+                    category = (category == 1 and 3) or 2
+                else
+                    category = 3
+                end
+            end
+        end
+        if category == 0 or category == 3 then
+            sort(srt,compare)
+        else
+            sort(srt)
+        end
+        return srt
+    else
+        return { }
+    end
+end
+
+local function sortedhashkeys(tab) -- fast one
+    if tab then
+        local srt, s = { }, 0
+        for key,_ in next, tab do
+            if key then
+                s= s + 1
+                srt[s] = key
+            end
+        end
+        sort(srt)
+        return srt
+    else
+        return { }
+    end
+end
+
+function table.allkeys(t)
+    local keys = { }
+    for i=1,#t do
+        for k, v in next, t[i] do
+            keys[k] = true
+        end
+    end
+    return sortedkeys(keys)
+end
+
+table.sortedkeys     = sortedkeys
+table.sortedhashkeys = sortedhashkeys
+
+local function nothing() end
+
+local function sortedhash(t)
+    if t then
+        local n, s = 0, sortedkeys(t) -- the robust one
+        local function kv(s)
+            n = n + 1
+            local k = s[n]
+            return k, t[k]
+        end
+        return kv, s
+    else
+        return nothing
+    end
+end
+
+table.sortedhash  = sortedhash
+table.sortedpairs = sortedhash -- obsolete
+
+function table.append(t,list)
+    local n = #t
+    for i=1,#list do
+        n = n + 1
+        t[n] = list[i]
+    end
+    return t
+end
+
+function table.prepend(t, list)
+    local nl = #list
+    local nt = nl + #t
+    for i=#t,1,-1 do
+        t[nt] = t[i]
+        nt = nt - 1
+    end
+    for i=1,#list do
+        t[i] = list[i]
+    end
+    return t
+end
+
+-- function table.merge(t, ...) -- first one is target
+--     t = t or { }
+--     local lst = { ... }
+--     for i=1,#lst do
+--         for k, v in next, lst[i] do
+--             t[k] = v
+--         end
+--     end
+--     return t
+-- end
+
+function table.merge(t, ...) -- first one is target
+    t = t or { }
+    for i=1,select("#",...) do
+        for k, v in next, (select(i,...)) do
+            t[k] = v
+        end
+    end
+    return t
+end
+
+-- function table.merged(...)
+--     local tmp, lst = { }, { ... }
+--     for i=1,#lst do
+--         for k, v in next, lst[i] do
+--             tmp[k] = v
+--         end
+--     end
+--     return tmp
+-- end
+
+function table.merged(...)
+    local t = { }
+    for i=1,select("#",...) do
+        for k, v in next, (select(i,...)) do
+            t[k] = v
+        end
+    end
+    return t
+end
+
+-- function table.imerge(t, ...)
+--     local lst, nt = { ... }, #t
+--     for i=1,#lst do
+--         local nst = lst[i]
+--         for j=1,#nst do
+--             nt = nt + 1
+--             t[nt] = nst[j]
+--         end
+--     end
+--     return t
+-- end
+
+function table.imerge(t, ...)
+    local nt = #t
+    for i=1,select("#",...) do
+        local nst = select(i,...)
+        for j=1,#nst do
+            nt = nt + 1
+            t[nt] = nst[j]
+        end
+    end
+    return t
+end
+
+-- function table.imerged(...)
+--     local tmp, ntmp, lst = { }, 0, {...}
+--     for i=1,#lst do
+--         local nst = lst[i]
+--         for j=1,#nst do
+--             ntmp = ntmp + 1
+--             tmp[ntmp] = nst[j]
+--         end
+--     end
+--     return tmp
+-- end
+
+function table.imerged(...)
+    local tmp, ntmp = { }, 0
+    for i=1,select("#",...) do
+        local nst = select(i,...)
+        for j=1,#nst do
+            ntmp = ntmp + 1
+            tmp[ntmp] = nst[j]
+        end
+    end
+    return tmp
+end
+
+local function fastcopy(old,metatabletoo) -- fast one
+    if old then
+        local new = { }
+        for k, v in next, old do
+            if type(v) == "table" then
+                new[k] = fastcopy(v,metatabletoo) -- was just table.copy
+            else
+                new[k] = v
+            end
+        end
+        if metatabletoo then
+            -- optional second arg
+            local mt = getmetatable(old)
+            if mt then
+                setmetatable(new,mt)
+            end
+        end
+        return new
+    else
+        return { }
+    end
+end
+
+-- todo : copy without metatable
+
+local function copy(t, tables) -- taken from lua wiki, slightly adapted
+    tables = tables or { }
+    local tcopy = {}
+    if not tables[t] then
+        tables[t] = tcopy
+    end
+    for i,v in next, t do -- brrr, what happens with sparse indexed
+        if type(i) == "table" then
+            if tables[i] then
+                i = tables[i]
+            else
+                i = copy(i, tables)
+            end
+        end
+        if type(v) ~= "table" then
+            tcopy[i] = v
+        elseif tables[v] then
+            tcopy[i] = tables[v]
+        else
+            tcopy[i] = copy(v, tables)
+        end
+    end
+    local mt = getmetatable(t)
+    if mt then
+        setmetatable(tcopy,mt)
+    end
+    return tcopy
+end
+
+table.fastcopy = fastcopy
+table.copy     = copy
+
+function table.derive(parent) -- for the moment not public
+    local child = { }
+    if parent then
+        setmetatable(child,{ __index = parent })
+    end
+    return child
+end
+
+function table.tohash(t,value)
+    local h = { }
+    if t then
+        if value == nil then value = true end
+        for _, v in next, t do -- no ipairs here
+            h[v] = value
+        end
+    end
+    return h
+end
+
+function table.fromhash(t)
+    local hsh, h = { }, 0
+    for k, v in next, t do -- no ipairs here
+        if v then
+            h = h + 1
+            hsh[h] = k
+        end
+    end
+    return hsh
+end
+
+local noquotes, hexify, handle, reduce, compact, inline, functions
+
+local reserved = table.tohash { -- intercept a language inconvenience: no reserved words as key
+    'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function', 'if',
+    'in', 'local', 'nil', 'not', 'or', 'repeat', 'return', 'then', 'true', 'until', 'while',
+}
+
+local function simple_table(t)
+    if #t > 0 then
+        local n = 0
+        for _,v in next, t do
+            n = n + 1
+        end
+        if n == #t then
+            local tt, nt = { }, 0
+            for i=1,#t do
+                local v = t[i]
+                local tv = type(v)
+                if tv == "number" then
+                    nt = nt + 1
+                    if hexify then
+                        tt[nt] = format("0x%04X",v)
+                    else
+                        tt[nt] = tostring(v) -- tostring not needed
+                    end
+                elseif tv == "boolean" then
+                    nt = nt + 1
+                    tt[nt] = tostring(v)
+                elseif tv == "string" then
+                    nt = nt + 1
+                    tt[nt] = format("%q",v)
+                else
+                    tt = nil
+                    break
+                end
+            end
+            return tt
+        end
+    end
+    return nil
+end
+
+-- Because this is a core function of mkiv I moved some function calls
+-- inline.
+--
+-- twice as fast in a test:
+--
+-- local propername = lpeg.P(lpeg.R("AZ","az","__") * lpeg.R("09","AZ","az", "__")^0 * lpeg.P(-1) )
+
+-- problem: there no good number_to_string converter with the best resolution
+
+-- probably using .. is faster than format
+-- maybe split in a few cases (yes/no hexify)
+
+-- todo: %g faster on numbers than %s
+
+local propername = patterns.propername -- was find(name,"^%a[%w%_]*$")
+
+local function dummy() end
+
+local function do_serialize(root,name,depth,level,indexed)
+    if level > 0 then
+        depth = depth .. " "
+        if indexed then
+            handle(format("%s{",depth))
+        else
+            local tn = type(name)
+            if tn == "number" then
+                if hexify then
+                    handle(format("%s[0x%04X]={",depth,name))
+                else
+                    handle(format("%s[%s]={",depth,name))
+                end
+            elseif tn == "string" then
+                if noquotes and not reserved[name] and lpegmatch(propername,name) then
+                    handle(format("%s%s={",depth,name))
+                else
+                    handle(format("%s[%q]={",depth,name))
+                end
+            elseif tn == "boolean" then
+                handle(format("%s[%s]={",depth,tostring(name)))
+            else
+                handle(format("%s{",depth))
+            end
+        end
+    end
+    -- we could check for k (index) being number (cardinal)
+    if root and next(root) then
+     -- local first, last = nil, 0 -- #root cannot be trusted here (will be ok in 5.2 when ipairs is gone)
+     -- if compact then
+     --     -- NOT: for k=1,#root do (we need to quit at nil)
+     --     for k,v in ipairs(root) do -- can we use next?
+     --         if not first then first = k end
+     --         last = last + 1
+     --     end
+     -- end
+        local first, last = nil, 0
+        if compact then
+            last = #root
+            for k=1,last do
+                if root[k] == nil then
+                    last = k - 1
+                    break
+                end
+            end
+            if last > 0 then
+                first = 1
+            end
+        end
+        local sk = sortedkeys(root)
+        for i=1,#sk do
+            local k = sk[i]
+            local v = root[k]
+            --~ if v == root then
+                -- circular
+            --~ else
+            local t, tk = type(v), type(k)
+            if compact and first and tk == "number" and k >= first and k <= last then
+                if t == "number" then
+                    if hexify then
+                        handle(format("%s 0x%04X,",depth,v))
+                    else
+                        handle(format("%s %s,",depth,v)) -- %.99g
+                    end
+                elseif t == "string" then
+                    if reduce and tonumber(v) then
+                        handle(format("%s %s,",depth,v))
+                    else
+                        handle(format("%s %q,",depth,v))
+                    end
+                elseif t == "table" then
+                    if not next(v) then
+                        handle(format("%s {},",depth))
+                    elseif inline then -- and #t > 0
+                        local st = simple_table(v)
+                        if st then
+                            handle(format("%s { %s },",depth,concat(st,", ")))
+                        else
+                            do_serialize(v,k,depth,level+1,true)
+                        end
+                    else
+                        do_serialize(v,k,depth,level+1,true)
+                    end
+                elseif t == "boolean" then
+                    handle(format("%s %s,",depth,tostring(v)))
+                elseif t == "function" then
+                    if functions then
+                        handle(format('%s load(%q),',depth,dump(v)))
+                    else
+                        handle(format('%s "function",',depth))
+                    end
+                else
+                    handle(format("%s %q,",depth,tostring(v)))
+                end
+            elseif k == "__p__" then -- parent
+                if false then
+                    handle(format("%s __p__=nil,",depth))
+                end
+            elseif t == "number" then
+                if tk == "number" then
+                    if hexify then
+                        handle(format("%s [0x%04X]=0x%04X,",depth,k,v))
+                    else
+                        handle(format("%s [%s]=%s,",depth,k,v)) -- %.99g
+                    end
+                elseif tk == "boolean" then
+                    if hexify then
+                        handle(format("%s [%s]=0x%04X,",depth,tostring(k),v))
+                    else
+                        handle(format("%s [%s]=%s,",depth,tostring(k),v)) -- %.99g
+                    end
+                elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                    if hexify then
+                        handle(format("%s %s=0x%04X,",depth,k,v))
+                    else
+                        handle(format("%s %s=%s,",depth,k,v)) -- %.99g
+                    end
+                else
+                    if hexify then
+                        handle(format("%s [%q]=0x%04X,",depth,k,v))
+                    else
+                        handle(format("%s [%q]=%s,",depth,k,v)) -- %.99g
+                    end
+                end
+            elseif t == "string" then
+                if reduce and tonumber(v) then
+                    if tk == "number" then
+                        if hexify then
+                            handle(format("%s [0x%04X]=%s,",depth,k,v))
+                        else
+                            handle(format("%s [%s]=%s,",depth,k,v))
+                        end
+                    elseif tk == "boolean" then
+                        handle(format("%s [%s]=%s,",depth,tostring(k),v))
+                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                        handle(format("%s %s=%s,",depth,k,v))
+                    else
+                        handle(format("%s [%q]=%s,",depth,k,v))
+                    end
+                else
+                    if tk == "number" then
+                        if hexify then
+                            handle(format("%s [0x%04X]=%q,",depth,k,v))
+                        else
+                            handle(format("%s [%s]=%q,",depth,k,v))
+                        end
+                    elseif tk == "boolean" then
+                        handle(format("%s [%s]=%q,",depth,tostring(k),v))
+                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                        handle(format("%s %s=%q,",depth,k,v))
+                    else
+                        handle(format("%s [%q]=%q,",depth,k,v))
+                    end
+                end
+            elseif t == "table" then
+                if not next(v) then
+                    if tk == "number" then
+                        if hexify then
+                            handle(format("%s [0x%04X]={},",depth,k))
+                        else
+                            handle(format("%s [%s]={},",depth,k))
+                        end
+                    elseif tk == "boolean" then
+                        handle(format("%s [%s]={},",depth,tostring(k)))
+                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                        handle(format("%s %s={},",depth,k))
+                    else
+                        handle(format("%s [%q]={},",depth,k))
+                    end
+                elseif inline then
+                    local st = simple_table(v)
+                    if st then
+                        if tk == "number" then
+                            if hexify then
+                                handle(format("%s [0x%04X]={ %s },",depth,k,concat(st,", ")))
+                            else
+                                handle(format("%s [%s]={ %s },",depth,k,concat(st,", ")))
+                            end
+                        elseif tk == "boolean" then
+                            handle(format("%s [%s]={ %s },",depth,tostring(k),concat(st,", ")))
+                        elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                            handle(format("%s %s={ %s },",depth,k,concat(st,", ")))
+                        else
+                            handle(format("%s [%q]={ %s },",depth,k,concat(st,", ")))
+                        end
+                    else
+                        do_serialize(v,k,depth,level+1)
+                    end
+                else
+                    do_serialize(v,k,depth,level+1)
+                end
+            elseif t == "boolean" then
+                if tk == "number" then
+                    if hexify then
+                        handle(format("%s [0x%04X]=%s,",depth,k,tostring(v)))
+                    else
+                        handle(format("%s [%s]=%s,",depth,k,tostring(v)))
+                    end
+                elseif tk == "boolean" then
+                    handle(format("%s [%s]=%s,",depth,tostring(k),tostring(v)))
+                elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                    handle(format("%s %s=%s,",depth,k,tostring(v)))
+                else
+                    handle(format("%s [%q]=%s,",depth,k,tostring(v)))
+                end
+            elseif t == "function" then
+                if functions then
+                    local f = getinfo(v).what == "C" and dump(dummy) or dump(v)
+                 -- local f = getinfo(v).what == "C" and dump(function(...) return v(...) end) or dump(v)
+                    if tk == "number" then
+                        if hexify then
+                            handle(format("%s [0x%04X]=load(%q),",depth,k,f))
+                        else
+                            handle(format("%s [%s]=load(%q),",depth,k,f))
+                        end
+                    elseif tk == "boolean" then
+                        handle(format("%s [%s]=load(%q),",depth,tostring(k),f))
+                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                        handle(format("%s %s=load(%q),",depth,k,f))
+                    else
+                        handle(format("%s [%q]=load(%q),",depth,k,f))
+                    end
+                end
+            else
+                if tk == "number" then
+                    if hexify then
+                        handle(format("%s [0x%04X]=%q,",depth,k,tostring(v)))
+                    else
+                        handle(format("%s [%s]=%q,",depth,k,tostring(v)))
+                    end
+                elseif tk == "boolean" then
+                    handle(format("%s [%s]=%q,",depth,tostring(k),tostring(v)))
+                elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+                    handle(format("%s %s=%q,",depth,k,tostring(v)))
+                else
+                    handle(format("%s [%q]=%q,",depth,k,tostring(v)))
+                end
+            end
+            --~ end
+        end
+    end
+   if level > 0 then
+        handle(format("%s},",depth))
+    end
+end
+
+-- replacing handle by a direct t[#t+1] = ... (plus test) is not much
+-- faster (0.03 on 1.00 for zapfino.tma)
+
+local function serialize(_handle,root,name,specification) -- handle wins
+    local tname = type(name)
+    if type(specification) == "table" then
+        noquotes  = specification.noquotes
+        hexify    = specification.hexify
+        handle    = _handle or specification.handle or print
+        reduce    = specification.reduce or false
+        functions = specification.functions
+        compact   = specification.compact
+        inline    = specification.inline and compact
+        if functions == nil then
+            functions = true
+        end
+        if compact == nil then
+            compact = true
+        end
+        if inline == nil then
+            inline = compact
+        end
+    else
+        noquotes  = false
+        hexify    = false
+        handle    = _handle or print
+        reduce    = false
+        compact   = true
+        inline    = true
+        functions = true
+    end
+    if tname == "string" then
+        if name == "return" then
+            handle("return {")
+        else
+            handle(name .. "={")
+        end
+    elseif tname == "number" then
+        if hexify then
+            handle(format("[0x%04X]={",name))
+        else
+            handle("[" .. name .. "]={")
+        end
+    elseif tname == "boolean" then
+        if name then
+            handle("return {")
+        else
+            handle("{")
+        end
+    else
+        handle("t={")
+    end
+    if root then
+        -- The dummy access will initialize a table that has a delayed initialization
+        -- using a metatable. (maybe explicitly test for metatable)
+        if getmetatable(root) then -- todo: make this an option, maybe even per subtable
+            local dummy = root._w_h_a_t_e_v_e_r_
+            root._w_h_a_t_e_v_e_r_ = nil
+        end
+        -- Let's forget about empty tables.
+        if next(root) then
+            do_serialize(root,name,"",0)
+        end
+    end
+    handle("}")
+end
+
+-- name:
+--
+-- true     : return     { }
+-- false    :            { }
+-- nil      : t        = { }
+-- string   : string   = { }
+-- "return" : return     { }
+-- number   : [number] = { }
+
+function table.serialize(root,name,specification)
+    local t, n = { }, 0
+    local function flush(s)
+        n = n + 1
+        t[n] = s
+    end
+    serialize(flush,root,name,specification)
+    return concat(t,"\n")
+end
+
+table.tohandle = serialize
+
+-- sometimes tables are real use (zapfino extra pro is some 85M) in which
+-- case a stepwise serialization is nice; actually, we could consider:
+--
+-- for line in table.serializer(root,name,reduce,noquotes) do
+--    ...(line)
+-- end
+--
+-- so this is on the todo list
+
+local maxtab = 2*1024
+
+function table.tofile(filename,root,name,specification)
+    local f = io.open(filename,'w')
+    if f then
+        if maxtab > 1 then
+            local t, n = { }, 0
+            local function flush(s)
+                n = n + 1
+                t[n] = s
+                if n > maxtab then
+                    f:write(concat(t,"\n"),"\n") -- hm, write(sometable) should be nice
+                    t, n = { }, 0 -- we could recycle t if needed
+                end
+            end
+            serialize(flush,root,name,specification)
+            f:write(concat(t,"\n"),"\n")
+        else
+            local function flush(s)
+                f:write(s,"\n")
+            end
+            serialize(flush,root,name,specification)
+        end
+        f:close()
+        io.flush()
+    end
+end
+
+local function flattened(t,f,depth)
+    if f == nil then
+        f = { }
+        depth = 0xFFFF
+    elseif tonumber(f) then
+        -- assume that only two arguments are given
+        depth = f
+        f = { }
+    elseif not depth then
+        depth = 0xFFFF
+    end
+    for k, v in next, t do
+        if type(k) ~= "number" then
+            if depth > 0 and type(v) == "table" then
+                flattened(v,f,depth-1)
+            else
+                f[k] = v
+            end
+        end
+    end
+    local n = #f
+    for k=1,#t do
+        local v = t[k]
+        if depth > 0 and type(v) == "table" then
+            flattened(v,f,depth-1)
+            n = #f
+        else
+            n = n + 1
+            f[n] = v
+        end
+    end
+    return f
+end
+
+table.flattened = flattened
+
+local function unnest(t,f) -- only used in mk, for old times sake
+    if not f then          -- and only relevant for token lists
+        f = { }            -- this one can become obsolete
+    end
+    for i=1,#t do
+        local v = t[i]
+        if type(v) == "table" then
+            if type(v[1]) == "table" then
+                unnest(v,f)
+            else
+                f[#f+1] = v
+            end
+        else
+            f[#f+1] = v
+        end
+    end
+    return f
+end
+
+function table.unnest(t) -- bad name
+    return unnest(t)
+end
+
+local function are_equal(a,b,n,m) -- indexed
+    if a and b and #a == #b then
+        n = n or 1
+        m = m or #a
+        for i=n,m do
+            local ai, bi = a[i], b[i]
+            if ai==bi then
+                -- same
+            elseif type(ai) == "table" and type(bi) == "table" then
+                if not are_equal(ai,bi) then
+                    return false
+                end
+            else
+                return false
+            end
+        end
+        return true
+    else
+        return false
+    end
+end
+
+local function identical(a,b) -- assumes same structure
+    for ka, va in next, a do
+        local vb = b[ka]
+        if va == vb then
+            -- same
+        elseif type(va) == "table" and  type(vb) == "table" then
+            if not identical(va,vb) then
+                return false
+            end
+        else
+            return false
+        end
+    end
+    return true
+end
+
+table.identical = identical
+table.are_equal = are_equal
+
+-- maybe also make a combined one
+
+function table.compact(t) -- remove empty tables, assumes subtables
+    if t then
+        for k, v in next, t do
+            if not next(v) then -- no type checking
+                t[k] = nil
+            end
+        end
+    end
+end
+
+function table.contains(t, v)
+    if t then
+        for i=1, #t do
+            if t[i] == v then
+                return i
+            end
+        end
+    end
+    return false
+end
+
+function table.count(t)
+    local n = 0
+    for k, v in next, t do
+        n = n + 1
+    end
+    return n
+end
+
+function table.swapped(t,s) -- hash
+    local n = { }
+    if s then
+        for k, v in next, s do
+            n[k] = v
+        end
+    end
+    for k, v in next, t do
+        n[v] = k
+    end
+    return n
+end
+
+function table.mirrored(t) -- hash
+    local n = { }
+    for k, v in next, t do
+        n[v] = k
+        n[k] = v
+    end
+    return n
+end
+
+function table.reversed(t)
+    if t then
+        local tt, tn = { }, #t
+        if tn > 0 then
+            local ttn = 0
+            for i=tn,1,-1 do
+                ttn = ttn + 1
+                tt[ttn] = t[i]
+            end
+        end
+        return tt
+    end
+end
+
+function table.reverse(t)
+    if t then
+        local n = #t
+        for i=1,floor(n/2) do
+            local j = n - i + 1
+            t[i], t[j] = t[j], t[i]
+        end
+        return t
+    end
+end
+
+function table.sequenced(t,sep) -- hash only
+    if t then
+        local s, n = { }, 0
+        for k, v in sortedhash(t) do
+            if simple then
+                if v == true then
+                    n = n + 1
+                    s[n] = k
+                elseif v and v~= "" then
+                    n = n + 1
+                    s[n] = k .. "=" .. tostring(v)
+                end
+            else
+                n = n + 1
+                s[n] = k .. "=" .. tostring(v)
+            end
+        end
+        return concat(s, sep or " | ")
+    else
+        return ""
+    end
+end
+
+function table.print(t,...)
+    if type(t) ~= "table" then
+        print(tostring(t))
+    else
+        table.tohandle(print,t,...)
+    end
+end
+
+-- -- -- obsolete but we keep them for a while and might comment them later -- -- --
+
+-- roughly: copy-loop : unpack : sub == 0.9 : 0.4 : 0.45 (so in critical apps, use unpack)
+
+function table.sub(t,i,j)
+    return { unpack(t,i,j) }
+end
+
+-- slower than #t on indexed tables (#t only returns the size of the numerically indexed slice)
+
+function table.is_empty(t)
+    return not t or not next(t)
+end
+
+function table.has_one_entry(t)
+    return t and not next(t,next(t))
+end
+
+-- new
+
+function table.loweredkeys(t) -- maybe utf
+    local l = { }
+    for k, v in next, t do
+        l[lower(k)] = v
+    end
+    return l
+end
+
+-- new, might move (maybe duplicate)
+
+function table.unique(old)
+    local hash = { }
+    local new = { }
+    local n = 0
+    for i=1,#old do
+        local oi = old[i]
+        if not hash[oi] then
+            n = n + 1
+            new[n] = oi
+            hash[oi] = true
+        end
+    end
+    return new
+end
+
+function table.sorted(t,...)
+    sort(t,...)
+    return t -- still sorts in-place
+end
+
 end -- closure
 
 do -- begin closure to overcome local limits and interference
@@ -1874,27 +2054,48 @@ function boolean.tonumber(b)
 end
 
 function toboolean(str,tolerant)
-    if tolerant then
-        local tstr = type(str)
-        if tstr == "string" then
-            return str == "true" or str == "yes" or str == "on" or str == "1" or str == "t"
-        elseif tstr == "number" then
-            return tonumber(str) ~= 0
-        elseif tstr == "nil" then
-            return false
-        else
-            return str
-        end
+    if  str == nil then
+        return false
+    elseif str == false then
+        return false
+    elseif str == true then
+        return true
     elseif str == "true" then
         return true
     elseif str == "false" then
         return false
+    elseif not tolerant then
+        return false
+    elseif str == 0 then
+        return false
+    elseif (tonumber(str) or 0) > 0 then
+        return true
     else
-        return str
+        return str == "yes" or str == "on" or str == "t"
     end
 end
 
 string.toboolean = toboolean
+
+function string.booleanstring(str)
+    if  str == nil then
+        return false
+    elseif str == false then
+        return false
+    elseif str == true then
+        return true
+    elseif str == "true" then
+        return true
+    elseif str == "false" then
+        return false
+    elseif str == 0 then
+        return false
+    elseif (tonumber(str) or 0) > 0 then
+        return true
+    else
+        return str == "yes" or str == "on" or str == "t"
+    end
+end
 
 function string.is_boolean(str,default)
     if type(str) == "string" then
@@ -1964,61 +2165,149 @@ file       = file or { }
 local file = file
 
 local insert, concat = table.insert, table.concat
-local find, gmatch, match, gsub, sub, char, lower = string.find, string.gmatch, string.match, string.gsub, string.sub, string.char, string.lower
+local match = string.match
 local lpegmatch = lpeg.match
 local getcurrentdir, attributes = lfs.currentdir, lfs.attributes
+local checkedsplit = string.checkedsplit
 
-local P, R, S, C, Cs, Cp, Cc = lpeg.P, lpeg.R, lpeg.S, lpeg.C, lpeg.Cs, lpeg.Cp, lpeg.Cc
+-- local patterns = file.patterns or { }
+-- file.patterns  = patterns
 
-local function dirname(name,default)
-    return match(name,"^(.+)[/\\].-$") or (default or "")
+local P, R, S, C, Cs, Cp, Cc, Ct = lpeg.P, lpeg.R, lpeg.S, lpeg.C, lpeg.Cs, lpeg.Cp, lpeg.Cc, lpeg.Ct
+
+local colon     = P(":")
+local period    = P(".")
+local periods   = P("..")
+local fwslash   = P("/")
+local bwslash   = P("\\")
+local slashes   = S("\\/")
+local noperiod  = 1-period
+local noslashes = 1-slashes
+local name      = noperiod^1
+local suffix    = period/"" * (1-period-slashes)^1 * -1
+
+local pattern = C((noslashes^0 * slashes^1)^1)
+
+local function pathpart(name,default)
+    return name and lpegmatch(pattern,name) or default or ""
 end
+
+local pattern = (noslashes^0 * slashes)^1 * C(noslashes^1) * -1
 
 local function basename(name)
-    return match(name,"^.+[/\\](.-)$") or name
+    return name and lpegmatch(pattern,name) or name
 end
 
--- local function nameonly(name)
---     return (gsub(match(name,"^.+[/\\](.-)$") or name,"%..*$",""))
--- end
+local pattern = (noslashes^0 * slashes^1)^0 * Cs((1-suffix)^1) * suffix^0
 
 local function nameonly(name)
-    return (gsub(match(name,"^.+[/\\](.-)$") or name,"%.[%a%d]+$",""))
+    return name and lpegmatch(pattern,name) or name
 end
 
-local function extname(name,default)
-    return match(name,"^.+%.([^/\\]-)$") or default or ""
+local pattern = (noslashes^0 * slashes)^0 * (noperiod^1 * period)^1 * C(noperiod^1) * -1
+
+local function suffixonly(name)
+    return name and lpegmatch(pattern,name) or ""
 end
 
-local function splitname(name)
-    local n, s = match(name,"^(.+)%.([^/\\]-)$")
-    return n or name, s or ""
+file.pathpart   = pathpart
+file.basename   = basename
+file.nameonly   = nameonly
+file.suffixonly = suffixonly
+file.suffix     = suffixonly
+
+file.dirname    = pathpart   -- obsolete
+file.extname    = suffixonly -- obsolete
+
+-- actually these are schemes
+
+local drive  = C(R("az","AZ")) * colon
+local path   = C(((1-slashes)^0 * slashes)^0)
+local suffix = period * C(P(1-period)^0 * P(-1))
+local base   = C((1-suffix)^0)
+local rest   = C(P(1)^0)
+
+drive  = drive  + Cc("")
+path   = path   + Cc("")
+base   = base   + Cc("")
+suffix = suffix + Cc("")
+
+local pattern_a =   drive * path  *   base * suffix
+local pattern_b =           path  *   base * suffix
+local pattern_c = C(drive * path) * C(base * suffix) -- trick: two extra captures
+local pattern_d =           path  *   rest
+
+function file.splitname(str,splitdrive)
+    if not str then
+        -- error
+    elseif splitdrive then
+        return lpegmatch(pattern_a,str) -- returns drive, path, base, suffix
+    else
+        return lpegmatch(pattern_b,str) -- returns path, base, suffix
+    end
 end
 
-file.basename = basename
-file.dirname  = dirname
-file.nameonly = nameonly
-file.extname  = extname
-file.suffix   = extname
-
-function file.removesuffix(filename)
-    return (gsub(filename,"%.[%a%d]+$",""))
+function file.splitbase(str)
+    return str and lpegmatch(pattern_d,str) -- returns path, base+suffix
 end
 
-function file.addsuffix(filename, suffix, criterium)
-    if not suffix or suffix == "" then
+function file.nametotable(str,splitdrive) -- returns table
+    if str then
+        local path, drive, subpath, name, base, suffix = lpegmatch(pattern_c,str)
+        if splitdrive then
+            return {
+                path    = path,
+                drive   = drive,
+                subpath = subpath,
+                name    = name,
+                base    = base,
+                suffix  = suffix,
+            }
+        else
+            return {
+                path    = path,
+                name    = name,
+                base    = base,
+                suffix  = suffix,
+            }
+        end
+    end
+end
+
+local pattern = Cs(((period * noperiod^1 * -1)/"" + 1)^1)
+
+function file.removesuffix(name)
+    return name and lpegmatch(pattern,name)
+end
+
+-- local pattern = (noslashes^0 * slashes)^0 * (noperiod^1 * period)^1 * Cp() * noperiod^1 * -1
+--
+-- function file.addsuffix(name, suffix)
+--     local p = lpegmatch(pattern,name)
+--     if p then
+--         return name
+--     else
+--         return name .. "." .. suffix
+--     end
+-- end
+
+local suffix  = period/"" * (1-period-slashes)^1 * -1
+local pattern = Cs((noslashes^0 * slashes^1)^0 * ((1-suffix)^1)) * Cs(suffix)
+
+function file.addsuffix(filename,suffix,criterium)
+    if not filename or not suffix or suffix == "" then
         return filename
     elseif criterium == true then
         return filename .. "." .. suffix
     elseif not criterium then
-        local n, s = splitname(filename)
+        local n, s = lpegmatch(pattern,filename)
         if not s or s == "" then
             return filename .. "." .. suffix
         else
             return filename
         end
     else
-        local n, s = splitname(filename)
+        local n, s = lpegmatch(pattern,filename)
         if s and s ~= "" then
             local t = type(criterium)
             if t == "table" then
@@ -2035,84 +2324,54 @@ function file.addsuffix(filename, suffix, criterium)
                 end
             end
         end
-        return n .. "." .. suffix
+        return (n or filename) .. "." .. suffix
     end
 end
 
---~ print("1 " .. file.addsuffix("name","new")                   .. " -> name.new")
---~ print("2 " .. file.addsuffix("name.old","new")               .. " -> name.old")
---~ print("3 " .. file.addsuffix("name.old","new",true)          .. " -> name.old.new")
---~ print("4 " .. file.addsuffix("name.old","new","new")         .. " -> name.new")
---~ print("5 " .. file.addsuffix("name.old","new","old")         .. " -> name.old")
---~ print("6 " .. file.addsuffix("name.old","new","foo")         .. " -> name.new")
---~ print("7 " .. file.addsuffix("name.old","new",{"foo","bar"}) .. " -> name.new")
---~ print("8 " .. file.addsuffix("name.old","new",{"old","bar"}) .. " -> name.old")
+-- print("1 " .. file.addsuffix("name","new")                   .. " -> name.new")
+-- print("2 " .. file.addsuffix("name.old","new")               .. " -> name.old")
+-- print("3 " .. file.addsuffix("name.old","new",true)          .. " -> name.old.new")
+-- print("4 " .. file.addsuffix("name.old","new","new")         .. " -> name.new")
+-- print("5 " .. file.addsuffix("name.old","new","old")         .. " -> name.old")
+-- print("6 " .. file.addsuffix("name.old","new","foo")         .. " -> name.new")
+-- print("7 " .. file.addsuffix("name.old","new",{"foo","bar"}) .. " -> name.new")
+-- print("8 " .. file.addsuffix("name.old","new",{"old","bar"}) .. " -> name.old")
 
-function file.replacesuffix(filename, suffix)
-    return (gsub(filename,"%.[%a%d]+$","")) .. "." .. suffix
+local suffix  = period * (1-period-slashes)^1 * -1
+local pattern = Cs((1-suffix)^0)
+
+function file.replacesuffix(name,suffix)
+    if name and suffix and suffix ~= "" then
+        return lpegmatch(pattern,name) .. "." .. suffix
+    else
+        return name
+    end
 end
 
---~ function file.join(...)
---~     local pth = concat({...},"/")
---~     pth = gsub(pth,"\\","/")
---~     local a, b = match(pth,"^(.*://)(.*)$")
---~     if a and b then
---~         return a .. gsub(b,"//+","/")
---~     end
---~     a, b = match(pth,"^(//)(.*)$")
---~     if a and b then
---~         return a .. gsub(b,"//+","/")
---~     end
---~     return (gsub(pth,"//+","/"))
---~ end
+--
 
-local trick_1 = char(1)
-local trick_2 = "^" .. trick_1 .. "/+"
+local reslasher = lpeg.replacer(P("\\"),"/")
 
-function file.join(...) -- rather dirty
-    local lst = { ... }
-    local a, b = lst[1], lst[2]
-    if not a or a == "" then -- not a added
-        lst[1] = trick_1
-    elseif b and find(a,"^/+$") and find(b,"^/") then
-        lst[1] = ""
-        lst[2] = gsub(b,"^/+","")
-    end
-    local pth = concat(lst,"/")
-    pth = gsub(pth,"\\","/")
-    local a, b = match(pth,"^(.*://)(.*)$")
-    if a and b then
-        return a .. gsub(b,"//+","/")
-    end
-    a, b = match(pth,"^(//)(.*)$")
-    if a and b then
-        return a .. gsub(b,"//+","/")
-    end
-    pth = gsub(pth,trick_2,"")
-    return (gsub(pth,"//+","/"))
+function file.reslash(str)
+    return str and lpegmatch(reslasher,str)
 end
-
---~ print(file.join("//","/y"))
---~ print(file.join("/","/y"))
---~ print(file.join("","/y"))
---~ print(file.join("/x/","/y"))
---~ print(file.join("x/","/y"))
---~ print(file.join("http://","/y"))
---~ print(file.join("http://a","/y"))
---~ print(file.join("http:///a","/y"))
---~ print(file.join("//nas-1","/y"))
 
 -- We should be able to use:
 --
+-- local writable = P(1) * P("w") * Cc(true)
+--
 -- function file.is_writable(name)
---     local a = attributes(name) or attributes(dirname(name,"."))
---     return a and sub(a.permissions,2,2) == "w"
+--     local a = attributes(name) or attributes(pathpart(name,"."))
+--     return a and lpegmatch(writable,a.permissions) or false
 -- end
 --
--- But after some testing Taco and I came up with:
+-- But after some testing Taco and I came up with the more robust
+-- variant:
 
 function file.is_writable(name)
-    if lfs.isdir(name) then
+    if not name then
+        -- error
+    elseif lfs.isdir(name) then
         name = name .. "/m_t_x_t_e_s_t.tmp"
         local f = io.open(name,"wb")
         if f then
@@ -2137,72 +2396,108 @@ function file.is_writable(name)
     return false
 end
 
+local readable = P("r") * Cc(true)
+
 function file.is_readable(name)
-    local a = attributes(name)
-    return a and sub(a.permissions,1,1) == "r"
+    if name then
+        local a = attributes(name)
+        return a and lpegmatch(readable,a.permissions) or false
+    else
+        return false
+    end
 end
 
 file.isreadable = file.is_readable -- depricated
 file.iswritable = file.is_writable -- depricated
 
--- todo: lpeg \\ / .. does not save much
+function file.size(name)
+    if name then
+        local a = attributes(name)
+        return a and a.size or 0
+    else
+        return 0
+    end
+end
 
-local checkedsplit = string.checkedsplit
-
-function file.splitpath(str,separator) -- string
-    str = gsub(str,"\\","/")
-    return checkedsplit(str,separator or io.pathseparator)
+function file.splitpath(str,separator) -- string .. reslash is a bonus (we could do a direct split)
+    return str and checkedsplit(lpegmatch(reslasher,str),separator or io.pathseparator)
 end
 
 function file.joinpath(tab,separator) -- table
-    return concat(tab,separator or io.pathseparator) -- can have trailing //
+    return tab and concat(tab,separator or io.pathseparator) -- can have trailing //
 end
 
--- we can hash them weakly
+local stripper  = Cs(P(fwslash)^0/"" * reslasher)
+local isnetwork = fwslash * fwslash * (1-fwslash) + (1-fwslash-colon)^1 * colon
+local isroot    = fwslash^1 * -1
+local hasroot   = fwslash^1
 
---~ function file.collapsepath(str) -- fails on b.c/..
---~     str = gsub(str,"\\","/")
---~     if find(str,"/") then
---~         str = gsub(str,"^%./",(gsub(getcurrentdir(),"\\","/")) .. "/") -- ./xx in qualified
---~         str = gsub(str,"/%./","/")
---~         local n, m = 1, 1
---~         while n > 0 or m > 0 do
---~             str, n = gsub(str,"[^/%.]+/%.%.$","")
---~             str, m = gsub(str,"[^/%.]+/%.%./","")
---~         end
---~         str = gsub(str,"([^/])/$","%1")
---~     --  str = gsub(str,"^%./","") -- ./xx in qualified
---~         str = gsub(str,"/%.$","")
---~     end
---~     if str == "" then str = "." end
---~     return str
---~ end
---~
---~ The previous one fails on "a.b/c"  so Taco came up with a split based
---~ variant. After some skyping we got it sort of compatible with the old
---~ one. After that the anchoring to currentdir was added in a better way.
---~ Of course there are some optimizations too. Finally we had to deal with
---~ windows drive prefixes and things like sys://.
+local deslasher = lpeg.replacer(S("\\/")^1,"/")
+
+-- If we have a network or prefix then there is a change that we end up with two
+-- // in the middle ... we could prevent this if we (1) expand prefixes: and (2)
+-- split and rebuild as url. Of course we could assume no network paths (which
+-- makes sense) adn assume either mapped drives (windows) or mounts (unix) but
+-- then we still have to deal with urls ... anyhow, multiple // are never a real
+-- problem but just ugly.
+
+function file.join(...)
+    local lst = { ... }
+    local one = lst[1]
+    if lpegmatch(isnetwork,one) then
+        local two = lpegmatch(deslasher,concat(lst,"/",2))
+        return one .. "/" .. two
+    elseif lpegmatch(isroot,one) then
+        local two = lpegmatch(deslasher,concat(lst,"/",2))
+        if lpegmatch(hasroot,two) then
+            return two
+        else
+            return "/" .. two
+        end
+    elseif one == "" then
+        return lpegmatch(stripper,concat(lst,"/",2))
+    else
+        return lpegmatch(deslasher,concat(lst,"/"))
+    end
+end
+
+-- print(file.join("c:/whatever","name"))
+-- print(file.join("//","/y"))
+-- print(file.join("/","/y"))
+-- print(file.join("","/y"))
+-- print(file.join("/x/","/y"))
+-- print(file.join("x/","/y"))
+-- print(file.join("http://","/y"))
+-- print(file.join("http://a","/y"))
+-- print(file.join("http:///a","/y"))
+-- print(file.join("//nas-1","/y"))
+
+-- The previous one fails on "a.b/c"  so Taco came up with a split based
+-- variant. After some skyping we got it sort of compatible with the old
+-- one. After that the anchoring to currentdir was added in a better way.
+-- Of course there are some optimizations too. Finally we had to deal with
+-- windows drive prefixes and things like sys://. Eventually gsubs and
+-- finds were replaced by lpegs.
+
+local drivespec    = R("az","AZ")^1 * colon
+local anchors      = fwslash + drivespec
+local untouched    = periods + (1-period)^1 * P(-1)
+local splitstarter = (Cs(drivespec * (bwslash/"/" + fwslash)^0) + Cc(false)) * Ct(lpeg.splitat(S("/\\")^1))
+local absolute     = fwslash
 
 function file.collapsepath(str,anchor)
-    if anchor and not find(str,"^/") and not find(str,"^%a:") then
+    if not str then
+        return
+    end
+    if anchor and not lpegmatch(anchors,str) then
         str = getcurrentdir() .. "/" .. str
     end
     if str == "" or str =="." then
         return "."
-    elseif find(str,"^%.%.") then
-        str = gsub(str,"\\","/")
-        return str
-    elseif not find(str,"%.") then
-        str = gsub(str,"\\","/")
-        return str
+    elseif lpegmatch(untouched,str) then
+        return lpegmatch(reslasher,str)
     end
-    str = gsub(str,"\\","/")
-    local starter, rest = match(str,"^(%a+:/*)(.-)$")
-    if starter then
-        str = rest
-    end
-    local oldelements = checkedsplit(str,"/")
+    local starter, oldelements = lpegmatch(splitstarter,str)
     local newelements = { }
     local i = #oldelements
     while i > 0 do
@@ -2232,29 +2527,37 @@ function file.collapsepath(str,anchor)
         return starter or "."
     elseif starter then
         return starter .. concat(newelements, '/')
-    elseif find(str,"^/") then
+    elseif lpegmatch(absolute,str) then
         return "/" .. concat(newelements,'/')
     else
         return concat(newelements, '/')
     end
 end
 
---~ local function test(str)
---~    print(string.format("%-20s %-15s %-15s",str,file.collapsepath(str),file.collapsepath(str,true)))
---~ end
---~ test("a/b.c/d") test("b.c/d") test("b.c/..")
---~ test("/") test("c:/..") test("sys://..")
---~ test("") test("./") test(".") test("..") test("./..") test("../..")
---~ test("a") test("./a") test("/a") test("a/../..")
---~ test("a/./b/..") test("a/aa/../b/bb") test("a/.././././b/..") test("a/./././b/..")
---~ test("a/b/c/../..") test("./a/b/c/../..") test("a/b/c/../..")
+-- local function test(str)
+--    print(string.format("%-20s %-15s %-15s",str,file.collapsepath(str),file.collapsepath(str,true)))
+-- end
+-- test("a/b.c/d") test("b.c/d") test("b.c/..")
+-- test("/") test("c:/..") test("sys://..")
+-- test("") test("./") test(".") test("..") test("./..") test("../..")
+-- test("a") test("./a") test("/a") test("a/../..")
+-- test("a/./b/..") test("a/aa/../b/bb") test("a/.././././b/..") test("a/./././b/..")
+-- test("a/b/c/../..") test("./a/b/c/../..") test("a/b/c/../..")
+
+local validchars = R("az","09","AZ","--","..")
+local pattern_a  = lpeg.replacer(1-validchars)
+local pattern_a  = Cs((validchars + P(1)/"-")^1)
+local whatever   = P("-")^0 / ""
+local pattern_b  = Cs(whatever * (1 - whatever * -1)^1)
 
 function file.robustname(str,strict)
-    str = gsub(str,"[^%a%d%/%-%.\\]+","-")
-    if strict then
-        return lower(gsub(str,"^%-*(.-)%-*$","%1"))
-    else
-        return str
+    if str then
+        str = lpegmatch(pattern_a,str) or str
+        if strict then
+            return lpegmatch(pattern_b,str) or str -- two step is cleaner (less backtracking)
+        else
+            return str
+        end
     end
 end
 
@@ -2262,105 +2565,22 @@ file.readdata = io.loaddata
 file.savedata = io.savedata
 
 function file.copy(oldname,newname)
-    file.savedata(newname,io.loaddata(oldname))
+    if oldname and newname then
+        file.savedata(newname,io.loaddata(oldname))
+    end
 end
-
--- lpeg variants, slightly faster, not always
-
---~ local period    = P(".")
---~ local slashes   = S("\\/")
---~ local noperiod  = 1-period
---~ local noslashes = 1-slashes
---~ local name      = noperiod^1
-
---~ local pattern = (noslashes^0 * slashes)^0 * (noperiod^1 * period)^1 * C(noperiod^1) * -1
-
---~ function file.extname(name)
---~     return lpegmatch(pattern,name) or ""
---~ end
-
---~ local pattern = Cs(((period * noperiod^1 * -1)/"" + 1)^1)
-
---~ function file.removesuffix(name)
---~     return lpegmatch(pattern,name)
---~ end
-
---~ local pattern = (noslashes^0 * slashes)^1 * C(noslashes^1) * -1
-
---~ function file.basename(name)
---~     return lpegmatch(pattern,name) or name
---~ end
-
---~ local pattern = (noslashes^0 * slashes)^1 * Cp() * noslashes^1 * -1
-
---~ function file.dirname(name)
---~     local p = lpegmatch(pattern,name)
---~     if p then
---~         return sub(name,1,p-2)
---~     else
---~         return ""
---~     end
---~ end
-
---~ local pattern = (noslashes^0 * slashes)^0 * (noperiod^1 * period)^1 * Cp() * noperiod^1 * -1
-
---~ function file.addsuffix(name, suffix)
---~     local p = lpegmatch(pattern,name)
---~     if p then
---~         return name
---~     else
---~         return name .. "." .. suffix
---~     end
---~ end
-
---~ local pattern = (noslashes^0 * slashes)^0 * (noperiod^1 * period)^1 * Cp() * noperiod^1 * -1
-
---~ function file.replacesuffix(name,suffix)
---~     local p = lpegmatch(pattern,name)
---~     if p then
---~         return sub(name,1,p-2) .. "." .. suffix
---~     else
---~         return name .. "." .. suffix
---~     end
---~ end
-
---~ local pattern = (noslashes^0 * slashes)^0 * Cp() * ((noperiod^1 * period)^1 * Cp() + P(true)) * noperiod^1 * -1
-
---~ function file.nameonly(name)
---~     local a, b = lpegmatch(pattern,name)
---~     if b then
---~         return sub(name,a,b-2)
---~     elseif a then
---~         return sub(name,a)
---~     else
---~         return name
---~     end
---~ end
-
---~ local test = file.extname
---~ local test = file.basename
---~ local test = file.dirname
---~ local test = file.addsuffix
---~ local test = file.replacesuffix
---~ local test = file.nameonly
-
---~ print(1,test("./a/b/c/abd.def.xxx","!!!"))
---~ print(2,test("./../b/c/abd.def.xxx","!!!"))
---~ print(3,test("a/b/c/abd.def.xxx","!!!"))
---~ print(4,test("a/b/c/def.xxx","!!!"))
---~ print(5,test("a/b/c/def","!!!"))
---~ print(6,test("def","!!!"))
---~ print(7,test("def.xxx","!!!"))
-
---~ local tim = os.clock() for i=1,250000 do local ext = test("abd.def.xxx","!!!") end print(os.clock()-tim)
 
 -- also rewrite previous
 
 local letter    = R("az","AZ") + S("_-+")
 local separator = P("://")
 
-local qualified = P(".")^0 * P("/") + letter*P(":") + letter^1*separator + letter^1 * P("/")
-local rootbased = P("/") + letter*P(":")
+local qualified = period^0 * fwslash
+                + letter   * colon
+                + letter^1 * separator
+                + letter^1 * fwslash
+local rootbased = fwslash
+                + letter * colon
 
 lpeg.patterns.qualified = qualified
 lpeg.patterns.rootbased = rootbased
@@ -2368,58 +2588,11 @@ lpeg.patterns.rootbased = rootbased
 -- ./name ../name  /name c: :// name/name
 
 function file.is_qualified_path(filename)
-    return lpegmatch(qualified,filename) ~= nil
+    return filename and lpegmatch(qualified,filename) ~= nil
 end
 
 function file.is_rootbased_path(filename)
-    return lpegmatch(rootbased,filename) ~= nil
-end
-
--- actually these are schemes
-
-local slash  = S("\\/")
-local period = P(".")
-local drive  = C(R("az","AZ")) * P(":")
-local path   = C(((1-slash)^0 * slash)^0)
-local suffix = period * C(P(1-period)^0 * P(-1))
-local base   = C((1-suffix)^0)
-
-drive  = drive  + Cc("")
-path   = path   + Cc("")
-base   = base   + Cc("")
-suffix = suffix + Cc("")
-
-local pattern_a =   drive * path  *   base * suffix
-local pattern_b =           path  *   base * suffix
-local pattern_c = C(drive * path) * C(base * suffix)
-
-function file.splitname(str,splitdrive)
-    if splitdrive then
-        return lpegmatch(pattern_a,str) -- returns drive, path, base, suffix
-    else
-        return lpegmatch(pattern_b,str) -- returns path, base, suffix
-    end
-end
-
-function file.nametotable(str,splitdrive) -- returns table
-    local path, drive, subpath, name, base, suffix = lpegmatch(pattern_c,str)
-    if splitdrive then
-        return {
-            path    = path,
-            drive   = drive,
-            subpath = subpath,
-            name    = name,
-            base    = base,
-            suffix  = suffix,
-        }
-    else
-        return {
-            path    = path,
-            name    = name,
-            base    = base,
-            suffix  = suffix,
-        }
-    end
+    return filename and lpegmatch(rootbased,filename) ~= nil
 end
 
 -- function test(t) for k, v in next, t do print(v, "=>", file.splitname(v)) end end
@@ -2429,21 +2602,38 @@ end
 -- test { "/aa", "/aa/bb", "/aa/bb/cc", "/aa/bb/cc.dd", "/aa/bb/cc.dd.ee" }
 -- test { "aa", "aa/bb", "aa/bb/cc", "aa/bb/cc.dd", "aa/bb/cc.dd.ee" }
 
---~ -- todo:
---~
---~ if os.type == "windows" then
---~     local currentdir = getcurrentdir
---~     function getcurrentdir()
---~         return (gsub(currentdir(),"\\","/"))
---~     end
---~ end
+-- -- maybe:
+--
+-- if os.type == "windows" then
+--     local currentdir = getcurrentdir
+--     function getcurrentdir()
+--         return lpegmatch(reslasher,currentdir())
+--     end
+-- end
 
 -- for myself:
 
 function file.strip(name,dir)
-    local b, a = match(name,"^(.-)" .. dir .. "(.*)$")
-    return a ~= "" and a or name
+    if name then
+        local b, a = match(name,"^(.-)" .. dir .. "(.*)$")
+        return a ~= "" and a or name
+    end
 end
+
+-- local debuglist = {
+--     "pathpart", "basename", "nameonly", "suffixonly", "suffix", "dirname", "extname",
+--     "addsuffix", "removesuffix", "replacesuffix", "join",
+--     "strip","collapsepath", "joinpath", "splitpath",
+-- }
+
+-- for i=1,#debuglist do
+--     local name = debuglist[i]
+--     local f = file[name]
+--     file[name] = function(...)
+--         print(name,f(...))
+--         return f(...)
+--     end
+-- end
 
 end -- closure
 
@@ -2460,6 +2650,7 @@ if not modules then modules = { } end modules ['l-io'] = {
 local io = io
 local byte, find, gsub, format = string.byte, string.find, string.gsub, string.format
 local concat = table.concat
+local floor = math.floor
 local type = type
 
 if string.find(os.getenv("PATH"),";") then
@@ -2468,14 +2659,53 @@ else
     io.fileseparator, io.pathseparator = "/" , ":"
 end
 
-function io.loaddata(filename,textmode)
+local function readall(f)
+    return f:read("*all")
+end
+
+-- The next one is upto 50% faster on large files and less memory consumption due
+-- to less intermediate large allocations. This phenomena was discussed on the
+-- luatex dev list.
+
+local function readall(f)
+    local size = f:seek("end")
+    if size == 0 then
+        return ""
+    elseif size < 1024*1024 then
+        f:seek("set",0)
+        return f:read('*all')
+    else
+        local done = f:seek("set",0)
+        if size < 1024*1024 then
+            step = 1024 * 1024
+        elseif size > 16*1024*1024 then
+            step = 16*1024*1024
+        else
+            step = floor(size/(1024*1024)) * 1024 * 1024 / 8
+        end
+        local data = { }
+        while true do
+            local r = f:read(step)
+            if not r then
+                return concat(data)
+            else
+                data[#data+1] = r
+            end
+        end
+    end
+end
+
+io.readall = readall
+
+function io.loaddata(filename,textmode) -- return nil if empty
     local f = io.open(filename,(textmode and 'r') or 'rb')
     if f then
-        local data = f:read('*all')
+--       local data = f:read('*all')
+        local data = readall(f)
         f:close()
-        return data
-    else
-        return nil
+        if #data > 0 then
+            return data
+        end
     end
 end
 
@@ -2497,12 +2727,51 @@ function io.savedata(filename,data,joiner)
     end
 end
 
+function io.loadlines(filename,n) -- return nil if empty
+    local f = io.open(filename,'r')
+    if not f then
+        -- no file
+    elseif n then
+        local lines = { }
+        for i=1,n do
+            local line = f:read("*lines")
+            if line then
+                lines[#lines+1] = line
+            else
+                break
+            end
+        end
+        f:close()
+        lines = concat(lines,"\n")
+        if #lines > 0 then
+            return lines
+        end
+    else
+        local line = f:read("*line") or ""
+        f:close()
+        if #line > 0 then
+            return line
+        end
+    end
+end
+
+function io.loadchunk(filename,n)
+    local f = io.open(filename,'rb')
+    if f then
+        local data = f:read(n or 1024)
+        f:close()
+        if #data > 0 then
+            return data
+        end
+    end
+end
+
 function io.exists(filename)
     local f = io.open(filename)
     if f == nil then
         return false
     else
-        assert(f:close())
+        f:close()
         return true
     end
 end
@@ -2513,7 +2782,7 @@ function io.size(filename)
         return 0
     else
         local s = f:seek("end")
-        assert(f:close())
+        f:close()
         return s
     end
 end
@@ -2521,9 +2790,13 @@ end
 function io.noflines(f)
     if type(f) == "string" then
         local f = io.open(filename)
-        local n = f and io.noflines(f) or 0
-        assert(f:close())
-        return n
+        if f then
+            local n = f and io.noflines(f) or 0
+            f:close()
+            return n
+        else
+            return 0
+        end
     else
         local n = 0
         for _ in f:lines() do
@@ -2700,7 +2973,7 @@ function io.readstring(f,n,m)
         f:seek("set",n)
         n = m
     end
-    local str = gsub(f:read(n),"%z","")
+    local str = gsub(f:read(n),"\000","")
     return str
 end
 
@@ -2708,6 +2981,24 @@ end
 
 if not io.i_limiter then function io.i_limiter() end end -- dummy so we can test safely
 if not io.o_limiter then function io.o_limiter() end end -- dummy so we can test safely
+
+-- This works quite ok:
+--
+-- function io.piped(command,writer)
+--     local pipe = io.popen(command)
+--  -- for line in pipe:lines() do
+--  --     print(line)
+--  -- end
+--     while true do
+--         local line = pipe:read(1)
+--         if not line then
+--             break
+--         elseif line ~= "\n" then
+--             writer(line)
+--         end
+--     end
+--     return pipe:close() -- ok, status, (error)code
+-- end
 
 end -- closure
 
@@ -2789,32 +3080,42 @@ texconfig.kpse_init = true
 resolvers = resolvers or { } -- no fancy file helpers used
 
 local remapper = {
-    otf   = "opentype fonts",
-    ttf   = "truetype fonts",
-    ttc   = "truetype fonts",
-    dfont = "truetype fonts", -- "truetype dictionary",
-    cid   = "cid maps",
-    fea   = "font feature files",
-    pfa   = "type1 fonts", -- this is for Khaled, in ConTeXt we don't use this!
-    pfb   = "type1 fonts", -- this is for Khaled, in ConTeXt we don't use this!
+    otf    = "opentype fonts",
+    ttf    = "truetype fonts",
+    ttc    = "truetype fonts",
+    dfont  = "truetype fonts", -- "truetype dictionary",
+    cid    = "cid maps",
+    cidmap = "cid maps",
+    fea    = "font feature files",
+    pfa    = "type1 fonts", -- this is for Khaled, in ConTeXt we don't use this!
+    pfb    = "type1 fonts", -- this is for Khaled, in ConTeXt we don't use this!
 }
 
 function resolvers.findfile(name,fileformat)
-    name = string.gsub(name,"\\","\/")
-    fileformat = fileformat and string.lower(fileformat)
-    local found = kpse.find_file(name,(fileformat and fileformat ~= "" and (remapper[fileformat] or fileformat)) or file.extname(name,"tex"))
+    name = string.gsub(name,"\\","/")
+    if not fileformat or fileformat == "" then
+        fileformat = file.suffix(name)
+        if fileformat == "" then
+            fileformat = "tex"
+        end
+    end
+    fileformat = string.lower(fileformat)
+    fileformat = remapper[fileformat] or fileformat
+    local found = kpse.find_file(name,fileformat)
     if not found or found == "" then
         found = kpse.find_file(name,"other text files")
     end
     return found
 end
 
-function resolvers.findbinfile(name,fileformat)
-    if not fileformat or fileformat == "" then
-        fileformat = file.extname(name) -- string.match(name,"%.([^%.]-)$")
-    end
-    return resolvers.findfile(name,(fileformat and remapper[fileformat]) or fileformat)
-end
+-- function resolvers.findbinfile(name,fileformat)
+--     if not fileformat or fileformat == "" then
+--         fileformat = file.suffix(name)
+--     end
+--     return resolvers.findfile(name,(fileformat and remapper[fileformat]) or fileformat)
+-- end
+
+resolvers.findbinfile = resolvers.findfile
 
 function resolvers.resolve(s)
     return s
@@ -3235,36 +3536,30 @@ if not modules then modules = { } end modules ['font-ini'] = {
     license   = "see context related readme files"
 }
 
--- basemethods    -> can also be in list
--- presetcontext  -> defaults
--- hashfeatures   -> ctx version
-
 --[[ldx--
 <p>Not much is happening here.</p>
 --ldx]]--
 
-local lower = string.lower
-local allocate, mark = utilities.storage.allocate, utilities.storage.mark
+local allocate = utilities.storage.allocate
 
 local report_defining = logs.reporter("fonts","defining")
 
-fontloader.totable = fontloader.to_table
-
-fonts               = fonts or { } -- already defined in context
+fonts               = fonts or { }
 local fonts         = fonts
 
--- some of these might move to where they are used first:
-
 fonts.hashes        = { identifiers = allocate() }
+
+fonts.tables        = fonts.tables     or { }
+fonts.helpers       = fonts.helpers    or { }
+fonts.tracers       = fonts.tracers    or { } -- for the moment till we have move to moduledata
+fonts.specifiers    = fonts.specifiers or { } -- in format !
+
 fonts.analyzers     = { } -- not needed here
 fonts.readers       = { }
-fonts.tables        = { }
 fonts.definers      = { methods = { } }
-fonts.specifiers    = fonts.specifiers or { } -- in format !
 fonts.loggers       = { register = function() end }
-fonts.helpers       = { }
 
-fonts.tracers       = { } -- for the moment till we have move to moduledata
+fontloader.totable  = fontloader.to_table
 
 end -- closure
 
@@ -3278,10 +3573,7 @@ if not modules then modules = { } end modules ['font-con'] = {
     license   = "see context related readme files"
 }
 
-
 -- some names of table entries will be changed (no _)
-
-local utf = unicode.utf8
 
 local next, tostring, rawget = next, tostring, rawget
 local format, match, lower, gsub = string.format, string.match, string.lower, string.gsub
@@ -3301,9 +3593,9 @@ local report_defining = logs.reporter("fonts","defining")
 --ldx]]--
 
 local fonts                  = fonts
-local constructors           = { }
+local constructors           = fonts.constructors or { }
 fonts.constructors           = constructors
-local handlers               = { }
+local handlers               = fonts.handlers or { } -- can have preloaded tables
 fonts.handlers               = handlers
 
 local specifiers             = fonts.specifiers
@@ -3630,6 +3922,10 @@ function constructors.scale(tfmdata,specification)
     elseif forcedsize > 1000 then -- safeguard
         scaledpoints = forcedsize
     end
+    targetparameters.mathsize    = mathsize    -- context specific
+    targetparameters.textsize    = textsize    -- context specific
+    targetparameters.forcedsize  = forcedsize  -- context specific
+    targetparameters.extrafactor = extrafactor -- context specific
     --
     local tounicode     = resources.tounicode
     local defaultwidth  = resources.defaultwidth  or 0
@@ -3809,13 +4105,16 @@ function constructors.scale(tfmdata,specification)
     -- some context specific trickery (this will move to a plugin)
     --
     if hasmath then
-        if properties.mathitalics then
-            italickey = "italic_correction"
-            if trace_defining then
-                report_defining("math italics disabled for: name '%s', fullname: '%s', filename: '%s'",
-                    name or "noname",fullname or "nofullname",filename or "nofilename")
-            end
-        end
+     -- the latest luatex can deal with it itself so we now disable this
+     -- mechanism here
+     --
+     -- if properties.mathitalics then
+     --     italickey = "italic_correction"
+     --     if trace_defining then
+     --         report_defining("math italics disabled for: name '%s', fullname: '%s', filename: '%s'",
+     --             name or "noname",fullname or "nofullname",filename or "nofilename")
+     --     end
+     -- end
         autoitalicamount = false -- new
     else
         if properties.textitalics then
@@ -4341,7 +4640,7 @@ setmetatableindex(formats, function(t,k)
         t[k] = l
         return l
     end
-    return rawget(t,file.extname(l))
+    return rawget(t,file.suffix(l))
 end)
 
 local locations = { }
@@ -4438,19 +4737,31 @@ function constructors.getfeatureaction(what,where,mode,name)
     end
 end
 
-function constructors.newfeatures(what)
-    local features = handlers[what].features
+function constructors.newhandler(what) -- could be a metatable newindex
+    local handler = handlers[what]
+    if not handler then
+        handler = { }
+        handlers[what] = handler
+    end
+    return handler
+end
+
+function constructors.newfeatures(what) -- could be a metatable newindex
+    local handler = handlers[what]
+    local features = handler.features
     if not features then
-        local tables = handlers[what].tables -- can be preloaded
+        local tables     = handler.tables     -- can be preloaded
+        local statistics = handler.statistics -- can be preloaded
         features = allocate {
             defaults     = { },
             descriptions = tables and tables.features or { },
+            used         = statistics and statistics.usedfeatures or { },
             initializers = { base = { }, node = { } },
             processors   = { base = { }, node = { } },
             manipulators = { base = { }, node = { } },
         }
         features.register = function(specification) return register(features,specification) end
-        handlers[what].features = features -- will also become hidden
+        handler.features = features -- will also become hidden
     end
     return features
 end
@@ -4652,17 +4963,17 @@ local format, match, lower = string.format, string.match, string.lower
 local tonumber = tonumber
 local P, S, R, C, V, lpegmatch = lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.V, lpeg.match
 
+local fonts, logs, trackers = fonts, logs, trackers
+
 local trace_loading = false  trackers.register("otf.loading", function(v) trace_loading = v end)
 
-local report_otf = logs.reporter("fonts","otf loading")
+local report_otf    = logs.reporter("fonts","otf loading")
 
-local fonts  = fonts
+local cid           = { }
+fonts.cid           = cid
 
-local cid    = { }
-fonts.cid    = cid
-
-local cidmap = { }
-local cidmax = 10
+local cidmap        = { }
+local cidmax        = 10
 
 -- original string parser: 0.109, lpeg parser: 0.036 seconds for Adobe-CNS1-4.cidmap
 --
@@ -4721,8 +5032,7 @@ local function loadcidfile(filename)
     end
 end
 
-cid.loadfile = loadcidfile -- we use the frozen variant
-
+cid.loadfile   = loadcidfile -- we use the frozen variant
 local template = "%s-%s-%s.cidmap"
 
 local function locate(registry,ordering,supplement)
@@ -4818,18 +5128,20 @@ if not modules then modules = { } end modules ['font-map'] = {
     license   = "see context related readme files"
 }
 
+local tonumber = tonumber
+
 local match, format, find, concat, gsub, lower = string.match, string.format, string.find, table.concat, string.gsub, string.lower
 local P, R, S, C, Ct, Cc, lpegmatch = lpeg.P, lpeg.R, lpeg.S, lpeg.C, lpeg.Ct, lpeg.Cc, lpeg.match
 local utfbyte = utf.byte
 
-local trace_loading = false  trackers.register("fonts.loading",    function(v) trace_loading    = v end)
+local trace_loading = false  trackers.register("fonts.loading", function(v) trace_loading    = v end)
 local trace_mapping = false  trackers.register("fonts.mapping", function(v) trace_unimapping = v end)
 
 local report_fonts  = logs.reporter("fonts","loading") -- not otf only
 
-local fonts    = fonts
-local mappings = { }
-fonts.mappings = mappings
+local fonts         = fonts
+local mappings      = fonts.mappings or { }
+fonts.mappings      = mappings
 
 --[[ldx--
 <p>Eventually this code will disappear because map files are kind
@@ -4852,7 +5164,7 @@ end
 local hex     = R("AF","09")
 local hexfour = (hex*hex*hex*hex) / function(s) return tonumber(s,16) end
 local hexsix  = (hex^1)           / function(s) return tonumber(s,16) end
-local dec     = (R("09")^1)  / tonumber
+local dec     = (R("09")^1) / tonumber
 local period  = P(".")
 local unicode = P("uni")   * (hexfour * (period + P(-1)) * Cc(false) + Ct(hexfour^1) * Cc(true))
 local ucode   = P("u")     * (hexsix  * (period + P(-1)) * Cc(false) + Ct(hexsix ^1) * Cc(true))
@@ -5263,14 +5575,15 @@ if not modules then modules = { } end modules ['font-oti'] = {
 
 local lower = string.lower
 
-local allocate = utilities.storage.allocate
-
 local fonts              = fonts
-local otf                = { }
-fonts.handlers.otf       = otf
+local constructors       = fonts.constructors
 
-local otffeatures        = fonts.constructors.newfeatures("otf")
+local otf                = constructors.newhandler("otf")
+local otffeatures        = constructors.newfeatures("otf")
+local otftables          = otf.tables
 local registerotffeature = otffeatures.register
+
+local allocate           = utilities.storage.allocate
 
 registerotffeature {
     name        = "features",
@@ -5279,8 +5592,6 @@ registerotffeature {
 }
 
 -- these are later hooked into node and base initializaters
-
-local otftables = otf.tables -- not always defined
 
 local function setmode(tfmdata,value)
     if value then
@@ -5365,8 +5676,6 @@ if not modules then modules = { } end modules ['font-otf'] = {
 -- ascent descent
 
 -- more checking against low level calls of functions
-
-local utf = unicode.utf8
 
 local utfbyte = utf.byte
 local format, gmatch, gsub, find, match, lower, strip = string.format, string.gmatch, string.gsub, string.find, string.match, string.lower, string.strip
@@ -5807,32 +6116,32 @@ function otf.load(filename,format,sub,featurefile)
             starttiming(data)
             report_otf("file size: %s", size)
             enhancers.apply(data,filename,fontdata)
+            local packtime = { }
             if packdata then
                 if cleanup > 0 then
                     collectgarbage("collect")
---~ lua.collectgarbage()
                 end
+                starttiming(packtime)
                 enhance("pack",data,filename,nil)
+                stoptiming(packtime)
             end
             report_otf("saving in cache: %s",filename)
             data = containers.write(otf.cache, hash, data)
             if cleanup > 1 then
                 collectgarbage("collect")
---~ lua.collectgarbage()
             end
             stoptiming(data)
             if elapsedtime then -- not in generic
-                report_otf("preprocessing and caching took %s seconds",elapsedtime(data))
+                report_otf("preprocessing and caching took %s seconds (packtime: %s)",
+                    elapsedtime(data),packdata and elapsedtime(packtime) or 0)
             end
             fontloader.close(fontdata) -- free memory
             if cleanup > 3 then
                 collectgarbage("collect")
---~ lua.collectgarbage()
             end
             data = containers.read(otf.cache, hash) -- this frees the old table and load the sparse one
             if cleanup > 2 then
                 collectgarbage("collect")
---~ lua.collectgarbage()
             end
         else
             data = nil
@@ -6410,7 +6719,10 @@ actions["reorganize subtables"] = function(data,filename,raw)
                     --
                     local name = gk.name
                     --
-                    if features then
+                    if not name then
+                        -- in fact an error
+                        report_otf("skipping weird lookup number %s",k)
+                    elseif features then
                         -- scripts, tag, ismac
                         local f = { }
                         for i=1,#features do
@@ -6466,7 +6778,7 @@ actions["prepare lookups"] = function(data,filename,raw)
 end
 
 -- The reverse handler does a bit redundant splitting but it's seldom
--- seen so we don' tbother too much. We could store the replacement
+-- seen so we don't bother too much. We could store the replacement
 -- in the current list (value instead of true) but it makes other code
 -- uglier. Maybe some day.
 
@@ -6482,6 +6794,22 @@ local function t_uncover(splitter,cache,covers)
         result[n] = uncovered
     end
     return result
+end
+
+local function s_uncover(splitter,cache,cover)
+    if cover == "" then
+        return nil
+    else
+        local uncovered = cache[cover]
+        if not uncovered then
+            uncovered = lpegmatch(splitter,cover)
+--             for i=1,#uncovered do
+--                 uncovered[i] = { [uncovered[i]] = true }
+--             end
+            cache[cover] = uncovered
+        end
+        return { uncovered }
+    end
 end
 
 local function t_hashed(t,cache)
@@ -6502,22 +6830,6 @@ local function t_hashed(t,cache)
         return ht
     else
         return nil
-    end
-end
-
-local function s_uncover(splitter,cache,cover)
-    if cover == "" then
-        return nil
-    else
-        local uncovered = cache[cover]
-        if not uncovered then
-            uncovered = lpegmatch(splitter,cover)
-            for i=1,#uncovered do
-                uncovered[i] = { [uncovered[i]] = true }
-            end
-            cache[cover] = uncovered
-        end
-        return uncovered
     end
 end
 
@@ -6545,11 +6857,15 @@ local function r_uncover(splitter,cache,cover,replacements)
     end
 end
 
-actions["reorganize lookups"] = function(data,filename,raw)
+actions["reorganize lookups"] = function(data,filename,raw) -- we could check for "" and n == 0
     -- we prefer the before lookups in a normal order
     if data.lookups then
         local splitter = data.helpers.tounicodetable
-        local cache, h_cache = { }, { }
+        local t_u_cache = { }
+        local s_u_cache = t_u_cache -- string keys
+        local t_h_cache = { }
+        local s_h_cache = t_h_cache -- table keys (so we could use one cache)
+        local r_u_cache = { } -- maybe shared
         for _, lookup in next, data.lookups do
             local rules = lookup.rules
             if rules then
@@ -6557,15 +6873,15 @@ actions["reorganize lookups"] = function(data,filename,raw)
                 if format == "class" then
                     local before_class = lookup.before_class
                     if before_class then
-                        before_class = t_uncover(splitter,cache,reversed(before_class))
+                        before_class = t_uncover(splitter,t_u_cache,reversed(before_class))
                     end
                     local current_class = lookup.current_class
                     if current_class then
-                        current_class = t_uncover(splitter,cache,current_class)
+                        current_class = t_uncover(splitter,t_u_cache,current_class)
                     end
                     local after_class = lookup.after_class
                     if after_class then
-                        after_class = t_uncover(splitter,cache,after_class)
+                        after_class = t_uncover(splitter,t_u_cache,after_class)
                     end
                     for i=1,#rules do
                         local rule = rules[i]
@@ -6575,7 +6891,7 @@ actions["reorganize lookups"] = function(data,filename,raw)
                             for i=1,#before do
                                 before[i] = before_class[before[i]] or { }
                             end
-                            rule.before = t_hashed(before,h_cache)
+                            rule.before = t_hashed(before,t_h_cache)
                         end
                         local current = class.current
                         local lookups = rule.lookups
@@ -6586,14 +6902,14 @@ actions["reorganize lookups"] = function(data,filename,raw)
                                     lookups[i] = false -- e.g. we can have two lookups and one replacement
                                 end
                             end
-                            rule.current = t_hashed(current,h_cache)
+                            rule.current = t_hashed(current,t_h_cache)
                         end
                         local after = class.after
                         if after then
                             for i=1,#after do
                                 after[i] = after_class[after[i]] or { }
                             end
-                            rule.after = t_hashed(after,h_cache)
+                            rule.after = t_hashed(after,t_h_cache)
                         end
                         rule.class = nil
                     end
@@ -6608,18 +6924,18 @@ actions["reorganize lookups"] = function(data,filename,raw)
                         if coverage then
                             local before = coverage.before
                             if before then
-                                before = t_uncover(splitter,cache,reversed(before))
-                                rule.before = t_hashed(before,h_cache)
+                                before = t_uncover(splitter,t_u_cache,reversed(before))
+                                rule.before = t_hashed(before,t_h_cache)
                             end
                             local current = coverage.current
                             if current then
-                                current = t_uncover(splitter,cache,current)
-                                rule.current = t_hashed(current,h_cache)
+                                current = t_uncover(splitter,t_u_cache,current)
+                                rule.current = t_hashed(current,t_h_cache)
                             end
                             local after = coverage.after
                             if after then
-                                after = t_uncover(splitter,cache,after)
-                                rule.after = t_hashed(after,h_cache)
+                                after = t_uncover(splitter,t_u_cache,after)
+                                rule.after = t_hashed(after,t_h_cache)
                             end
                             rule.coverage = nil
                         end
@@ -6631,22 +6947,22 @@ actions["reorganize lookups"] = function(data,filename,raw)
                         if reversecoverage then
                             local before = reversecoverage.before
                             if before then
-                                before = t_uncover(splitter,cache,reversed(before))
-                                rule.before = t_hashed(before,h_cache)
+                                before = t_uncover(splitter,t_u_cache,reversed(before))
+                                rule.before = t_hashed(before,t_h_cache)
                             end
                             local current = reversecoverage.current
                             if current then
-                                current = t_uncover(splitter,cache,current)
-                                rule.current = t_hashed(current,h_cache)
+                                current = t_uncover(splitter,t_u_cache,current)
+                                rule.current = t_hashed(current,t_h_cache)
                             end
                             local after = reversecoverage.after
                             if after then
-                                after = t_uncover(splitter,cache,after)
-                                rule.after = t_hashed(after,h_cache)
+                                after = t_uncover(splitter,t_u_cache,after)
+                                rule.after = t_hashed(after,t_h_cache)
                             end
                             local replacements = reversecoverage.replacements
                             if replacements then
-                                rule.replacements = r_uncover(splitter,cache,current,replacements)
+                                rule.replacements = r_uncover(splitter,r_u_cache,current,replacements)
                             end
                             rule.reversecoverage = nil
                         end
@@ -6657,19 +6973,19 @@ actions["reorganize lookups"] = function(data,filename,raw)
                         local glyphs = rule.glyphs
                         if glyphs then
                             local fore = glyphs.fore
-                            if fore then
-                                fore = s_uncover(splitter,cache,fore)
-                                rule.before = s_hashed(fore,h_cache)
+                            if fore and fore ~= "" then
+                                fore = s_uncover(splitter,s_u_cache,fore)
+                                rule.before = s_hashed(fore,s_h_cache)
                             end
                             local back = glyphs.back
                             if back then
-                                back = s_uncover(splitter,cache,back)
-                                rule.after = s_hashed(back,h_cache)
+                                back = s_uncover(splitter,s_u_cache,back)
+                                rule.after = s_hashed(back,s_h_cache)
                             end
                             local names = glyphs.names
                             if names then
-                                names = s_uncover(splitter,cache,names)
-                                rule.current = s_hashed(names,h_cache)
+                                names = s_uncover(splitter,s_u_cache,names)
+                                rule.current = s_hashed(names,s_h_cache)
                             end
                             rule.glyphs = nil
                         end
@@ -6839,6 +7155,9 @@ actions["merge kern classes"] = function(data,filename,raw)
                             if type(lookups) ~= "table" then
                                 lookups = { lookups }
                             end
+                         -- if offsets[1] == nil then
+                         --     offsets[1] = ""
+                         -- end
                             -- we can check the max in the loop
                          -- local maxseconds = getn(seconds)
                             for n, s in next, firsts do
@@ -6859,9 +7178,9 @@ actions["merge kern classes"] = function(data,filename,raw)
                                     if splt then
                                         local extrakerns = { }
                                         local baseoffset = (fk-1) * maxseconds
-                                     -- for sk=2,maxseconds do
-                                     --     local sv = seconds[sk]
-                                        for sk, sv in next, seconds do
+                                        for sk=2,maxseconds do -- will become 1 based in future luatex
+                                            local sv = seconds[sk]
+                                     -- for sk, sv in next, seconds do
                                             local splt = split[sv]
                                             if splt then -- redundant test
                                                 local offset = offsets[baseoffset + sk]
@@ -7324,7 +7643,7 @@ local function read_from_otf(specification)
         local allfeatures = tfmdata.shared.features or specification.features.normal
         constructors.applymanipulators("otf",tfmdata,allfeatures,trace_features,report_otf)
         constructors.setname(tfmdata,specification) -- only otf?
-        fonts.loggers.register(tfmdata,file.extname(specification.filename),specification)
+        fonts.loggers.register(tfmdata,file.suffix(specification.filename),specification)
     end
     return tfmdata
 end
@@ -7448,26 +7767,27 @@ local type, next, tonumber, tostring = type, next, tonumber, tostring
 local lpegmatch = lpeg.match
 local utfchar = utf.char
 
-local trace_baseinit      = false  trackers.register("otf.baseinit",     function(v) trace_baseinit     = v end)
-local trace_singles       = false  trackers.register("otf.singles",      function(v) trace_singles      = v end)
-local trace_multiples     = false  trackers.register("otf.multiples",    function(v) trace_multiples    = v end)
-local trace_alternatives  = false  trackers.register("otf.alternatives", function(v) trace_alternatives = v end)
-local trace_ligatures     = false  trackers.register("otf.ligatures",    function(v) trace_ligatures    = v end)
-local trace_kerns         = false  trackers.register("otf.kerns",        function(v) trace_kerns        = v end)
-local trace_preparing     = false  trackers.register("otf.preparing",    function(v) trace_preparing    = v end)
+local trace_baseinit         = false  trackers.register("otf.baseinit",         function(v) trace_baseinit         = v end)
+local trace_singles          = false  trackers.register("otf.singles",          function(v) trace_singles          = v end)
+local trace_multiples        = false  trackers.register("otf.multiples",        function(v) trace_multiples        = v end)
+local trace_alternatives     = false  trackers.register("otf.alternatives",     function(v) trace_alternatives     = v end)
+local trace_ligatures        = false  trackers.register("otf.ligatures",        function(v) trace_ligatures        = v end)
+local trace_ligatures_detail = false  trackers.register("otf.ligatures.detail", function(v) trace_ligatures_detail = v end)
+local trace_kerns            = false  trackers.register("otf.kerns",            function(v) trace_kerns            = v end)
+local trace_preparing        = false  trackers.register("otf.preparing",        function(v) trace_preparing        = v end)
 
-local report_prepare      = logs.reporter("fonts","otf prepare")
+local report_prepare         = logs.reporter("fonts","otf prepare")
 
-local fonts               = fonts
-local otf                 = fonts.handlers.otf
+local fonts                  = fonts
+local otf                    = fonts.handlers.otf
 
-local otffeatures         = fonts.constructors.newfeatures("otf")
-local registerotffeature  = otffeatures.register
+local otffeatures            = otf.features
+local registerotffeature     = otffeatures.register
 
-otf.defaultbasealternate  = "none" -- first last
+otf.defaultbasealternate     = "none" -- first last
 
-local wildcard = "*"
-local default  = "dflt"
+local wildcard               = "*"
+local default                = "dflt"
 
 local function gref(descriptions,n)
     if type(n) == "number" then
@@ -7481,8 +7801,8 @@ local function gref(descriptions,n)
         local num, nam = { }, { }
         for i=2,#n do -- first is likely a key
             local ni = n[i]
-            num[i] = format("U+%05X",ni)
-            nam[i] = descriptions[ni].name or "?"
+            num[i-1] = format("U+%05X",ni)
+            nam[i-1] = descriptions[ni].name or "?"
         end
         return format("%s (%s)",concat(num," "), concat(nam," "))
     else
@@ -7602,7 +7922,7 @@ local function finalize_ligatures(tfmdata,ligatures)
                 if ligature then
                     local unicode, lookupdata = ligature[1], ligature[2]
                     if trace then
-                        print("BUILDING",concat(lookupdata," "),unicode)
+                        trace_ligatures_detail("building %q into %q",concat(lookupdata," "),unicode)
                     end
                     local size = #lookupdata
                     local firstcode = lookupdata[1] -- [2]
@@ -7615,7 +7935,7 @@ local function finalize_ligatures(tfmdata,ligatures)
                             if not firstdata then
                                 firstcode = private
                                 if trace then
-                                    print(" DEFINING",firstname,firstcode)
+                                    trace_ligatures_detail("defining %q as %q",firstname,firstcode)
                                 end
                                 unicodes[firstname] = firstcode
                                 firstdata = { intermediate = true, ligatures = { } }
@@ -7639,7 +7959,7 @@ local function finalize_ligatures(tfmdata,ligatures)
                                 end
                             end
                             if trace then
-                                print("CODES",firstname,firstcode,secondname,secondcode,target)
+                                trace_ligatures_detail("codes (%s,%s) + (%s,%s) -> %s",firstname,firstcode,secondname,secondcode,target)
                             end
                             local firstligs = firstdata.ligatures
                             if firstligs then
@@ -8087,7 +8407,7 @@ if not modules then modules = { } end modules ['node-inj'] = {
 -- This is very experimental (this will change when we have luatex > .50 and
 -- a few pending thingies are available. Also, Idris needs to make a few more
 -- test fonts. Btw, future versions of luatex will have extended glyph properties
--- that can be of help.
+-- that can be of help. Some optimizations can go away when we have faster machines.
 
 local next = next
 
@@ -8112,38 +8432,26 @@ local traverse_id        = node.traverse_id
 local unset_attribute    = node.unset_attribute
 local has_attribute      = node.has_attribute
 local set_attribute      = node.set_attribute
-local copy_node          = node.copy
 local insert_node_before = node.insert_before
 local insert_node_after  = node.insert_after
 
+local kernpair = attributes.private('kernpair')
+local ligacomp = attributes.private('ligacomp')
 local markbase = attributes.private('markbase')
 local markmark = attributes.private('markmark')
 local markdone = attributes.private('markdone')
 local cursbase = attributes.private('cursbase')
 local curscurs = attributes.private('curscurs')
 local cursdone = attributes.private('cursdone')
-local kernpair = attributes.private('kernpair')
-local ligacomp = attributes.private('ligacomp')
-local fontkern = attributes.private('fontkern')
-
-if context then
-
-    local kern = nodes.pool.register(newkern())
-
-    set_attribute(kern,fontkern,1) -- we can have several, attributes are shared
-
-    newkern = function(k)
-        local c = copy_node(kern)
-        c.kern = k
-        return c
-    end
-
-end
 
 -- This injector has been tested by Idris Samawi Hamid (several arabic fonts as well as
 -- the rather demanding Husayni font), Khaled Hosny (latin and arabic) and Kaj Eigner
 -- (arabic, hebrew and thai) and myself (whatever font I come across). I'm pretty sure
 -- that this code is not 100% okay but examples are needed to figure things out.
+
+function injections.installnewkern(nk)
+    newkern = nk or newkern
+end
 
 local cursives = { }
 local marks    = { }
@@ -8430,16 +8738,13 @@ function injections.handler(head,where,keep)
                                         -- new per 2010-10-06, width adapted per 2010-02-03
                                         -- we used to negate the width of marks because in tfm
                                         -- that makes sense but we no longer do that so as a
-                                        -- consequence the sign of p.width was changed (we need
-                                        -- to keep an eye on it as we don't have that many fonts
-                                        -- that enter this branch .. I'm still not sure if this
-                                        -- one is right
+                                        -- consequence the sign of p.width was changed
                                         local k = wx[p]
                                         if k then
-                                            n.xoffset = p.xoffset + p.width + d[1] - k[2]
+                                            -- brill roman: A\char"0300 (but ugly anyway)
+                                            n.xoffset = p.xoffset - p.width + d[1] - k[2] -- was + p.width
                                         else
-                                         -- n.xoffset = p.xoffset + p.width + d[1]
-                                            -- lucida U\char"032F (default+mark)
+                                            -- lucida: U\char"032F (default+mark)
                                             n.xoffset = p.xoffset - p.width + d[1] -- 01-05-2011
                                         end
                                     else
@@ -8579,6 +8884,371 @@ end -- closure
 
 do -- begin closure to overcome local limits and interference
 
+if not modules then modules = { } end modules ['font-ota'] = {
+    version   = 1.001,
+    comment   = "companion to font-otf.lua (analysing)",
+    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
+    copyright = "PRAGMA ADE / ConTeXt Development Team",
+    license   = "see context related readme files"
+}
+
+-- this might become scrp-*.lua
+
+local type = type
+
+if not trackers then trackers = { register = function() end } end
+
+local trace_analyzing = false  trackers.register("otf.analyzing",  function(v) trace_analyzing = v end)
+
+local fonts, nodes, node = fonts, nodes, node
+
+local allocate            = utilities.storage.allocate
+
+local otf                 = fonts.handlers.otf
+
+local analyzers           = fonts.analyzers
+local initializers        = allocate()
+local methods             = allocate()
+
+analyzers.initializers    = initializers
+analyzers.methods         = methods
+analyzers.useunicodemarks = false
+
+local nodecodes           = nodes.nodecodes
+local glyph_code          = nodecodes.glyph
+
+local set_attribute       = node.set_attribute
+local has_attribute       = node.has_attribute
+local traverse_id         = node.traverse_id
+local traverse_node_list  = node.traverse
+
+local fontdata            = fonts.hashes.identifiers
+local state               = attributes.private('state')
+local categories          = characters and characters.categories or { } -- sorry, only in context
+
+local otffeatures         = fonts.constructors.newfeatures("otf")
+local registerotffeature  = otffeatures.register
+
+--[[ldx--
+<p>Analyzers run per script and/or language and are needed in order to
+process features right.</p>
+--ldx]]--
+
+analyzers.constants = {
+    init = 1,
+    medi = 2,
+    fina = 3,
+    isol = 4,
+ -- devanagari
+    rphf = 5,
+    half = 6,
+    pref = 7,
+    blwf = 8,
+    pstf = 9,
+}
+
+-- todo: analyzers per script/lang, cross font, so we need an font id hash -> script
+-- e.g. latin -> hyphenate, arab -> 1/2/3 analyze -- its own namespace
+
+function analyzers.setstate(head,font)
+    local useunicodemarks  = analyzers.useunicodemarks
+    local tfmdata = fontdata[font]
+    local characters = tfmdata.characters
+    local descriptions = tfmdata.descriptions
+    local first, last, current, n, done = nil, nil, head, 0, false -- maybe make n boolean
+    while current do
+        local id = current.id
+        if id == glyph_code and current.font == font then
+            local char = current.char
+            local d = descriptions[char]
+            if d then
+                if d.class == "mark" or (useunicodemarks and categories[char] == "mn") then
+                    done = true
+                    set_attribute(current,state,5) -- mark
+                elseif n == 0 then
+                    first, last, n = current, current, 1
+                    set_attribute(current,state,1) -- init
+                else
+                    last, n = current, n+1
+                    set_attribute(current,state,2) -- medi
+                end
+            else -- finish
+                if first and first == last then
+                    set_attribute(last,state,4) -- isol
+                elseif last then
+                    set_attribute(last,state,3) -- fina
+                end
+                first, last, n = nil, nil, 0
+            end
+        elseif id == disc_code then
+            -- always in the middle
+            set_attribute(current,state,2) -- midi
+            last = current
+        else -- finish
+            if first and first == last then
+                set_attribute(last,state,4) -- isol
+            elseif last then
+                set_attribute(last,state,3) -- fina
+            end
+            first, last, n = nil, nil, 0
+        end
+        current = current.next
+    end
+    if first and first == last then
+        set_attribute(last,state,4) -- isol
+    elseif last then
+        set_attribute(last,state,3) -- fina
+    end
+    return head, done
+end
+
+-- in the future we will use language/script attributes instead of the
+-- font related value, but then we also need dynamic features which is
+-- somewhat slower; and .. we need a chain of them
+
+local function analyzeinitializer(tfmdata,value) -- attr
+    local script, language = otf.scriptandlanguage(tfmdata) -- attr
+    local action = initializers[script]
+    if not action then
+        -- skip
+    elseif type(action) == "function" then
+        return action(tfmdata,value)
+    else
+        local action = action[language]
+        if action then
+            return action(tfmdata,value)
+        end
+    end
+end
+
+local function analyzeprocessor(head,font,attr)
+    local tfmdata = fontdata[font]
+    local script, language = otf.scriptandlanguage(tfmdata,attr)
+    local action = methods[script]
+    if not action then
+        -- skip
+    elseif type(action) == "function" then
+        return action(head,font,attr)
+    else
+        action = action[language]
+        if action then
+            return action(head,font,attr)
+        end
+    end
+    return head, false
+end
+
+registerotffeature {
+    name         = "analyze",
+    description  = "analysis of (for instance) character classes",
+    default      = true,
+    initializers = {
+        node     = analyzeinitializer,
+    },
+    processors = {
+        position = 1,
+        node     = analyzeprocessor,
+    }
+}
+
+-- latin
+
+methods.latn = analyzers.setstate
+
+-- this info eventually will go into char-def and we will have a state
+-- table for generic then
+
+local zwnj = 0x200C
+local zwj  = 0x200D
+
+local isol = {
+    [0x0600] = true, [0x0601] = true, [0x0602] = true, [0x0603] = true,
+    [0x0608] = true, [0x060B] = true, [0x0621] = true, [0x0674] = true,
+    [0x06DD] = true, [zwnj] = true,
+}
+
+local isol_fina = {
+    [0x0622] = true, [0x0623] = true, [0x0624] = true, [0x0625] = true,
+    [0x0627] = true, [0x0629] = true, [0x062F] = true, [0x0630] = true,
+    [0x0631] = true, [0x0632] = true, [0x0648] = true, [0x0671] = true,
+    [0x0672] = true, [0x0673] = true, [0x0675] = true, [0x0676] = true,
+    [0x0677] = true, [0x0688] = true, [0x0689] = true, [0x068A] = true,
+    [0x068B] = true, [0x068C] = true, [0x068D] = true, [0x068E] = true,
+    [0x068F] = true, [0x0690] = true, [0x0691] = true, [0x0692] = true,
+    [0x0693] = true, [0x0694] = true, [0x0695] = true, [0x0696] = true,
+    [0x0697] = true, [0x0698] = true, [0x0699] = true, [0x06C0] = true,
+    [0x06C3] = true, [0x06C4] = true, [0x06C5] = true, [0x06C6] = true,
+    [0x06C7] = true, [0x06C8] = true, [0x06C9] = true, [0x06CA] = true,
+    [0x06CB] = true, [0x06CD] = true, [0x06CF] = true, [0x06D2] = true,
+    [0x06D3] = true, [0x06D5] = true, [0x06EE] = true, [0x06EF] = true,
+    [0x0759] = true, [0x075A] = true, [0x075B] = true, [0x076B] = true,
+    [0x076C] = true, [0x0771] = true, [0x0773] = true, [0x0774] = true,
+	[0x0778] = true, [0x0779] = true, [0xFEF5] = true, [0xFEF7] = true,
+	[0xFEF9] = true, [0xFEFB] = true,
+
+    -- syriac
+
+	[0x0710] = true, [0x0715] = true, [0x0716] = true, [0x0717] = true,
+	[0x0718] = true, [0x0719] = true, [0x0728] = true, [0x072A] = true,
+	[0x072C] = true, [0x071E] = true,
+}
+
+local isol_fina_medi_init = {
+    [0x0626] = true, [0x0628] = true, [0x062A] = true, [0x062B] = true,
+    [0x062C] = true, [0x062D] = true, [0x062E] = true, [0x0633] = true,
+    [0x0634] = true, [0x0635] = true, [0x0636] = true, [0x0637] = true,
+    [0x0638] = true, [0x0639] = true, [0x063A] = true, [0x063B] = true,
+    [0x063C] = true, [0x063D] = true, [0x063E] = true, [0x063F] = true,
+    [0x0640] = true, [0x0641] = true, [0x0642] = true, [0x0643] = true,
+    [0x0644] = true, [0x0645] = true, [0x0646] = true, [0x0647] = true,
+    [0x0649] = true, [0x064A] = true, [0x066E] = true, [0x066F] = true,
+    [0x0678] = true, [0x0679] = true, [0x067A] = true, [0x067B] = true,
+    [0x067C] = true, [0x067D] = true, [0x067E] = true, [0x067F] = true,
+    [0x0680] = true, [0x0681] = true, [0x0682] = true, [0x0683] = true,
+    [0x0684] = true, [0x0685] = true, [0x0686] = true, [0x0687] = true,
+    [0x069A] = true, [0x069B] = true, [0x069C] = true, [0x069D] = true,
+    [0x069E] = true, [0x069F] = true, [0x06A0] = true, [0x06A1] = true,
+    [0x06A2] = true, [0x06A3] = true, [0x06A4] = true, [0x06A5] = true,
+    [0x06A6] = true, [0x06A7] = true, [0x06A8] = true, [0x06A9] = true,
+    [0x06AA] = true, [0x06AB] = true, [0x06AC] = true, [0x06AD] = true,
+    [0x06AE] = true, [0x06AF] = true, [0x06B0] = true, [0x06B1] = true,
+    [0x06B2] = true, [0x06B3] = true, [0x06B4] = true, [0x06B5] = true,
+    [0x06B6] = true, [0x06B7] = true, [0x06B8] = true, [0x06B9] = true,
+    [0x06BA] = true, [0x06BB] = true, [0x06BC] = true, [0x06BD] = true,
+    [0x06BE] = true, [0x06BF] = true, [0x06C1] = true, [0x06C2] = true,
+    [0x06CC] = true, [0x06CE] = true, [0x06D0] = true, [0x06D1] = true,
+    [0x06FA] = true, [0x06FB] = true, [0x06FC] = true, [0x06FF] = true,
+    [0x0750] = true, [0x0751] = true, [0x0752] = true, [0x0753] = true,
+    [0x0754] = true, [0x0755] = true, [0x0756] = true, [0x0757] = true,
+    [0x0758] = true, [0x075C] = true, [0x075D] = true, [0x075E] = true,
+    [0x075F] = true, [0x0760] = true, [0x0761] = true, [0x0762] = true,
+    [0x0763] = true, [0x0764] = true, [0x0765] = true, [0x0766] = true,
+    [0x0767] = true, [0x0768] = true, [0x0769] = true, [0x076A] = true,
+    [0x076D] = true, [0x076E] = true, [0x076F] = true, [0x0770] = true,
+    [0x0772] = true, [0x0775] = true, [0x0776] = true, [0x0777] = true,
+    [0x077A] = true, [0x077B] = true, [0x077C] = true, [0x077D] = true,
+    [0x077E] = true, [0x077F] = true,
+
+    -- syriac
+
+    [0x0712] = true, [0x0713] = true, [0x0714] = true, [0x071A] = true,
+    [0x071B] = true, [0x071C] = true, [0x071D] = true, [0x071F] = true,
+    [0x0720] = true, [0x0721] = true, [0x0722] = true, [0x0723] = true,
+    [0x0724] = true, [0x0725] = true, [0x0726] = true, [0x0727] = true,
+    [0x0729] = true, [0x072B] = true,
+
+    -- also
+
+    [zwj] = true,
+}
+
+local arab_warned = { }
+
+-- todo: gref
+
+local function warning(current,what)
+    local char = current.char
+    if not arab_warned[char] then
+        log.report("analyze","arab: character %s (U+%05X) has no %s class", char, char, what)
+        arab_warned[char] = true
+    end
+end
+
+local function finish(first,last)
+    if last then
+        if first == last then
+            local fc = first.char
+            if isol_fina_medi_init[fc] or isol_fina[fc] then
+                set_attribute(first,state,4) -- isol
+            else
+                warning(first,"isol")
+                set_attribute(first,state,0) -- error
+            end
+        else
+            local lc = last.char
+            if isol_fina_medi_init[lc] or isol_fina[lc] then -- why isol here ?
+            -- if laststate == 1 or laststate == 2 or laststate == 4 then
+                set_attribute(last,state,3) -- fina
+            else
+                warning(last,"fina")
+                set_attribute(last,state,0) -- error
+            end
+        end
+        first, last = nil, nil
+    elseif first then
+        -- first and last are either both set so we never com here
+        local fc = first.char
+        if isol_fina_medi_init[fc] or isol_fina[fc] then
+            set_attribute(first,state,4) -- isol
+        else
+            warning(first,"isol")
+            set_attribute(first,state,0) -- error
+        end
+        first = nil
+    end
+    return first, last
+end
+
+function methods.arab(head,font,attr) -- maybe make a special version with no trace
+    local useunicodemarks = analyzers.useunicodemarks
+    local tfmdata = fontdata[font]
+    local marks = tfmdata.resources.marks
+    local first, last, current, done = nil, nil, head, false
+    while current do
+        if current.id == glyph_code and current.font == font and current.subtype<256 and not has_attribute(current,state) then
+            done = true
+            local char = current.char
+            if marks[char] or (useunicodemarks and categories[char] == "mn") then
+                set_attribute(current,state,5) -- mark
+            elseif isol[char] then -- can be zwj or zwnj too
+                first, last = finish(first,last)
+                set_attribute(current,state,4) -- isol
+                first, last = nil, nil
+            elseif not first then
+                if isol_fina_medi_init[char] then
+                    set_attribute(current,state,1) -- init
+                    first, last = first or current, current
+                elseif isol_fina[char] then
+                    set_attribute(current,state,4) -- isol
+                    first, last = nil, nil
+                else -- no arab
+                    first, last = finish(first,last)
+                end
+            elseif isol_fina_medi_init[char] then
+                first, last = first or current, current
+                set_attribute(current,state,2) -- medi
+            elseif isol_fina[char] then
+                if not has_attribute(last,state,1) then
+                    -- tricky, we need to check what last may be !
+                    set_attribute(last,state,2) -- medi
+                end
+                set_attribute(current,state,3) -- fina
+                first, last = nil, nil
+            elseif char >= 0x0600 and char <= 0x06FF then
+                set_attribute(current,state,6) -- rest
+                first, last = finish(first,last)
+            else --no
+                first, last = finish(first,last)
+            end
+        else
+            first, last = finish(first,last)
+        end
+        current = current.next
+    end
+    first, last = finish(first,last)
+    return head, done
+end
+
+methods.syrc = methods.arab
+
+directives.register("otf.analyze.useunicodemarks",function(v)
+    analyzers.useunicodemarks = v
+end)
+
+end -- closure
+
+do -- begin closure to overcome local limits and interference
+
 if not modules then modules = { } end modules ['font-otn'] = {
     version   = 1.001,
     comment   = "companion to font-ini.mkiv",
@@ -8609,6 +9279,8 @@ if not modules then modules = { } end modules ['font-otn'] = {
 -- handle positions (we need example fonts)
 -- handle gpos_single (we might want an extra width field in glyph nodes because adding kerns might interfere)
 -- mark (to mark) code is still not what it should be (too messy but we need some more extreem husayni tests)
+-- remove some optimizations (when I have a faster machine)
+
 
 --[[ldx--
 <p>This module is a bit more split up that I'd like but since we also want to test
@@ -8697,6 +9369,8 @@ results in different tables.</p>
 -- we now use only one hash. If needed we can have multiple again but in that
 -- case I will probably prefix (i.e. rename) the lookups in the cached font file.
 
+-- Todo: make plugin feature that operates on char/glyphnode arrays
+
 local concat, insert, remove = table.concat, table.insert, table.remove
 local format, gmatch, gsub, find, match, lower, strip = string.format, string.gmatch, string.gsub, string.find, string.match, string.lower, string.strip
 local type, next, tonumber, tostring = type, next, tonumber, tostring
@@ -8732,6 +9406,7 @@ local report_subchain = logs.reporter("fonts","otf subchain")
 local report_chain    = logs.reporter("fonts","otf chain")
 local report_process  = logs.reporter("fonts","otf process")
 local report_prepare  = logs.reporter("fonts","otf prepare")
+local report_warning  = logs.reporter("fonts","otf warning")
 
 registertracker("otf.verbose_chain", function(v) otf.setcontextchain(v and "verbose") end)
 registertracker("otf.normal_chain",  function(v) otf.setcontextchain(v and "normal")  end)
@@ -8891,105 +9566,229 @@ local function pref(kind,lookupname)
     return format("feature %s, lookup %s",kind,lookupname)
 end
 
--- we can assume that languages that use marks are not hyphenated
--- we can also assume that at most one discretionary is present
+-- We can assume that languages that use marks are not hyphenated. We can also assume
+-- that at most one discretionary is present.
 
-local function markstoligature(kind,lookupname,start,stop,char)
-    local n = copy_node(start)
-    local keep = start
-    local current
-    current, start = insert_node_after(start,start,n)
-    local snext = stop.next
-    current.next = snext
-    if snext then
-        snext.prev = current
+-- We do need components in funny kerning mode but maybe I can better reconstruct then
+-- as we do have the font components info available; removing components makes the
+-- previous code much simpler. Also, later on copying and freeing becomes easier.
+-- However, for arabic we need to keep them around for the sake of mark placement
+-- and indices.
+
+local function copy_glyph(g) -- next and prev are untouched !
+    local components = g.components
+    if components then
+        g.components = nil
+        local n = copy_node(g)
+        g.components = components
+        return n
+    else
+        return copy_node(g)
     end
-    start.prev, stop.next = nil, nil
-    current.char, current.subtype, current.components = char, ligature_code, start
-    return keep
 end
 
+-- start is a mark and we need to keep that one
+
+-- local function markstoligature(kind,lookupname,start,stop,char)
+--     -- [start]..[stop]
+--     local keep = start
+--     local prev = start.prev
+--     local next = stop.next
+--     local base = copy_glyph(start)
+--     local current, start = insert_node_after(start,start,base)
+--     -- [current][start]..[stop]
+--     current.next = next
+--     if next then
+--         next.prev = current
+--     end
+--     start.prev = nil
+--     stop.next = nil
+--     current.char = char
+--     current.subtype = ligature_code
+--     current.components = start
+--     return keep
+-- end
+
+local function markstoligature(kind,lookupname,start,stop,char)
+    if start == stop and start.char == char then
+        return start
+    else
+        local prev = start.prev
+        local next = stop.next
+        start.prev = nil
+        stop.next = nil
+        local base = copy_glyph(start)
+        base.char = char
+        base.subtype = ligature_code
+        base.components = start
+        if prev then
+            prev.next = base
+        end
+        if next then
+            next.prev = base
+        end
+        base.next = next
+        base.prev = prev
+        return base
+    end
+end
+
+-- The next code is somewhat complicated by the fact that some fonts can have ligatures made
+-- from ligatures that themselves have marks. This was identified by Kai in for instance
+-- arabtype:  KAF LAM SHADDA ALEF FATHA (0x0643 0x0644 0x0651 0x0627 0x064E). This becomes
+-- KAF LAM-ALEF with a SHADDA on the first and a FATHA op de second component. In a next
+-- iteration this becomes a KAF-LAM-ALEF with a SHADDA on the second and a FATHA on the
+-- third component.
+
+local function getcomponentindex(start)
+    if start.id ~= glyph_code then
+        return 0
+    elseif start.subtype == ligature_code then
+        local i = 0
+        local components = start.components
+        while components do
+            i = i + getcomponentindex(components)
+            components = components.next
+        end
+        return i
+    elseif not marks[start.char] then
+        return 1
+    else
+        return 0
+    end
+end
+
+-- local function toligature(kind,lookupname,start,stop,char,markflag,discfound) -- brr head
+--     if start == stop and start.char == char then
+--         start.char = char
+--         return start
+--     elseif discfound then
+--         local prev = start.prev
+--         local next = stop.next
+--         start.prev = nil
+--         stop.next = nil
+--         local base = copy_glyph(start)
+--         base.char = char
+--         base.subtype = ligature_code
+--         base.components = start -- start can have components
+--         if prev then
+--             prev.next = base
+--         end
+--         if next then
+--             next.prev = base
+--         end
+--         base.next = next
+--         base.prev = prev
+--         return base
+--     else
+--         -- start is the ligature
+--         local deletemarks = markflag ~= "mark"
+--         local prev = start.prev
+--         local next = stop.next
+--         local base = copy_glyph(start)
+--         local current, start = insert_node_after(start,start,base)
+--         -- [start->current][copyofstart->start]...[stop]
+--         current.next = next
+--         if next then
+--             next.prev = current
+--         end
+--         start.prev = nil
+--         stop.next = nil
+--         current.char = char
+--         current.subtype = ligature_code
+--         current.components = start
+--         local head = current
+--         -- this is messy ... we should get rid of the components eventually
+--         local baseindex = 0
+--         local componentindex = 0
+--         while start do
+--             local char = start.char
+--             if not marks[char] then
+--                 baseindex = baseindex + componentindex
+--                 componentindex = getcomponentindex(start)
+--             elseif not deletemarks then -- quite fishy
+--                 set_attribute(start,ligacomp,baseindex + (has_attribute(start,ligacomp) or componentindex))
+--                 if trace_marks then
+--                     logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),has_attribute(start,ligacomp))
+--                 end
+--                 head, current = insert_node_after(head,current,copy_glyph(start)) -- unlikely that mark has components
+--             end
+--             start = start.next
+--         end
+--         start = current.next
+--         while start and start.id == glyph_code do -- hm, is id test needed ?
+--             local char = start.char
+--             if marks[char] then
+--                 set_attribute(start,ligacomp,baseindex + (has_attribute(start,ligacomp) or componentindex))
+--                 if trace_marks then
+--                     logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),has_attribute(start,ligacomp))
+--                 end
+--             else
+--                 break
+--             end
+--             start = start.next
+--         end
+--         return head
+--     end
+-- end
+
 local function toligature(kind,lookupname,start,stop,char,markflag,discfound) -- brr head
-    if start == stop then
+    if start == stop and start.char == char then
         start.char = char
         return start
-    elseif discfound then
-     -- print("start->stop",nodes.tosequence(start,stop))
-        local components = start.components
-        if components then
-            flush_node_list(components)
-            start.components = nil
-        end
-        local lignode = copy_node(start)
-        lignode.font = start.font
-        lignode.char = char
-        lignode.subtype = ligature_code
-        local next = stop.next
-        local prev = start.prev
-        stop.next = nil
-        start.prev = nil
-        lignode.components = start
-     -- print("lignode",nodes.tosequence(lignode))
-     -- print("components",nodes.tosequence(lignode.components))
-        prev.next = lignode
-        if next then
-            next.prev = lignode
-        end
-        lignode.next = next
-        lignode.prev = prev
-     -- print("start->end",nodes.tosequence(start))
-        return lignode
-    else
-        -- start is the ligature
+    end
+    local prev = start.prev
+    local next = stop.next
+    start.prev = nil
+    stop.next = nil
+    local base = copy_glyph(start)
+    base.char = char
+    base.subtype = ligature_code
+    base.components = start -- start can have components
+    if prev then
+        prev.next = base
+    end
+    if next then
+        next.prev = base
+    end
+    base.next = next
+    base.prev = prev
+    if not discfound then
         local deletemarks = markflag ~= "mark"
-        local n = copy_node(start)
-        local current
-        current, start = insert_node_after(start,start,n)
-        local snext = stop.next
-        current.next = snext
-        if snext then
-            snext.prev = current
-        end
-        start.prev = nil
-        stop.next = nil
-        current.char = char
-        current.subtype = ligature_code
-        current.components = start
-        local head = current
-        -- this is messy ... we should get rid of the components eventually
-        local i = 0 -- is index of base
+        local components = start
+        local baseindex = 0
+        local componentindex = 0
+        local head = base
+        local current = base
         while start do
-            if not marks[start.char] then
-                i = i + 1
+            local char = start.char
+            if not marks[char] then
+                baseindex = baseindex + componentindex
+                componentindex = getcomponentindex(start)
             elseif not deletemarks then -- quite fishy
-                set_attribute(start,ligacomp,i)
+                set_attribute(start,ligacomp,baseindex + (has_attribute(start,ligacomp) or componentindex))
                 if trace_marks then
-                    logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(start.char),i)
+                    logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),has_attribute(start,ligacomp))
                 end
-                head, current = insert_node_after(head,current,copy_node(start))
+                head, current = insert_node_after(head,current,copy_node(start)) -- unlikely that mark has components
             end
             start = start.next
         end
-        start = current.next
-        while start and start.id == glyph_code do
-            if marks[start.char] then
-                set_attribute(start,ligacomp,i)
+        local start = components
+        while start and start.id == glyph_code do -- hm, is id test needed ?
+            local char = start.char
+            if marks[char] then
+                set_attribute(start,ligacomp,baseindex + (has_attribute(start,ligacomp) or componentindex))
                 if trace_marks then
-                    logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(start.char),i)
+                    logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),has_attribute(start,ligacomp))
                 end
             else
                 break
             end
             start = start.next
         end
-        --
-        -- we do need components in funny kerning mode but maybe I can better reconstruct then
-        -- as we do have the font components info available; removing components makes the
-        -- previous code much simpler
-        --
-        -- flush_node_list(head.components)
-        return head
     end
+    return base
 end
 
 function handlers.gsub_single(start,kind,lookupname,replacement)
@@ -9044,7 +9843,7 @@ local function multiple_glyphs(start,multiple) -- marks ?
         if nofmultiples > 1 then
             local sn = start.next
             for k=2,nofmultiples do -- todo: use insert_node
-                local n = copy_node(start)
+                local n = copy_node(start) -- ignore components
                 n.char = multiple[k]
                 n.next = sn
                 n.prev = start
@@ -9069,12 +9868,12 @@ function handlers.gsub_alternate(start,kind,lookupname,alternative,sequence)
     local choice = get_alternative_glyph(start,alternative,value)
     if choice then
         if trace_alternatives then
-            logprocess("%s: replacing %s by alternative %s (%s)",pref(kind,lookupname),gref(char),gref(choice),choice)
+            logprocess("%s: replacing %s by alternative %s (%s)",pref(kind,lookupname),gref(start.char),gref(choice),choice)
         end
         start.char = choice
     else
         if trace_alternatives then
-            logwarning("%s: no variant %s for %s",pref(kind,lookupname),tostring(value),gref(char))
+            logwarning("%s: no variant %s for %s",pref(kind,lookupname),tostring(value),gref(start.char))
         end
     end
     return start, true
@@ -9093,7 +9892,7 @@ function handlers.gsub_ligature(start,kind,lookupname,ligature,sequence)
     if marks[startchar] then
         while s do
             local id = s.id
-            if id == glyph_code and s.subtype<256 and s.font == currentfont then
+            if id == glyph_code and s.font == currentfont and s.subtype<256 then
                 local lg = ligature[s.char]
                 if lg then
                     stop = s
@@ -9178,12 +9977,12 @@ function handlers.gpos_mark2base(start,kind,lookupname,markanchors,sequence)
     local markchar = start.char
     if marks[markchar] then
         local base = start.prev -- [glyph] [start=mark]
-        if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+        if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
             local basechar = base.char
             if marks[basechar] then
                 while true do
                     base = base.prev
-                    if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+                    if base and base.id == glyph_code  and base.font == currentfont and base.subtype<256 then
                         basechar = base.char
                         if not marks[basechar] then
                             break
@@ -9239,12 +10038,12 @@ function handlers.gpos_mark2ligature(start,kind,lookupname,markanchors,sequence)
     local markchar = start.char
     if marks[markchar] then
         local base = start.prev -- [glyph] [optional marks] [start=mark]
-        if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+        if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
             local basechar = base.char
             if marks[basechar] then
                 while true do
                     base = base.prev
-                    if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+                    if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
                         basechar = base.char
                         if not marks[basechar] then
                             break
@@ -9317,7 +10116,7 @@ function handlers.gpos_mark2mark(start,kind,lookupname,markanchors,sequence)
                 end
             end
         end
-        if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then -- subtype test can go
+        if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then -- subtype test can go
             local basechar = base.char
             local baseanchors = descriptions[basechar]
             if baseanchors then
@@ -9368,7 +10167,7 @@ function handlers.gpos_cursive(start,kind,lookupname,exitanchors,sequence) -- to
             end
         else
             local nxt = start.next
-            while not done and nxt and nxt.id == glyph_code and nxt.subtype<256 and nxt.font == currentfont do
+            while not done and nxt and nxt.id == glyph_code and nxt.font == currentfont and nxt.subtype<256 do
                 local nextchar = nxt.char
                 if marks[nextchar] then
                     -- should not happen (maybe warning)
@@ -9432,7 +10231,7 @@ function handlers.gpos_pair(start,kind,lookupname,kerns,sequence)
         local prev, done = start, false
         local factor = tfmdata.parameters.factor
         local lookuptype = lookuptypes[lookupname]
-        while snext and snext.id == glyph_code and snext.subtype<256 and snext.font == currentfont do
+        while snext and snext.id == glyph_code and snext.font == currentfont and snext.subtype<256 do
             local nextchar = snext.char
             local krn = kerns[nextchar]
             if not krn and marks[nextchar] then
@@ -9568,6 +10367,10 @@ local function delete_till_stop(start,stop,ignoremarks) -- keeps start
         repeat -- start x x m x x stop => start m
             local next = start.next
             if not marks[next.char] then
+local components = next.components
+if components then -- probably not needed
+    flush_node_list(components)
+end
                 delete_node(start,next)
             end
             n = n + 1
@@ -9575,6 +10378,10 @@ local function delete_till_stop(start,stop,ignoremarks) -- keeps start
     else -- start x x x stop => start
         repeat
             local next = start.next
+local components = next.components
+if components then -- probably not needed
+    flush_node_list(components)
+end
             delete_node(start,next)
             n = n + 1
         until next == stop
@@ -9816,12 +10623,12 @@ function chainprocs.gpos_mark2base(start,stop,kind,chainname,currentcontext,look
         end
         if markanchors then
             local base = start.prev -- [glyph] [start=mark]
-            if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+            if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
                 local basechar = base.char
                 if marks[basechar] then
                     while true do
                         base = base.prev
-                        if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+                        if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
                             basechar = base.char
                             if not marks[basechar] then
                                 break
@@ -9880,12 +10687,12 @@ function chainprocs.gpos_mark2ligature(start,stop,kind,chainname,currentcontext,
         end
         if markanchors then
             local base = start.prev -- [glyph] [optional marks] [start=mark]
-            if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+            if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
                 local basechar = base.char
                 if marks[basechar] then
                     while true do
                         base = base.prev
-                        if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then
+                        if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then
                             basechar = base.char
                             if not marks[basechar] then
                                 break
@@ -9966,7 +10773,7 @@ function chainprocs.gpos_mark2mark(start,stop,kind,chainname,currentcontext,look
                         end
                     end
                 end
-                if base and base.id == glyph_code and base.subtype<256 and base.font == currentfont then -- subtype test can go
+                if base and base.id == glyph_code and base.font == currentfont and base.subtype<256 then -- subtype test can go
                     local basechar = base.char
                     local baseanchors = descriptions[basechar].anchors
                     if baseanchors then
@@ -10026,7 +10833,7 @@ function chainprocs.gpos_cursive(start,stop,kind,chainname,currentcontext,lookup
                 end
             else
                 local nxt = start.next
-                while not done and nxt and nxt.id == glyph_code and nxt.subtype<256 and nxt.font == currentfont do
+                while not done and nxt and nxt.id == glyph_code and nxt.font == currentfont and nxt.subtype<256 do
                     local nextchar = nxt.char
                     if marks[nextchar] then
                         -- should not happen (maybe warning)
@@ -10107,7 +10914,7 @@ function chainprocs.gpos_pair(start,stop,kind,chainname,currentcontext,lookuphas
                 local lookuptype = lookuptypes[lookupname]
                 local prev, done = start, false
                 local factor = tfmdata.parameters.factor
-                while snext and snext.id == glyph_code and snext.subtype<256 and snext.font == currentfont do
+                while snext and snext.id == glyph_code and snext.font == currentfont and snext.subtype<256 do
                     local nextchar = snext.char
                     local krn = kerns[nextchar]
                     if not krn and marks[nextchar] then
@@ -10200,7 +11007,7 @@ local function normal_handle_contextchain(start,kind,chainname,contexts,sequence
         -- f..l = mid string
         if s == 1 then
             -- never happens
-            match = current.id == glyph_code and current.subtype<256 and current.font == currentfont and seq[1][current.char]
+            match = current.id == glyph_code and current.font == currentfont and current.subtype<256 and seq[1][current.char]
         else
             -- maybe we need a better space check (maybe check for glue or category or combination)
             -- we cannot optimize for n=2 because there can be disc nodes
@@ -10220,7 +11027,7 @@ local function normal_handle_contextchain(start,kind,chainname,contexts,sequence
                         if last then
                             local id = last.id
                             if id == glyph_code then
-                                if last.subtype<256 and last.font == currentfont then
+                                if last.font == currentfont and last.subtype<256 then
                                     local char = last.char
                                     local ccd = descriptions[char]
                                     if ccd then
@@ -10270,7 +11077,7 @@ local function normal_handle_contextchain(start,kind,chainname,contexts,sequence
                         if prev then
                             local id = prev.id
                             if id == glyph_code then
-                                if prev.subtype<256 and prev.font == currentfont then -- normal char
+                                if prev.font == currentfont and prev.subtype<256 then -- normal char
                                     local char = prev.char
                                     local ccd = descriptions[char]
                                     if ccd then
@@ -10303,7 +11110,7 @@ local function normal_handle_contextchain(start,kind,chainname,contexts,sequence
                                 break
                             end
                             prev = prev.prev
-                        elseif seq[n][32] then -- somehat special, as zapfino can have many preceding spaces
+                        elseif seq[n][32] then -- somewhat special, as zapfino can have many preceding spaces
                             n = n -1
                         else
                             match = false
@@ -10331,7 +11138,7 @@ local function normal_handle_contextchain(start,kind,chainname,contexts,sequence
                         if current then
                             local id = current.id
                             if id == glyph_code then
-                                if current.subtype<256 and current.font == currentfont then -- normal char
+                                if current.font == currentfont and current.subtype<256 then -- normal char
                                     local char = current.char
                                     local ccd = descriptions[char]
                                     if ccd then
@@ -10543,12 +11350,7 @@ end)
 
 -- fonts.hashes.lookups = lookuphashes
 
-local special_attributes = {
-    init = 1,
-    medi = 2,
-    fina = 3,
-    isol = 4
-}
+local constants = fonts.analyzers.constants
 
 local function initialize(sequence,script,language,enabled)
     local features = sequence.features
@@ -10558,7 +11360,7 @@ local function initialize(sequence,script,language,enabled)
             if valid then
                 local languages = scripts[script] or scripts[wildcard]
                 if languages and (languages[language] or languages[wildcard]) then
-                    return { valid, special_attributes[kind] or false, sequence.chain or 0, kind, sequence }
+                    return { valid, constants[kind] or false, sequence.chain or 0, kind, sequence }
                 end
             end
         end
@@ -10566,7 +11368,7 @@ local function initialize(sequence,script,language,enabled)
     return false
 end
 
-function otf.dataset(tfmdata,sequences,font) -- generic variant, overloaded in context
+function otf.dataset(tfmdata,font) -- generic variant, overloaded in context
     local shared     = tfmdata.shared
     local properties = tfmdata.properties
     local language   = properties.language or "dflt"
@@ -10584,12 +11386,17 @@ function otf.dataset(tfmdata,sequences,font) -- generic variant, overloaded in c
     end
     local rl = rs[language]
     if not rl then
-        rl = { }
+        rl = {
+            -- indexed but we can also add specific data by key
+        }
         rs[language] = rl
+        local sequences = tfmdata.resources.sequences
         setmetatableindex(rl, function(t,k)
-            local v = enabled and initialize(sequences[k],script,language,enabled)
-            t[k] = v
-            return v
+            if type(k) == "number" then
+                local v = enabled and initialize(sequences[k],script,language,enabled)
+                t[k] = v
+                return v
+            end
         end)
     end
     return rl
@@ -10610,6 +11417,8 @@ end
 --     else
 --         start = start.next
 --     end
+
+-- there will be a new direction parser (pre-parsed etc)
 
 local function featuresprocessor(head,font,attr)
 
@@ -10638,7 +11447,7 @@ local function featuresprocessor(head,font,attr)
 
     local sequences        = resources.sequences
     local done             = false
-    local datasets         = otf.dataset(tfmdata,sequences,font,attr)
+    local datasets         = otf.dataset(tfmdata,font,attr)
 
     local dirstack = { } -- could move outside function
 
@@ -10646,6 +11455,9 @@ local function featuresprocessor(head,font,attr)
     -- much speed gain (experiments showed that it made not much sense) and we need
     -- to keep track of directions anyway. Also at some point I want to play with
     -- font interactions and then we do need the full sweeps.
+
+    -- Keeping track of the headnode is needed for devanagari (I generalized it a bit
+    -- so that multiple cases are also covered.
 
     for s=1,#sequences do
         local dataset = datasets[s]
@@ -10668,7 +11480,7 @@ local function featuresprocessor(head,font,attr)
                     while start do
                         local id = start.id
                         if id == glyph_code then
-                            if start.subtype<256 and start.font == font then
+                            if start.font == font and start.subtype<256 then
                                 local a = has_attribute(start,0)
                                 if a then
                                     a = a == attr
@@ -10682,8 +11494,12 @@ local function featuresprocessor(head,font,attr)
                                         if lookupcache then
                                             local lookupmatch = lookupcache[start.char]
                                             if lookupmatch then
+                                                local headnode = start == head
                                                 start, success = handler(start,dataset[4],lookupname,lookupmatch,sequence,lookuphash,i)
                                                 if success then
+                                                    if headnode then
+                                                        head = start
+                                                    end
                                                     break
                                                 end
                                             end
@@ -10716,7 +11532,7 @@ local function featuresprocessor(head,font,attr)
                             while start do
                                 local id = start.id
                                 if id == glyph_code then
-                                    if start.subtype<256 and start.font == font then
+                                    if start.font == font and start.subtype<256 then
                                         local a = has_attribute(start,0)
                                         if a then
                                             a = (a == attr) and (not attribute or has_attribute(start,state,attribute))
@@ -10727,10 +11543,14 @@ local function featuresprocessor(head,font,attr)
                                             local lookupmatch = lookupcache[start.char]
                                             if lookupmatch then
                                                 -- sequence kan weg
+                                                local headnode = start == head
                                                 local ok
                                                 start, ok = handler(start,dataset[4],lookupname,lookupmatch,sequence,lookuphash,1)
                                                 if ok then
                                                     success = true
+                                                    if headnode then
+                                                        head = start
+                                                    end
                                                 end
                                             end
                                             if start then start = start.next end
@@ -10785,7 +11605,7 @@ local function featuresprocessor(head,font,attr)
                         while start do
                             local id = start.id
                             if id == glyph_code then
-                                if start.subtype<256 and start.font == font then
+                                if start.font == font and start.subtype<256 then
                                     local a = has_attribute(start,0)
                                     if a then
                                         a = (a == attr) and (not attribute or has_attribute(start,state,attribute))
@@ -10800,10 +11620,14 @@ local function featuresprocessor(head,font,attr)
                                                 local lookupmatch = lookupcache[start.char]
                                                 if lookupmatch then
                                                     -- we could move all code inline but that makes things even more unreadable
+                                                    local headnode = start == head
                                                     local ok
                                                     start, ok = handler(start,dataset[4],lookupname,lookupmatch,sequence,lookuphash,i)
                                                     if ok then
                                                         success = true
+                                                        if headnode then
+                                                            head = start
+                                                        end
                                                         break
                                                     end
                                                 end
@@ -11129,6 +11953,10 @@ registerotffeature {
         node     = featuresprocessor,
     }
 }
+
+-- this will change but is needed for an experiment:
+
+otf.handlers = handlers
 
 end -- closure
 
@@ -11757,388 +12585,6 @@ end -- closure
 
 do -- begin closure to overcome local limits and interference
 
-if not modules then modules = { } end modules ['font-ota'] = {
-    version   = 1.001,
-    comment   = "companion to font-otf.lua (analysing)",
-    author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
-    copyright = "PRAGMA ADE / ConTeXt Development Team",
-    license   = "see context related readme files"
-}
-
--- this might become scrp-*.lua
-
-local type, tostring, match, format, concat = type, tostring, string.match, string.format, table.concat
-
-if not trackers then trackers = { register = function() end } end
-
-local trace_analyzing = false  trackers.register("otf.analyzing",  function(v) trace_analyzing = v end)
-
-local fonts, nodes, node = fonts, nodes, node
-
-local allocate            = utilities.storage.allocate
-
-local otf                 = fonts.handlers.otf
-
-local analyzers           = fonts.analyzers
-local initializers        = allocate()
-local methods             = allocate()
-
-analyzers.initializers    = initializers
-analyzers.methods         = methods
-analyzers.useunicodemarks = false
-
-local nodecodes           = nodes.nodecodes
-local glyph_code          = nodecodes.glyph
-
-local set_attribute       = node.set_attribute
-local has_attribute       = node.has_attribute
-local traverse_id         = node.traverse_id
-local traverse_node_list  = node.traverse
-
-local fontdata            = fonts.hashes.identifiers
-local state               = attributes.private('state')
-local categories          = characters and characters.categories or { } -- sorry, only in context
-
-local tracers             = nodes.tracers
-local colortracers        = tracers and tracers.colors
-local setnodecolor        = colortracers and colortracers.set   or function() end
-local resetnodecolor      = colortracers and colortracers.reset or function() end
-
-local otffeatures         = fonts.constructors.newfeatures("otf")
-local registerotffeature  = otffeatures.register
-
---[[ldx--
-<p>Analyzers run per script and/or language and are needed in order to
-process features right.</p>
---ldx]]--
-
--- todo: analyzers per script/lang, cross font, so we need an font id hash -> script
--- e.g. latin -> hyphenate, arab -> 1/2/3 analyze -- its own namespace
-
-local state = attributes.private('state')
-
-function analyzers.setstate(head,font)
-    local useunicodemarks  = analyzers.useunicodemarks
-    local tfmdata = fontdata[font]
-    local characters = tfmdata.characters
-    local descriptions = tfmdata.descriptions
-    local first, last, current, n, done = nil, nil, head, 0, false -- maybe make n boolean
-    while current do
-        local id = current.id
-        if id == glyph_code and current.font == font then
-            local char = current.char
-            local d = descriptions[char]
-            if d then
-                if d.class == "mark" or (useunicodemarks and categories[char] == "mn") then
-                    done = true
-                    set_attribute(current,state,5) -- mark
-                elseif n == 0 then
-                    first, last, n = current, current, 1
-                    set_attribute(current,state,1) -- init
-                else
-                    last, n = current, n+1
-                    set_attribute(current,state,2) -- medi
-                end
-            else -- finish
-                if first and first == last then
-                    set_attribute(last,state,4) -- isol
-                elseif last then
-                    set_attribute(last,state,3) -- fina
-                end
-                first, last, n = nil, nil, 0
-            end
-        elseif id == disc_code then
-            -- always in the middle
-            set_attribute(current,state,2) -- midi
-            last = current
-        else -- finish
-            if first and first == last then
-                set_attribute(last,state,4) -- isol
-            elseif last then
-                set_attribute(last,state,3) -- fina
-            end
-            first, last, n = nil, nil, 0
-        end
-        current = current.next
-    end
-    if first and first == last then
-        set_attribute(last,state,4) -- isol
-    elseif last then
-        set_attribute(last,state,3) -- fina
-    end
-    return head, done
-end
-
--- in the future we will use language/script attributes instead of the
--- font related value, but then we also need dynamic features which is
--- somewhat slower; and .. we need a chain of them
-
-local function analyzeinitializer(tfmdata,value) -- attr
-    local script, language = otf.scriptandlanguage(tfmdata) -- attr
-    local action = initializers[script]
-    if action then
-        if type(action) == "function" then
-            return action(tfmdata,value)
-        else
-            local action = action[language]
-            if action then
-                return action(tfmdata,value)
-            end
-        end
-    end
-end
-
-local function analyzeprocessor(head,font,attr)
-    local tfmdata = fontdata[font]
-    local script, language = otf.scriptandlanguage(tfmdata,attr)
-    local action = methods[script]
-    if action then
-        if type(action) == "function" then
-            return action(head,font,attr)
-        else
-            action = action[language]
-            if action then
-                return action(head,font,attr)
-            end
-        end
-    end
-    return head, false
-end
-
-registerotffeature {
-    name         = "analyze",
-    description  = "analysis of (for instance) character classes",
-    default      = true,
-    initializers = {
-        node     = analyzeinitializer,
-    },
-    processors = {
-        position = 1,
-        node     = analyzeprocessor,
-    }
-}
-
--- latin
-
-methods.latn = analyzers.setstate
-
--- this info eventually will go into char-def and we will have a state
--- table for generic then
-
-local zwnj = 0x200C
-local zwj  = 0x200D
-
-local isol = {
-    [0x0600] = true, [0x0601] = true, [0x0602] = true, [0x0603] = true,
-    [0x0608] = true, [0x060B] = true, [0x0621] = true, [0x0674] = true,
-    [0x06DD] = true, [zwnj] = true,
-}
-
-local isol_fina = {
-    [0x0622] = true, [0x0623] = true, [0x0624] = true, [0x0625] = true,
-    [0x0627] = true, [0x0629] = true, [0x062F] = true, [0x0630] = true,
-    [0x0631] = true, [0x0632] = true, [0x0648] = true, [0x0671] = true,
-    [0x0672] = true, [0x0673] = true, [0x0675] = true, [0x0676] = true,
-    [0x0677] = true, [0x0688] = true, [0x0689] = true, [0x068A] = true,
-    [0x068B] = true, [0x068C] = true, [0x068D] = true, [0x068E] = true,
-    [0x068F] = true, [0x0690] = true, [0x0691] = true, [0x0692] = true,
-    [0x0693] = true, [0x0694] = true, [0x0695] = true, [0x0696] = true,
-    [0x0697] = true, [0x0698] = true, [0x0699] = true, [0x06C0] = true,
-    [0x06C3] = true, [0x06C4] = true, [0x06C5] = true, [0x06C6] = true,
-    [0x06C7] = true, [0x06C8] = true, [0x06C9] = true, [0x06CA] = true,
-    [0x06CB] = true, [0x06CD] = true, [0x06CF] = true, [0x06D2] = true,
-    [0x06D3] = true, [0x06D5] = true, [0x06EE] = true, [0x06EF] = true,
-    [0x0759] = true, [0x075A] = true, [0x075B] = true, [0x076B] = true,
-    [0x076C] = true, [0x0771] = true, [0x0773] = true, [0x0774] = true,
-	[0x0778] = true, [0x0779] = true, [0xFEF5] = true, [0xFEF7] = true,
-	[0xFEF9] = true, [0xFEFB] = true,
-
-    -- syriac
-
-	[0x0710] = true, [0x0715] = true, [0x0716] = true, [0x0717] = true,
-	[0x0718] = true, [0x0719] = true, [0x0728] = true, [0x072A] = true,
-	[0x072C] = true, [0x071E] = true,
-}
-
-local isol_fina_medi_init = {
-    [0x0626] = true, [0x0628] = true, [0x062A] = true, [0x062B] = true,
-    [0x062C] = true, [0x062D] = true, [0x062E] = true, [0x0633] = true,
-    [0x0634] = true, [0x0635] = true, [0x0636] = true, [0x0637] = true,
-    [0x0638] = true, [0x0639] = true, [0x063A] = true, [0x063B] = true,
-    [0x063C] = true, [0x063D] = true, [0x063E] = true, [0x063F] = true,
-    [0x0640] = true, [0x0641] = true, [0x0642] = true, [0x0643] = true,
-    [0x0644] = true, [0x0645] = true, [0x0646] = true, [0x0647] = true,
-    [0x0649] = true, [0x064A] = true, [0x066E] = true, [0x066F] = true,
-    [0x0678] = true, [0x0679] = true, [0x067A] = true, [0x067B] = true,
-    [0x067C] = true, [0x067D] = true, [0x067E] = true, [0x067F] = true,
-    [0x0680] = true, [0x0681] = true, [0x0682] = true, [0x0683] = true,
-    [0x0684] = true, [0x0685] = true, [0x0686] = true, [0x0687] = true,
-    [0x069A] = true, [0x069B] = true, [0x069C] = true, [0x069D] = true,
-    [0x069E] = true, [0x069F] = true, [0x06A0] = true, [0x06A1] = true,
-    [0x06A2] = true, [0x06A3] = true, [0x06A4] = true, [0x06A5] = true,
-    [0x06A6] = true, [0x06A7] = true, [0x06A8] = true, [0x06A9] = true,
-    [0x06AA] = true, [0x06AB] = true, [0x06AC] = true, [0x06AD] = true,
-    [0x06AE] = true, [0x06AF] = true, [0x06B0] = true, [0x06B1] = true,
-    [0x06B2] = true, [0x06B3] = true, [0x06B4] = true, [0x06B5] = true,
-    [0x06B6] = true, [0x06B7] = true, [0x06B8] = true, [0x06B9] = true,
-    [0x06BA] = true, [0x06BB] = true, [0x06BC] = true, [0x06BD] = true,
-    [0x06BE] = true, [0x06BF] = true, [0x06C1] = true, [0x06C2] = true,
-    [0x06CC] = true, [0x06CE] = true, [0x06D0] = true, [0x06D1] = true,
-    [0x06FA] = true, [0x06FB] = true, [0x06FC] = true, [0x06FF] = true,
-    [0x0750] = true, [0x0751] = true, [0x0752] = true, [0x0753] = true,
-    [0x0754] = true, [0x0755] = true, [0x0756] = true, [0x0757] = true,
-    [0x0758] = true, [0x075C] = true, [0x075D] = true, [0x075E] = true,
-    [0x075F] = true, [0x0760] = true, [0x0761] = true, [0x0762] = true,
-    [0x0763] = true, [0x0764] = true, [0x0765] = true, [0x0766] = true,
-    [0x0767] = true, [0x0768] = true, [0x0769] = true, [0x076A] = true,
-    [0x076D] = true, [0x076E] = true, [0x076F] = true, [0x0770] = true,
-    [0x0772] = true, [0x0775] = true, [0x0776] = true, [0x0777] = true,
-    [0x077A] = true, [0x077B] = true, [0x077C] = true, [0x077D] = true,
-    [0x077E] = true, [0x077F] = true,
-
-    -- syriac
-
-	[0x0712] = true, [0x0713] = true, [0x0714] = true, [0x071A] = true,
-	[0x071B] = true, [0x071C] = true, [0x071D] = true, [0x071F] = true,
-	[0x0720] = true, [0x0721] = true, [0x0722] = true, [0x0723] = true,
-	[0x0724] = true, [0x0725] = true, [0x0726] = true, [0x0727] = true,
-	[0x0729] = true, [0x072B] = true,
-
-    -- also
-
-    [zwj] = true,
-}
-
-local arab_warned = { }
-
-
--- todo: gref
-
-local function warning(current,what)
-    local char = current.char
-    if not arab_warned[char] then
-        log.report("analyze","arab: character %s (U+%05X) has no %s class", char, char, what)
-        arab_warned[char] = true
-    end
-end
-
-function methods.nocolor(head,font,attr)
-    for n in traverse_id(glyph_code,head) do
-        if not font or n.font == font then
-            resetnodecolor(n)
-        end
-    end
-    return head, true
-end
-
-local function finish(first,last)
-    if last then
-        if first == last then
-            local fc = first.char
-            if isol_fina_medi_init[fc] or isol_fina[fc] then
-                set_attribute(first,state,4) -- isol
-                if trace_analyzing then setnodecolor(first,"font:isol") end
-            else
-                warning(first,"isol")
-                set_attribute(first,state,0) -- error
-                if trace_analyzing then resetnodecolor(first) end
-            end
-        else
-            local lc = last.char
-            if isol_fina_medi_init[lc] or isol_fina[lc] then -- why isol here ?
-            -- if laststate == 1 or laststate == 2 or laststate == 4 then
-                set_attribute(last,state,3) -- fina
-                if trace_analyzing then setnodecolor(last,"font:fina") end
-            else
-                warning(last,"fina")
-                set_attribute(last,state,0) -- error
-                if trace_analyzing then resetnodecolor(last) end
-            end
-        end
-        first, last = nil, nil
-    elseif first then
-        -- first and last are either both set so we never com here
-        local fc = first.char
-        if isol_fina_medi_init[fc] or isol_fina[fc] then
-            set_attribute(first,state,4) -- isol
-            if trace_analyzing then setnodecolor(first,"font:isol") end
-        else
-            warning(first,"isol")
-            set_attribute(first,state,0) -- error
-            if trace_analyzing then resetnodecolor(first) end
-        end
-        first = nil
-    end
-    return first, last
-end
-
-function methods.arab(head,font,attr) -- maybe make a special version with no trace
-    local useunicodemarks = analyzers.useunicodemarks
-    local tfmdata = fontdata[font]
-    local marks = tfmdata.resources.marks
-    local first, last, current, done = nil, nil, head, false
-    while current do
-        if current.id == glyph_code and current.subtype<256 and current.font == font and not has_attribute(current,state) then
-            done = true
-            local char = current.char
-            if marks[char] or (useunicodemarks and categories[char] == "mn") then
-                set_attribute(current,state,5) -- mark
-                if trace_analyzing then setnodecolor(current,"font:mark") end
-            elseif isol[char] then -- can be zwj or zwnj too
-                first, last = finish(first,last)
-                set_attribute(current,state,4) -- isol
-                if trace_analyzing then setnodecolor(current,"font:isol") end
-                first, last = nil, nil
-            elseif not first then
-                if isol_fina_medi_init[char] then
-                    set_attribute(current,state,1) -- init
-                    if trace_analyzing then setnodecolor(current,"font:init") end
-                    first, last = first or current, current
-                elseif isol_fina[char] then
-                    set_attribute(current,state,4) -- isol
-                    if trace_analyzing then setnodecolor(current,"font:isol") end
-                    first, last = nil, nil
-                else -- no arab
-                    first, last = finish(first,last)
-                end
-            elseif isol_fina_medi_init[char] then
-                first, last = first or current, current
-                set_attribute(current,state,2) -- medi
-                if trace_analyzing then setnodecolor(current,"font:medi") end
-            elseif isol_fina[char] then
-                if not has_attribute(last,state,1) then
-                    -- tricky, we need to check what last may be !
-                    set_attribute(last,state,2) -- medi
-                    if trace_analyzing then setnodecolor(last,"font:medi") end
-                end
-                set_attribute(current,state,3) -- fina
-                if trace_analyzing then setnodecolor(current,"font:fina") end
-                first, last = nil, nil
-            elseif char >= 0x0600 and char <= 0x06FF then
-                if trace_analyzing then setnodecolor(current,"font:rest") end
-                first, last = finish(first,last)
-            else --no
-                first, last = finish(first,last)
-            end
-        else
-            first, last = finish(first,last)
-        end
-        current = current.next
-    end
-    first, last = finish(first,last)
-    return head, done
-end
-
-methods.syrc = methods.arab
-
-directives.register("otf.analyze.useunicodemarks",function(v)
-    analyzers.useunicodemarks = v
-end)
-
-end -- closure
-
-do -- begin closure to overcome local limits and interference
-
 if not modules then modules = { } end modules ['luatex-fonts-lua'] = {
     version   = 1.001,
     comment   = "companion to luatex-*.tex",
@@ -12185,7 +12631,8 @@ if not modules then modules = { } end modules ['font-def'] = {
     license   = "see context related readme files"
 }
 
-local concat = table.concat
+-- We can overload some of the definers.functions so we don't local them.
+
 local format, gmatch, match, find, lower, gsub = string.format, string.gmatch, string.match, string.find, string.lower, string.gsub
 local tostring, next = tostring, next
 local lpegmatch = lpeg.match
@@ -12211,6 +12658,7 @@ local readers       = fonts.readers
 local definers      = fonts.definers
 local specifiers    = fonts.specifiers
 local constructors  = fonts.constructors
+local fontgoodies   = fonts.goodies
 
 readers.sequence    = allocate { 'otf', 'ttf', 'afm', 'tfm', 'lua' } -- dfont ttc
 
@@ -12221,9 +12669,12 @@ definers.methods    = definers.methods or { }
 
 local internalized  = allocate() -- internal tex numbers (private)
 
-
 local loadedfonts   = constructors.loadedfonts
 local designsizes   = constructors.designsizes
+
+-- not in generic (some day I'll make two defs, one for context, one for generic)
+
+local resolvefile   = fontgoodies and fontgoodies.filenames and fontgoodies.filenames.resolve or function(s) return s end
 
 --[[ldx--
 <p>We hardly gain anything when we cache the final (pre scaled)
@@ -12251,7 +12702,7 @@ and prepares a table that will move along as we proceed.</p>
 -- name name(sub) name(sub)*spec name*spec
 -- name@spec*oeps
 
-local splitter, splitspecifiers = nil, ""
+local splitter, splitspecifiers = nil, "" -- not so nice
 
 local P, C, S, Cc = lpeg.P, lpeg.C, lpeg.S, lpeg.Cc
 
@@ -12262,7 +12713,7 @@ local space = P(" ")
 
 definers.defaultlookup = "file"
 
-local prefixpattern  = P(false)
+local prefixpattern = P(false)
 
 local function addspecifier(symbol)
     splitspecifiers     = splitspecifiers .. symbol
@@ -12298,12 +12749,12 @@ function definers.registersplit(symbol,action,verbosename)
     end
 end
 
-function definers.makespecification(specification,lookup,name,sub,method,detail,size)
+local function makespecification(specification,lookup,name,sub,method,detail,size)
     size = size or 655360
     if trace_defining then
         report_defining("%s -> lookup: %s, name: %s, sub: %s, method: %s, detail: %s",
-            specification, (lookup ~= "" and lookup) or "[file]", (name ~= "" and name) or "-",
-            (sub ~= "" and sub) or "-", (method ~= "" and method) or "-", (detail ~= "" and detail) or "-")
+            specification, lookup ~= "" and lookup or "[file]", name ~= "" and name or "-",
+            sub ~= "" and sub or "-", method ~= "" and method or "-", detail ~= "" and detail or "-")
     end
     if not lookup or lookup == "" then
         lookup = definers.defaultlookup
@@ -12323,10 +12774,13 @@ function definers.makespecification(specification,lookup,name,sub,method,detail,
     return t
 end
 
+
+definers.makespecification = makespecification
+
 function definers.analyze(specification, size)
     -- can be optimized with locals
     local lookup, name, sub, method, detail = getspecification(specification or "")
-    return definers.makespecification(specification, lookup, name, sub, method, detail, size)
+    return makespecification(specification, lookup, name, sub, method, detail, size)
 end
 
 --[[ldx--
@@ -12339,10 +12793,13 @@ local resolvers    = definers.resolvers
 -- todo: reporter
 
 function resolvers.file(specification)
-    local suffix = file.suffix(specification.name)
+    local name = resolvefile(specification.name) -- catch for renames
+    local suffix = file.suffix(name)
     if fonts.formats[suffix] then
         specification.forced = suffix
-        specification.name = file.removesuffix(specification.name)
+        specification.name = file.removesuffix(name)
+    else
+        specification.name = name -- cna be resolved
     end
 end
 
@@ -12373,7 +12830,7 @@ function resolvers.spec(specification)
         if resolved then
             specification.resolved = resolved
             specification.sub      = sub
-            specification.forced   = file.extname(resolved)
+            specification.forced   = file.suffix(resolved)
             specification.name     = file.removesuffix(resolved)
         end
     else
@@ -12421,12 +12878,13 @@ specification yet.</p>
 function definers.applypostprocessors(tfmdata)
     local postprocessors = tfmdata.postprocessors
     if postprocessors then
+        local properties = tfmdata.properties
         for i=1,#postprocessors do
             local extrahash = postprocessors[i](tfmdata) -- after scaling etc
             if type(extrahash) == "string" and extrahash ~= "" then
                 -- e.g. a reencoding needs this
                 extrahash = gsub(lower(extrahash),"[^a-z]","-")
-                tfmdata.properties.fullname = format("%s-%s",tfmdata.properties.fullname,extrahash)
+                properties.fullname = format("%s-%s",properties.fullname,extrahash)
             end
         end
     end
@@ -12744,18 +13202,14 @@ local otffeatures = fonts.constructors.newfeatures("otf")
 
 local function initializeitlc(tfmdata,value)
     if value then
-        -- the magic 40 and it formula come from Dohyun Kim
-        local parameters  = tfmdata.parameters
+        -- the magic 40 and it formula come from Dohyun Kim but we might need another guess
+        local parameters = tfmdata.parameters
         local italicangle = parameters.italicangle
         if italicangle and italicangle ~= 0 then
-            local uwidth = (parameters.uwidth or 40)/2
-            for unicode, d in next, tfmdata.descriptions do
-                local it = d.boundingbox[3] - d.width + uwidth
-                if it ~= 0 then
-                    d.italic = it
-                end
-            end
-            tfmdata.properties.hasitalics = true
+            local properties = tfmdata.properties
+            local factor = tonumber(value) or 1
+            properties.hasitalics = true
+            properties.autoitalicamount = factor * (parameters.uwidth or 40)/2
         end
     end
 end

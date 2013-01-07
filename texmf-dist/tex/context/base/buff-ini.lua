@@ -13,21 +13,26 @@ local trace_visualize = false  trackers.register("buffers.visualize", function(v
 local report_buffers  = logs.reporter("buffers","usage")
 local report_grabbing = logs.reporter("buffers","grabbing")
 
-local concat = table.concat
-local type, next = type, next
-local sub, format, match, find = string.sub, string.format, string.match, string.find
-local count, splitlines = string.count, string.splitlines
+local context, commands = context, commands
 
-local variables = interfaces.variables
+local concat = table.concat
+local type, next, load = type, next, load
+local sub, format = string.sub, string.format
+local splitlines, validstring = string.splitlines, string.valid
+local P, Cs, patterns, lpegmatch = lpeg.P, lpeg.Cs, lpeg.patterns, lpeg.match
+
+local variables         = interfaces.variables
 local settings_to_array = utilities.parsers.settings_to_array
 
-local ctxcatcodes = tex.ctxcatcodes
-local txtcatcodes = tex.txtcatcodes
+local v_yes             = variables.yes
 
-buffers = { }
+local catcodenumbers    = catcodes.numbers
 
+local ctxcatcodes       = catcodenumbers.ctxcatcodes
+local txtcatcodes       = catcodenumbers.txtcatcodes
+
+buffers       = buffers or { }
 local buffers = buffers
-local context = context
 
 local cache = { }
 
@@ -98,16 +103,17 @@ buffers.collectcontent = collectcontent
 commands.erasebuffer  = erase
 commands.assignbuffer = assign
 
-local P, patterns, lpegmatch = lpeg.P, lpeg.patterns, lpeg.match
+local anything      = patterns.anything
+local alwaysmatched = patterns.alwaysmatched
 
 local function countnesting(b,e)
     local n
     local g = P(b) / function() n = n + 1 end
             + P(e) / function() n = n - 1 end
-            + patterns.anything
-    local p = patterns.alwaysmatched / function() n = 0 end
+            + anything
+    local p = alwaysmatched / function() n = 0 end
             * g^0
-            * patterns.alwaysmatched / function() return n end
+            * alwaysmatched / function() return n end
     return p
 end
 
@@ -122,6 +128,65 @@ local continue   = false
 --
 -- An \n is unlikely to show up as \r is the endlinechar but \n is more generic
 -- for us.
+
+-- This fits the way we fetch verbatim: the indentatio before the sentinel
+-- determines the stripping.
+
+-- str = [[
+--     test test test test test test test
+--       test test test test test test test
+--     test test test test test test test
+--
+--     test test test test test test test
+--       test test test test test test test
+--     test test test test test test test
+--     ]]
+
+-- local function undent(str)
+--     local margin = match(str,"[\n\r]( +)[\n\r]*$") or ""
+--     local indent = #margin
+--     if indent > 0 then
+--         local lines = splitlines(str)
+--         local ok = true
+--         local pattern = "^" .. margin
+--         for i=1,#lines do
+--             local l = lines[i]
+--             if find(l,pattern) then
+--                 lines[i] = sub(l,indent+1)
+--             else
+--                 ok = false
+--                 break
+--             end
+--         end
+--         if ok then
+--             return concat(lines,"\n")
+--         end
+--     end
+--     return str
+-- end
+
+local getmargin = (Cs(P(" ")^1)*P(-1)+1)^1
+local eol       = patterns.eol
+local whatever  = (P(1)-eol)^0 * eol^1
+
+local strippers = { }
+
+local function undent(str) -- new version, needs testing
+    local margin = lpegmatch(getmargin,str)
+    if type(margin) ~= "string" then
+        return str
+    end
+    local indent = #margin
+    if indent == 0 then
+        return str
+    end
+    local stripper = strippers[indent]
+    if not stripper then
+        stripper = Cs((P(margin)/"" * whatever + eol^1)^1)
+        strippers[indent] = stripper
+    end
+    return lpegmatch(stripper,str) or str
+end
 
 function commands.grabbuffer(name,begintag,endtag,bufferdata,catcodes) -- maybe move \\ to call
     local dn = getcontent(name)
@@ -150,47 +215,27 @@ function commands.grabbuffer(name,begintag,endtag,bufferdata,catcodes) -- maybe 
     else
         if continue then
             dn = dn .. sub(bufferdata,2,-2) -- no \r, \n is more generic
+        elseif dn == "" then
+            dn = sub(bufferdata,2,-2)
         else
-            if dn == "" then
-                dn = sub(bufferdata,2,-2)
-            else
-                dn = dn .. "\n" .. sub(bufferdata,2,-2) -- no \r, \n is more generic
-            end
+            dn = dn .. "\n" .. sub(bufferdata,2,-2) -- no \r, \n is more generic
         end
         local last = sub(dn,-1)
         if last == "\n" or last == "\r" then -- \n is unlikely as \r is the endlinechar
             dn = sub(dn,1,-2)
         end
         if autoundent then
-            local margin = match(dn,"[\n\r]( +)[\n\r]*$") or ""
-            local indent = #margin
-            if indent > 0 then
-                local lines = splitlines(dn)
-                local ok = true
-                local pattern = "^" .. margin
-                for i=1,#lines do
-                    local l = lines[i]
-                    if find(l,pattern) then
-                        lines[i] = sub(l,indent+1)
-                    else
-                        ok = false
-                        break
-                    end
-                end
-                if ok then
-                    dn = concat(lines,"\n")
-                end
-            end
+            dn =  undent(dn)
         end
     end
     assign(name,dn,catcodes)
-    commands.testcase(more)
+    commands.doifelse(more)
 end
 
 -- The optional prefix hack is there for the typesetbuffer feature and
 -- in mkii we needed that (this hidden feature is used in a manual).
 
-local function prepared(name,list) -- list is optional
+local function prepared(name,list,prefix) -- list is optional
     if not list or list == "" then
         list = name
     end
@@ -201,7 +246,12 @@ local function prepared(name,list) -- list is optional
     if content == "" then
         content = "empty buffer"
     end
-    return tex.jobname .. "-" .. name .. ".tmp", content
+    if prefix then
+        local name = file.addsuffix(name,"tmp")
+        return tex.jobname .. "-" .. name, content
+    else
+        return name, content
+    end
 end
 
 local capsule = "\\starttext\n%s\n\\stoptext\n"
@@ -224,20 +274,20 @@ function commands.runbuffer(name,list,encapsulate)
     end
 end
 
-function commands.savebuffer(list,name) -- name is optional
-    local name, content = prepared(name,list)
+function commands.savebuffer(list,name,prefix) -- name is optional
+    local name, content = prepared(name,list,prefix==v_yes)
     io.savedata(name,content)
 end
 
 function commands.getbuffer(name)
     local str = getcontent(name)
     if str ~= "" then
-        context.viafile(str)
+        context.viafile(str,format("buffer.%s",validstring(name,"noname")))
     end
 end
 
 function commands.getbuffermkvi(name) -- rather direct !
-    context.viafile(resolvers.macros.preprocessed(getcontent(name)))
+    context.viafile(resolvers.macros.preprocessed(getcontent(name)),format("buffer.%s.mkiv",validstring(name,"noname")))
 end
 
 function commands.gettexbuffer(name)
@@ -256,7 +306,7 @@ function commands.gettexbuffer(name)
 end
 
 function commands.getbufferctxlua(name)
-    local ok = loadstring(getcontent(name))
+    local ok = load(getcontent(name))
     if ok then
         ok()
     else
@@ -265,7 +315,7 @@ function commands.getbufferctxlua(name)
 end
 
 function commands.doifelsebuffer(name)
-    commands.testcase(exists(name))
+    commands.doifelse(exists(name))
 end
 
 -- This only used for mp buffers and is a kludge. Don't change the

@@ -34,10 +34,13 @@ functions.</p>
 local trace_callbacks = false  trackers.register("system.callbacks", function(v) trace_callbacks = v end)
 local trace_calls     = false  -- only used when analyzing performance and initializations
 
-local register_callback, find_callback, list_callbacks = callback.register, callback.find, callback.list
+local register_callback = callback.register
+local find_callback     = callback.find
+local list_callbacks    = callback.list
+
 local frozen, stack, list = { }, { }, callbacks.list
 
-if not callbacks.list then -- otherwise counters get reset
+if not list then -- otherwise counters get reset
 
     list = utilities.storage.allocate(list_callbacks())
 
@@ -113,15 +116,6 @@ function callbacks.report()
     end
 end
 
-function callbacks.table()
-    local NC, NR, verbatim = context.NC, context.NR, context.type
-    context.starttabulate { "|l|l|p|" }
-    for name, _ in sortedhash(list) do
-        NC() verbatim(name) NC() verbatim(state(name)) NC() context(frozen[name] or "") NC() NR()
-    end
-    context.stoptabulate()
-end
-
 function callbacks.freeze(name,freeze)
     freeze = type(freeze) == "string" and freeze
     if find(name,"%*") then
@@ -143,7 +137,7 @@ function callbacks.register(name,func,freeze)
         end
         return frozen_callback(name)
     elseif freeze then
-        frozen[name] = (type(freeze) == "string" and freeze) or "registered"
+        frozen[name] = type(freeze) == "string" and freeze or "registered"
     end
     if delayed[name] and environment.initex then
         return nil
@@ -160,7 +154,7 @@ function callback.register(name,func) -- original
     return frozen_callback(name)
 end
 
-function callbacks.push(name, func)
+function callbacks.push(name,func)
     if not frozen[name] then
         local sn = stack[name]
         if not sn then
@@ -310,4 +304,17 @@ function garbagecollector.check(size,criterium)
             end
         end
     end
+end
+
+-- this will move
+
+commands = commands or { }
+
+function commands.showcallbacks()
+    local NC, NR, verbatim = context.NC, context.NR, context.type
+    context.starttabulate { "|l|l|p|" }
+    for name, _ in sortedhash(list) do
+        NC() verbatim(name) NC() verbatim(state(name)) NC() context(frozen[name] or "") NC() NR()
+    end
+    context.stoptabulate()
 end

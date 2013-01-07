@@ -1746,7 +1746,7 @@
 
 \unexpanded\def\font_helpers_set_current_font_size#size%
   {\edef\fontsize{#size}%
-   \font_helpers_check_big_math_synchronization
+   \font_helpers_check_big_math_synchronization % double? better in everymath?
    \font_helpers_synchronize_font}
 
 \unexpanded\def\font_helpers_set_current_font_style_alternative#style#alternative% \rmsl
@@ -1757,20 +1757,20 @@
 \unexpanded\def\font_helpers_set_current_font_style_size#style#size% \rma
   {\edef\fontstyle{#style}%
    \edef\fontsize {#size}%
-   \font_helpers_check_big_math_synchronization
+   \font_helpers_check_big_math_synchronization % double? better in everymath?
    \font_helpers_synchronize_font}
 
 \unexpanded\def\font_helpers_set_current_font_alternative_size#alternative#size% \sla
   {\edef\fontalternative{#alternative}%
    \edef\fontsize       {#size}%
-   \font_helpers_check_big_math_synchronization
+   \font_helpers_check_big_math_synchronization % double? better in everymath?
    \font_helpers_synchronize_font}
 
 \unexpanded\def\font_helpers_set_current_font_style_alternative_size#style#alternative#size% \rmsla
   {\edef\fontstyle      {#style}%
    \edef\fontalternative{#alternative}%
    \edef\fontsize       {#size}%
-   \font_helpers_check_big_math_synchronization
+   \font_helpers_check_big_math_synchronization % double? better in everymath?
    \font_helpers_synchronize_font}
 
 \unexpanded\def\font_helpers_synchronize_font % we can have dups i.e. no need to let fontstrategy
@@ -2095,16 +2095,18 @@
       \fi
       \the\everysetupbodyfont}}
 
-\unexpanded\def\switchtobodyfont[#specification]%
-  {\doifsomething{#specification}
-     {\edef\m_font_step{\bodyfontvariable{#specification}}%
-      \ifx\m_font_step\empty
-        \font_helpers_set_font\zerocount{#specification}%
-      \else
-        \font_helpers_switch_bodyfont_step % so we have a fast [small] switch
-      \fi
-      \the\everybodyfont
-      \the\everyswitchtobodyfont}}
+\unexpanded\def\font_basics_switchtobodyfont#specification%
+  {\edef\m_font_step{\bodyfontvariable{#specification}}%
+   \ifx\m_font_step\empty
+     \font_helpers_set_font\zerocount{#specification}%
+   \else
+     \font_helpers_switch_bodyfont_step % so we have a fast [small] switch
+   \fi
+   \the\everybodyfont
+   \the\everyswitchtobodyfont}
+
+\unexpanded\def\switchtobodyfont[#specification]% could become an ifx
+  {\doifsomething{#specification}{\font_basics_switchtobodyfont{#specification}}}
 
 \def\font_helpers_switch_bodyfont_step
   {\font_basics_switch_points\m_font_step

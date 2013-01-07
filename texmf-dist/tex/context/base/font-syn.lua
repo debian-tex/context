@@ -8,14 +8,12 @@ if not modules then modules = { } end modules ['font-syn'] = {
 
 -- todo: subs in lookups requests
 
-local utf = unicode.utf8
 local next, tonumber = next, tonumber
-local gsub, lower, match, find, lower, upper = string.gsub, string.lower, string.match, string.find, string.lower, string.upper
+local sub, gsub, lower, match, find, lower, upper = string.sub, string.gsub, string.lower, string.match, string.find, string.lower, string.upper
 local find, gmatch = string.find, string.gmatch
 local concat, sort, format = table.concat, table.sort, string.format
 local serialize = table.serialize
 local lpegmatch = lpeg.match
-local utfgsub, utflower = utf.gsub, utf.lower
 local unpack = unpack or table.unpack
 
 local allocate = utilities.storage.allocate
@@ -34,13 +32,13 @@ using a table that has keys filtered from the font related files.</p>
 
 fonts            = fonts or { } -- also used elsewhere
 
-local names      = { }
+local names      = font.names or allocate { }
 fonts.names      = names
 
-names.filters    = names.filters or { }
-local filters    = names.filters
+local filters    = names.filters or { }
+names.filters    = filters
 
-names.data       = names.data or { }
+names.data       = names.data or allocate { }
 
 names.version    = 1.110
 names.basename   = "names"
@@ -120,6 +118,50 @@ local variants = Cs( -- fax casual
 )
 
 local normalized_variants = sparse()
+
+names.knownweights = {
+    "black",
+    "bold",
+    "demi",
+    "demibold",
+    "extrabold",
+    "heavy",
+    "light",
+    "medium",
+    "mediumbold",
+    "normal",
+    "regular",
+    "semi",
+    "semibold",
+    "ultra",
+    "ultrabold",
+    "ultralight",
+}
+
+names.knownstyles = {
+    "italic",
+    "normal",
+    "oblique",
+    "regular",
+    "reverseitalic",
+    "reverseoblique",
+    "roman",
+    "slanted",
+}
+
+names.knownwidths = {
+  "book",
+  "condensed",
+  "expanded",
+  "normal",
+  "thin",
+}
+
+names.knownvariants = {
+  "normal",
+  "oldstyle",
+  "smallcaps",
+}
 
 local any = P(1)
 
@@ -310,8 +352,6 @@ end
 
 local function cleanname(name)
     return (gsub(lower(name),"[^%a%d]",""))
- -- once we can load files with utf names, we can play with the following:
- -- return (utfgsub(utfgsub(lower(str),"[^%a%A%d]",""),"%s",""))
 end
 
 local function cleanfilename(fullname,defaultsuffix)
@@ -498,22 +538,20 @@ local function collecthashes()
             if fontname and not mf[fontname] then
                 mf[fontname], nofmappings = index, nofmappings + 1
             end
-            if familyname and weight then
+            if familyname and weight and weight ~= sub(familyname,#familyname-#weight+1,#familyname) then
                 local madename = familyname .. weight
                 if not mf[madename] and not ff[madename] then
                     ff[madename], noffallbacks = index, noffallbacks + 1
                 end
             end
-            if familyname and subfamily then
+            if familyname and subfamily and subfamily ~= sub(familyname,#familyname-#subfamily+1,#familyname) then
                 local extraname = familyname .. subfamily
                 if not mf[extraname] and not ff[extraname] then
                     ff[extraname], noffallbacks = index, noffallbacks + 1
                 end
             end
-            if familyname then
-                if not mf[familyname] and not ff[familyname] then
-                    ff[familyname], noffallbacks = index, noffallbacks + 1
-                end
+            if familyname and not mf[familyname] and not ff[familyname] then
+                ff[familyname], noffallbacks = index, noffallbacks + 1
             end
         end
     end

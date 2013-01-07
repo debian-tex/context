@@ -7,9 +7,12 @@ if not modules then modules = { } end modules ['font-vf'] = {
 }
 
 --[[ldx--
-<p>This is very experimental code! Not yet adapted to recent
-changes. This will change.</p>
+<p>This is very experimental code! Not yet adapted to recent changes. This will change.</p>
 --ldx]]--
+
+-- present in the backend but unspecified:
+--
+-- vf.rule vf.special vf.right vf.push vf.down vf.char vf.node vf.fontid vf.pop vf.image vf.nop
 
 local next = next
 
@@ -19,8 +22,7 @@ local fastcopy          = table.fastcopy
 
 local fonts             = fonts
 local constructors      = fonts.constructors
-local vf                = { }
-fonts.handlers.vf       = vf
+local vf                = constructors.newhandler("vf")
 
 -- general code
 

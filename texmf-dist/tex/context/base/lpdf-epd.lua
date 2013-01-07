@@ -27,6 +27,8 @@ local lower, match, char, find, sub = string.lower, string.match, string.char, s
 local concat = table.concat
 local toutf = string.toutf
 
+local report_epdf = logs.reporter("epdf")
+
 -- a bit of protection
 
 local limited = false
@@ -59,9 +61,7 @@ local function prepare(document,d,t,n,k)
     for i=1,n do
         local v = d:getVal(i)
         local r = d:getValNF(i)
-        if r:getTypeName() ~= "ref" then
-            t[d:getKey(i)] = checked_access[v:getTypeName()](v,document)
-        else
+        if r:getTypeName() == "ref" then
             r = r:getRef().num
             local c = document.cache[r]
             if c then
@@ -74,6 +74,8 @@ local function prepare(document,d,t,n,k)
                 end
             end
             t[d:getKey(i)] = c
+        else
+            t[d:getKey(i)] = checked_access[v:getTypeName()](v,document)
         end
     end
     getmetatable(t).__index = nil
@@ -95,9 +97,9 @@ local function prepare(document,a,t,n,k)
     for i=1,n do
         local v = a:get(i)
         local r = a:getNF(i)
-        if r:getTypeName() ~= "ref" then
-            t[i] = checked_access[v:getTypeName()](v,document)
-        else
+        if v:getTypeName() == "null" then
+            -- TH: weird, but appears possible
+        elseif r:getTypeName() == "ref" then
             r = r:getRef().num
             local c = document.cache[r]
             if c then
@@ -108,6 +110,8 @@ local function prepare(document,a,t,n,k)
                 document.xrefs[c] = r
             end
             t[i] = c
+        else
+            t[i] = checked_access[v:getTypeName()](v,document)
         end
     end
     getmetatable(t).__index = nil
@@ -179,14 +183,17 @@ checked_access = {
     ref = function(v)
         return v:getRef()
     end,
+    null = function()
+        return nil
+    end,
 }
 
---~ checked_access.real    = epdf.real
---~ checked_access.integer = epdf.integer
---~ checked_access.string  = epdf.string
---~ checked_access.boolean = epdf.boolean
---~ checked_access.name    = epdf.name
---~ checked_access.ref     = epdf.ref
+-- checked_access.real    = epdf.real
+-- checked_access.integer = epdf.integer
+-- checked_access.string  = epdf.string
+-- checked_access.boolean = epdf.boolean
+-- checked_access.name    = epdf.name
+-- checked_access.ref     = epdf.ref
 
 local function getnames(document,n,target) -- direct
     if n then
@@ -264,10 +271,14 @@ local function getpages(document)
     for pagenumber=1,nofpages do
         local pagereference = cata:getPageRef(pagenumber).num
         local pagedata = some_dictionary(xref:fetch(pagereference,0):getDict(),document,pagereference)
-        pagedata.number = pagenumber
-        pages[pagenumber] = pagedata
-        xrefs[pagedata] = pagereference
-        cache[pagereference] = pagedata
+        if pagedata then
+            pagedata.number = pagenumber
+            pages[pagenumber] = pagedata
+            xrefs[pagedata] = pagereference
+            cache[pagereference] = pagedata
+        else
+            report_epdf("missing pagedata at slot %i",i)
+        end
     end
     pages.n = nofpages
     return pages
@@ -321,6 +332,15 @@ function lpdf.epdf.load(filename)
      -- print(statistics.elapsedtime(lpdf.epdf))
     end
     return document
+end
+
+-- for k, v in next, expand(t) do
+
+function lpdf.epdf.expand(t)
+    if type(t) == "table" then
+        local dummy = t.dummy
+    end
+    return t
 end
 
 -- helpers

@@ -20,7 +20,12 @@ local allocate, mark = utilities.storage.allocate, utilities.storage.mark
 
 local format, sub, match, gsub, find = string.format, string.sub, string.match, string.gsub, string.find
 local unquoted, quoted = string.unquoted, string.quoted
-local concat = table.concat
+local concat, insert, remove = table.concat, table.insert, table.remove
+local loadedluacode = utilities.lua.loadedluacode
+local luasuffixes = utilities.lua.suffixes
+
+environment       = environment or { }
+local environment = environment
 
 -- precautions
 
@@ -30,22 +35,59 @@ function os.setlocale()
     -- no way you can mess with it
 end
 
--- dirty tricks
+-- dirty tricks (we will replace the texlua call by luatex --luaonly)
 
-if arg and (arg[0] == 'luatex' or arg[0] == 'luatex.exe') and arg[1] == "--luaonly" then
+local validengines = allocate {
+    ["luatex"]        = true,
+    ["luajittex"]     = true,
+ -- ["luatex.exe"]    = true,
+ -- ["luajittex.exe"] = true,
+}
+
+local basicengines = allocate {
+    ["luatex"]        = "luatex",
+    ["texlua"]        = "luatex",
+    ["texluac"]       = "luatex",
+    ["luajittex"]     = "luajittex",
+    ["texluajit"]     = "luajittex",
+ -- ["texlua.exe"]    = "luatex",
+ -- ["texluajit.exe"] = "luajittex",
+}
+
+environment.validengines = validengines
+environment.basicengines = basicengines
+
+if arg and validengines[file.removesuffix(arg[0])] and arg[1] == "--luaonly" then
     arg[-1] = arg[0]
     arg[ 0] = arg[2]
     for k=3,#arg do
         arg[k-2] = arg[k]
     end
-    arg[#arg] = nil -- last
-    arg[#arg] = nil -- pre-last
+    remove(arg) -- last
+    remove(arg) -- pre-last
+end
+
+-- This is an ugly hack but it permits symlinking a script (say 'context') to 'mtxrun' as in:
+--
+--   ln -s /opt/minimals/tex/texmf-linux-64/bin/mtxrun context
+--
+-- The special mapping hack is needed because 'luatools' boils down to 'mtxrun --script base'
+-- but it's unlikely that there will be more of this
+
+do
+
+    local originalzero   = file.basename(arg[0])
+    local specialmapping = { luatools == "base" }
+
+    if originalzero ~= "mtxrun" and originalzero ~= "mtxrun.lua" then
+       arg[0] = specialmapping[originalzero] or originalzero
+       insert(arg,0,"--script")
+       insert(arg,0,"mtxrun")
+    end
+
 end
 
 -- environment
-
-environment             = environment or { }
-local environment       = environment
 
 environment.arguments   = allocate()
 environment.files       = allocate()
@@ -79,6 +121,8 @@ local mt = {
 
 setmetatable(environment,mt)
 
+-- context specific arguments (in order not to confuse the engine)
+
 function environment.initializearguments(arg)
     local arguments, files = { }, { }
     environment.arguments, environment.files, environment.sortedflags = arguments, files, nil
@@ -87,10 +131,12 @@ function environment.initializearguments(arg)
         if index > 0 then
             local flag, value = match(argument,"^%-+(.-)=(.-)$")
             if flag then
+                flag = gsub(flag,"^c:","")
                 arguments[flag] = unquoted(value or "")
             else
                 flag = match(argument,"^%-+(.+)")
                 if flag then
+                    flag = gsub(flag,"^c:","")
                     arguments[flag] = true
                 else
                     files[#files+1] = argument
@@ -98,7 +144,7 @@ function environment.initializearguments(arg)
             end
         end
     end
-    environment.ownname = environment.ownname or arg[0] or 'unknown.lua'
+    environment.ownname = file.reslash(environment.ownname or arg[0] or 'unknown.lua')
 end
 
 function environment.setargument(name,value)
@@ -110,7 +156,7 @@ end
 -- tricky: too many hits when we support partials unless we add
 -- a registration of arguments so from now on we have 'partial'
 
-function environment.argument(name,partial)
+function environment.getargument(name,partial)
     local arguments, sortedflags = environment.arguments, environment.sortedflags
     if arguments[name] then
         return arguments[name]
@@ -132,6 +178,8 @@ function environment.argument(name,partial)
     end
     return nil
 end
+
+environment.argument = environment.getargument
 
 function environment.splitarguments(separator) -- rather special, cut-off before separator
     local done, before, after = false, { }, { }
@@ -177,22 +225,22 @@ function environment.reconstructcommandline(arg,noquote)
     end
 end
 
---~ -- to be tested:
---~
---~ function environment.reconstructcommandline(arg,noquote)
---~     arg = arg or environment.originalarguments
---~     if noquote and #arg == 1 then
---~         return unquoted(resolvers.resolve(arg[1]))
---~     elseif #arg > 0 then
---~         local result = { }
---~         for i=1,#arg do
---~             result[#result+1] = format("%q",unquoted(resolvers.resolve(arg[i]))) -- always quote
---~         end
---~         return concat(result," ")
---~     else
---~         return ""
---~     end
---~ end
+-- -- to be tested:
+--
+-- function environment.reconstructcommandline(arg,noquote)
+--     arg = arg or environment.originalarguments
+--     if noquote and #arg == 1 then
+--         return unquoted(resolvers.resolve(arg[1]))
+--     elseif #arg > 0 then
+--         local result = { }
+--         for i=1,#arg do
+--             result[#result+1] = format("%q",unquoted(resolvers.resolve(arg[i]))) -- always quote
+--         end
+--         return concat(result," ")
+--     else
+--         return ""
+--     end
+-- end
 
 if arg then
 
@@ -234,7 +282,7 @@ function environment.texfile(filename)
     return resolvers.findfile(filename,'tex')
 end
 
-function environment.luafile(filename)
+function environment.luafile(filename) -- needs checking
     local resolved = resolvers.findfile(filename,'tex') or ""
     if resolved ~= "" then
         return resolved
@@ -246,13 +294,27 @@ function environment.luafile(filename)
     return resolvers.findfile(filename,'luatexlibs') or ""
 end
 
-environment.loadedluacode = loadfile -- can be overloaded
+-- local function checkstrip(filename)
+--     local modu = modules[file.nameonly(filename)]
+--     return modu and modu.dataonly
+-- end
+
+local stripindeed = false  directives.register("system.compile.strip", function(v) stripindeed = v end)
+
+local function strippable(filename)
+    if stripindeed then
+        local modu = modules[file.nameonly(filename)]
+        return modu and modu.dataonly
+    else
+        return false
+    end
+end
 
 function environment.luafilechunk(filename,silent) -- used for loading lua bytecode in the format
     filename = file.replacesuffix(filename, "lua")
     local fullname = environment.luafile(filename)
     if fullname and fullname ~= "" then
-        local data = environment.loadedluacode(fullname)
+        local data = loadedluacode(fullname,strippable,filename)
         if trace_locating then
             report_lua("loading file %s%s", fullname, not data and " failed" or "")
         elseif not silent then
@@ -273,9 +335,11 @@ function environment.loadluafile(filename, version)
     local lucname, luaname, chunk
     local basename = file.removesuffix(filename)
     if basename == filename then
-        lucname, luaname = basename .. ".luc",  basename .. ".lua"
+        luaname = fiule.addsuffix(basename,luasuffixes.lua)
+        lucname = fiule.addsuffix(basename,luasuffixes.luc)
     else
-        lucname, luaname = nil, basename -- forced suffix
+        luaname = basename -- forced suffix
+        lucname = nil
     end
     -- when not overloaded by explicit suffix we look for a luc file first
     local fullname = (lucname and environment.luafile(lucname)) or ""

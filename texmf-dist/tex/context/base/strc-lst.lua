@@ -122,7 +122,7 @@ function lists.addto(t)
     end
     local m = t.metadata
     local r = t.references
-    local i = (r and r.internal) or 0 -- brrr
+    local i = r and r.internal or 0 -- brrr
     local p = pushed[i]
     if not p then
         p = #cached + 1
@@ -130,7 +130,6 @@ function lists.addto(t)
         pushed[i] = p
         r.listindex = p
     end
-    --
     local setcomponent = references.setcomponent
     if setcomponent then
         setcomponent(t) -- might move to the tex end
@@ -192,26 +191,6 @@ function lists.enhance(n)
     end
 end
 
---~ function lists.enforce(n)
---~  -- todo: symbolic names for counters
---~     local l = cached[n]
---~     if l then
---~         --
---~         l.directives = nil -- might change
---~         -- save in the right order (happens at shipout)
---~         lists.tobesaved[#lists.tobesaved+1] = l
---~         -- default enhancer (cross referencing)
---~         l.references.realpage = texcount.realpageno
---~         -- specific enhancer (kind of obsolete)
---~         local kind = l.metadata.kind
---~         local enhancer = kind and lists.enhancers[kind]
---~         if enhancer then
---~             enhancer(l)
---~         end
---~         return l
---~     end
---~ end
-
 -- we can use level instead but we can also decide to remove level from the metadata
 
 local nesting = { }
@@ -270,7 +249,7 @@ local function filtercollected(names, criterium, number, collected, forced, nest
     if block == "" then
         block = false
     end
---~ print(">>",block,criterium)
+-- print(">>",block,criterium)
     --
     forced = forced or { } -- todo: also on other branched, for the moment only needed for bookmarks
     if type(names) == "string" then
@@ -295,7 +274,7 @@ local function filtercollected(names, criterium, number, collected, forced, nest
         for i=1,#collected do
             local v = collected[i]
             local r = v.references
-            if r then
+            if r and (not block or not r.block or block == r.block) then
                 local metadata = v.metadata
                 if metadata then
                     local name = metadata.name or false
@@ -353,7 +332,6 @@ local function filtercollected(names, criterium, number, collected, forced, nest
                         local cnumbers = sectionnumber.numbers
                         local metadata = v.metadata
                         if cnumbers then
---~ print(#cnumbers, depth, concat(cnumbers))
                             if metadata and not metadata.nolist and (all or names[metadata.name or false]) and #cnumbers >= depth then
                                 local ok = true
                                 for d=1,depth do
@@ -597,7 +575,7 @@ function lists.hasnumberdata(name,n)
     local data = lists.result[n]
     if data then
         local numberdata = data.numberdata
-        if numberdata then
+        if numberdata and not numberdata.hidenumber then -- th ehide number is true
             return true
         end
     end
@@ -731,10 +709,27 @@ function commands.savedlisttitle(name,n,tag)
     end
 end
 
+-- function commands.savedlistprefixednumber(name,n)
+--     local data = cached[tonumber(n)]
+--     if data then
+--         local numberdata = data.numberdata
+--         if numberdata then
+--             helpers.prefix(data,data.prefixdata)
+--             sections.typesetnumber(numberdata,"number",numberdata or false)
+--         end
+--     end
+-- end
+
+if not lists.reordered then
+    function lists.reordered(data)
+        return data.numberdata
+    end
+end
+
 function commands.savedlistprefixednumber(name,n)
     local data = cached[tonumber(n)]
     if data then
-        local numberdata = data.numberdata
+        local numberdata = lists.reordered(data)
         if numberdata then
             helpers.prefix(data,data.prefixdata)
             sections.typesetnumber(numberdata,"number",numberdata or false)
@@ -743,3 +738,90 @@ function commands.savedlistprefixednumber(name,n)
 end
 
 commands.discardfromlist = lists.discard
+
+-- new and experimental and therefore off by default
+
+local sort, setmetatableindex = table.sort, table.setmetatableindex
+
+lists.autoreorder = false -- true
+
+local function addlevel(t,k)
+    local v = { }
+    setmetatableindex(v,function(t,k)
+        local v = { }
+        t[k] = v
+        return v
+    end)
+    t[k] = v
+    return v
+end
+
+local internals = setmetatableindex({ }, function(t,k)
+
+    local sublists = setmetatableindex({ },addlevel)
+
+    local collected = lists.collected or { }
+
+    for i=1,#collected do
+        local entry = collected[i]
+        local numberdata = entry.numberdata
+        if numberdata then
+            local metadata = entry.metadata
+            if metadata then
+                local references = entry.references
+                if references then
+                    local kind = metadata.kind
+                    local name = numberdata.counter or metadata.name
+                    local internal = references.internal
+                    if kind and name and internal then
+                        local sublist = sublists[kind][name]
+                        sublist[#sublist + 1] = { internal, numberdata }
+                    end
+                end
+            end
+        end
+    end
+
+    for k, v in next, sublists do
+        for k, v in next, v do
+            local tmp = { }
+            for i=1,#v do
+                tmp[i] = v[i]
+            end
+            sort(v,function(a,b) return a[1] < b[1] end)
+            for i=1,#v do
+                t[v[i][1]] = tmp[i][2]
+            end
+        end
+    end
+
+    setmetatableindex(t,nil)
+
+    return t[k]
+
+end)
+
+function lists.reordered(entry)
+    local numberdata = entry.numberdata
+    if lists.autoreorder then
+        if numberdata then
+            local metadata = entry.metadata
+            if metadata then
+                local references = entry.references
+                if references then
+                    local kind = metadata.kind
+                    local name = numberdata.counter or metadata.name
+                    local internal = references.internal
+                    if kind and name and internal then
+                        return internals[internal] or numberdata
+                    end
+                end
+            end
+        end
+    else
+        function lists.reordered(entry)
+            return entry.numberdata
+        end
+    end
+    return numberdata
+end

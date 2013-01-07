@@ -1,4 +1,4 @@
-if not modules then modules = { } end modules ['lpdf-mis'] = {
+if not modules then modules = { } end modules ['lpdf-col'] = {
     version   = 1.001,
     comment   = "companion to lpdf-ini.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
@@ -12,6 +12,9 @@ local concat = table.concat
 local round = math.round
 
 local backends, lpdf, nodes = backends, lpdf, nodes
+
+local allocate             = utilities.storage.allocate
+local formatters           = string.formatters
 
 local nodeinjections       = backends.pdf.nodeinjections
 local codeinjections       = backends.pdf.codeinjections
@@ -40,11 +43,16 @@ local forcedmodel          = colors.forcedmodel
 
 local c_transparency = pdfconstant("Transparency")
 
+local f_gray = formatters["%.3f g %.3f G"]
+local f_rgb  = formatters["%.3f %.3f %.3f rg %.3f %.3f %.3f RG"]
+local f_cmyk = formatters["%.3f %.3f %.3f %.3f k %.3f %.3f %.3f %.3f K"]
+local f_cm   = formatters["q %f %f %f %f %f %f cm"]
+
 local report_color = logs.reporter("colors","backend")
 
 -- page groups (might move to lpdf-ini.lua)
 
-local colorspaceconstants = { -- v_none is ignored
+local colorspaceconstants = allocate { -- v_none is ignored
     gray = pdfconstant("DeviceGray"),
     rgb  = pdfconstant("DeviceRGB"),
     cmyk = pdfconstant("DeviceCMYK"),
@@ -97,15 +105,15 @@ commands.synchronizecolormodel                = synchronizecolormodel
 -- color injection
 
 function nodeinjections.rgbcolor(r,g,b)
-    return register(pdfliteral(format("%s %s %s rg %s %s %s RG",r,g,b,r,g,b)))
+    return register(pdfliteral(f_rgb(r,g,b,r,g,b)))
 end
 
 function nodeinjections.cmykcolor(c,m,y,k)
-    return register(pdfliteral(format("%s %s %s %s k %s %s %s %s K",c,m,y,k,c,m,y,k)))
+    return register(pdfliteral(f_cmyk(c,m,y,k,c,m,y,k)))
 end
 
 function nodeinjections.graycolor(s) -- caching 0/1 does not pay off
-    return register(pdfliteral(format("%s g %s G",s,s)))
+    return register(pdfliteral(f_gray(s,s)))
 end
 
 function nodeinjections.spotcolor(n,f,d,p)
@@ -152,9 +160,9 @@ local pdf_rbg_range  = pdfarray { 0, 1, 0, 1, 0, 1 }
 local pdf_cmyk_range = pdfarray { 0, 1, 0, 1, 0, 1, 0, 1 }
 local pdf_gray_range = pdfarray { 0, 1 }
 
-local rgb_function  = "dup %s mul exch dup %s mul exch %s mul"
-local cmyk_function = "dup %s mul exch dup %s mul exch dup %s mul exch %s mul"
-local gray_function = "%s mul"
+local f_rgb_function  = formatters["dup %s mul exch dup %s mul exch %s mul"]
+local f_cmyk_function = formatters["dup %s mul exch dup %s mul exch dup %s mul exch %s mul"]
+local f_gray_function = formatters["%s mul"]
 
 local documentcolorspaces = pdfdictionary()
 
@@ -343,47 +351,47 @@ end
 
 function registrations.rgbspotcolor(name,noffractions,names,p,r,g,b)
     if noffractions == 1 then
-        registersomespotcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rbg_range,format(rgb_function,r,g,b))
+        registersomespotcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rbg_range,f_rgb_function(r,g,b))
     else
         registersomespotcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rbg_range,format("%s %s %s",r,g,b))
     end
     delayindexcolor(name,names,function()
-        return registersomeindexcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rgb_range,format(rgb_function,r,g,b))
+        return registersomeindexcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rgb_range,f_rgb_function(r,g,b))
     end)
 end
 
 function registrations.cmykspotcolor(name,noffractions,names,p,c,m,y,k)
     if noffractions == 1 then
-        registersomespotcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,format(cmyk_function,c,m,y,k))
+        registersomespotcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,f_cmyk_function(c,m,y,k))
     else
         registersomespotcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,format("%s %s %s %s",c,m,y,k))
     end
     delayindexcolor(name,names,function()
-        return registersomeindexcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,format(cmyk_function,c,m,y,k))
+        return registersomeindexcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,f_cmyk_function(c,m,y,k))
     end)
 end
 
 function registrations.grayspotcolor(name,noffractions,names,p,s)
     if noffractions == 1 then
-        registersomespotcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,format(gray_function,s))
+        registersomespotcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,f_gray_function(s))
     else
         registersomespotcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,s)
     end
     delayindexcolor(name,names,function()
-        return registersomeindexcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,format(gray_function,s))
+        return registersomeindexcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,f_gray_function(s))
     end)
 end
 
 function registrations.rgbindexcolor(name,noffractions,names,p,r,g,b)
-    registersomeindexcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rgb_range,format(rgb_function,r,g,b))
+    registersomeindexcolor(name,noffractions,names,p,pdf_device_rgb,pdf_rgb_range,f_rgb_function(r,g,b))
 end
 
 function registrations.cmykindexcolor(name,noffractions,names,p,c,m,y,k)
-    registersomeindexcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,format(cmyk_function,c,m,y,k))
+    registersomeindexcolor(name,noffractions,names,p,pdf_device_cmyk,pdf_cmyk_range,f_cmyk_function(c,m,y,k))
 end
 
 function registrations.grayindexcolor(name,noffractions,names,p,s)
-    registersomeindexcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,gray_function)
+    registersomeindexcolor(name,noffractions,names,p,pdf_device_gray,pdf_gray_range,f_gray_function(s))
 end
 
 function codeinjections.setfigurecolorspace(data,figure)
@@ -459,10 +467,9 @@ end
 
 statistics.register("page group warning", function()
     if done and not transparencygroups[currentgroupcolormodel] then
-        return format("transparencies are used but no pagecolormodel is set")
+        return "transparencies are used but no pagecolormodel is set"
     end
 end)
-
 
 -- Literals needed to inject code in the mp stream, we cannot use attributes there
 -- since literals may have qQ's, much may go away once we have mplib code in place.
@@ -480,13 +487,13 @@ local function lpdfcolor(model,ca,default) -- todo: use gray when no color
             model = forcedmodel(model)
             if model == 2 then
                 local s = cv[2]
-                return format("%s g %s G",s,s)
+                return f_gray(s,s)
             elseif model == 3 then
                 local r, g, b = cv[3], cv[4], cv[5]
-                return format("%s %s %s rg %s %s %s RG",r,g,b,r,g,b)
+                return f_rgb(r,g,b,r,g,b)
             elseif model == 4 then
                 local c, m, y, k = cv[6],cv[7],cv[8],cv[9]
-                return format("%s %s %s %s k %s %s %s %s K",c,m,y,k,c,m,y,k)
+                return f_cmyk(c,m,y,k,c,m,y,k)
             else
                 local n,f,d,p = cv[10],cv[11],cv[12],cv[13]
                 if type(p) == "string" then
@@ -495,7 +502,7 @@ local function lpdfcolor(model,ca,default) -- todo: use gray when no color
                 return format("/%s cs /%s CS %s SCN %s scn",n,n,p,p)
             end
         else
-            return format("%s g %s G",default or 0,default or 0)
+            return f_gray(default or 0,default or 0)
         end
     else
         return ""
@@ -694,7 +701,7 @@ end
 
 -- this will move to lpdf-spe.lua
 
-backends.pdf.tables.vfspecials = { -- todo: distinguish between glyph and rule color
+backends.pdf.tables.vfspecials = allocate { -- todo: distinguish between glyph and rule color
 
     red        = { "special", 'pdf: 1 0 0 rg 1 0 0 RG' },
     green      = { "special", 'pdf: 0 1 0 rg 0 1 0 RG' },
@@ -714,7 +721,7 @@ backends.pdf.tables.vfspecials = { -- todo: distinguish between glyph and rule c
             palegray   = { "special", 'pdf: .75 g' },
     },
 
-    startslant = function(a) return { "special", format("pdf: q 1 0 %s 1 0 0 cm",a) } end,
+    startslant = function(a) return { "special", format("pdf: q 1 0 %f 1 0 0 cm",a) } end,
     stopslant  = { "special", "pdf: Q" },
 
 }

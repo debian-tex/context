@@ -32,7 +32,7 @@ local helpinfo = [[
 
 local application = logs.application {
     name     = "mtx-update",
-    banner   = "ConTeXt Minimals Updater 0.30",
+    banner   = "ConTeXt Minimals Updater 0.31",
     helpinfo = helpinfo,
 }
 
@@ -108,6 +108,7 @@ scripts.update.engines = {
     ["luatex"] = {
         { "fonts/new/",               "texmf" },
         { "bin/luatex/<platform>/",   "texmf-<platform>" },
+        { "bin/luajittex/<platform>/","texmf-<platform>" },
     },
     ["xetex"] = {
         { "base/xetex/",              "texmf" },
@@ -125,6 +126,7 @@ scripts.update.engines = {
         { "fonts/old/",               "texmf" },
         { "base/xetex/",              "texmf" },
         { "bin/luatex/<platform>/",   "texmf-<platform>" },
+        { "bin/luajittex/<platform>/","texmf-<platform>" },
         { "bin/xetex/<platform>/",    "texmf-<platform>" },
         { "bin/pdftex/<platform>/",   "texmf-<platform>" },
     },
@@ -132,10 +134,10 @@ scripts.update.engines = {
 
 scripts.update.goodies = {
     ["scite"] = {
-        { "bin/<platform>/scite/",     "texmf-<platform>" },
+        { "bin/<platform>/scite/",    "texmf-<platform>" },
     },
     ["texworks"] = {
-        { "bin/<platform>/texworks/",  "texmf-<platform>" },
+        { "bin/<platform>/texworks/", "texmf-<platform>" },
     },
 }
 
@@ -421,9 +423,9 @@ function scripts.update.synchronize()
                 if platform == 'mswin' then
                     bin = gsub(bin,"([a-zA-Z]):/", "/cygdrive/%1/")
                     texroot = gsub(texroot,"([a-zA-Z]):/", "/cygdrive/%1/")
-                    command = format("%s -t %s/texmf-context/scripts/context/lua/%s.lua %s/texmf-mswin/bin/", bin, texroot, script, texroot)
+                    command = format([[%s -t "%s/texmf-context/scripts/context/lua/%s.lua" "%s/texmf-mswin/bin/"]], bin, texroot, script, texroot)
                 else
-                    command = format("%s -tgo --chmod=a+x %s/texmf-context/scripts/context/lua/%s.lua %s/texmf-%s/bin/%s", bin, texroot, script, texroot, platform, script)
+                    command = format([[%s -tgo --chmod=a+x '%s/texmf-context/scripts/context/lua/%s.lua' '%s/texmf-%s/bin/%s']], bin, texroot, script, texroot, platform, script)
                 end
                 report("updating %s for %s: %s", script, platform, command)
                 scripts.update.run(command)
@@ -496,6 +498,8 @@ function scripts.update.make()
         for engine in next, engines do
             if engine == "luatex" then
                 scripts.update.run(format('mtxrun --tree="%s" --script context --autogenerate --make',texroot))
+            elseif engine == "luajittex" then
+                scripts.update.run(format('mtxrun --tree="%s" --script context --autogenerate --make --engine=luajittex',texroot))
             else
                 scripts.update.run(format('mtxrun --tree="%s" --script texexec --make --all --%s %s',texroot,engine,formatlist))
             end

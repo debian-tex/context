@@ -93,10 +93,10 @@ tables.vfspecials = allocate {
     stopslant  = comment,
 }
 
--- -- experimental code --
+-- experimental code --
 
-function commands.pdfrotation(a)
+function commands.pdfrotation(a) -- somewhat weird here
     local s, c = sind(a), cosd(a)
-    context("%s %s %s %s",c,s,-s,c)
+    context("%0.6f %0.6f %0.6f %0.6f",c,s,-s,c)
 end
 

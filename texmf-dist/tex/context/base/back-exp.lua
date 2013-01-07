@@ -20,11 +20,11 @@ if not modules then modules = { } end modules ['back-exp'] = {
 
 local next, type = next, type
 local format, match, concat, rep, sub, gsub, gmatch, find = string.format, string.match, table.concat, string.rep, string.sub, string.gsub, string.gmatch, string.find
+local validstring = string.valid
 local lpegmatch = lpeg.match
-local utfchar, utfbyte, utfsub, utfgsub = utf.char, utf.byte, utf.sub, utf.gsub
+local utfchar, utfbyte, utfvalues = utf.char, utf.byte, utf.values
 local insert, remove = table.insert, table.remove
 local topoints = number.topoints
-local utfvalues = string.utfvalues
 local fromunicode16 = fonts.mappings.fromunicode16
 local sortedhash = table.sortedhash
 
@@ -153,6 +153,8 @@ local specialspaces     = { [0x20] = " "  }               -- for conversion
 local somespace         = { [0x20] = true, [" "] = true } -- for testing
 local entities          = { ["&"] = "&amp;", [">"] = "&gt;", ["<"] = "&lt;" }
 local attribentities    = { ["&"] = "&amp;", [">"] = "&gt;", ["<"] = "&lt;", ['"'] = "quot;" }
+
+local entityremapper    = utf.remapper(entities)
 
 local alignmapping = {
     flushright = "right",
@@ -300,7 +302,7 @@ local usedstyles = { }
 
 local documenttemplate = [[
 document {
-	font-size  : %s !important ;
+    font-size  : %s !important ;
     max-width  : %s !important ;
     text-align : %s !important ;
     hyphens    : %s !important ;
@@ -382,7 +384,7 @@ local function allusedimages(xmlfile)
     for element, details in sortedhash(usedimages) do
         for detail, data in sortedhash(details) do
             local name = data.name
-            if file.extname(name) == "pdf" then
+            if file.suffix(name) == "pdf" then
                 -- temp hack .. we will have a remapper
                 name = file.replacesuffix(name,"svg")
             end
@@ -397,7 +399,7 @@ local function uniqueusedimages()
     for element, details in next, usedimages do
         for detail, data in next, details do
             local name = data.name
-            if file.extname(name) == "pdf" then
+            if file.suffix(name) == "pdf" then
                 unique[file.replacesuffix(name,"svg")] = name
             else
                 unique[name] = name
@@ -1351,7 +1353,7 @@ local function begintag(result,element,nature,depth,di,skip)
         end
         result[#result+1] = format("%s<metadata>\n",spaces[depth])
         for k, v in table.sortedpairs(metadata) do
-            v = utfgsub(v,".",entities)
+            v = entityremapper(v)
             result[#result+1] = format("%s<metavariable name=%q>%s</metavariable>\n",spaces[depth+1],k,v)
         end
         result[#result+1] = format("%s</metadata>\n",spaces[depth])
@@ -1409,7 +1411,7 @@ local function flushtree(result,data,nature,depth)
             -- whatever
         elseif di.content then
             -- already has breaks
-            local content = utfgsub(di.content,".",entities)
+            local content = entityremapper(di.content)
             if i == nofdata and sub(content,-1) == "\n" then -- move check
                 -- can be an end of line in par but can also be the last line
                 if trace_spacing then
@@ -1934,24 +1936,6 @@ local function collectresults(head,list) -- is last used (we also have currentat
                     end
                 end
             end
-        elseif id == hlist_code or id == vlist_code then
-            local ai = has_attribute(n,a_image)
-            if ai then
-                local at = has_attribute(n,a_tagged)
-                if nofcurrentcontent > 0 then
-                    pushcontent()
-                    pushentry(currentnesting) -- ??
-                end
-                pushentry(taglist[at]) -- has an index, todo: flag empty element
-                if trace_export then
-                    report_export("%s<!-- processing image (tag %s)",spaces[currentdepth],last)
-                end
-                last = nil
-                currentparagraph = nil
-            else
-                -- we need to determine an end-of-line
-                collectresults(n.list,n)
-            end
         elseif id == disc_code then -- probably too late
             if keephyphens then
                 local pre = n.pre
@@ -2090,6 +2074,24 @@ local function collectresults(head,list) -- is last used (we also have currentat
                     -- as we don't want the rightskip space addition
                     return
                 end
+            end
+        elseif id == hlist_code or id == vlist_code then
+            local ai = has_attribute(n,a_image)
+            if ai then
+                local at = has_attribute(n,a_tagged)
+                if nofcurrentcontent > 0 then
+                    pushcontent()
+                    pushentry(currentnesting) -- ??
+                end
+                pushentry(taglist[at]) -- has an index, todo: flag empty element
+                if trace_export then
+                    report_export("%s<!-- processing image (tag %s)",spaces[currentdepth],last)
+                end
+                last = nil
+                currentparagraph = nil
+            else
+                -- we need to determine an end-of-line
+                collectresults(n.list,n)
             end
         elseif id == kern_code then
             local kern = n.kern
@@ -2362,12 +2364,21 @@ local function stopexport(v)
         report_export("saving xhtml variant in '%s",xhtmlfile)
         local xmltree = cleanxhtmltree(xml.convert(results))
         xml.save(xmltree,xhtmlfile)
+        -- looking at identity is somewhat redundant as we also inherit from interaction
+        -- at the tex end
+        local identity = interactions.general.getidentity()
         local specification = {
             name       = file.removesuffix(v),
             identifier = os.uuid(),
             images     = uniqueusedimages(),
             root       = xhtmlfile,
             files      = files,
+            language   = languagenames[tex.count.mainlanguagenumber],
+            title      = validstring(finetuning.title) or validstring(identity.title),
+            subtitle   = validstring(finetuning.subtitle) or validstring(identity.subtitle),
+            author     = validstring(finetuning.author) or validstring(identity.author),
+            firstpage  = validstring(finetuning.firstpage),
+            lastpage   = validstring(finetuning.lastpage),
         }
         report_export("saving specification in '%s' (mtxrun --script epub --make %s)",specificationfilename,specificationfilename)
         io.savedata(specificationfilename,table.serialize(specification,true))

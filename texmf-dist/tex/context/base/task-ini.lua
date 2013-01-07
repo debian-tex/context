@@ -20,9 +20,10 @@ local freezegroup     = tasks.freezegroup
 local freezecallbacks = callbacks.freeze
 
 appendaction("processors",   "normalizers", "typesetters.characters.handler")                    -- always on
-appendaction("processors",   "normalizers", "fonts.collections.process")                         -- todo
+appendaction("processors",   "normalizers", "fonts.collections.process")                         -- disabled
 appendaction("processors",   "normalizers", "fonts.checkers.missing")                            -- disabled
 
+appendaction("processors",   "characters",  "scripts.autofontfeature.handler")
 appendaction("processors",   "characters",  "typesetters.cleaners.handler")                      -- disabled
 appendaction("processors",   "characters",  "typesetters.directions.handler")                    -- disabled
 appendaction("processors",   "characters",  "typesetters.cases.handler")                         -- disabled
@@ -58,8 +59,11 @@ appendaction("shipouts",     "normalizers", "nodes.shifts.handler")             
 appendaction("shipouts",     "normalizers", "structures.tags.handler")                           -- disabled
 appendaction("shipouts",     "normalizers", "nodes.handlers.accessibility")                      -- disabled
 appendaction("shipouts",     "normalizers", "nodes.handlers.backgrounds")                        -- disabled
+appendaction("shipouts",     "normalizers", "nodes.handlers.alignbackgrounds")                        -- disabled
 
---~ appendaction("shipouts",     "normalizers", "nodes.handlers.export")                             -- disabled
+-- appendaction("shipouts",     "normalizers", "nodes.handlers.export")                             -- disabled
+
+appendaction("shipouts",     "finishers",   "nodes.visualizers.handler")                         -- disabled
 
 appendaction("shipouts",     "finishers",   "attributes.colors.handler")                         -- disabled
 appendaction("shipouts",     "finishers",   "attributes.transparencies.handler")                 -- disabled
@@ -75,12 +79,13 @@ appendaction("math",         "normalizers", "noads.handlers.relocate", nil, "noh
 appendaction("math",         "normalizers", "noads.handlers.render",   nil, "nohead")            -- always on
 appendaction("math",         "normalizers", "noads.handlers.collapse", nil, "nohead")            -- always on
 appendaction("math",         "normalizers", "noads.handlers.resize",   nil, "nohead")            -- always on
-appendaction("math",         "normalizers", "noads.handlers.respace",  nil, "nohead")            -- always on
+------------("math",         "normalizers", "noads.handlers.respace",  nil, "nohead")            -- always on
 appendaction("math",         "normalizers", "noads.handlers.check",    nil, "nohead")            -- always on
 appendaction("math",         "normalizers", "noads.handlers.tags",     nil, "nohead")            -- disabled
 appendaction("math",         "normalizers", "noads.handlers.italics",  nil, "nohead")            -- disabled
 
 appendaction("math",         "builders",    "builders.kernel.mlist_to_hlist")                    -- always on
+------------("math",         "builders",    "noads.handlers.italics",  nil, "nohead")            -- disabled
 
 -- quite experimental (nodes.handlers.graphicvadjust might go away)
 
@@ -96,8 +101,15 @@ appendaction("mvlbuilders",  "normalizers", "builders.vspacing.pagehandler")    
 
 appendaction("vboxbuilders", "normalizers", "builders.vspacing.vboxhandler")                     --
 
+-- experimental too
+
+appendaction("mvlbuilders","normalizers","typesetters.checkers.handler")
+appendaction("vboxbuilders","normalizers","typesetters.checkers.handler")
+
 -- speedup: only kick in when used
 
+disableaction("processors",  "scripts.autofontfeature.handler")
+disableaction("processors",  "fonts.collections.process")
 disableaction("processors",  "fonts.checkers.missing")
 disableaction("processors",  "chars.handle_breakpoints")
 disableaction("processors",  "typesetters.cleaners.handler")
@@ -122,8 +134,10 @@ disableaction("shipouts",    "attributes.effects.handler")
 disableaction("shipouts",    "attributes.negatives.handler")
 disableaction("shipouts",    "attributes.viewerlayers.handler")
 disableaction("shipouts",    "structures.tags.handler")
+disableaction("shipouts",    "nodes.visualizers.handler")
 disableaction("shipouts",    "nodes.handlers.accessibility")
 disableaction("shipouts",    "nodes.handlers.backgrounds")
+disableaction("shipouts",    "nodes.handlers.alignbackgrounds")
 disableaction("shipouts",    "nodes.handlers.cleanuppage")
 
 disableaction("shipouts",    "nodes.references.handler")
@@ -142,6 +156,9 @@ disableaction("finalizers",  "builders.paragraphs.tag")
 
 disableaction("math",        "noads.handlers.tags")
 disableaction("math",        "noads.handlers.italics")
+
+disableaction("mvlbuilders", "typesetters.checkers.handler")
+disableaction("vboxbuilders","typesetters.checkers.handler")
 
 freezecallbacks("find_.*_file", "find file using resolver")
 freezecallbacks("read_.*_file", "read file at once")

@@ -5,7 +5,7 @@
 %D       subtitle=plugins,
 %D         author=Hans Hagen,
 %D           date=\currentdate,
-%D      copyright={PRAGMA / Hans Hagen \& Ton Otten}]
+%D      copyright={PRAGMA ADE \& \CONTEXT\ Development Team}]
 %C
 %C This module is part of the \CONTEXT\ macro||package and is
 %C therefore copyrighted by \PRAGMA. See licen-en.pdf for
@@ -99,7 +99,13 @@ newinternal textextoffset ; textextoffset := 0 ;
 numeric mfun_tt_w[], mfun_tt_h[], mfun_tt_d[] ; % we can consider using colors (less hash space)
 numeric mfun_tt_n ; mfun_tt_n := 0 ;
 picture mfun_tt_p ; mfun_tt_p := nullpicture ;
-boolean mfun_trial_run ; mfun_trial_run := false ;
+
+if unknown mfun_trial_run :
+    boolean mfun_trial_run ;
+    mfun_trial_run := false ;
+else :
+    % already defined before the format is loaded
+fi ;
 
 def mfun_reset_tex_texts =
     mfun_tt_n := 0 ;
@@ -110,8 +116,8 @@ def mfun_flush_tex_texts =
     addto currentpicture also mfun_tt_p
 enddef ;
 
-extra_endfig   := "mfun_flush_tex_texts;" & extra_endfig;
-extra_beginfig := extra_beginfig & "mfun_reset_tex_texts;";
+extra_endfig   := "mfun_flush_tex_texts ;" & extra_endfig ;
+extra_beginfig := extra_beginfig & "mfun_reset_tex_texts ;" ;
 
 % We collect and flush them all, as we can also have temporary textexts
 % that gets never really flushed but are used for calculations. So, we
@@ -255,7 +261,7 @@ vardef thetextext@#(expr p,z) =
     fi
 enddef ;
 
-vardef textext@#(expr p) = % no draw hers
+vardef textext@#(expr p) = % no draw here
     thetextext@#(p,origin)
 enddef ;
 
@@ -565,7 +571,10 @@ def bitmapimage(expr xresolution, yresolution, data) =
     )
 enddef ;
 
-% TODO:
+% Experimental:
+%
+% property p ; p = properties(withcolor (1,1,0,0)) ;
+% fill fullcircle scaled 20cm withproperties p ;
 
 let property = picture ;
 
@@ -573,24 +582,33 @@ vardef properties(text t) =
     image(draw unitcircle t)
 enddef ;
 
-def withproperties expr p =
-    if colormodel p = 3 :
-        withcolor greypart p
-    elseif colormodel p = 5 :
-        withcolor (redpart p,greenpart p,bluepart p)
-    elseif colormodel p = 7 :
-        withcolor (cyanpart p,magentapart p,yellowpart p,blackpart p)
-    fi
-    % todo, when available in mp:
-    %
-    % withprescript prescript p
-    % withpostscript postscript p
-    %
-    % todo, penpart
-enddef ;
+if metapostversion < 1.770  :
 
-% property p ; p = properties(withcolor (1,1,0,1)) ;
-% fill fullcircle scaled 20cm withproperties p ;
+    def withproperties expr p =
+        if colormodel p = 3 :
+            withcolor greypart p
+        elseif colormodel p = 5 :
+            withcolor (redpart p,greenpart p,bluepart p)
+        elseif colormodel p = 7 :
+            withcolor (cyanpart p,magentapart p,yellowpart p,blackpart p)
+        fi
+    enddef ;
+
+else :
+
+    def withproperties expr p =
+        if colormodel p = 3 :
+            withcolor greypart p
+        elseif colormodel p = 5 :
+            withcolor (redpart p,greenpart p,bluepart p)
+        elseif colormodel p = 7 :
+            withcolor (cyanpart p,magentapart p,yellowpart p,blackpart p)
+        fi
+        withprescript prescript p
+        withpostscript postscript p
+    enddef ;
+
+fi ;
 
 % Experimental:
 
@@ -614,3 +632,26 @@ primarydef t asgroup s = % s = isolated|knockout
     wrappedpicture
     endgroup
 enddef ;
+
+% Also experimental
+
+string mfun_auto_align[] ;
+
+mfun_auto_align[0] := "rt" ;
+mfun_auto_align[1] := "urt" ;
+mfun_auto_align[2] := "top" ;
+mfun_auto_align[3] := "ulft" ;
+mfun_auto_align[4] := "lft" ;
+mfun_auto_align[5] := "llft" ;
+mfun_auto_align[6] := "bot" ;
+mfun_auto_align[7] := "lrt" ;
+mfun_auto_align[8] := "rt" ;
+
+def autoalign(expr n) =
+    scantokens mfun_auto_align[round((n mod 360)/45)]
+enddef ;
+
+% draw textext.autoalign(60) ("\strut oeps 1") ;
+% draw textext.autoalign(160)("\strut oeps 2") ;
+% draw textext.autoalign(260)("\strut oeps 3") ;
+% draw textext.autoalign(360)("\strut oeps 4") ;

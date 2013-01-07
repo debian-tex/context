@@ -6,10 +6,7 @@ if not modules then modules = { } end modules ['font-con'] = {
     license   = "see context related readme files"
 }
 
-
 -- some names of table entries will be changed (no _)
-
-local utf = unicode.utf8
 
 local next, tostring, rawget = next, tostring, rawget
 local format, match, lower, gsub = string.format, string.match, string.lower, string.gsub
@@ -29,9 +26,9 @@ local report_defining = logs.reporter("fonts","defining")
 --ldx]]--
 
 local fonts                  = fonts
-local constructors           = { }
+local constructors           = fonts.constructors or { }
 fonts.constructors           = constructors
-local handlers               = { }
+local handlers               = fonts.handlers or { } -- can have preloaded tables
 fonts.handlers               = handlers
 
 local specifiers             = fonts.specifiers
@@ -358,6 +355,10 @@ function constructors.scale(tfmdata,specification)
     elseif forcedsize > 1000 then -- safeguard
         scaledpoints = forcedsize
     end
+    targetparameters.mathsize    = mathsize    -- context specific
+    targetparameters.textsize    = textsize    -- context specific
+    targetparameters.forcedsize  = forcedsize  -- context specific
+    targetparameters.extrafactor = extrafactor -- context specific
     --
     local tounicode     = resources.tounicode
     local defaultwidth  = resources.defaultwidth  or 0
@@ -537,13 +538,16 @@ function constructors.scale(tfmdata,specification)
     -- some context specific trickery (this will move to a plugin)
     --
     if hasmath then
-        if properties.mathitalics then
-            italickey = "italic_correction"
-            if trace_defining then
-                report_defining("math italics disabled for: name '%s', fullname: '%s', filename: '%s'",
-                    name or "noname",fullname or "nofullname",filename or "nofilename")
-            end
-        end
+     -- the latest luatex can deal with it itself so we now disable this
+     -- mechanism here
+     --
+     -- if properties.mathitalics then
+     --     italickey = "italic_correction"
+     --     if trace_defining then
+     --         report_defining("math italics disabled for: name '%s', fullname: '%s', filename: '%s'",
+     --             name or "noname",fullname or "nofullname",filename or "nofilename")
+     --     end
+     -- end
         autoitalicamount = false -- new
     else
         if properties.textitalics then
@@ -1069,7 +1073,7 @@ setmetatableindex(formats, function(t,k)
         t[k] = l
         return l
     end
-    return rawget(t,file.extname(l))
+    return rawget(t,file.suffix(l))
 end)
 
 local locations = { }
@@ -1166,19 +1170,31 @@ function constructors.getfeatureaction(what,where,mode,name)
     end
 end
 
-function constructors.newfeatures(what)
-    local features = handlers[what].features
+function constructors.newhandler(what) -- could be a metatable newindex
+    local handler = handlers[what]
+    if not handler then
+        handler = { }
+        handlers[what] = handler
+    end
+    return handler
+end
+
+function constructors.newfeatures(what) -- could be a metatable newindex
+    local handler = handlers[what]
+    local features = handler.features
     if not features then
-        local tables = handlers[what].tables -- can be preloaded
+        local tables     = handler.tables     -- can be preloaded
+        local statistics = handler.statistics -- can be preloaded
         features = allocate {
             defaults     = { },
             descriptions = tables and tables.features or { },
+            used         = statistics and statistics.usedfeatures or { },
             initializers = { base = { }, node = { } },
             processors   = { base = { }, node = { } },
             manipulators = { base = { }, node = { } },
         }
         features.register = function(specification) return register(features,specification) end
-        handlers[what].features = features -- will also become hidden
+        handler.features = features -- will also become hidden
     end
     return features
 end

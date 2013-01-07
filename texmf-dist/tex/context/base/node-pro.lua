@@ -6,7 +6,6 @@ if not modules then modules = { } end modules ['node-pro'] = {
     license   = "see context related readme files"
 }
 
-local utf = unicode.utf8
 local utfchar = utf.char
 local format, concat = string.format, table.concat
 
@@ -72,7 +71,7 @@ function processors.pre_linebreak_filter(head,groupcode,size,packtype,direction)
     if found then
         if trace_callbacks then
             local before = nodes.count(head,true)
-            local head, done = actions(head,groupcode,size,packtype,direction)
+            local head, done = actions(head,groupcode,size,packtype,direction) -- todo : pass first
             local after = nodes.count(head,true)
             if done then
                 tracer("pre_linebreak","changed",head,groupcode,before,after,true)
@@ -81,7 +80,7 @@ function processors.pre_linebreak_filter(head,groupcode,size,packtype,direction)
             end
             return (done and head) or true
         else
-            local head, done = actions(head,groupcode,size,packtype,direction)
+            local head, done = actions(head,groupcode,size,packtype,direction) -- todo : pass first
             return (done and head) or true
         end
     elseif trace_callbacks then

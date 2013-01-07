@@ -25,10 +25,10 @@ local tex = tex
 context       = context or { }
 local context = context
 
-local format, find, gmatch, gsub = string.format, string.find, string.gmatch, string.gsub
+local format, gsub, validstring = string.format, string.gsub, string.valid
 local next, type, tostring, tonumber, setmetatable = next, type, tostring, tonumber, setmetatable
 local insert, remove, concat = table.insert, table.remove, table.concat
-local lpegmatch, lpegC, lpegS, lpegP, lpegCc = lpeg.match, lpeg.C, lpeg.S, lpeg.P, lpeg.Cc
+local lpegmatch, lpegC, lpegS, lpegP, lpegCc, patterns = lpeg.match, lpeg.C, lpeg.S, lpeg.P, lpeg.Cc, lpeg.patterns
 
 local texsprint         = tex.sprint
 local textprint         = tex.tprint
@@ -40,12 +40,14 @@ local isnode            = node.is_node -- after 0.65 just node.type
 local writenode         = node.write
 local copynodelist      = node.copy_list
 
-local ctxcatcodes       = tex.ctxcatcodes
-local prtcatcodes       = tex.prtcatcodes
-local texcatcodes       = tex.texcatcodes
-local txtcatcodes       = tex.txtcatcodes
-local vrbcatcodes       = tex.vrbcatcodes
-local xmlcatcodes       = tex.xmlcatcodes
+local catcodenumbers    = catcodes.numbers
+
+local ctxcatcodes       = catcodenumbers.ctxcatcodes
+local prtcatcodes       = catcodenumbers.prtcatcodes
+local texcatcodes       = catcodenumbers.texcatcodes
+local txtcatcodes       = catcodenumbers.txtcatcodes
+local vrbcatcodes       = catcodenumbers.vrbcatcodes
+local xmlcatcodes       = catcodenumbers.xmlcatcodes
 
 local flush             = texsprint
 local flushdirect       = texprint
@@ -160,8 +162,8 @@ context.popcatcodes  = popcatcodes
 --~         content                                       / texsprint
 --~     )^0
 
-local newline       = lpeg.patterns.newline
-local space         = lpeg.patterns.spacer
+local newline       = patterns.newline
+local space         = patterns.spacer
 local spacing       = newline * space^0
 local content       = lpegC((1-spacing)^1)            -- texsprint
 local emptyline     = space^0 * newline^2             -- texprint("")
@@ -344,9 +346,9 @@ end
 
 local methodhandler = resolvers.methodhandler
 
-function context.viafile(data)
+function context.viafile(data,tag)
     if data and data ~= "" then
-        local filename = resolvers.savers.byscheme("virtual","viafile",data)
+        local filename = resolvers.savers.byscheme("virtual",validstring(tag,"viafile"),data)
      -- context.startregime { "utf" }
         context.input(filename)
      -- context.stopregime()
@@ -354,6 +356,8 @@ function context.viafile(data)
 end
 
 -- -- --
+
+local containseol = patterns.containseol
 
 local function writer(parent,command,first,...) -- already optimized before call
     local t = { first, ... }
@@ -375,7 +379,7 @@ local function writer(parent,command,first,...) -- already optimized before call
             flush(currentcatcodes,"{}")
         elseif typ == "string" then
             -- is processelines seen ?
-            if processlines and find(ti,"[\n\r]") then -- we can check for ti == "\n"
+            if processlines and lpegmatch(containseol,ti) then
                 flush(currentcatcodes,"{")
                 local flushlines = parent.__flushlines or flushlines
                 flushlines(ti)
@@ -410,7 +414,11 @@ local function writer(parent,command,first,...) -- already optimized before call
                         done = true
                     end
                 end
-                flush(currentcatcodes,"]")
+                if done then
+                    flush(currentcatcodes,"]")
+                else
+                    flush(currentcatcodes,"[]")
+                end
             elseif tn == 1 then -- some 20% faster than the next loop
                 local tj = ti[1]
                 if type(tj) == "function" then
@@ -448,16 +456,20 @@ end
 local generics = { }  context.generics = generics
 
 local function indexer(parent,k)
-    local c = "\\" .. tostring(generics[k] or k)
-    local f = function(first,...)
-        if first == nil then
-            flush(currentcatcodes,c)
-        else
-            return writer(parent,c,first,...)
+    if type(k) == "string" then
+        local c = "\\" .. tostring(generics[k] or k)
+        local f = function(first,...)
+            if first == nil then
+                flush(currentcatcodes,c)
+            else
+                return writer(parent,c,first,...)
+            end
         end
+        parent[k] = f
+        return f
+    else
+        return context -- catch
     end
-    parent[k] = f
-    return f
 end
 
 -- Potential optimization: after the first call we know if there will be an
@@ -519,7 +531,7 @@ local function caller(parent,f,a,...)
         if typ == "string" then
             if a then
                 flush(contentcatcodes,format(f,a,...)) -- was currentcatcodes
-            elseif processlines and find(f,"[\n\r]") then
+            elseif processlines and lpegmatch(containseol,f) then
                 local flushlines = parent.__flushlines or flushlines
                 flushlines(f)
             else
@@ -538,10 +550,9 @@ local function caller(parent,f,a,...)
             if f then
                 if a ~= nil then
                     local flushlines = parent.__flushlines or flushlines
-                    flushlines(f)
-                    -- ignore ... maybe some day
+                    flushlines(a)
                 else
-                    flushdirect(currentcatcodes,"\r")
+                    flushdirect(currentcatcodes,"\n") -- no \r, else issues with \startlines ... use context.par() otherwise
                 end
             else
                 if a ~= nil then
@@ -598,7 +609,7 @@ function context.fprint(catcodes,fmt,first,...)
         end
     else
         if fmt then
-            flush(format(catodes,fmt,first,...))
+            flush(format(catcodes,fmt,first,...))
         else
             flush(catcodes)
         end
@@ -610,6 +621,24 @@ function tex.fprint(fmt,first,...) -- goodie
         flush(currentcatcodes,format(fmt,first,...))
     else
         flush(currentcatcodes,fmt)
+    end
+end
+
+local formatters = string.formatters
+
+function context.formatted(catcodes,fmt,first,...)
+    if type(catcodes) == "number" then
+        if first then
+            flush(catcodes,formatters[fmt](first,...))
+        else
+            flush(catcodes,fmt)
+        end
+    else
+        if fmt then
+            flush(formatters[catcodes](fmt,first,...))
+        else
+            flush(catcodes)
+        end
     end
 end
 
@@ -625,6 +654,11 @@ local currenttrace      = nil
 local nofwriters        = 0
 local nofflushes        = 0
 
+local visualizer = lpeg.replacer {
+    { "\n","<<newline>>" },
+    { "\r","<<par>>" },
+}
+
 statistics.register("traced context", function()
     if nofwriters > 0 or nofflushes > 0 then
         return format("writers: %s, flushes: %s, maxstack: %s",nofwriters,nofflushes,_n_f_)
@@ -638,7 +672,7 @@ local tracedwriter = function(parent,...) -- also catcodes ?
     local t, n = { "w : - : " }, 1
     local traced = function(normal,catcodes,...) -- todo: check for catcodes
         local s = concat({...})
-        s = gsub(s,"\r","<<newline>>") -- unlikely
+        s = lpegmatch(visualizer,s)
         n = n + 1
         t[n] = s
         normal(catcodes,...)
@@ -666,7 +700,7 @@ local traced = function(normal,one,two,...)
             local argtype = type(argument)
             c = c + 1
             if argtype == "string" then
-                collapsed[c] = gsub(argument,"\r","<<newline>>")
+                collapsed[c] = lpegmatch(visualizer,argument)
             elseif argtype == "number" then
                 collapsed[c] = argument
             else
@@ -679,7 +713,7 @@ local traced = function(normal,one,two,...)
         normal(one)
         local argtype = type(one)
         if argtype == "string" then
-            currenttrace(format("f : - : %s",gsub(one,"\r","<<newline>>")))
+            currenttrace(format("f : - : %s",lpegmatch(visualizer,one)))
         elseif argtype == "number" then
             currenttrace(format("f : - : %s",one))
         else
@@ -955,18 +989,6 @@ setmetatable(delayed, { __index = indexer, __call = caller } )
 
 -- helpers:
 
--- we could have faster calls here
-
-function context.concat(t,separator)
-    local done = false
-    for i=1,#t do
-        local ti = t[i]
-        if ti ~= "" then
-            if done then
-                context(separator)
-            end
-            context(ti)
-            done = true
-        end
-    end
+function context.concat(...)
+    context(concat(...))
 end

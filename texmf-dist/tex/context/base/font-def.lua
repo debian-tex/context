@@ -6,7 +6,8 @@ if not modules then modules = { } end modules ['font-def'] = {
     license   = "see context related readme files"
 }
 
-local concat = table.concat
+-- We can overload some of the definers.functions so we don't local them.
+
 local format, gmatch, match, find, lower, gsub = string.format, string.gmatch, string.match, string.find, string.lower, string.gsub
 local tostring, next = tostring, next
 local lpegmatch = lpeg.match
@@ -32,6 +33,7 @@ local readers       = fonts.readers
 local definers      = fonts.definers
 local specifiers    = fonts.specifiers
 local constructors  = fonts.constructors
+local fontgoodies   = fonts.goodies
 
 readers.sequence    = allocate { 'otf', 'ttf', 'afm', 'tfm', 'lua' } -- dfont ttc
 
@@ -42,9 +44,12 @@ definers.methods    = definers.methods or { }
 
 local internalized  = allocate() -- internal tex numbers (private)
 
-
 local loadedfonts   = constructors.loadedfonts
 local designsizes   = constructors.designsizes
+
+-- not in generic (some day I'll make two defs, one for context, one for generic)
+
+local resolvefile   = fontgoodies and fontgoodies.filenames and fontgoodies.filenames.resolve or function(s) return s end
 
 --[[ldx--
 <p>We hardly gain anything when we cache the final (pre scaled)
@@ -72,7 +77,7 @@ and prepares a table that will move along as we proceed.</p>
 -- name name(sub) name(sub)*spec name*spec
 -- name@spec*oeps
 
-local splitter, splitspecifiers = nil, ""
+local splitter, splitspecifiers = nil, "" -- not so nice
 
 local P, C, S, Cc = lpeg.P, lpeg.C, lpeg.S, lpeg.Cc
 
@@ -83,7 +88,7 @@ local space = P(" ")
 
 definers.defaultlookup = "file"
 
-local prefixpattern  = P(false)
+local prefixpattern = P(false)
 
 local function addspecifier(symbol)
     splitspecifiers     = splitspecifiers .. symbol
@@ -119,12 +124,12 @@ function definers.registersplit(symbol,action,verbosename)
     end
 end
 
-function definers.makespecification(specification,lookup,name,sub,method,detail,size)
+local function makespecification(specification,lookup,name,sub,method,detail,size)
     size = size or 655360
     if trace_defining then
         report_defining("%s -> lookup: %s, name: %s, sub: %s, method: %s, detail: %s",
-            specification, (lookup ~= "" and lookup) or "[file]", (name ~= "" and name) or "-",
-            (sub ~= "" and sub) or "-", (method ~= "" and method) or "-", (detail ~= "" and detail) or "-")
+            specification, lookup ~= "" and lookup or "[file]", name ~= "" and name or "-",
+            sub ~= "" and sub or "-", method ~= "" and method or "-", detail ~= "" and detail or "-")
     end
     if not lookup or lookup == "" then
         lookup = definers.defaultlookup
@@ -144,10 +149,13 @@ function definers.makespecification(specification,lookup,name,sub,method,detail,
     return t
 end
 
+
+definers.makespecification = makespecification
+
 function definers.analyze(specification, size)
     -- can be optimized with locals
     local lookup, name, sub, method, detail = getspecification(specification or "")
-    return definers.makespecification(specification, lookup, name, sub, method, detail, size)
+    return makespecification(specification, lookup, name, sub, method, detail, size)
 end
 
 --[[ldx--
@@ -160,10 +168,13 @@ local resolvers    = definers.resolvers
 -- todo: reporter
 
 function resolvers.file(specification)
-    local suffix = file.suffix(specification.name)
+    local name = resolvefile(specification.name) -- catch for renames
+    local suffix = file.suffix(name)
     if fonts.formats[suffix] then
         specification.forced = suffix
-        specification.name = file.removesuffix(specification.name)
+        specification.name = file.removesuffix(name)
+    else
+        specification.name = name -- cna be resolved
     end
 end
 
@@ -194,7 +205,7 @@ function resolvers.spec(specification)
         if resolved then
             specification.resolved = resolved
             specification.sub      = sub
-            specification.forced   = file.extname(resolved)
+            specification.forced   = file.suffix(resolved)
             specification.name     = file.removesuffix(resolved)
         end
     else
@@ -242,12 +253,13 @@ specification yet.</p>
 function definers.applypostprocessors(tfmdata)
     local postprocessors = tfmdata.postprocessors
     if postprocessors then
+        local properties = tfmdata.properties
         for i=1,#postprocessors do
             local extrahash = postprocessors[i](tfmdata) -- after scaling etc
             if type(extrahash) == "string" and extrahash ~= "" then
                 -- e.g. a reencoding needs this
                 extrahash = gsub(lower(extrahash),"[^a-z]","-")
-                tfmdata.properties.fullname = format("%s-%s",tfmdata.properties.fullname,extrahash)
+                properties.fullname = format("%s-%s",properties.fullname,extrahash)
             end
         end
     end

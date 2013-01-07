@@ -8,6 +8,15 @@ local info = {
 
 }
 
+-- Starting with SciTE version 3.20 there is an issue with coloring. As we still lack
+-- a connection with scite itself (properties as well as printing to the log pane) we
+-- cannot trace this (on windows). As far as I can see, there are no fundamental
+-- changes in lexer.lua or LexLPeg.cxx so it must be in scintilla itself. So for the
+-- moment I stick to 3.10. Indicators are: no lexing of 'next' and 'goto <label>' in the
+-- Lua lexer and no brace highlighting either. Interesting is that it does work ok in
+-- the cld lexer (so the Lua code is okay). Also the fact that char-def.lua lexes fast
+-- is a signal that the lexer quits somewhere halfway.
+
 -- The fold and lex functions are copied and patched from original code by Mitchell (see
 -- lexer.lua). All errors are mine.
 --
@@ -210,8 +219,11 @@ function context.exact_match(words,word_chars,case_insensitive)
 end
 
 -- spell checking (we can only load lua files)
-
+--
 -- return {
+--     min = 3,
+--     max = 40,
+--     n = 12345,
 --     words = {
 --         ["someword"]    = "someword",
 --         ["anotherword"] = "Anotherword",
@@ -220,42 +232,30 @@ end
 
 local lists = { }
 
-local splitter = (Cf(Ct("") * (Cg(C((1-S(" \t\n\r"))^1 * Cc(true))) + P(1))^1,rawset) )^0
-local splitter = (Cf(Ct("") * (Cg(C(R("az","AZ","\127\255")^1) * Cc(true)) + P(1))^1,rawset) )^0
-
-local function splitwords(words)
-    return lpegmatch(splitter,words)
-end
-
 function context.setwordlist(tag,limit) -- returns hash (lowercase keys and original values)
     if not tag or tag == "" then
-        return false
-    elseif lists[tag] ~= nil then
-        return lists[tag]
-    else
-        local list = context.loaddefinitions("spell-" .. tag)
-        if not list or type(list) ~= "table" then
-            lists[tag] = false
-            return false
-        elseif type(list.words) == "string" then
-            list = splitwords(list.words) or false
-            lists[tag] = list
-            return list
-        else
-            list = list.words or false
-            lists[tag] = list
-            return list
-        end
+        return false, 3
     end
+    local list = lists[tag]
+    if not list then
+        list = context.loaddefinitions("spell-" .. tag)
+        if not list or type(list) ~= "table" then
+            list = { words = false, min = 3 }
+        else
+            list.words = list.words or false
+            list.min   = list.min or 3
+        end
+        lists[tag] = list
+    end
+    return list.words, list.min
 end
 
 patterns.wordtoken   = R("az","AZ","\127\255")
 patterns.wordpattern = patterns.wordtoken^3 -- todo: if limit and #s < limit then
 
-function context.checkedword(validwords,s,i) -- ,limit
-    if not validwords then
-        return true, { "text", i }
---         return true, { "default", i }
+function context.checkedword(validwords,validminimum,s,i) -- ,limit
+    if not validwords then -- or #s < validminimum then
+        return true, { "text", i } -- { "default", i }
     else
         -- keys are lower
         local word = validwords[s]
@@ -278,8 +278,8 @@ function context.checkedword(validwords,s,i) -- ,limit
     end
 end
 
-function context.styleofword(validwords,s) -- ,limit
-    if not validwords then
+function context.styleofword(validwords,validminimum,s) -- ,limit
+    if not validwords or #s < validminimum then
         return "text"
     else
         -- keys are lower
