@@ -1,7 +1,7 @@
 
-tlnet=/var/www/norbert/tlnet
+tlnet=${1:-/var/www/norbert/tlnet}
 
-basever=2012.05.30
+basever=2013.01.02
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
@@ -22,6 +22,8 @@ unpackone() {
     fi
   done
 }
+
+echo "installing from $tlnet"
 
 mkdir $pkg
 cd $pkg
