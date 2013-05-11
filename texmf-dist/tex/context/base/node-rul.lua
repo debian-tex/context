@@ -43,12 +43,12 @@ function nodes.striprange(first,last) -- todo: dir
             if id == glyph_code or id == disc_code then -- or id == rule_code
                 break
             else
-local prev = last.prev -- luatex < 0.70 has italic correction kern not prev'd
-if prev then
-                last = last.prev
-else
-    break
-end
+                local prev = last.prev -- luatex < 0.70 has italic correction kern not prev'd
+                if prev then
+                    last = last.prev
+                else
+                    break
+                end
             end
         end
         if not last then
@@ -77,8 +77,6 @@ local insert_node_before = node.insert_before
 local insert_node_after  = node.insert_after
 local striprange         = nodes.striprange
 local list_dimensions    = node.dimensions
-local has_attribute      = node.has_attribute
-local set_attribute      = node.set_attribute
 
 local hpack_nodes        = node.hpack
 
@@ -142,7 +140,7 @@ local function processwords(attribute,data,flush,head,parent) -- we have hlistdi
         while n do
             local id = n.id
             if id == glyph_code or id == rule_code then
-                local aa = has_attribute(n,attribute)
+                local aa = n[attribute]
                 if aa then
                     if aa == a then
                         if not f then -- ?
@@ -195,7 +193,7 @@ local function processwords(attribute,data,flush,head,parent) -- we have hlistdi
                     elseif id == glue_code then
                         -- catch \underbar{a} \underbar{a} (subtype test is needed)
                         local subtype = n.subtype
-                        if continue and has_attribute(n,attribute) and
+                        if continue and n[attribute] and
                             (subtype == userskip_code or subtype == spaceskip_code or subskip == xspaceskip_code) then
                             l = n
                         else
@@ -249,7 +247,7 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
             local before = n_tosequence(f,l,true)
             f, l = striprange(f,l)
             local after = n_tosequence(f,l,true)
-            report_ruled("range stripper: %s -> %s",before,after)
+            report_ruled("range stripper, before %a, after %a",before,after)
         else
             f, l = striprange(f,l)
         end
@@ -261,9 +259,9 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
     local method, offset, continue, dy, order, max = d.method, d.offset, d.continue, d.dy, d.order, d.max
     local rulethickness, unit = d.rulethickness, d.unit
     local ma, ca, ta = d.ma, d.ca, d.ta
-    local colorspace   = (ma > 0 and ma) or has_attribute(f,a_colorspace) or 1
-    local color        = (ca > 0 and ca) or has_attribute(f,a_color)
-    local transparency = (ta > 0 and ta) or has_attribute(f,a_transparency)
+    local colorspace   = (ma > 0 and ma) or f[a_colorspace] or 1
+    local color        = (ca > 0 and ca) or f[a_color]
+    local transparency = (ta > 0 and ta) or f[a_transparency]
     local foreground = order == variables.foreground
 
     local e = dimenfactor(unit,fontdata[f.font]) -- what if no glyph node
@@ -296,18 +294,18 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
         local ht =  (offset+(i-1)*dy)*e + rulethickness - m
         local dp = -(offset+(i-1)*dy)*e + rulethickness + m
         local r = new_rule(w,ht,dp)
-        local v = has_attribute(f,a_viewerlayer)
+        local v = f[a_viewerlayer]
         -- quick hack
         if v then
-            set_attribute(r,a_viewerlayer,v)
+            r[a_viewerlayer] = v
         end
         --
         if color then
-            set_attribute(r,a_colorspace,colorspace)
-            set_attribute(r,a_color,color)
+            r[a_colorspace] = colorspace
+            r[a_color] = color
         end
         if transparency then
-            set_attribute(r,a_transparency,transparency)
+            r[a_transparency] = transparency
         end
         local k = new_kern(-w)
         if foreground then
@@ -319,9 +317,8 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
             insert_node_after(head,r,k)
         end
         if trace_ruled then
-            report_ruled("level: %s, width: %i, height: %i, depth: %i, nodes: %s, text: %s",
+            report_ruled("level %a, width %p, height %p, depth %p, nodes %a, text %a",
                 level,w,ht,dp,n_tostring(f,l),n_tosequence(f,l,true))
-             -- level,r.width,r.height,r.depth,n_tostring(f,l),n_tosequence(f,l,true))
         end
     end
     return head
@@ -378,7 +375,7 @@ local function flush_shifted(head,first,last,data,level,parent,strip) -- not tha
     local raise = data.dy * dimenfactor(data.unit,fontdata[first.font])
     list.shift, list.height, list.depth = raise, height, depth
     if trace_shifted then
-        report_shifted("width: %s, nodes: %s, text: %s",width,n_tostring(first,last),n_tosequence(first,last,true))
+        report_shifted("width %p, nodes %a, text %a",width,n_tostring(first,last),n_tosequence(first,last,true))
     end
     return head
 end

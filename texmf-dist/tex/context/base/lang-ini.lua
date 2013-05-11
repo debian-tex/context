@@ -88,7 +88,8 @@ end
 
 -- languages.tolang = tolang
 
--- todo: en+de => merge
+-- patterns=en
+-- patterns=en,de
 
 local function loaddefinitions(tag,specification)
     statistics.starttiming(languages)
@@ -96,7 +97,7 @@ local function loaddefinitions(tag,specification)
     local definitions = settings_to_array(specification.patterns or "")
     if #definitions > 0 then
         if trace_patterns then
-            report_initialization("pattern specification for language '%s': %s",tag,specification.patterns)
+            report_initialization("pattern specification for language %a: %s",tag,specification.patterns)
         end
         local dataused, ok = data.used, false
         for i=1,#definitions do
@@ -105,7 +106,7 @@ local function loaddefinitions(tag,specification)
                 -- error
             elseif definition == "reset" then -- interfaces.variables.reset
                 if trace_patterns then
-                    report_initialization("clearing patterns for language '%s'",tag)
+                    report_initialization("clearing patterns for language %a",tag)
                 end
                 instance:clear_patterns()
             elseif not dataused[definition] then
@@ -114,7 +115,7 @@ local function loaddefinitions(tag,specification)
                 local fullname = resolvers.findfile(filename) or ""
                 if fullname ~= "" then
                     if trace_patterns then
-                        report_initialization("loading definition '%s' for language '%s' from '%s'",definition,tag,fullname)
+                        report_initialization("loading definition %a for language %a from %a",definition,tag,fullname)
                     end
                     local defs = dofile(fullname) -- use regular loader instead
                     if defs then -- todo: version test
@@ -122,18 +123,18 @@ local function loaddefinitions(tag,specification)
                         instance:patterns   (defs.patterns   and defs.patterns  .data or "")
                         instance:hyphenation(defs.exceptions and defs.exceptions.data or "")
                     else
-                        report_initialization("invalid definition '%s' for language '%s' in '%s'",definition,tag,filename)
+                        report_initialization("invalid definition %a for language %a in %a",definition,tag,filename)
                     end
                 elseif trace_patterns then
-                    report_initialization("invalid definition '%s' for language '%s' in '%s'",definition,tag,filename)
+                    report_initialization("invalid definition %a for language %a in %a",definition,tag,filename)
                 end
             elseif trace_patterns then
-                report_initialization("definition '%s' for language '%s' already loaded",definition,tag)
+                report_initialization("definition %a for language %a already loaded",definition,tag)
             end
         end
         return ok
     elseif trace_patterns then
-        report_initialization("no definitions for language '%s'",tag)
+        report_initialization("no definitions for language %a",tag)
     end
     statistics.stoptiming(languages)
 end
@@ -145,7 +146,7 @@ local noflanguages = storage.shared.noflanguages
 function languages.define(tag,parent)
     noflanguages = noflanguages + 1
     if trace_patterns then
-        report_initialization("assigning number %s to %s",noflanguages,tag)
+        report_initialization("assigning number %a to %a",noflanguages,tag)
     end
     numbers[noflanguages] = tag
     registered[tag] = {
@@ -223,14 +224,14 @@ else
         if l then
             if l.dirty then
                 if trace_patterns then
-                    report_initialization("checking patterns for %s (%s)",tag,default)
+                    report_initialization("checking patterns for %a with default %a",tag,default)
                 end
                 -- patterns is already resolved to parent patterns if applicable
                 if patterns and patterns ~= "" then
                     if l.patterns ~= patterns then
                         l.patterns = patterns
                         if trace_patterns then
-                            report_initialization("loading patterns for '%s' using specification '%s'",tag,patterns)
+                            report_initialization("loading patterns for %a using specification %a",tag,patterns)
                         end
                         loaddefinitions(tag,l)
                     else
@@ -239,13 +240,13 @@ else
                 elseif l.patterns == "" then
                     l.patterns = tag
                     if trace_patterns then
-                        report_initialization("loading patterns for '%s' using tag",tag)
+                        report_initialization("loading patterns for %a using tag",tag)
                     end
                     local ok = loaddefinitions(tag,l)
                     if not ok and tag ~= default then
                         l.patterns = default
                         if trace_patterns then
-                            report_initialization("loading patterns for '%s' using default",tag)
+                            report_initialization("loading patterns for %a using default",tag)
                         end
                         loaddefinitions(tag,l)
                     end
@@ -300,9 +301,9 @@ function languages.hyphenate(tag,str)
     end
 end
 
---~ hyphenation.define        ("zerolanguage")
---~ hyphenation.loadpatterns  ("zerolanguage") -- else bug
---~ hyphenation.loadexceptions("zerolanguage") -- else bug
+-- hyphenation.define        ("zerolanguage")
+-- hyphenation.loadpatterns  ("zerolanguage") -- else bug
+-- hyphenation.loadexceptions("zerolanguage") -- else bug
 
 languages.logger = languages.logger or { }
 
@@ -311,13 +312,13 @@ function languages.logger.report()
     for tag, l in sortedpairs(registered) do
         if l.loaded then
             r = r + 1
-            result[r] = format("%s:%s:%s", tag, l.parent, l.number)
+            result[r] = format("%s:%s:%s",tag,l.parent,l.number)
         end
     end
-    return (r > 0 and concat(result," ")) or "none"
+    return r > 0 and concat(result," ") or "none"
 end
 
--- must happen at the tex end
+-- must happen at the tex end .. will use lang-def.lua
 
 languages.associate('en','latn','eng')
 languages.associate('uk','latn','eng')
@@ -335,64 +336,6 @@ end)
 statistics.register("language load time", function()
     return statistics.elapsedseconds(languages, format(", nofpatterns: %s",nofloaded))
 end)
-
---~ -- obsolete
---~ --
---~ -- loading the 26 languages that we normally load in mkiv, the string based variant
---~ -- takes .84 seconds (probably due to the sub's) while the lpeg variant takes .78
---~ -- seconds
---~ --
---~ -- the following lpeg can probably be improved (it was one of the first I made)
-
---~ local leftbrace  = lpeg.P("{")
---~ local rightbrace = lpeg.P("}")
---~ local spaces     = lpeg.S(" \r\n\t\f")
---~ local spacing    = spaces^0
---~ local validchar  = 1-(spaces+rightbrace+leftbrace)
---~ local validword  = validchar^1
---~ local content    = spacing * leftbrace * spacing * lpeg.C((spacing * validword)^0) * spacing * rightbrace * lpeg.P(true)
---~
---~ local command    = lpeg.P("\\patterns")
---~ local parser     = (1-command)^0 * command * content
---~
---~ local function filterpatterns(filename)
---~     return lpegmatch(parser,io.loaddata(resolvers.findfile(filename)) or "")
---~ end
---~
---~ local command = lpeg.P("\\hyphenation")
---~ local parser  = (1-command)^0 * command * content
---~
---~ local function filterexceptions(filename)
---~     return lpegmatch(parser,io.loaddata(resolvers.findfile(filename)) or "") -- "" ?
---~ end
---~
---~ local function loadthem(tag, filename, filter, target)
---~     statistics.starttiming(languages)
---~     local data, instance = resolve(tag)
---~     local fullname = (filename and filename ~= "" and resolvers.findfile(filename)) or ""
---~     local ok = fullname ~= ""
---~     if ok then
---~         if trace_patterns then
---~             report_initialization("filtering %s for language '%s' from '%s'",target,tag,fullname)
---~         end
---~         lang[target](data,filter(fullname) or "")
---~     else
---~         if trace_patterns then
---~             report_initialization("no %s for language '%s' in '%s'",target,tag,filename or "?")
---~         end
---~         lang[target](instance,"")
---~     end
---~     statistics.stoptiming(languages)
---~     return ok
---~ end
---~
---~ function hyphenation.loadpatterns(tag, patterns)
---~     return loadthem(tag, patterns, filterpatterns, "patterns")
---~ end
---~
---~ function hyphenation.loadexceptions(tag, exceptions)
---~     return loadthem(tag, exceptions, filterexceptions, "exceptions")
---~ end
 
 -- interface
 

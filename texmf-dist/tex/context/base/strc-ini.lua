@@ -20,7 +20,7 @@ but it does not make sense to store all processdata.
 
 ]]--
 
-local format = string.format
+local formatters = string.formatters
 local lpegmatch = lpeg.match
 local count = tex.count
 local type, next, tonumber, select = type, next, tonumber, select
@@ -190,7 +190,7 @@ local tags = {
 --  (optionally) as a setups to be applied but keep in mind that document setups
 --  also get applied (when they use #1's).
 --
---  local command = format("\\xmlprocessbuffer{%s}{%s}{}",metadata.xmlroot or "main",tag)
+--  local command = formatters["\\xmlprocessbuffer{%s}{%s}{}"](metadata.xmlroot or "main",tag)
 
 local experiment = true
 
@@ -201,37 +201,37 @@ function helpers.title(title,metadata) -- coding is xml is rather old and not th
             if metadata.coding == "xml" then
                 -- title can contain raw xml
                 local tag = tags[metadata.kind] or tags.generic
-                local xmldata = format("<?xml version='1.0'?><%s>%s</%s>",tag,title,tag)
-if not experiment then
-                buffers.assign(tag,xmldata)
-end
+                local xmldata = formatters["<?xml version='1.0'?><%s>%s</%s>"](tag,title,tag)
+                if not experiment then
+                    buffers.assign(tag,xmldata)
+                end
                 if trace_processors then
                     report_processors("putting xml data in buffer: %s",xmldata)
-                    report_processors("processing buffer with setup '%s' and tag '%s'",xmlsetup or "",tag)
+                    report_processors("processing buffer with setup %a and tag %a",xmlsetup,tag)
                 end
-if experiment then
-    -- the question is: will this be forgotten ... better store in a via file
-    local xmltable = lxml.convert("temp",xmldata or "")
-    lxml.store("temp",xmltable)
-    context.xmlsetup("temp",xmlsetup or "")
-else
+            if experiment then
+                -- the question is: will this be forgotten ... better store in a via file
+                local xmltable = lxml.convert("temp",xmldata or "")
+                lxml.store("temp",xmltable)
+                context.xmlsetup("temp",xmlsetup or "")
+            else
                 context.xmlprocessbuffer("dummy",tag,xmlsetup or "")
-end
+            end
             elseif xmlsetup then -- title is reference to node (so \xmlraw should have been used)
                 if trace_processors then
-                    report_processors("feeding xmlsetup '%s' using node '%s'",xmlsetup,title)
+                    report_processors("feeding xmlsetup %a using node %a",xmlsetup,title)
                 end
                 context.xmlsetup(title,metadata.xmlsetup)
             else
                 local catcodes = metadata.catcodes
                 if catcodes == notcatcodes or catcodes == xmlcatcodes then
                     if trace_processors then
-                        report_processors("cct: %s (overloads %s), txt: %s",ctxcatcodes,catcodes,title)
+                        report_processors("catcodetable %a, overloads %a, text %a",ctxcatcodes,catcodes,title)
                     end
                     context(title) -- nasty
                 else
                     if trace_processors then
-                        report_processors("cct: %s, txt: %s",catcodes,title)
+                        report_processors("catcodetable %a, text %a",catcodes,title)
                     end
                     --
                     -- context.sprint(catcodes,title)

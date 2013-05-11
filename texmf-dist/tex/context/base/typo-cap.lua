@@ -16,11 +16,9 @@ local report_casing = logs.reporter("typesetting","casing")
 
 local nodes, node = nodes, node
 
-local has_attribute   = node.has_attribute
-local unset_attribute = node.unset_attribute
-local set_attribute   = node.set_attribute
 local traverse_id     = node.traverse_id
 local copy_node       = node.copy
+local end_of_math     = node.end_of_math
 
 local texattribute    = tex.attribute
 local unsetvalue      = attributes.unsetvalue
@@ -31,6 +29,7 @@ local kerncodes       = nodes.kerncodes
 
 local glyph_code      = nodecodes.glyph
 local kern_code       = nodecodes.kern
+local math_code       = nodecodes.math
 
 local kerning_code    = kerncodes.kerning
 local userskip_code   = skipcodes.userskip
@@ -86,7 +85,6 @@ local function helper(start, codes, special, attribute, once)
                 if next then
                     next.prev = prev
                 end
---~ node.free(start)
                 return prev, true
             elseif lastfont and start.prev.id ~= glyph_code then
                 fnt = lastfont
@@ -171,8 +169,8 @@ local function Word(start,attribute,attr)
     if not prev or prev.id ~= glyph_code then
         --- only the first character is treated
         for n in traverse_id(glyph_code,start.next) do
-            if has_attribute(n,attribute) == attr then
-                unset_attribute(n,attribute)
+            if n[attribute] == attr then
+                n[attribute] = unsetvalue
             else
              -- break -- we can have nested mess
             end
@@ -264,26 +262,28 @@ local function process(namespace,attribute,head) -- not real fast but also not u
     while start do -- while because start can jump ahead
         local id = start.id
         if id == glyph_code then
-            local attr = has_attribute(start,attribute)
+            local attr = start[attribute]
             if attr and attr > 0 then
                 if attr ~= lastattr then
                     lastfont = nil
                     lastattr = attr
                 end
-                unset_attribute(start,attribute)
+                start[attribute] = unsetvalue
                 local action = actions[attr%100] -- map back to low number
                 if action then
                     start, ok = action(start,attribute,attr)
                     done = done and ok
                     if trace_casing then
-                        report_casing("case trigger %s, instance %s, result %s",attr%100,div(attr,100),tostring(ok))
+                        report_casing("case trigger %a, instance %a, result %a",attr%100,div(attr,100),ok)
                     end
                 elseif trace_casing then
-                    report_casing("unknown case trigger %s",attr)
+                    report_casing("unknown case trigger %a",attr)
                 end
             end
+        elseif id == math_code then
+            start = end_of_math(start)
         end
-        if start then
+        if start then -- why test
             start = start.next
         end
     end

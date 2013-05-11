@@ -9,6 +9,7 @@ if not modules then modules = { } end modules ['mtx-context'] = {
 -- todo: more local functions
 -- todo: pass jobticket/ctxdata table around
 
+local type, next, tostring, tonumber = type, next, tostring, tonumber
 local format, gmatch, match, gsub, find = string.format, string.gmatch, string.match, string.gsub, string.find
 local quote, validstring = string.quote, string.valid
 local concat = table.concat
@@ -19,82 +20,11 @@ local lpegpatterns, lpegmatch, Cs, P = lpeg.patterns, lpeg.match, lpeg.Cs, lpeg.
 local getargument = environment.getargument or environment.argument
 local setargument = environment.setargument
 
-local basicinfo = [[
---run                 process (one or more) files (default action)
---make                create context formats
-
---ctx=name            use ctx file (process management specification)
---interface           use specified user interface (default: en)
-
---autopdf             close pdf file in viewer and start pdf viewer afterwards
---purge(all)          purge files either or not after a run (--pattern=...)
-
---usemodule=list      load the given module or style, normally part o fthe distribution
---environment=list    load the given environment file first (document styles)
---mode=list           enable given the modes (conditional processing in styles)
---path=list           also consult the given paths when files are looked for
---arguments=list      set variables that can be consulted during a run (key/value pairs)
---randomseed=number   set the randomseed
---result=name         rename the resulting output to the given name
---trackers=list       set tracker variables (show list with --showtrackers)
---directives=list     set directive variables (show list with --showdirectives)
---silent=list         disable logcatgories (show list with --showlogcategories)
---noconsole           disable logging to the console (logfile only)
---purgeresult         purge result file before run
-
---forcexml            force xml stub
---forcecld            force cld (context lua document) stub
---forcelua            force lua stub (like texlua)
---forcemp             force mp stub
-
---arrange             run extra imposition pass, given that the style sets up imposition
---noarrange           ignore imposition specifications in the style
-
---once                only run once (no multipass data file is produced)
---batchmode           run without stopping and don't show messages on the console
---nonstopmode         run without stopping
-
---generate            generate file database etc. (as luatools does)
---paranoid            don't descend to .. and ../..
---version             report installed context version
-
---global              assume given file present elsewhere
---nofile              use dummy file as jobname
-
---expert              expert options
-]]
-
-local expertinfo = [[
-expert options:
-
---touch               update context version number (remake needed afterwards, also provide --expert)
---nostatistics        omit runtime statistics at the end of the run
---update              update context from website (not to be confused with contextgarden)
---profile             profile job (use: mtxrun --script profile --analyze)
---timing              generate timing and statistics overview
-
---extra=name          process extra (mtx-context-<name> in distribution)
---extras              show extras
-]]
-
-local specialinfo = [[
-special options:
-
---pdftex              process file with texexec using pdftex
---xetex               process file with texexec using xetex
---mkii                process file with texexec
-
---pipe                don't check for file and enter scroll mode (--dummyfile=whatever.tmp)
-]]
-
 local application = logs.application {
     name     = "mtx-context",
     banner   = "ConTeXt Process Management 0.60",
-    helpinfo = {
-        basic  = basicinfo,
-        extra  = extrainfo,
-        expert = expertinfo,
-    }
+ -- helpinfo = helpinfo, -- table with { category_a = text_1, category_b = text_2 } or helpstring or xml_blob
+    helpinfo = "mtx-context.xml",
 }
 
 -- local luatexflags = {
@@ -138,6 +68,7 @@ local application = logs.application {
 --     ["version"]                     = true, -- display version and exit
 --     ["luaonly"]                     = true, -- run a lua file, then exit
 --     ["luaconly"]                    = true, -- byte-compile a lua file, then exit
+--     ["jiton"]                       = false,
 -- }
 
 local report = application.report
@@ -146,6 +77,12 @@ scripts         = scripts         or { }
 scripts.context = scripts.context or { }
 
 -- for the moment here
+
+if getargument("jit") or getargument("jiton") then
+    -- bonus shortcut, we assume than --jit also indicates the engine
+    -- although --jit and --engine=luajittex are independent
+    setargument("engine","luajittex")
+end
 
 local engine_new = getargument("engine") or directives.value("system.engine")
 local engine_old = environment.ownbin
@@ -482,6 +419,7 @@ local function run_texexec(filename,a_purge,a_purgeall)
             options = gsub(options,"--purge","")
             options = gsub(options,"--purgeall","")
             local command = format("ruby %s %s",texexec,options)
+            report("running command: %s\n\n",command)
             if a_purge then
                 os.execute(command)
                 scripts.context.purge_job(filename,false,true)
@@ -489,7 +427,7 @@ local function run_texexec(filename,a_purge,a_purgeall)
                 os.execute(command)
                 scripts.context.purge_job(filename,true,true)
             else
-                os.exec(command)
+                os.execute(command) -- we can use os.exec but that doesn't give back timing
             end
         end
     end
@@ -557,19 +495,27 @@ function scripts.context.run(ctxdata,filename)
     local a_backend     = getargument("backend")
     local a_arrange     = getargument("arrange")
     local a_noarrange   = getargument("noarrange")
-    local a_jit         = getargument("jit")
+    local a_jiton       = getargument("jiton")
+    --
+    a_batchmode = (a_batchmode and "batchmode") or (a_nonstopmode and "nonstopmode") or nil
+    a_synctex   = tonumber(a_synctex) or (toboolean(a_synctex,true) and 1) or (a_synctex == "zipped" and 1) or (a_synctex == "unzipped" and -1) or nil
     --
     for i=1,#filelist do
         --
         local filename = filelist[i]
-        local basename = file.basename(filename)
+        local basename = file.basename(filename) -- use splitter
         local pathname = file.dirname(filename)
-        local jobname  = file.removesuffix(basename)
-        local ctxname  = ctxdata and ctxdata.ctxname
         --
         if pathname == "" and not a_global and filename ~= usedfiles.nop then
             filename = "./" .. filename
+            if not lfs.isfile(filename) then
+                report("warning: no (local) file %a, proceeding",filename)
+            end
         end
+        --
+        local jobname  = file.removesuffix(basename)
+     -- local jobname  = file.removesuffix(filename)
+        local ctxname  = ctxdata and ctxdata.ctxname
         --
         local analysis = preamble_analyze(filename)
         --
@@ -580,6 +526,9 @@ function scripts.context.run(ctxdata,filename)
                 formatname = formatofinterface[analysis.interface] or formatname
                 formatfile, scriptfile = resolvers.locateformat(formatname)
             end
+            --
+            a_jiton = (a_jiton or toboolean(analysis.jiton,true)) and true or nil
+            --
             if not formatfile or not scriptfile then
                 report("warning: no format found, forcing remake (source driven)")
                 scripts.context.make(formatname,a_engine)
@@ -614,16 +563,18 @@ function scripts.context.run(ctxdata,filename)
                         pdf_close(resultname,pdfview)
                     end
                 end
+                --
+                -- we could do this when locating the format and exit from luatex when
+                -- there is a version mismatch .. that way we can use stock luatex
+                -- plus mtxrun to run luajittex instead .. this saves a restart but is
+                -- also cleaner as then mtxrun only has to check for a special return
+                -- code (signaling a make + rerun) .. maybe some day
+                --
                 local okay = statistics.checkfmtstatus(formatfile,a_engine)
                 if okay ~= true then
                     report("warning: %s, forcing remake",tostring(okay))
                     scripts.context.make(formatname)
                 end
-                --
--- if a_engine and a_engine ~= "" and a_engine ~= "luatex" then
---     formatfile = gsub(formatfile,"/luatex%-cache/",format("/%s-cache/",a_engine))
---     scriptfile = gsub(scriptfile,"/luatex%-cache/",format("/%s-cache/",a_engine))
--- end
                 --
                 local oldhash    = multipass_hashfiles(jobname)
                 local newhash    = { }
@@ -642,21 +593,23 @@ function scripts.context.run(ctxdata,filename)
                 }
                 --
                 for k, v in next, environment.arguments do
+                    -- the raw arguments
                     if c_flags[k] == nil then
                         c_flags[k] = v
                     end
                 end
                 --
+                --
                 local l_flags = {
-                    ["interaction"]           = (a_batchmode and "batchmode") or (a_nonstopmode and "nonstopmode") or nil,
-                    ["synctex"]               = a_synctex and 1 or nil,
+                    ["interaction"]           = a_batchmode,
+                    ["synctex"]               = a_synctex,
                     ["no-parse-first-line"]   = true,
                  -- ["no-mktex"]              = true,
                  -- ["file-line-error-style"] = true,
                     ["fmt"]                   = formatfile,
                     ["lua"]                   = scriptfile,
                     ["jobname"]               = jobname,
-                    ["jiton"]                 = a_jit and true or nil,
+                    ["jiton"]                 = a_jiton,
                 }
                 --
                 if a_synctex then
@@ -685,6 +638,7 @@ function scripts.context.run(ctxdata,filename)
                     --
                     c_flags.final      = false
                     c_flags.kindofrun  = (a_once and 3) or (currentrun==1 and 1) or (currentrun==maxnofruns and 4) or 2
+                    c_flags.maxnofruns = maxnofruns
                     c_flags.currentrun = currentrun
                     c_flags.noarrange  = a_noarrange or a_arrange or nil
                     --
@@ -845,7 +799,7 @@ function scripts.context.pipe() -- still used?
 end
 
 local function make_mkiv_format(name,engine)
-    environment.make_format(name)
+    environment.make_format(name) -- jit is picked up later
 end
 
 local function make_mkii_format(name,engine)
@@ -866,6 +820,9 @@ function scripts.context.make(name)
     end
     local list = (name and { name }) or (environment.files[1] and environment.files) or defaultformats
     local engine = getargument("engine") or "luatex"
+    if getargument("jit") or getargument("jiton") then
+        engine = "luajittex"
+    end
     for i=1,#list do
         local name = list[i]
         name = formatofinterface[name] or name or ""
@@ -991,7 +948,7 @@ local temporary_runfiles = {
     "tui", "tua", "tup", "ted", "tes", "top",
     "log", "tmp", "run", "bck", "rlg",
     "mpt", "mpx", "mpd", "mpo", "mpb", "ctl",
-    "synctex.gz", "pgf",
+    "synctex", "synctex.gz", "pgf",
     "prep",
 }
 
@@ -1071,47 +1028,71 @@ end
 
 -- touching files (signals regeneration of formats)
 
-local function touch(name,pattern)
-    local name = resolvers.findfile(name)
+local function touch(path,name,versionpattern,kind,kindpattern)
+    if path and path ~= "" then
+        name = file.join(path,name)
+print(name)
+    else
+        name = resolvers.findfile(name)
+    end
     local olddata = io.loaddata(name)
     if olddata then
+        local oldkind, newkind = "", kind or ""
         local oldversion, newversion = "", os.date("%Y.%m.%d %H:%M")
-        local newdata, ok = gsub(olddata,pattern,function(pre,mid,post)
-            oldversion = mid
-            return pre .. newversion .. post
-        end)
-        if ok > 0 then
+        local newdata
+        if versionpattern then
+            newdata = gsub(olddata,versionpattern,function(pre,mid,post)
+                oldversion = mid
+                return pre .. newversion .. post
+            end) or olddata
+        end
+        if kind and kindpattern then
+            newdata = gsub(newdata,kindpattern,function(pre,mid,post)
+                oldkind = mid
+                return pre .. newkind .. post
+            end) or newdata
+        end
+        if newdata ~= "" and (oldversion ~= newversion or oldkind ~= newkind or newdata ~= olddata) then
             local backup = file.replacesuffix(name,"tmp")
             os.remove(backup)
             os.rename(name,backup)
             io.savedata(name,newdata)
-            return true, oldversion, newversion, name
-        else
-            return false
+            return name, oldversion, newversion, oldkind, newkind
         end
     end
 end
 
-local function touchfiles(suffix)
-    local done, oldversion, newversion, foundname = touch(file.addsuffix("context",suffix),"(\\edef\\contextversion{)(.-)(})")
-    if done then
-        report("old version : %s", oldversion)
-        report("new version : %s", newversion)
-        report("touched file: %s", foundname)
-        local ok, _, _, foundname = touch(file.addsuffix("cont-new",suffix), "(\\newcontextversion{)(.-)(})")
-        if ok then
-            report("touched file: %s", foundname)
+local p_contextkind       = "(\\edef\\contextkind%s*{)(.-)(})"
+local p_contextversion    = "(\\edef\\contextversion%s*{)(.-)(})"
+local p_newcontextversion = "(\\newcontextversion%s*{)(.-)(})"
+
+local function touchfiles(suffix,kind,path)
+    local foundname, oldversion, newversion, oldkind, newkind = touch(path,file.addsuffix("context",suffix),p_contextversion,kind,p_contextkind)
+    if foundname then
+        report("old version  : %s (%s)",oldversion,oldkind)
+        report("new version  : %s (%s)",newversion,newkind)
+        report("touched file : %s",foundname)
+        local foundname = touch(path,file.addsuffix("cont-new",suffix),p_newcontextversion)
+        if foundname then
+            report("touched file : %s", foundname)
         end
+    else
+        report("nothing touched")
     end
 end
 
 function scripts.context.touch()
     if getargument("expert") then
-        touchfiles("mkii")
-        touchfiles("mkiv")
-        touchfiles("mkvi")
-        touchfiles("mkix")
-        touchfiles("mkxi")
+        local touch = getargument("touch")
+        local kind  = getargument("kind")
+        local path  = getargument("basepath")
+        if touch == "mkii" or touch == "mkiv" or touch == "mkvi" then -- mkix mkxi
+            touchfiles(touch,kind,path)
+        else
+            touchfiles("mkii",kind,path)
+            touchfiles("mkiv",kind,path)
+            touchfiles("mkvi",kind,path)
+        end
     else
         report("touching needs --expert")
     end
@@ -1451,6 +1432,9 @@ elseif getargument("extras") then
     scripts.context.extras(environment.files[1] or getargument("extras"))
 elseif getargument("extra") then
     scripts.context.extra()
+elseif getargument("exporthelp") then
+ -- application.export(getargument("exporthelp"),environment.files[1])
+    application.export()
 elseif getargument("help") then
     if environment.files[1] == "extras" then
         scripts.context.extras()

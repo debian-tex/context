@@ -102,6 +102,8 @@ local stopcode       = P("\\stoptexdefinition")                                 
 local anything       = patterns.anything
 local always         = patterns.alwaysmatched
 
+local definer        = escape * (P("u")^-1 * S("egx")^-1 * P("def"))             -- tex
+
 -- The comment nilling can become an option but it nicely compensates the Lua
 -- parsing here with less parsing at the TeX end. We keep lines so the errors
 -- get reported all right, but comments are never seen there anyway. We keep
@@ -147,6 +149,7 @@ local grammar = { "converter",
                   )^0,
     definition  = pushlocal
                 * definer
+                * spaces^0
                 * escapedname
 --                 * (declaration + furthercomment + commentline + (1-leftbrace))^0
                 * (declaration + furthercomment + commentline + csname_endcsname + (1-leftbrace))^0
@@ -209,7 +212,7 @@ end
 --         local oldsize = #str
 --         str = lpegmatch(parser,str,1,true) or str
 --         pushtarget("log")
---         report_macros("processed mkvi file %q, delta %s",filename,oldsize-#str)
+--         report_macros("processed mkvi file %a, delta %s",filename,oldsize-#str)
 --         poptarget("log")
 --     end
 --     return str
@@ -225,7 +228,7 @@ function processors.mkvi(str,filename)
     local oldsize = #str
     str = lpegmatch(parser,str,1,true) or str
     pushtarget("log")
-    report_macros("processed mkvi file %q, delta %s",filename,oldsize-#str)
+    report_macros("processed mkvi file %a, delta %s",filename,oldsize-#str)
     poptarget("log")
     return str
 end
@@ -240,7 +243,7 @@ function processors.mkix(str,filename) -- we could intercept earlier so that cac
     local oldsize = #str
     str = convertlmxstring(str,document.variables,false) or str
     pushtarget("log")
-    report_macros("processed mkix file %q, delta %s",filename,oldsize-#str)
+    report_macros("processed mkix file %a, delta %s",filename,oldsize-#str)
     poptarget("log")
     return str
 end
@@ -256,7 +259,7 @@ function processors.mkxi(str,filename)
     str = convertlmxstring(str,document.variables,false) or str
     str = lpegmatch(parser,str,1,true) or str
     pushtarget("log")
-    report_macros("processed mkxi file %q, delta %s",filename,oldsize-#str)
+    report_macros("processed mkxi file %a, delta %s",filename,oldsize-#str)
     poptarget("log")
     return str
 end
@@ -277,7 +280,7 @@ function macros.processmkvi(str,filename)
         local oldsize = #str
         str = lpegmatch(parser,str,1,true) or str
         pushtarget("log")
-        report_macros("processed mkvi file %q, delta %s",filename,oldsize-#str)
+        report_macros("processed mkvi file %a, delta %s",filename,oldsize-#str)
         poptarget("log")
     end
     return str
@@ -307,7 +310,7 @@ if resolvers.schemes then
             else
                 local result = lpegmatch(parser,str,1,true) or str
                 pushtarget("log")
-                report_macros("processed scheme '%s', delta %s",filename,#str-#result)
+                report_macros("processed scheme %a, delta %s",filename,#str-#result)
                 poptarget("log")
                 io.savedata(cachename,result)
             end
@@ -326,7 +329,7 @@ end
 --     \stoptexdefinition
 -- ]]))
 
--- print(macros.preprocessed([[\def\bla#bla{bla#{bla}}]]))
+-- print(macros.preprocessed([[\checked \def \bla #bla{bla#{bla}}]]))
 -- print(macros.preprocessed([[\def\bla#bla{#{bla}bla}]]))
 -- print(macros.preprocessed([[\def\blä#{blá}{blà:#{blá}}]]))
 -- print(macros.preprocessed([[\def\blä#bla{blà:#bla}]]))

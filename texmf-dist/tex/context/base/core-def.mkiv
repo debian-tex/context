@@ -56,6 +56,10 @@
 \to \everydisplay
 
 % \appendtoks
+%     \flushpostponednodedata
+% \to \neverypar
+
+% \appendtoks
 %     \flushsyncpositions
 % \to \everyheadstart
 
@@ -110,10 +114,6 @@
     \job_options_set_modules
     \job_options_set_environments
 \to \everyjob
-
-\appendtoks
-    \job_options_log
-\to \everystarttext
 
 \appendtoks
     \ifarrangingpages\poparrangedpages\fi

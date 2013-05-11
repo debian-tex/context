@@ -10,8 +10,6 @@ local format = string.format
 
 local attributes, nodes, node = attributes, nodes, node
 
-local has_attribute = node.has_attribute
-local set_attribute = node.set_attribute
 local remove_nodes  = nodes.remove
 
 local nodecodes     = nodes.nodecodes
@@ -22,7 +20,7 @@ local vlist_code    = nodecodes.vlist
 local insert_code   = nodecodes.ins
 local mark_code     = nodecodes.mark
 
-local migrated      = attributes.private("migrated")
+local a_migrated    = attributes.private("migrated")
 
 local trace_migrations = false trackers.register("nodes.migrations", function(v) trace_migrations = v end)
 
@@ -70,15 +68,15 @@ function nodes.handlers.migrate(head,where)
     local done = false
     if head then
         if trace_migrations then
-            report_nodes("migration sweep '%s'",where)
+            report_nodes("migration sweep %a",where)
         end
         local current = head
         while current do
             local id = current.id
             -- inserts_too is a temp hack, we should only do them when it concerns
             -- newly placed (flushed) inserts
-            if id == vlist_code or id == hlist_code or (inserts_too and id == insert_code) and not has_attribute(current,migrated) then
-                set_attribute(current,migrated,1)
+            if id == vlist_code or id == hlist_code or (inserts_too and id == insert_code) and not current[a_migrated] then
+                current[a_migrated] = 1
                 t_sweeps = t_sweeps + 1
                 local h = current.list
                 local first, last, ni, nm
@@ -92,7 +90,7 @@ function nodes.handlers.migrate(head,where)
                 if first then
                     t_inserts, t_marks = t_inserts + ni, t_marks + nm
                     if trace_migrations and (ni > 0 or nm > 0) then
-                        report_nodes("sweep %s, container %s, %s inserts and %s marks migrated outwards during '%s'",
+                        report_nodes("sweep %a, container %a, %s inserts and %s marks migrated outwards during %a",
                             t_sweeps,nodecodes[id],ni,nm,where)
                     end
                     -- inserts after head

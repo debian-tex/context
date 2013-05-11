@@ -15,6 +15,8 @@
 
 \registerctxluafile{strc-con}{1.001}
 
+% todo: check why \copy .. probably mkii leftover
+%
 % todo: check if commands similar to lists
 % todo: \strc_constructions_setup_counter\strc_constructions_setup_counter{#1} in setup ... synchronization
 %
@@ -103,6 +105,8 @@
 \let\currentconstructionlevel  \empty
 \let\currentconstructionhandler\empty
 
+\settrue\c_strc_constructions_define_commands % use with care, might become a proper key
+
 \appendtoks
     \ifx\currentconstructionparent\empty
         \letvalue{\??constructionmain\currentconstruction}\currentconstruction
@@ -116,8 +120,10 @@
 \to \everydefineconstruction
 
 \appendtoks
-    \setuevalue{\e!start\currentconstruction}{\strc_constructions_start{\currentconstruction}}%
-    \setuevalue{\e!stop \currentconstruction}{\strc_constructions_stop}%
+    \ifconditional\c_strc_constructions_define_commands
+        \setuevalue{\e!start\currentconstruction}{\strc_constructions_start{\currentconstruction}}%
+        \setuevalue{\e!stop \currentconstruction}{\strc_constructions_stop}%
+    \fi
 \to \everydefineconstruction
 
 %D Just a basic environment (mostly for testing). We will provide a 'setup' based
@@ -246,11 +252,19 @@
    \constructionparameter\c!before
    \begingroup
    \edef\currentconstructionalternative{\constructionparameter\c!alternative}%
- % \checkconstructionalternativeparent % this catches an unknown alternative
    \edef\p_strc_constructions_renderingsetup{\constructionalternativeparameter\c!renderingsetup}%
-   \doifnotsetups\p_strc_constructions_renderingsetup
-     {\letconstructionparameter\c!alternative\v!left
-      \let\currentconstructionalternative\v!left}%
+   % catch fuzzyness
+   \ifx\p_strc_constructions_renderingsetup\empty
+      \letconstructionparameter\c!alternative\v!left
+      \let\currentconstructionalternative\v!left
+      \edef\p_strc_constructions_renderingsetup{\constructionalternativeparameter\c!renderingsetup}%
+   \else
+     \doifnotsetups\p_strc_constructions_renderingsetup
+       {\letconstructionparameter\c!alternative\v!left
+        \let\currentconstructionalternative\v!left
+        \edef\p_strc_constructions_renderingsetup{\constructionalternativeparameter\c!renderingsetup}}%
+   \fi
+   %
    \doadaptleftskip{\constructionparameter\c!margin}%
    \setlocalhsize % so we can use \localhsize in width assignments
    \edef\p_strc_constructions_distance{\constructionalternativeparameter\c!distance}%
@@ -745,10 +759,15 @@
         \advance\leftskip\leftskipadaption % but we're already further on
     \fi
     \hskip-\leftskipadaption\relax
-    \ifhbox\constructionheadbox\unhcopy\else\copy\fi\constructionheadbox
+    \ifhbox\constructionheadbox \unhbox\else\box\fi\constructionheadbox
     \ifconditional\c_strc_constructions_distance_none \else
-      \kern\ifdim\constructionsheaddistance=\zeropoint .75\emwidth\else\constructionsheaddistance\fi
+      % we used to have just a kern, but long lines look bad then
+      \scratchdistance\ifdim\constructionsheaddistance=\zeropoint .75\emwidth\else\constructionsheaddistance\fi
+      \hskip     \scratchdistance
+      \s!plus .25\scratchdistance
+      \s!minus.25\scratchdistance
     \fi
+    \allowbreak % new
     \useconstructionstyleandcolor\c!style\c!color
     \ignorespaces
 \stopsetups
@@ -945,5 +964,12 @@
    \edef\currentconstructionsynchronize{\ctxlatecommand{enhancelist(#1)}}}
 
 \installstructurelistprocessor{construction}{\usestructurelistprocessor{number+title}}
+
+% Helpers:
+
+\def\currentconstructionnumber{\constructionparameter\s!counter}
+
+\unexpanded\def\strc_constructions_next_indeed #get#tag#level{\strc_counters_increment_sub{#get{#tag}\s!counter}{#level}}
+\unexpanded\def\strc_constructions_reset_indeed#get#tag#level{\strc_counters_reset_sub    {#get{#tag}\s!counter}{#level}}
 
 \protect \endinput

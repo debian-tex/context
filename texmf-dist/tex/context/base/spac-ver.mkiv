@@ -305,7 +305,7 @@
    \prevdepth\d_spac_prevdepth}
 
 \def\spac_helpers_hglue_indeed
-  {\dontleavehmode % \leavevmode
+  {\dontleavehmode
    \c_spac_spacefactor\spacefactor
    \vrule\s!width\zeropoint
    \nobreak
@@ -604,6 +604,7 @@
 %
 %   \setstrut          : instellen \strut
 %   \setnostrut        : resetten \strut, \endstrut, \begstrut
+%   \setnonestrut      : resetten \strut (fast one)
 %
 %   \setteststrut      : instellen zichtbare struts
 %   \resetteststrut    : instellen onzichtbare struts
@@ -719,6 +720,11 @@
    \lineskip     \normallineskip
    \lineskiplimit\normallineskiplimit}
 
+\unexpanded\def\flexiblebaselines
+  {\baselineskip \normalbaselineskip
+   \lineskip     1\normallineskip \s!plus 1\s!fill
+   \lineskiplimit\normallineskiplimit}
+
 \unexpanded\def\setnormalbaselines
   {\ifdim\normallineheight>\zeropoint
      \lineheight\normallineheight
@@ -757,8 +763,15 @@
    \setnormalbaselines
    \setstrut}
 
-\unexpanded\def\forgetverticalstretch % \forgetspacing
-  {\spacing\plusone}
+% \unexpanded\def\forgetverticalstretch % \forgetspacing
+%   {\spacing\plusone}
+
+\unexpanded\def\forgetverticalstretch
+  {\let\spacingfactor       \plusone
+   \let\systemtopskipfactor \topskipfactor
+   \let\systemmaxdepthfactor\maxdepthfactor
+   \setnormalbaselines
+   \setstrut}
 
 \appendtoks
     \forgetverticalstretch
@@ -964,12 +977,27 @@
      \setcharstrut\m_strut
    \fi}
 
+\unexpanded\def\dosynchronizestrut#1% no [] parsing, faster for internal
+  {\ifcsname\??struts#1\endcsname
+     \csname\??struts#1\endcsname
+   \else
+     \setcharstrut\m_strut
+   \fi}
+
 \unexpanded\def\showstruts
   {\setteststrut
    \settestcrlf}
 
 \unexpanded\def\setteststrut
   {\def\strutwidth{.8pt}%
+   \setstrut}
+
+\unexpanded\def\dontshowstruts
+  {\unsetteststrut
+   \settestcrlf}
+
+\unexpanded\def\unsetteststrut
+  {\let\strutwidth\zeropoint
    \setstrut}
 
 \def\autostrutfactor{1.1}
@@ -1112,7 +1140,7 @@
 
 \unexpanded\def\offinterlineskip
   {\baselineskip-\thousandpoint
-   \lineskip\zeropoint
+   \lineskip     \zeropoint
    \lineskiplimit\maxdimen
    % We also need this here now; thanks to taco for figuring that out!
    \def\minimumlinedistance{\zeropoint}}
@@ -1126,8 +1154,8 @@
 
 \unexpanded\def\spac_helpers_push_interlineskip_yes
   {\edef\oninterlineskip
-     {\baselineskip\the\baselineskip
-      \lineskip\the\lineskip
+     {\baselineskip \the\baselineskip
+      \lineskip     \the\lineskip
       \lineskiplimit\the\lineskiplimit
       \noexpand\edef\noexpand\minimumlinedistance{\the\dimexpr\minimumlinedistance}%
       \let\noexpand\offinterlineskip\noexpand\normaloffinterlineskip}} % \noexpand not needed
@@ -1415,6 +1443,15 @@
 %unexpanded\def\moveongrid {\dosingleempty\spac_grids_move_on}
 \unexpanded\def\snaptogrid {\dosingleempty\spac_grids_snap_to}
 \unexpanded\def\placeongrid{\dosingleempty\spac_grids_place_on}
+
+\unexpanded\def\startgridsnapping
+  {\dosingleempty\spac_grids_start_snapping}
+
+\unexpanded\def\spac_grids_start_snapping[#1]%
+  {\snaptogrid[#1]\vbox\bgroup}
+
+\unexpanded\def\stopgridsnapping
+  {\egroup}
 
 % \def\spac_grids_move_on[#1]%
 %   {[obsolete]} % gone, unless we set an attribute
@@ -2030,7 +2067,7 @@
 \letvalue{\??fixedalternatives\s!default}\tbox
 
 \unexpanded\def\typo_fixed_finish#1%
-  {\expandcheckedcsname\??fixedalternatives{#1}\s!default{\box\nextbox}}
+  {\expandnamespacevalue\??fixedalternatives{#1}\s!default{\box\nextbox}}
 
 % %D Forgotten already:
 %

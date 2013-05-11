@@ -12,356 +12,76 @@ might become a runtime module instead. This module will be cleaned up!</p>
 --ldx]]--
 
 local utfchar = utf.char
-local concat = table.concat
 local format, match, gmatch, concat, rep = string.format, string.match, string.gmatch, table.concat, string.rep
 local lpegmatch = lpeg.match
-local write_nl = texio.write_nl
 local clock = os.gettimeofday or os.clock -- should go in environment
 
 local report_nodes = logs.reporter("nodes","tracing")
 
-fonts = fonts or { }
 nodes = nodes or { }
 
-local fonts, nodes, node, context = fonts, nodes, node, context
+local nodes, node, context = nodes, node, context
 
-nodes.tracers         = nodes.tracers or { }
-local tracers         = nodes.tracers
+local tracers          = nodes.tracers or { }
+nodes.tracers          = tracers
 
-nodes.tasks           = nodes.tasks or { }
-local tasks           = nodes.tasks
+local tasks            = nodes.tasks or { }
+nodes.tasks            = tasks
 
-nodes.handlers        = nodes.handlers or { }
-local handlers        = nodes.handlers
+local handlers         = nodes.handlers or {}
+nodes.handlers         = handlers
 
-nodes.injections      = nodes.injections or { }
-local injections      = nodes.injections
+local injections       = nodes.injections or { }
+nodes.injections       = injections
 
-tracers.characters    = tracers.characters or { }
-tracers.steppers      = tracers.steppers   or { }
+local traverse_nodes   = node.traverse
+local traverse_by_id   = node.traverse_id
+local count_nodes      = nodes.count
 
-local char_tracers    = tracers.characters
-local step_tracers    = tracers.steppers
+local nodecodes        = nodes.nodecodes
+local whatcodes        = nodes.whatcodes
+local skipcodes        = nodes.skipcodes
+local fillcodes        = nodes.fillcodes
 
-local copy_node_list  = node.copy_list
-local hpack_node_list = node.hpack
-local free_node_list  = node.flush_list
-local traverse_nodes  = node.traverse
-local traverse_by_id  = node.traverse_id
+local glyph_code       = nodecodes.glyph
+local hlist_code       = nodecodes.hlist
+local vlist_code       = nodecodes.vlist
+local disc_code        = nodecodes.disc
+local glue_code        = nodecodes.glue
+local kern_code        = nodecodes.kern
+local rule_code        = nodecodes.rule
+local whatsit_code     = nodecodes.whatsit
+local spec_code        = nodecodes.glue_spec
 
-local nodecodes       = nodes.nodecodes
-local whatcodes       = nodes.whatcodes
-local skipcodes       = nodes.skipcodes
+local localpar_code    = whatcodes.localpar
+local dir_code         = whatcodes.dir
 
-local glyph_code      = nodecodes.glyph
-local hlist_code      = nodecodes.hlist
-local vlist_code      = nodecodes.vlist
-local disc_code       = nodecodes.disc
-local glue_code       = nodecodes.glue
-local kern_code       = nodecodes.kern
-local rule_code       = nodecodes.rule
-local whatsit_code    = nodecodes.whatsit
+local nodepool         = nodes.pool
 
-local localpar_code   = whatcodes.localpar
-local dir_code        = whatcodes.dir
-
-local nodepool        = nodes.pool
-
-local new_glyph       = nodepool.glyph
-
-function char_tracers.collect(head,list,tag,n)
-    local fontdata = fonts.hashes.identifiers
-    n = n or 0
-    local ok, fn = false, nil
-    while head do
-        local id = head.id
-        if id == glyph_code then
-            local f = head.font
-            if f ~= fn then
-                ok, fn = false, f
-            end
-            local c = head.char
-            local i = fontdata[f].indices[c] or 0
-            if not ok then
-                ok = true
-                n = n + 1
-                list[n] = list[n] or { }
-                list[n][tag] = { }
-            end
-            local l = list[n][tag]
-            l[#l+1] = { c, f, i }
-        elseif id == disc_code then
-            -- skip
-        else
-            ok = false
-        end
-        head = head.next
-    end
-end
-
-function char_tracers.equal(ta, tb)
-    if #ta ~= #tb then
-        return false
-    else
-        for i=1,#ta do
-            local a, b = ta[i], tb[i]
-            if a[1] ~= b[1] or a[2] ~= b[2] or a[3] ~= b[3] then
-                return false
-            end
-        end
-    end
-    return true
-end
-
-function char_tracers.string(t)
-    local tt = { }
-    for i=1,#t do
-        tt[i] = utfchar(t[i][1])
-    end
-    return concat(tt,"")
-end
-
-function char_tracers.unicodes(t,decimal)
-    local tt = { }
-    for i=1,#t do
-        local n = t[i][1]
-        if n == 0 then
-            tt[i] = "-"
-        elseif decimal then
-            tt[i] = n
-        else
-            tt[i] = format("U+%04X",n)
-        end
-    end
-    return concat(tt," ")
-end
-
-function char_tracers.indices(t,decimal)
-    local tt = { }
-    for i=1,#t do
-        local n = t[i][3]
-        if n == 0 then
-            tt[i] = "-"
-        elseif decimal then
-            tt[i] = n
-        else
-            tt[i] = format("U+%04X",n)
-        end
-    end
-    return concat(tt," ")
-end
-
-function char_tracers.start()
-    local npc = handlers.characters
-    local list = { }
-    function handlers.characters(head)
-        local n = #list
-        char_tracers.collect(head,list,'before',n)
-        local h, d = npc(head)
-        char_tracers.collect(head,list,'after',n)
-        if #list > n then
-            list[#list+1] = { }
-        end
-        return h, d
-    end
-    function char_tracers.stop()
-        tracers.list['characters'] = list
-        local variables = {
-            ['title']                = 'ConTeXt Character Processing Information',
-            ['color-background-one'] = lmx.get('color-background-yellow'),
-            ['color-background-two'] = lmx.get('color-background-purple'),
-        }
-        lmx.show('context-characters.lmx',variables)
-        handlers.characters = npc
-        tasks.restart("processors", "characters")
-    end
-    tasks.restart("processors", "characters")
-end
-
-local stack = { }
-
-function tracers.start(tag)
-    stack[#stack+1] = tag
-    local tracer = tracers[tag]
-    if tracer and tracer.start then
-        tracer.start()
-    end
-end
-function tracers.stop()
-    local tracer = stack[#stack]
-    if tracer and tracer.stop then
-        tracer.stop()
-    end
-    stack[#stack] = nil
-end
-
--- experimental
-
-local collection, collecting, messages = { }, false, { }
-
-function step_tracers.start()
-    collecting = true
-end
-
-function step_tracers.stop()
-    collecting = false
-end
-
-function step_tracers.reset()
-    for i=1,#collection do
-        local c = collection[i]
-        if c then
-            free_node_list(c)
-        end
-    end
-    collection, messages = { }, { }
-end
-
-function step_tracers.nofsteps()
-    return context(#collection)
-end
-
-function step_tracers.glyphs(n,i) -- no need for hpack
-    local c = collection[i]
-    if c then
-        tex.box[n] = hpack_node_list(copy_node_list(c))
-    end
-end
-
-function step_tracers.features()
-    -- we cannot use first_glyph here as it only finds characters with subtype < 256
-    local fontdata = fonts.hashes.identifiers
-    local f = collection[1]
-    while f do
-        if f.id == glyph_code then
-            local tfmdata, t = fontdata[f.font], { }
-            for feature, value in table.sortedhash(tfmdata.shared.features) do
-                if feature == "number" or feature == "features" then
-                    -- private
-                elseif type(value) == "boolean" then
-                    if value then
-                        t[#t+1] = format("%s=yes",feature)
-                    else
-                        -- skip
-                    end
-                else
-                    t[#t+1] = format("%s=%s",feature,value)
-                end
-            end
-            if #t > 0 then
-                context(concat(t,", "))
-            else
-                context("no features")
-            end
-            return
-        end
-        f = f.next
-    end
-end
-
-function tracers.fontchar(font,char)
-    local fontchar = fonts.hashes.characters
-    local n = new_glyph()
-    n.font, n.char, n.subtype = font, char, 256
-    context(n)
-end
-
-function step_tracers.codes(i,command)
-    local fontdata = fonts.hashes.identifiers
-    local c = collection[i]
-    while c do
-        local id = c.id
-        if id == glyph_code then
-            if command then
-                local f, c = c.font,c.char
-                local d = fontdata[f].descriptions
-                local d = d and d[c]
-                context[command](f,c,d and d.class or "")
-            else
-                context("[%s:U+%04X]",c.font,c.char)
-            end
-        elseif id == whatsit_code and (c.subtype == localpar_code or c.subtype == dir_code) then
-            context("[%s]",c.dir)
-        else
-            context("[%s]",nodecodes[id])
-        end
-        c = c.next
-    end
-end
-
-function step_tracers.messages(i,command,split)
-    local list = messages[i] -- or { "no messages" }
-    if list then
-        for i=1,#list do
-            local l = list[i]
-            if not command then
-                context("(%s)",l)
-            elseif split then
-                local a, b = match(l,"^(.-)%s*:%s*(.*)$")
-                context[command](a or l or "",b or "")
-            else
-                context[command](l)
-            end
-        end
-    end
-end
-
--- hooks into the node list processor (see otf)
-
-function step_tracers.check(head)
-    if collecting then
-        step_tracers.reset()
-        local n = copy_node_list(head)
-        injections.handler(n,nil,"trace",true)
-        handlers.protectglyphs(n) -- can be option
-        collection[1] = n
-    end
-end
-
-function step_tracers.register(head)
-    if collecting then
-        local nc = #collection+1
-        if messages[nc] then
-            local n = copy_node_list(head)
-            injections.handler(n,nil,"trace",true)
-            handlers.protectglyphs(n) -- can be option
-            collection[nc] = n
-        end
-    end
-end
-
-function step_tracers.message(str,...)
-    str = format(str,...)
-    if collecting then
-        local n = #collection + 1
-        local m = messages[n]
-        if not m then m = { } messages[n] = m end
-        m[#m+1] = str
-    end
-    return str -- saves an intermediate var in the caller
-end
+local dimenfactors     = number.dimenfactors
+local formatters       = string.formatters
 
 -- this will be reorganized:
 
 function nodes.showlist(head, message)
     if message then
-        write_nl(message)
+        report_nodes(message)
     end
     for n in traverse_nodes(head) do
-        write_nl(tostring(n))
+        report_nodes(tostring(n))
     end
 end
 
 function nodes.handlers.checkglyphs(head,message)
     local t = { }
     for g in traverse_by_id(glyph_code,head) do
-        t[#t+1] = format("U+%04X:%s",g.char,g.subtype)
+        t[#t+1] = formatters["%U:%s"](g.char,g.subtype)
     end
     if #t > 0 then
         if message and message ~= "" then
-            report_nodes("%s, %s glyphs: %s",message,#t,concat(t," "))
+            report_nodes("%s, %s glyphs: % t",message,#t,t)
         else
-            report_nodes("%s glyphs: %s",#t,concat(t," "))
+            report_nodes("%s glyphs: % t",#t,t)
         end
     end
     return false
@@ -376,9 +96,11 @@ function nodes.handlers.checkforleaks(sparse)
     end
     node.flush_list(q)
     for k, v in next, l do
-        write_nl(format("%s * %s", v, k))
+        write_nl(formatters["%s * %s"](v,k))
     end
 end
+
+local f_sequence = formatters["U+%04X:%s"]
 
 local function tosequence(start,stop,compact)
     if start then
@@ -394,7 +116,7 @@ local function tosequence(start,stop,compact)
                         t[#t+1] = utfchar(c)
                     end
                 else
-                    t[#t+1] = format("U+%04X:%s",c,utfchar(c))
+                    t[#t+1] = f_sequence(c,utfchar(c))
                 end
             elseif id == whatsit_code and start.subtype == localpar_code or start.subtype == dir_code then
                 t[#t+1] = "[" .. start.dir .. "]"
@@ -430,19 +152,7 @@ end
 nodes.tosequence = tosequence
 
 function nodes.report(t,done)
-    if done then
-        if status.output_active then
-            report_nodes("output, changed, %s nodes",nodes.count(t))
-        else
-            write_nl("nodes","normal, changed, %s nodes",nodes.count(t))
-        end
-    else
-        if status.output_active then
-            report_nodes("output, unchanged, %s nodes",nodes.count(t))
-        else
-            write_nl("nodes","normal, unchanged, %s nodes",nodes.count(t))
-        end
-    end
+    report_nodes("output %a, %changed %a, %s nodes",status.output_active,done,count_nodes(t))
 end
 
 function nodes.packlist(head)
@@ -463,9 +173,9 @@ function nodes.idstostring(head,tail)
             last_n = last_n + 1
         else
             if last_n > 1 then
-                t[#t+1] = format("[%s*%s]",last_n,nodecodes[last_id] or "?")
+                t[#t+1] = formatters["[%s*%s]"](last_n,nodecodes[last_id] or "?")
             else
-                t[#t+1] = format("[%s]",nodecodes[last_id] or "?")
+                t[#t+1] = formatters["[%s]"](nodecodes[last_id] or "?")
             end
             last_id, last_n = id, 1
         end
@@ -476,47 +186,47 @@ function nodes.idstostring(head,tail)
     if not last_id then
         t[#t+1] = "no nodes"
     elseif last_n > 1 then
-        t[#t+1] = format("[%s*%s]",last_n,nodecodes[last_id] or "?")
+        t[#t+1] = formatters["[%s*%s]"](last_n,nodecodes[last_id] or "?")
     else
-        t[#t+1] = format("[%s]",nodecodes[last_id] or "?")
+        t[#t+1] = formatters["[%s]"](nodecodes[last_id] or "?")
     end
     return concat(t," ")
 end
 
---~ function nodes.xidstostring(head,tail) -- only for special tracing of backlinks
---~     local n = head
---~     while n.next do
---~         n = n.next
---~     end
---~     local t, last_id, last_n = { }, nil, 0
---~     while n do
---~         local id = n.id
---~         if not last_id then
---~             last_id, last_n = id, 1
---~         elseif last_id == id then
---~             last_n = last_n + 1
---~         else
---~             if last_n > 1 then
---~                 t[#t+1] = format("[%s*%s]",last_n,nodecodes[last_id] or "?")
---~             else
---~                 t[#t+1] = format("[%s]",nodecodes[last_id] or "?")
---~             end
---~             last_id, last_n = id, 1
---~         end
---~         if n == head then
---~             break
---~         end
---~         n = n.prev
---~     end
---~     if not last_id then
---~         t[#t+1] = "no nodes"
---~     elseif last_n > 1 then
---~         t[#t+1] = format("[%s*%s]",last_n,nodecodes[last_id] or "?")
---~     else
---~         t[#t+1] = format("[%s]",nodecodes[last_id] or "?")
---~     end
---~     return table.concat(table.reversed(t)," ")
---~ end
+-- function nodes.xidstostring(head,tail) -- only for special tracing of backlinks
+--     local n = head
+--     while n.next do
+--         n = n.next
+--     end
+--     local t, last_id, last_n = { }, nil, 0
+--     while n do
+--         local id = n.id
+--         if not last_id then
+--             last_id, last_n = id, 1
+--         elseif last_id == id then
+--             last_n = last_n + 1
+--         else
+--             if last_n > 1 then
+--                 t[#t+1] = formatters["[%s*%s]"](last_n,nodecodes[last_id] or "?")
+--             else
+--                 t[#t+1] = formatters["[%s]"](nodecodes[last_id] or "?")
+--             end
+--             last_id, last_n = id, 1
+--         end
+--         if n == head then
+--             break
+--         end
+--         n = n.prev
+--     end
+--     if not last_id then
+--         t[#t+1] = "no nodes"
+--     elseif last_n > 1 then
+--         t[#t+1] = formatters["[%s*%s]"](last_n,nodecodes[last_id] or "?")
+--     else
+--         t[#t+1] = formatters["[%s]"](nodecodes[last_id] or "?")
+--     end
+--     return table.concat(table.reversed(t)," ")
+-- end
 
 local function showsimplelist(h,depth,n)
     while h do
@@ -553,7 +263,7 @@ local function listtoutf(h,joiner,textonly,last)
             end
         elseif id == disc_code then
             local pre, rep, pos = h.pre, h.replace, h.post
-            w[#w+1] = format("[%s|%s|%s]",
+            w[#w+1] = formatters["[%s|%s|%s]"] (
                 pre and listtoutf(pre,joiner,textonly) or "",
                 rep and listtoutf(rep,joiner,textonly) or "",
                 mid and listtoutf(mid,joiner,textonly) or ""
@@ -592,99 +302,127 @@ end
 
 nodes.showboxes = showboxes
 
-local threshold = 65536
+local ptfactor = dimenfactors.pt
+local bpfactor = dimenfactors.bp
+local stripper = lpeg.patterns.stripzeros
 
-local function toutf(list,result,nofresult,stopcriterium)
-    if list then
-        local fontchar = fonts.hashes.characters
-        for n in traverse_nodes(list) do
-            local id = n.id
-            if id == glyph_code then
-                local components = n.components
-                if components then
-                    result, nofresult = toutf(components,result,nofresult)
-                else
-                    local c = n.char
-                    local fc = fontchar[n.font]
-                    if fc then
-                        local u = fc[c].tounicode
-                        if u then
-                            for s in gmatch(u,"....") do
-                                nofresult = nofresult + 1
-                                result[nofresult] = utfchar(tonumber(s,16))
-                            end
-                        else
-                            nofresult = nofresult + 1
-                            result[nofresult] = utfchar(c)
-                        end
-                    else
-                        nofresult = nofresult + 1
-                        result[nofresult] = utfchar(c)
-                    end
-                end
-            elseif id == disc_code then
-                result, nofresult = toutf(n.replace,result,nofresult) -- needed?
-            elseif id == hlist_code or id == vlist_code then
---~                 if nofresult > 0 and result[nofresult] ~= " " then
---~                     nofresult = nofresult + 1
---~                     result[nofresult] = " "
---~                 end
-                result, nofresult = toutf(n.list,result,nofresult)
-            elseif id == glue_code then
-                if nofresult > 0 and result[nofresult] ~= " " then
-                    nofresult = nofresult + 1
-                    result[nofresult] = " "
-                end
-            elseif id == kern_code and n.kern > threshold then
-                if nofresult > 0 and result[nofresult] ~= " " then
-                    nofresult = nofresult + 1
-                    result[nofresult] = " "
-                end
-            end
-            if n == stopcriterium then
-                break
-            end
+-- start redefinition
+--
+-- -- if fmt then
+-- --     return formatters[fmt](n*dimenfactors[unit],unit)
+-- -- else
+-- --     return match(formatters["%.20f"](n*dimenfactors[unit]),"(.-0?)0*$") .. unit
+-- -- end
+--
+-- redefined:
+
+local dimenfactors = number.dimenfactors
+
+local function numbertodimen(d,unit,fmt,strip)
+    if not d then
+        local str = formatters[fmt](0,unit)
+        return strip and lpegmatch(stripper,str) or str
+    end
+    local t = type(d)
+    if t == 'string' then
+        return d
+    end
+    if unit == true then
+        unit = "pt"
+        fmt  = "%0.5f%s"
+    else
+        unit = unit or 'pt'
+        if not fmt then
+            fmt = "%s%s"
+        elseif fmt == true then
+            fmt = "%0.5f%s"
         end
     end
-    if nofresult > 0 and result[nofresult] == " " then
-        result[nofresult] = nil
-        nofresult = nofresult - 1
+    if t == "number" then
+        local str = formatters[fmt](d*dimenfactors[unit],unit)
+        return strip and lpegmatch(stripper,str) or str
     end
-    return result, nofresult
+    local id = node.id
+    if id == kern_code then
+        local str = formatters[fmt](d.width*dimenfactors[unit],unit)
+        return strip and lpegmatch(stripper,str) or str
+    end
+    if id == glue_code then
+        d = d.spec
+    end
+    if not d or not d.id == spec_code then
+        local str = formatters[fmt](0,unit)
+        return strip and lpegmatch(stripper,str) or str
+    end
+    local width   = d.width
+    local plus    = d.stretch_order
+    local minus   = d.shrink_order
+    local stretch = d.stretch
+    local shrink  = d.shrink
+    if plus ~= 0 then
+        plus = " plus " .. stretch/65536 .. fillcodes[plus]
+    elseif stretch ~= 0 then
+        plus = formatters[fmt](stretch*dimenfactors[unit],unit)
+        plus = " plus " .. (strip and lpegmatch(stripper,plus) or plus)
+    else
+        plus = ""
+    end
+    if minus ~= 0 then
+        minus = " minus " .. shrink/65536 .. fillcodes[minus]
+    elseif shrink ~= 0 then
+        minus = formatters[fmt](shrink*dimenfactors[unit],unit)
+        minus = " minus " .. (strip and lpegmatch(stripper,minus) or minus)
+    else
+        minus = ""
+    end
+    local str = formatters[fmt](d.width*dimenfactors[unit],unit)
+    return (strip and lpegmatch(stripper,str) or str) .. plus .. minus
 end
 
-function nodes.toutf(list,stopcriterium)
-    local result, nofresult = toutf(list,{},0,stopcriterium)
-    return concat(result)
-end
+number.todimen = numbertodimen
 
--- this will move elsewhere
+function number.topoints      (n,fmt) return numbertodimen(n,"pt",fmt) end
+function number.toinches      (n,fmt) return numbertodimen(n,"in",fmt) end
+function number.tocentimeters (n,fmt) return numbertodimen(n,"cm",fmt) end
+function number.tomillimeters (n,fmt) return numbertodimen(n,"mm",fmt) end
+function number.toscaledpoints(n,fmt) return numbertodimen(n,"sp",fmt) end
+function number.toscaledpoints(n)     return            n .. "sp"      end
+function number.tobasepoints  (n,fmt) return numbertodimen(n,"bp",fmt) end
+function number.topicas       (n,fmt) return numbertodimen(n "pc",fmt) end
+function number.todidots      (n,fmt) return numbertodimen(n,"dd",fmt) end
+function number.tociceros     (n,fmt) return numbertodimen(n,"cc",fmt) end
+function number.tonewdidots   (n,fmt) return numbertodimen(n,"nd",fmt) end
+function number.tonewciceros  (n,fmt) return numbertodimen(n,"nc",fmt) end
 
-local ptfactor = number.dimenfactors.pt
-local bpfactor = number.dimenfactors.bp
-local stripper = lpeg.patterns.stripzeros
+-- stop redefinition
 
 local points = function(n)
     if not n or n == 0 then
         return "0pt"
+    elseif type(n) == "number" then
+        return lpegmatch(stripper,format("%.5fpt",n*ptfactor)) -- faster than formatter
     else
-        return lpegmatch(stripper,format("%.5fpt",n*ptfactor))
+        return numbertodimen(n,"pt",true,true) -- also deals with nodes
     end
 end
 
 local basepoints = function(n)
     if not n or n == 0 then
         return "0bp"
+    elseif type(n) == "number" then
+        return lpegmatch(stripper,format("%.5fbp",n*bpfactor)) -- faster than formatter
     else
-        return lpegmatch(stripper,format("%.5fbp",n*bpfactor))
+        return numbertodimen(n,"bp",true,true) -- also deals with nodes
     end
 end
 
 local pts = function(n)
     if not n or n == 0 then
         return "0pt"
+    elseif type(n) == "number" then
+        return format("%.5fpt",n*ptfactor) -- faster than formatter
     else
-        return format("%.5fpt",n*ptfactor)
+        return numbertodimen(n,"pt",true) -- also deals with nodes
     end
 end
 
@@ -692,7 +430,7 @@ local nopts = function(n)
     if not n or n == 0 then
         return "0"
     else
-        return format("%.5f",n*ptfactor)
+        return format("%.5f",n*ptfactor) -- faster than formatter
     end
 end
 
@@ -701,35 +439,24 @@ number.basepoints = basepoints
 number.pts        = pts
 number.nopts      = nopts
 
---~ function nodes.thespec(s)
---~     local stretch_order = s.stretch_order
---~     local shrink_order = s.shrink_order
---~     local stretch_unit = (stretch_order ~= 0) and ("fi".. string.rep("l",stretch_order)) or "sp"
---~     local shrink_unit = (shrink_order ~= 0) and ("fi".. string.rep("l",shrink_order)) or "sp"
---~     return string.format("%ssp+ %ssp - %ssp",s.width,s.stretch,stretch_unit,s.shrink,shrink_unit)
---~ end
-
 local colors   = { }
 tracers.colors = colors
 
-local get_attribute   = node.has_attribute
-local set_attribute   = node.set_attribute
-local unset_attribute = node.unset_attribute
+local unsetvalue      = attributes.unsetvalue
 
 local a_color         = attributes.private('color')
 local a_colormodel    = attributes.private('colormodel')
-local a_state         = attributes.private('state')
 local m_color         = attributes.list[a_color] or { }
 
 function colors.set(n,c,s)
     local mc = m_color[c]
     if not mc then
-        unset_attribute(n,a_color)
+        n[a_color] = unsetvalue
     else
-        if not get_attribute(n,a_colormodel) then
-            set_attribute(n,a_colormodel,s or 1)
+        if not n[a_colormodel] then
+            n[a_colormodel] = s or 1
         end
-        set_attribute(n,a_color,mc)
+        n[a_color] = mc
     end
     return n
 end
@@ -739,12 +466,12 @@ function colors.setlist(n,c,s)
     while n do
         local mc = m_color[c]
         if not mc then
-            unset_attribute(n,a_color)
+            n[a_color] = unsetvalue
         else
-            if not get_attribute(n,a_colormodel) then
-                set_attribute(n,a_colormodel,s or 1)
+            if not n[a_colormodel] then
+                n[a_colormodel] = s or 1
             end
-            set_attribute(n,a_color,mc)
+            n[a_color] = mc
         end
         n = n.next
     end
@@ -752,7 +479,7 @@ function colors.setlist(n,c,s)
 end
 
 function colors.reset(n)
-    unset_attribute(n,a_color)
+    n[a_color] = unsetvalue
     return n
 end
 
@@ -767,9 +494,9 @@ local m_transparency   = attributes.list[a_transparency] or { }
 function transparencies.set(n,t)
     local mt = m_transparency[t]
     if not mt then
-        unset_attribute(n,a_transparency)
+        n[a_transparency] = unsetvalue
     else
-        set_attribute(n,a_transparency,mt)
+        n[a_transparency] = mt
     end
     return n
 end
@@ -779,9 +506,9 @@ function transparencies.setlist(n,c,s)
     while n do
         local mt = m_transparency[c]
         if not mt then
-            unset_attribute(n,a_transparency)
+            n[a_transparency] = unsetvalue
         else
-            set_attribute(n,a_transparency,mt)
+            n[a_transparency] = mt
         end
         n = n.next
     end
@@ -789,7 +516,7 @@ function transparencies.setlist(n,c,s)
 end
 
 function transparencies.reset(n)
-    unset_attribute(n,a_transparency)
+    n[a_transparency] = unsetvalue
     return n
 end
 
@@ -799,58 +526,4 @@ nodes.visualizers = { }
 
 function nodes.visualizers.handler(head)
     return head, false
-end
-
--- also moved here
-
-local snapshots  = { }
-nodes.snapshots  = snapshots
-
-local nodeusage  = nodepool.usage
-
-local lasttime   = clock()
-local samples    = { }
-local parameters = {
-    "cs_count",
-    "dyn_used",
-    "elapsed_time",
-    "luabytecode_bytes",
-    "luastate_bytes",
-    "max_buf_stack",
-    "obj_ptr",
-    "pdf_mem_ptr",
-    "pdf_mem_size",
-    "pdf_os_cntr",
---  "pool_ptr", -- obsolete
-    "str_ptr",
-}
-
-function snapshots.takesample(comment)
-    local c = clock()
-    local t = {
-        elapsed_time = c - lasttime,
-        node_memory  = nodeusage(),
-        comment      = comment,
-    }
-    for i=1,#parameters do
-        local parameter = parameters[i]
-        local ps = status[parameter]
-        if ps then
-            t[parameter] = ps
-        end
-    end
-    samples[#samples+1] = t
-    lasttime = c
-end
-
-function snapshots.getsamples()
-    return samples -- one return value !
-end
-
-function snapshots.resetsamples()
-    samples = { }
-end
-
-function snapshots.getparameters()
-    return parameters
 end

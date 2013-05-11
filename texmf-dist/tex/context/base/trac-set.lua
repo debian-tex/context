@@ -17,10 +17,11 @@ local allocate = utilities.storage.allocate
 
 utilities         = utilities or { }
 local utilities   = utilities
-utilities.setters = utilities.setters or { }
-local setters     = utilities.setters
 
-local data = { } -- maybe just local
+local setters     = utilities.setters or { }
+utilities.setters = setters
+
+local data        = { }
 
 -- We can initialize from the cnf file. This is sort of tricky as
 -- later defined setters also need to be initialized then. If set
@@ -32,7 +33,7 @@ function setters.initialize(filename,name,values) -- filename only for diagnosti
     local setter = data[name]
     if setter then
         frozen = true -- don't permitoverload
--- trace_initialize = true
+     -- trace_initialize = true
         local data = setter.data
         if data then
             for key, newvalue in next, values do
@@ -42,12 +43,12 @@ function setters.initialize(filename,name,values) -- filename only for diagnosti
                     local oldvalue = functions.value
                     if functions.frozen then
                         if trace_initialize then
-                            setter.report("%s: %q is frozen to %q",filename,key,tostring(oldvalue))
+                            setter.report("%s: %a is %s to %a",filename,key,"frozen",oldvalue)
                         end
                     elseif #functions > 0 and not oldvalue then
 --                     elseif #functions > 0 and oldvalue == nil then
                         if trace_initialize then
-                            setter.report("%s: %q is set to %q",filename,key,tostring(newvalue))
+                            setter.report("%s: %a is %s to %a",filename,key,"set",newvalue)
                         end
                         for i=1,#functions do
                             functions[i](newvalue)
@@ -56,7 +57,7 @@ function setters.initialize(filename,name,values) -- filename only for diagnosti
                         functions.frozen = functions.frozen or frozen
                     else
                         if trace_initialize then
-                            setter.report("%s: %q is kept as %q",filename,key,tostring(oldvalue))
+                            setter.report("%s: %a is %s as %a",filename,key,"kept",oldvalue)
                         end
                     end
                 else
@@ -65,7 +66,7 @@ function setters.initialize(filename,name,values) -- filename only for diagnosti
                     functions = { default = newvalue, frozen = frozen }
                     data[key] = functions
                     if trace_initialize then
-                        setter.report("%s: %q default to %q",filename,key,tostring(newvalue))
+                        setter.report("%s: %a is %s to %a",filename,key,"defaulted",newvalue)
                     end
                 end
             end
@@ -148,7 +149,7 @@ function setters.register(t,what,...)
         functions = { }
         data[what] = functions
         if trace_initialize then
-            t.report("defining %s",what)
+            t.report("defining %a",what)
         end
     end
     local default = functions.default -- can be set from cnf file
@@ -157,7 +158,7 @@ function setters.register(t,what,...)
         local typ = type(fnc)
         if typ == "string" then
             if trace_initialize then
-                t.report("coupling %s to %s",what,fnc)
+                t.report("coupling %a to %a",what,fnc)
             end
             local s = fnc -- else wrong reference
             fnc = function(value) set(t,s,value) end
@@ -235,15 +236,8 @@ end
 
 local enable, disable, register, list, show = setters.enable, setters.disable, setters.register, setters.list, setters.show
 
-local write_nl = texio and texio.write_nl or print
-
-local function report(setter,...)
-    local report = logs and logs.report
-    if report then
-        report(setter.name,...)
-    else -- fallback, as this module is loaded before the logger
-        write_nl(format("%-15s : %s\n",setter.name,format(...)))
-    end
+function setters.report(setter,...)
+    print(format("%-15s : %s\n",setter.name,format(...)))
 end
 
 local function default(setter,name)
@@ -261,14 +255,14 @@ function setters.new(name) -- we could use foo:bar syntax (but not used that oft
     setter = {
         data     = allocate(), -- indexed, but also default and value fields
         name     = name,
-        report   = function(...)        report  (setter,...) end,
-        enable   = function(...)        enable  (setter,...) end,
-        disable  = function(...)        disable (setter,...) end,
-        register = function(...)        register(setter,...) end,
-        list     = function(...)        list    (setter,...) end,
-        show     = function(...)        show    (setter,...) end,
-        default  = function(...) return default (setter,...) end,
-        value    = function(...) return value   (setter,...) end,
+        report   = function(...) setters.report  (setter,...) end,
+        enable   = function(...)         enable  (setter,...) end,
+        disable  = function(...)         disable (setter,...) end,
+        register = function(...)         register(setter,...) end,
+        list     = function(...)         list    (setter,...) end,
+        show     = function(...)         show    (setter,...) end,
+        default  = function(...)  return default (setter,...) end,
+        value    = function(...)  return value   (setter,...) end,
     }
     data[name] = setter
     return setter
@@ -278,9 +272,9 @@ trackers    = setters.new("trackers")
 directives  = setters.new("directives")
 experiments = setters.new("experiments")
 
-local t_enable, t_disable, t_report = trackers   .enable, trackers   .disable, trackers   .report
-local d_enable, d_disable, d_report = directives .enable, directives .disable, directives .report
-local e_enable, e_disable, e_report = experiments.enable, experiments.disable, experiments.report
+local t_enable, t_disable = trackers   .enable, trackers   .disable
+local d_enable, d_disable = directives .enable, directives .disable
+local e_enable, e_disable = experiments.enable, experiments.disable
 
 -- nice trick: we overload two of the directives related functions with variants that
 -- do tracing (itself using a tracker) .. proof of concept
@@ -290,28 +284,28 @@ local trace_experiments = false local trace_experiments = false  trackers.regist
 
 function directives.enable(...)
     if trace_directives then
-        d_report("enabling: %s",concat({...}," "))
+        directives.report("enabling: % t",{...})
     end
     d_enable(...)
 end
 
 function directives.disable(...)
     if trace_directives then
-        d_report("disabling: %s",concat({...}," "))
+        directives.report("disabling: % t",{...})
     end
     d_disable(...)
 end
 
 function experiments.enable(...)
     if trace_experiments then
-        e_report("enabling: %s",concat({...}," "))
+        experiments.report("enabling: % t",{...})
     end
     e_enable(...)
 end
 
 function experiments.disable(...)
     if trace_experiments then
-        e_report("disabling: %s",concat({...}," "))
+        experiments.report("disabling: % t",{...})
     end
     e_disable(...)
 end
@@ -319,11 +313,19 @@ end
 -- a useful example
 
 directives.register("system.nostatistics", function(v)
-    statistics.enable = not v
+    if statistics then
+        statistics.enable = not v
+    else
+        -- forget about it
+    end
 end)
 
 directives.register("system.nolibraries", function(v)
-    libraries = nil -- we discard this tracing for security
+    if libraries then
+        libraries = nil -- we discard this tracing for security
+    else
+        -- no libraries defined
+    end
 end)
 
 -- experiment

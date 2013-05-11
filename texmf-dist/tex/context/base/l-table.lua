@@ -85,7 +85,7 @@ local function sortedkeys(tab)
     end
 end
 
-local function sortedhashkeys(tab) -- fast one
+local function sortedhashkeys(tab,cmp) -- fast one
     if tab then
         local srt, s = { }, 0
         for key,_ in next, tab do
@@ -94,7 +94,7 @@ local function sortedhashkeys(tab) -- fast one
                 srt[s] = key
             end
         end
-        sort(srt)
+        sort(srt,cmp)
         return srt
     else
         return { }
@@ -103,8 +103,8 @@ end
 
 function table.allkeys(t)
     local keys = { }
-    for i=1,#t do
-        for k, v in next, t[i] do
+    for k, v in next, t do
+        for k, v in next, v do
             keys[k] = true
         end
     end
@@ -116,9 +116,16 @@ table.sortedhashkeys = sortedhashkeys
 
 local function nothing() end
 
-local function sortedhash(t)
+local function sortedhash(t,cmp)
     if t then
-        local n, s = 0, sortedkeys(t) -- the robust one
+        local s
+        if cmp then
+            -- it would be nice if teh sort function would accept a third argument (or nicer, an optional first)
+            s = sortedhashkeys(t,function(a,b) return cmp(t,a,b) end)
+        else
+            s = sortedkeys(t) -- the robust one
+        end
+        local n = 0
         local function kv(s)
             n = n + 1
             local k = s[n]
@@ -386,6 +393,8 @@ end
 -- maybe split in a few cases (yes/no hexify)
 
 -- todo: %g faster on numbers than %s
+
+-- we can speed this up with repeaters and formatters (is indeed faster)
 
 local propername = patterns.propername -- was find(name,"^%a[%w%_]*$")
 
@@ -704,6 +713,322 @@ local function serialize(_handle,root,name,specification) -- handle wins
     handle("}")
 end
 
+--    -- This is some 20% faster than using format (because formatters are much faster) but
+--    -- of course, inlining the format using .. is then again faster .. anyway, as we do
+--    -- some pretty printing as well there is not that much to gain unless we make a 'fast'
+--    -- ugly variant as well. But, we would have to move the formatter to l-string then.
+
+--    local formatters = string.formatters
+
+--    local function do_serialize(root,name,level,indexed)
+--        if level > 0 then
+--            if indexed then
+--                handle(formatters["%w{"](level))
+--            else
+--                local tn = type(name)
+--                if tn == "number" then
+--                    if hexify then
+--                        handle(formatters["%w[%04H]={"](level,name))
+--                    else
+--                        handle(formatters["%w[%s]={"](level,name))
+--                    end
+--                elseif tn == "string" then
+--                    if noquotes and not reserved[name] and lpegmatch(propername,name) then
+--                        handle(formatters["%w%s={"](level,name))
+--                    else
+--                        handle(formatters["%w[%q]={"](level,name))
+--                    end
+--                elseif tn == "boolean" then
+--                    handle(formatters["%w[%S]={"](level,name))
+--                else
+--                    handle(formatters["%w{"](level))
+--                end
+--            end
+--        end
+--        -- we could check for k (index) being number (cardinal)
+--        if root and next(root) then
+--         -- local first, last = nil, 0 -- #root cannot be trusted here (will be ok in 5.2 when ipairs is gone)
+--         -- if compact then
+--         --     -- NOT: for k=1,#root do (we need to quit at nil)
+--         --     for k,v in ipairs(root) do -- can we use next?
+--         --         if not first then first = k end
+--         --         last = last + 1
+--         --     end
+--         -- end
+--            local first, last = nil, 0
+--            if compact then
+--                last = #root
+--                for k=1,last do
+--                    if root[k] == nil then
+--                        last = k - 1
+--                        break
+--                    end
+--                end
+--                if last > 0 then
+--                    first = 1
+--                end
+--            end
+--            local sk = sortedkeys(root)
+--            for i=1,#sk do
+--                local k = sk[i]
+--                local v = root[k]
+--                --~ if v == root then
+--                    -- circular
+--                --~ else
+--                local t, tk = type(v), type(k)
+--                if compact and first and tk == "number" and k >= first and k <= last then
+--                    if t == "number" then
+--                        if hexify then
+--                            handle(formatters["%w %04H,"](level,v))
+--                        else
+--                            handle(formatters["%w %s,"](level,v)) -- %.99g
+--                        end
+--                    elseif t == "string" then
+--                        if reduce and tonumber(v) then
+--                            handle(formatters["%w %s,"](level,v))
+--                        else
+--                            handle(formatters["%w %q,"](level,v))
+--                        end
+--                    elseif t == "table" then
+--                        if not next(v) then
+--                            handle(formatters["%w {},"](level))
+--                        elseif inline then -- and #t > 0
+--                            local st = simple_table(v)
+--                            if st then
+--                                handle(formatters["%w { %, t },"](level,st))
+--                            else
+--                                do_serialize(v,k,level+1,true)
+--                            end
+--                        else
+--                            do_serialize(v,k,level+1,true)
+--                        end
+--                    elseif t == "boolean" then
+--                        handle(formatters["%w %S,"](level,v))
+--                    elseif t == "function" then
+--                        if functions then
+--                            handle(formatters['%w load(%q),'](level,dump(v)))
+--                        else
+--                            handle(formatters['%w "function",'](level))
+--                        end
+--                    else
+--                        handle(formatters["%w %Q,"](level,v))
+--                    end
+--                elseif k == "__p__" then -- parent
+--                    if false then
+--                        handle(formatters["%w __p__=nil,"](level))
+--                    end
+--                elseif t == "number" then
+--                    if tk == "number" then
+--                        if hexify then
+--                            handle(formatters["%w [%04H]=%04H,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%s]=%s,"](level,k,v)) -- %.99g
+--                        end
+--                    elseif tk == "boolean" then
+--                        if hexify then
+--                            handle(formatters["%w [%S]=%04H,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%S]=%s,"](level,k,v)) -- %.99g
+--                        end
+--                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                        if hexify then
+--                            handle(formatters["%w %s=%04H,"](level,k,v))
+--                        else
+--                            handle(formatters["%w %s=%s,"](level,k,v)) -- %.99g
+--                        end
+--                    else
+--                        if hexify then
+--                            handle(formatters["%w [%q]=%04H,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%q]=%s,"](level,k,v)) -- %.99g
+--                        end
+--                    end
+--                elseif t == "string" then
+--                    if reduce and tonumber(v) then
+--                        if tk == "number" then
+--                            if hexify then
+--                                handle(formatters["%w [%04H]=%s,"](level,k,v))
+--                            else
+--                                handle(formatters["%w [%s]=%s,"](level,k,v))
+--                            end
+--                        elseif tk == "boolean" then
+--                            handle(formatters["%w [%S]=%s,"](level,k,v))
+--                        elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                            handle(formatters["%w %s=%s,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%q]=%s,"](level,k,v))
+--                        end
+--                    else
+--                        if tk == "number" then
+--                            if hexify then
+--                                handle(formatters["%w [%04H]=%q,"](level,k,v))
+--                            else
+--                                handle(formatters["%w [%s]=%q,"](level,k,v))
+--                            end
+--                        elseif tk == "boolean" then
+--                            handle(formatters["%w [%S]=%q,"](level,k,v))
+--                        elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                            handle(formatters["%w %s=%q,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%q]=%q,"](level,k,v))
+--                        end
+--                    end
+--                elseif t == "table" then
+--                    if not next(v) then
+--                        if tk == "number" then
+--                            if hexify then
+--                                handle(formatters["%w [%04H]={},"](level,k))
+--                            else
+--                                handle(formatters["%w [%s]={},"](level,k))
+--                            end
+--                        elseif tk == "boolean" then
+--                            handle(formatters["%w [%S]={},"](level,k))
+--                        elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                            handle(formatters["%w %s={},"](level,k))
+--                        else
+--                            handle(formatters["%w [%q]={},"](level,k))
+--                        end
+--                    elseif inline then
+--                        local st = simple_table(v)
+--                        if st then
+--                            if tk == "number" then
+--                                if hexify then
+--                                    handle(formatters["%w [%04H]={ %, t },"](level,k,st))
+--                                else
+--                                    handle(formatters["%w [%s]={ %, t },"](level,k,st))
+--                                end
+--                            elseif tk == "boolean" then
+--                                handle(formatters["%w [%S]={ %, t },"](level,k,st))
+--                            elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                                handle(formatters["%w %s={ %, t },"](level,k,st))
+--                            else
+--                                handle(formatters["%w [%q]={ %, t },"](level,k,st))
+--                            end
+--                        else
+--                            do_serialize(v,k,level+1)
+--                        end
+--                    else
+--                        do_serialize(v,k,level+1)
+--                    end
+--                elseif t == "boolean" then
+--                    if tk == "number" then
+--                        if hexify then
+--                            handle(formatters["%w [%04H]=%S,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%s]=%S,"](level,k,v))
+--                        end
+--                    elseif tk == "boolean" then
+--                        handle(formatters["%w [%S]=%S,"](level,k,v))
+--                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                        handle(formatters["%w %s=%S,"](level,k,v))
+--                    else
+--                        handle(formatters["%w [%q]=%S,"](level,k,v))
+--                    end
+--                elseif t == "function" then
+--                    if functions then
+--                        local f = getinfo(v).what == "C" and dump(dummy) or dump(v)
+--                     -- local f = getinfo(v).what == "C" and dump(function(...) return v(...) end) or dump(v)
+--                        if tk == "number" then
+--                            if hexify then
+--                                handle(formatters["%w [%04H]=load(%q),"](level,k,f))
+--                            else
+--                                handle(formatters["%w [%s]=load(%q),"](level,k,f))
+--                            end
+--                        elseif tk == "boolean" then
+--                            handle(formatters["%w [%S]=load(%q),"](level,k,f))
+--                        elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                            handle(formatters["%w %s=load(%q),"](level,k,f))
+--                        else
+--                            handle(formatters["%w [%q]=load(%q),"](level,k,f))
+--                        end
+--                    end
+--                else
+--                    if tk == "number" then
+--                        if hexify then
+--                            handle(formatters["%w [%04H]=%Q,"](level,k,v))
+--                        else
+--                            handle(formatters["%w [%s]=%Q,"](level,k,v))
+--                        end
+--                    elseif tk == "boolean" then
+--                        handle(formatters["%w [%S]=%Q,"](level,k,v))
+--                    elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
+--                        handle(formatters["%w %s=%Q,"](level,k,v))
+--                    else
+--                        handle(formatters["%w [%q]=%Q,"](level,k,v))
+--                    end
+--                end
+--                --~ end
+--            end
+--        end
+--        if level > 0 then
+--            handle(formatters["%w}"](level))
+--        end
+--    end
+
+--    local function serialize(_handle,root,name,specification) -- handle wins
+--        local tname = type(name)
+--        if type(specification) == "table" then
+--            noquotes  = specification.noquotes
+--            hexify    = specification.hexify
+--            handle    = _handle or specification.handle or print
+--            reduce    = specification.reduce or false
+--            functions = specification.functions
+--            compact   = specification.compact
+--            inline    = specification.inline and compact
+--            if functions == nil then
+--                functions = true
+--            end
+--            if compact == nil then
+--                compact = true
+--            end
+--            if inline == nil then
+--                inline = compact
+--            end
+--        else
+--            noquotes  = false
+--            hexify    = false
+--            handle    = _handle or print
+--            reduce    = false
+--            compact   = true
+--            inline    = true
+--            functions = true
+--        end
+--        if tname == "string" then
+--            if name == "return" then
+--                handle("return {")
+--            else
+--                handle(name .. "={")
+--            end
+--        elseif tname == "number" then
+--            if hexify then
+--                handle(format("[0x%04X]={",name))
+--            else
+--                handle("[" .. name .. "]={")
+--            end
+--        elseif tname == "boolean" then
+--            if name then
+--                handle("return {")
+--            else
+--                handle("{")
+--            end
+--        else
+--            handle("t={")
+--        end
+--        if root then
+--            -- The dummy access will initialize a table that has a delayed initialization
+--            -- using a metatable. (maybe explicitly test for metatable)
+--            if getmetatable(root) then -- todo: make this an option, maybe even per subtable
+--                local dummy = root._w_h_a_t_e_v_e_r_
+--                root._w_h_a_t_e_v_e_r_ = nil
+--            end
+--            -- Let's forget about empty tables.
+--            if next(root) then
+--                do_serialize(root,name,0)
+--            end
+--        end
+--        handle("}")
+--    end
+
 -- name:
 --
 -- true     : return     { }
@@ -722,6 +1047,13 @@ function table.serialize(root,name,specification)
     serialize(flush,root,name,specification)
     return concat(t,"\n")
 end
+
+--   local a = { e = { 1,2,3,4,5,6}, a = 1, b = 2, c = "ccc", d = { a = 1, b = 2, c = "ccc", d = { a = 1, b = 2, c = "ccc" } } }
+--   local t = os.clock()
+--   for i=1,10000 do
+--       table.serialize(a)
+--   end
+--   print(os.clock()-t,table.serialize(a))
 
 table.tohandle = serialize
 
@@ -762,7 +1094,7 @@ function table.tofile(filename,root,name,specification)
     end
 end
 
-local function flattened(t,f,depth)
+local function flattened(t,f,depth) -- also handles { nil, 1, nil, 2 }
     if f == nil then
         f = { }
         depth = 0xFFFF
@@ -778,19 +1110,16 @@ local function flattened(t,f,depth)
             if depth > 0 and type(v) == "table" then
                 flattened(v,f,depth-1)
             else
-                f[k] = v
+                f[#f+1] = v
             end
         end
     end
-    local n = #f
     for k=1,#t do
         local v = t[k]
         if depth > 0 and type(v) == "table" then
             flattened(v,f,depth-1)
-            n = #f
         else
-            n = n + 1
-            f[n] = v
+            f[#f+1] = v
         end
     end
     return f
@@ -940,9 +1269,20 @@ function table.reverse(t)
     end
 end
 
-function table.sequenced(t,sep) -- hash only
-    if t then
-        local s, n = { }, 0
+function table.sequenced(t,sep,simple) -- hash only
+    if not t then
+        return ""
+    end
+    local n = #t
+    local s = { }
+    if n > 0 then
+        -- indexed
+        for i=1,n do
+            s[i] = tostring(t[i])
+        end
+    else
+        -- hashed
+        n = 0
         for k, v in sortedhash(t) do
             if simple then
                 if v == true then
@@ -957,19 +1297,19 @@ function table.sequenced(t,sep) -- hash only
                 s[n] = k .. "=" .. tostring(v)
             end
         end
-        return concat(s, sep or " | ")
-    else
-        return ""
     end
+    return concat(s,sep or " | ")
 end
 
 function table.print(t,...)
     if type(t) ~= "table" then
         print(tostring(t))
     else
-        table.tohandle(print,t,...)
+        serialize(print,t,...)
     end
 end
+
+setinspector(function(v) if type(v) == "table" then serialize(print,v,"table") return true end end)
 
 -- -- -- obsolete but we keep them for a while and might comment them later -- -- --
 

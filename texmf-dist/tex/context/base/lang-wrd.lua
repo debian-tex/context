@@ -26,12 +26,12 @@ words.threshold       = 4
 local numbers         = languages.numbers
 local registered      = languages.registered
 
-local set_attribute   = node.set_attribute
-local unset_attribute = node.unset_attribute
 local traverse_nodes  = node.traverse
 local wordsdata       = words.data
 local chardata        = characters.data
 local tasks           = nodes.tasks
+
+local unsetvalue      = attributes.unsetvalue
 
 local nodecodes       = nodes.nodecodes
 local kerncodes       = nodes.kerncodes
@@ -60,7 +60,7 @@ local loaded = { } -- we share lists
 function words.load(tag,filename)
     local fullname = resolvers.findfile(filename,'other text file') or ""
     if fullname ~= "" then
-        report_words("loading word file '%s'",fullname)
+        report_words("loading word file %a",fullname)
         statistics.starttiming(languages)
         local list = loaded[fullname]
         if not list then
@@ -72,7 +72,7 @@ function words.load(tag,filename)
         wordsdata[tag] = list
         statistics.stoptiming(languages)
     else
-        report_words("missing word file '%s'",filename)
+        report_words("missing word file %a",filename)
     end
 end
 
@@ -207,7 +207,7 @@ table.setmetatableindex(cache, function(t,k) -- k == language, numbers[k] == tag
     else
         c = colist["word:" .. (numbers[k] or "unset")] or colist["word:unknown"]
     end
-    local v = c and function(n) set_attribute(n,a_color,c) end or false
+    local v = c and function(n) n[a_color] = c end or false
     t[k] = v
     return v
 end)
@@ -226,7 +226,7 @@ end
 
 methods[1] = function(head)
     for n in traverse_nodes(head) do
-        unset_attribute(n,a_color) -- hm, not that selective (reset color)
+        n[a_color] = unsetvalue -- hm, not that selective (reset color)
     end
     return mark_words(head,sweep)
 end
@@ -307,7 +307,7 @@ local function dumpusedwords()
     if dumpthem then
         collected.threshold = words.threshold
         dumpname = dumpname or file.addsuffix(tex.jobname,"words")
-        report_words("saving list of used words in '%s'",dumpname)
+        report_words("saving list of used words in %a",dumpname)
         io.savedata(dumpname,table.serialize(collected,true))
      -- table.tofile(dumpname,list,true)
     end
@@ -327,7 +327,7 @@ end
 
 methods[3] = function(head)
     for n in traverse_nodes(head) do
-        unset_attribute(n,a_color)
+        n[a_color] = unsetvalue
     end
     return mark_words(head,sweep)
 end

@@ -11,7 +11,7 @@ if not modules then modules = { } end modules ['math-ini'] = {
 --
 -- isn't characters.data loaded already ... shortcut it here
 
-local format = string.format
+local formatters = string.formatters
 local utfchar, utfbyte = utf.char, utf.byte
 local setmathcode, setdelcode = tex.setmathcode, tex.setdelcode
 local texattribute = tex.attribute
@@ -42,31 +42,53 @@ local families = allocate {
 }
 
 local classes = allocate {
-    ord       =  0,  -- mathordcomm     mathord
-    op        =  1,  -- mathopcomm      mathop
-    bin       =  2,  -- mathbincomm     mathbin
-    rel       =  3,  -- mathrelcomm     mathrel
-    open      =  4,  -- mathopencomm    mathopen
-    close     =  5,  -- mathclosecomm   mathclose
-    punct     =  6,  -- mathpunctcomm   mathpunct
-    alpha     =  7,  -- mathalphacomm   firstofoneargument
-    accent    =  8,  -- class 0
-    radical   =  9,
-    xaccent   = 10,  -- class 3
-    topaccent = 11,  -- class 0
-    botaccent = 12,  -- class 0
-    under     = 13,
-    over      = 14,
-    delimiter = 15,
-    inner     =  0,  -- mathinnercomm   mathinner
-    nothing   =  0,  -- mathnothingcomm firstofoneargument
-    choice    =  0,  -- mathchoicecomm  @@mathchoicecomm
-    box       =  0,  -- mathboxcomm     @@mathboxcomm
-    limop     =  1,  -- mathlimopcomm   @@mathlimopcomm
-    nolop     =  1,  -- mathnolopcomm   @@mathnolopcomm
+    ord         =  0, -- mathordcomm     mathord
+    op          =  1, -- mathopcomm      mathop
+    bin         =  2, -- mathbincomm     mathbin
+    rel         =  3, -- mathrelcomm     mathrel
+    open        =  4, -- mathopencomm    mathopen
+    middle      =  4,
+    close       =  5, -- mathclosecomm   mathclose
+    punct       =  6, -- mathpunctcomm   mathpunct
+    alpha       =  7, -- mathalphacomm   firstofoneargument
+    accent      =  8, -- class 0
+    radical     =  9,
+    xaccent     = 10, -- class 3
+    topaccent   = 11, -- class 0
+    botaccent   = 12, -- class 0
+    under       = 13,
+    over        = 14,
+    delimiter   = 15,
+    inner       =  0, -- mathinnercomm   mathinner
+    nothing     =  0, -- mathnothingcomm firstofoneargument
+    choice      =  0, -- mathchoicecomm  @@mathchoicecomm
+    box         =  0, -- mathboxcomm     @@mathboxcomm
+    limop       =  1, -- mathlimopcomm   @@mathlimopcomm
+    nolop       =  1, -- mathnolopcomm   @@mathnolopcomm
+    --
+    ordinary    =  0, -- ord
+    alphabetic  =  7, -- alpha
+    unknown     =  0, -- nothing
+    default     =  0, -- nothing
+    punctuation =  6, -- punct
+    normal      =  0, -- nothing
+    opening     =  4, -- open
+    closing     =  5, -- close
+    binary      =  2, -- bin
+    relation    =  3, -- rel
+    fence       =  0, -- unknown
+    diacritic   =  8, -- accent
+    large       =  1, -- op
+    variable    =  7, -- alphabetic
+    number      =  7, -- alphabetic
 }
 
+local open_class   = 4
+local middle_class = 4
+local close_class  = 5
+
 local accents = allocate {
+    accent    = true, -- some can be both
     topaccent = true,  [11] = true,
     botaccent = true,  [12] = true,
     under     = true,  [13] = true,
@@ -85,137 +107,118 @@ local codes = allocate {
     variable       = 7, [7] = "variable",
 }
 
-local arrowtypes = allocate {
-    l = "left",
-    r = "right",
-    u = "up",
-    d = "down",
-    h = "horizontal", -- double : lr or rl
-    v = "vertical",   -- double : ud or du
-    m = "mixed",
+local extensibles = allocate {
+           unknown    = 0,
+    l = 1, left       = 1,
+    r = 2, right      = 2,
+    h = 3, horizontal = 3,-- lr or rl
+    u = 5, up         = 4,
+    d = 5, down       = 5,
+    v = 6, vertical   = 6,-- ud or du
+    m = 7, mixed      = 7,
 }
 
-mathematics.arrowtypes      = arrowtypes
+table.setmetatableindex(extensibles,function(t,k) t[k] = 0 return 0 end)
+
+mathematics.extensibles     = extensibles
 mathematics.classes         = classes
 mathematics.codes           = codes
 -----------.accents         = codes
 mathematics.families        = families
 
-classes.alphabetic  = classes.alpha
-classes.unknown     = classes.nothing
-classes.default     = classes.nothing
-classes.punctuation = classes.punct
-classes.normal      = classes.nothing
-classes.opening     = classes.open
-classes.closing     = classes.close
-classes.binary      = classes.bin
-classes.relation    = classes.rel
-classes.fence       = classes.unknown
-classes.diacritic   = classes.accent
-classes.large       = classes.op
-classes.variable    = classes.alphabetic
-classes.number      = classes.alphabetic
-
 -- there will be proper functions soon (and we will move this code in-line)
 -- no need for " in class and family (saves space)
 
-local function delcode(target,family,slot)
-    return format('\\Udelcode%s="%X "%X ',target,family,slot)
-end
-
 local function mathchar(class,family,slot)
-    return format('\\Umathchar "%X "%X "%X ',class,family,slot)
+    return formatters['\\Umathchar "%X "%X "%X '](class,family,slot)
 end
 
 local function mathaccent(class,family,slot)
-    return format('\\Umathaccent "%X "%X "%X ',0,family,slot) -- no class
+    return formatters['\\Umathaccent "%X "%X "%X '](0,family,slot) -- no class
 end
 
 local function delimiter(class,family,slot)
-    return format('\\Udelimiter "%X "%X "%X ',class,family,slot)
+    return formatters['\\Udelimiter "%X "%X "%X '](class,family,slot)
 end
 
 local function radical(family,slot)
-    return format('\\Uradical "%X "%X ',family,slot)
+    return formatters['\\Uradical "%X "%X '](family,slot)
 end
 
 local function mathchardef(name,class,family,slot)
-    return format('\\Umathchardef\\%s "%X "%X "%X ',name,class,family,slot)
+    return formatters['\\Umathchardef\\%s "%X "%X "%X '](name,class,family,slot)
 end
 
 local function mathcode(target,class,family,slot)
-    return format('\\Umathcode%s="%X "%X "%X ',target,class,family,slot)
+    return formatters['\\Umathcode%s="%X "%X "%X '](target,class,family,slot)
 end
 
 local function mathtopaccent(class,family,slot)
-    return format('\\Umathaccent "%X "%X "%X ',0,family,slot) -- no class
+    return formatters['\\Umathaccent "%X "%X "%X '](0,family,slot) -- no class
 end
 
 local function mathbotaccent(class,family,slot)
-    return format('\\Umathaccent bottom "%X "%X "%X ',0,family,slot) -- no class
+    return formatters['\\Umathaccent bottom "%X "%X "%X '](0,family,slot) -- no class
 end
 
 local function mathtopdelimiter(class,family,slot)
-    return format('\\Udelimiterover "%X "%X ',family,slot) -- no class
+    return formatters['\\Udelimiterover "%X "%X '](family,slot) -- no class
 end
 
 local function mathbotdelimiter(class,family,slot)
-    return format('\\Udelimiterunder "%X "%X ',family,slot) -- no class
+    return formatters['\\Udelimiterunder "%X "%X '](family,slot) -- no class
 end
 
 local escapes = characters.filters.utf.private.escapes
 
 -- not that many so no need to reuse tables
 
-local setmathcharacter = function(class,family,slot,unicode)
-    if class <= 7 then
-        setmathcode(slot,{class,family,unicode or slot})
-    end
-end
-
-local setmathsynonym = function(class,family,slot,unicode,setcode)
-    if setcode and class <= 7 then
+local setmathcharacter = function(class,family,slot,unicode,mset,dset)
+    if mset and codes[class] then -- regular codes < 7
         setmathcode("global",slot,{class,family,unicode})
+        mset = false
     end
-    if class == classes.open or class == classes.close then
+    if dset and class == open_class or class == close_class or class == middle_class then
         setdelcode("global",slot,{family,unicode,0,0})
+        dset = false
     end
+    return mset, dset
 end
 
 local setmathsymbol = function(name,class,family,slot) -- hex is nicer for tracing
     if class == classes.accent then
-        contextsprint(format([[\ugdef\%s{\Umathaccent 0 "%X "%X }]],name,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Umathaccent 0 "%X "%X }]] ](name,family,slot))
     elseif class == classes.topaccent then
-        contextsprint(format([[\ugdef\%s{\Umathaccent 0 "%X "%X }]],name,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Umathaccent 0 "%X "%X }]] ](name,family,slot))
     elseif class == classes.botaccent then
-        contextsprint(format([[\ugdef\%s{\Umathbotaccent 0 "%X "%X }]],name,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Umathbotaccent 0 "%X "%X }]] ](name,family,slot))
     elseif class == classes.over then
-        contextsprint(format([[\ugdef\%s{\Udelimiterover "%X "%X }]],name,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Udelimiterover "%X "%X }]] ](name,family,slot))
     elseif class == classes.under then
-        contextsprint(format([[\ugdef\%s{\Udelimiterunder "%X "%X }]],name,family,slot))
-    elseif class == classes.open or class == classes.close then
+        contextsprint(formatters[ [[\ugdef\%s{\Udelimiterunder "%X "%X }]] ](name,family,slot))
+    elseif class == open_class or class == close_class or class == middle_class then
         setdelcode(slot,{family,slot,0,0})
-        contextsprint(format([[\ugdef\%s{\Udelimiter "%X "%X "%X }]],name,class,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Udelimiter "%X "%X "%X }]] ](name,class,family,slot))
     elseif class == classes.delimiter then
         setdelcode(slot,{family,slot,0,0})
-        contextsprint(format([[\ugdef\%s{\Udelimiter 0 "%X "%X }]],name,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Udelimiter 0 "%X "%X }]] ](name,family,slot))
     elseif class == classes.radical then
-        contextsprint(format([[\ugdef\%s{\Uradical "%X "%X }]],name,family,slot))
+        contextsprint(formatters[ [[\ugdef\%s{\Uradical "%X "%X }]] ](name,family,slot))
     else
         -- beware, open/close and other specials should not end up here
-     -- contextsprint(format([[\ugdef\%s{\Umathchar "%X "%X "%X }]],name,class,family,slot))
-        contextsprint(format([[\Umathchardef\%s "%X "%X "%X ]],name,class,family,slot))
+     -- contextsprint(formatters[ [[\ugdef\%s{\Umathchar "%X "%X "%X }]],name,class,family,slot))
+        contextsprint(formatters[ [[\Umathchardef\%s "%X "%X "%X ]] ](name,class,family,slot))
     end
 end
 
 local function report(class,family,unicode,name)
     local nametype = type(name)
     if nametype == "string" then
-        report_math("%s:%s %s U+%05X (%s) => %s",classname,class,family,unicode,utfchar(unicode),name)
+        report_math("class name %a, class %a, family %a, char %C, name %a",classname,class,family,unicode,name)
     elseif nametype == "number" then
-        report_math("%s:%s %s U+%05X (%s) => U+%05X",classname,class,family,unicode,utfchar(unicode),name)
+        report_math("class name %a, class %a, family %a, char %C, number %U",classname,class,family,unicode,name)
     else
-        report_math("%s:%s %s U+%05X (%s)", classname,class,family,unicode,utfchar(unicode))
+        report_math("class name %a, class %a, family %a, char %C", classname,class,family,unicode)
     end
 end
 
@@ -227,7 +230,7 @@ function mathematics.define(family)
     local data = characters.data
     for unicode, character in next, data do
         local symbol = character.mathsymbol
-        local setcode = true
+        local mset, dset = true, true
         if symbol then
             local other = data[symbol]
             local class = other.mathclass
@@ -236,8 +239,7 @@ function mathematics.define(family)
                 if trace_defining then
                     report(class,family,unicode,symbol)
                 end
-                setmathsynonym(class,family,unicode,symbol,setcode)
-                setcode = false
+                mset, dset = setmathcharacter(class,family,unicode,symbol,mset,dset)
             end
             local spec = other.mathspec
             if spec then
@@ -245,8 +247,7 @@ function mathematics.define(family)
                     local class = m.class
                     if class then
                         class = classes[class] or class -- no real checks needed
-                        setmathsynonym(class,family,unicode,symbol,setcode)
-                        setcode = false
+                        mset, dset = setmathcharacter(class,family,unicode,symbol,mset,dset)
                     end
                 end
             end
@@ -271,16 +272,11 @@ function mathematics.define(family)
                         setmathsymbol(name,class,family,unicode)
                     else
                         name = class == classes.variable or class == classes.number and character.adobename
-                        if name then
-                            if trace_defining then
-                                report(class,family,unicode,name)
-                            end
+                        if name and trace_defining then
+                            report(class,family,unicode,name)
                         end
                     end
-                    if setcode then
-                        setmathcharacter(class,family,unicode,unicode)
-                        setcode = false
-                    end
+                    mset, dset = setmathcharacter(class,family,unicode,m.unicode or unicode,mset,dset) -- see solidus
                 end
             end
         end
@@ -291,9 +287,7 @@ function mathematics.define(family)
                 if trace_defining then
                     report(class,family,unicode,name)
                 end
-if setcode then
-                setmathcharacter(class,family,unicode)
-end
+                mset, dset = setmathcharacter(class,family,unicode,mset,dset)
             else
                 name = name or character.contextname
                 if name then
@@ -306,9 +300,7 @@ end
                         report(class,family,unicode,character.adobename)
                     end
                 end
-if setcode then
-                setmathcharacter(class,family,unicode,unicode)
-end
+                mset, dset = setmathcharacter(class,family,unicode,unicode,mset,dset)
             end
         end
     end

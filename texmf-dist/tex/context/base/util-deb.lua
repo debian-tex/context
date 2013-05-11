@@ -18,11 +18,13 @@ local format, find = string.format, string.find
 local is_boolean = string.is_boolean
 
 utilities          = utilities or { }
-utilities.debugger = utilities.debugger or { }
-local debugger     = utilities.debugger
+local debugger     = utilities.debugger or { }
+utilities.debugger = debugger
 
-local counters = { }
-local names    = { }
+local counters     = { }
+local names        = { }
+
+local report       = logs.reporter("debugger")
 
 -- one
 
@@ -50,7 +52,7 @@ local function hook()
 end
 
 function debugger.showstats(printer,threshold) -- hm, something has changed, rubish now
-    printer   = printer or texio.write or print
+    printer   = printer or report
     threshold = threshold or 0
     local total, grandtotal, functions = 0, 0, 0
     local dataset = { }
@@ -107,23 +109,6 @@ end
 --~ debugger.showstats()
 --~ print("")
 --~ debugger.showstats(print,3)
-
-local is_node = node and node.is_node
-local is_lpeg = lpeg and lpeg.type
-
-function inspect(i) -- global function
-    local ti = type(i)
-    if ti == "table" then
-        table.print(i,"table")
-    elseif is_node and is_node(i) then
-        table.print(nodes.astable(i),tostring(i))
-    elseif is_lpeg and is_lpeg(i) then
-        lpeg.print(i)
-    else
-        print(tostring(i))
-    end
-    return i -- so that we can inline the inspect
-end
 
 -- from the lua book:
 

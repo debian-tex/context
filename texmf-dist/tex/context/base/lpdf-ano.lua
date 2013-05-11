@@ -14,6 +14,7 @@ local next, tostring = next, tostring
 local rep, format = string.rep, string.format
 local texcount = tex.count
 local lpegmatch = lpeg.match
+local formatters = string.formatters
 
 local backends, lpdf = backends, lpdf
 
@@ -150,7 +151,7 @@ local function link(url,filename,destination,page,actions)
                 }
             }
         elseif trace_references then
-            report_reference("invalid page reference: %s",tostring(page))
+            report_reference("invalid page reference %a",page)
         end
     end
     return false
@@ -234,7 +235,7 @@ local function use_normal_annotations()
     local function reference(width,height,depth,prerolled) -- keep this one
         if prerolled then
             if trace_references then
-                report_reference("w=%s, h=%s, d=%s, a=%s",width,height,depth,prerolled)
+                report_reference("width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
             end
             return pdfannotation_node(width,height,depth,prerolled)
         end
@@ -251,6 +252,9 @@ end
 
 local hashed, nofunique, nofused = { }, 0, 0
 
+local f_annot = formatters["<< /Type /Annot %s /Rect [%0.3f %0.3f %0.3f %0.3f] >>"]
+local f_bpnf  = formatters["_bpnf_(%s,%s,%s,'%s')"]
+
 local function use_shared_annotations()
 
     local factor = number.dimenfactors.bp
@@ -259,7 +263,7 @@ local function use_shared_annotations()
         local h, v = pdf.h, pdf.v
         local llx, lly = h*factor, (v - depth)*factor
         local urx, ury = (h + width)*factor, (v + height)*factor
-        local annot = format("<< /Type /Annot %s /Rect [%0.3f %0.3f %0.3f %0.3f] >>",prerolled,llx,lly,urx,ury)
+        local annot = f_annot(prerolled,llx,lly,urx,ury)
         local n = hashed[annot]
         if not n then
             n = pdfdelayedobject(annot)
@@ -275,16 +279,15 @@ local function use_shared_annotations()
     local function reference(width,height,depth,prerolled)
         if prerolled then
             if trace_references then
-                report_reference("w=%s, h=%s, d=%s, a=%s",width,height,depth,prerolled)
+                report_reference("width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
             end
-            local luacode = format("_bpnf_(%s,%s,%s,'%s')",width,height,depth,prerolled)
+            local luacode = f_bpnf(width,height,depth,prerolled)
             return latelua_node(luacode)
         end
     end
 
     statistics.register("pdf annotations", function()
         if nofused > 0 then
-         -- table.print(hashed,"hashed_annotations")
             return format("%s embedded, %s unique",nofused,nofunique)
         else
             return nil
@@ -323,7 +326,7 @@ function nodeinjections.destination(width,height,depth,name,view)
     if not done[name] then
         done[name] = true
         if trace_destinations then
-            report_destination("w=%s, h=%s, d=%s, n=%s, v=%s",width,height,depth,name,view or "no view")
+            report_destination("width %p, height %p, depth %p, name %a, view %a",width,height,depth,name,view)
         end
         return pdfdestination_node(width,height,depth,name,view) -- can be begin/end node
     end
@@ -410,11 +413,9 @@ runners["special operation with arguments"] = runners["special"]
 function specials.internal(var,actions) -- better resolve in strc-ref
     local i = tonumber(var.operation)
     local v = i and references.internals[i]
---~ print(">>>>>>>",i)
---~ inspect(v)
     if not v then
         -- error
-        report_reference("no internal reference '%s'",i or "?")
+        report_reference("no internal reference %a",i)
     elseif getinnermethod() == "names" then
         -- named
         return link(nil,nil,"aut:"..i,v.references.realpage,actions)
@@ -492,17 +493,17 @@ end
 
 -- sections
 
---~ function specials.section(var,actions)
---~     local sectionname = var.operation
---~     local destination = var.arguments
---~     local internal    = structures.sections.internalreference(sectionname,destination)
---~     if internal then
---~         var.special   = "internal"
---~         var.operation = internal
---~         var.arguments = nil
---~         specials.internal(var,actions)
---~     end
---~ end
+-- function specials.section(var,actions)
+--     local sectionname = var.operation
+--     local destination = var.arguments
+--     local internal    = structures.sections.internalreference(sectionname,destination)
+--     if internal then
+--         var.special   = "internal"
+--         var.operation = internal
+--         var.arguments = nil
+--         specials.internal(var,actions)
+--     end
+-- end
 
 specials.section = specials.internal -- specials.section just need to have a value as it's checked
 
@@ -687,7 +688,7 @@ local function build(levels,start,parent,method)
             return i, n, first, last
         elseif level == startlevel then
             if trace_bookmarks then
-                report_bookmark("%3i %s%s %s",reference.realpage,rep("  ",level-1),(open and "+") or "-",title)
+                report_bookmark("%3i %w%s %s",reference.realpage,(level-1)*2,(open and "+") or "-",title)
             end
             local prev = child
             child = pdfreserveobject()

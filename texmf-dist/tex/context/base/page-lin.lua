@@ -49,7 +49,6 @@ local current_list       = { }
 local cross_references   = { }
 local chunksize          = 250 -- not used in boxed
 
-local has_attribute      = node.has_attribute
 local traverse_id        = node.traverse_id
 local traverse           = node.traverse
 local copy_node          = node.copy
@@ -70,7 +69,7 @@ local function resolve(n,m) -- we can now check the 'line' flag (todo)
     while n do
         local id = n.id
         if id == whatsit_code then -- why whatsit
-            local a = has_attribute(n,a_linereference)
+            local a = n[a_linereference]
             if a then
                 cross_references[a] = m
             end
@@ -129,7 +128,7 @@ function boxed.register(configuration)
     last = last + 1
     data[last] = configuration
     if trace_numbers then
-        report_lines("registering setup %s",last)
+        report_lines("registering setup %a",last)
     end
     return last
 end
@@ -142,14 +141,14 @@ function boxed.setup(n,configuration)
     local d = data[n]
     if d then
         if trace_numbers then
-            report_lines("updating setup %s",n)
+            report_lines("updating setup %a",n)
         end
         for k,v in next, configuration do
             d[k] = v
         end
     else
         if trace_numbers then
-            report_lines("registering setup %s (br)",n)
+            report_lines("registering setup %a (br)",n)
         end
         data[n] = configuration
     end
@@ -166,17 +165,17 @@ local function check_number(n,a,skip,sameline)
         if sameline then
             skipflag = 0
             if trace_numbers then
-                report_lines("skipping broken line number %s for setup %s: %s (%s)",#current_list,a,s,d.continue or "no")
+                report_lines("skipping broken line number %s for setup %a: %s (%s)",#current_list,a,s,d.continue or "no")
             end
         elseif not skip and s % d.step == 0 then
             skipflag, d.start = 1, s + 1 -- (d.step or 1)
             if trace_numbers then
-                report_lines("making number %s for setup %s: %s (%s)",#current_list,a,s,d.continue or "no")
+                report_lines("making number %s for setup %a: %s (%s)",#current_list,a,s,d.continue or "no")
             end
         else
             skipflag, d.start = 0, s + 1 -- (d.step or 1)
             if trace_numbers then
-                report_lines("skipping line number %s for setup %s: %s (%s)",#current_list,a,s,d.continue or "no")
+                report_lines("skipping line number %s for setup %a: %s (%s)",#current_list,a,s,d.continue or "no")
             end
         end
         context.makelinenumber(tag,skipflag,s,n.shift,n.width,leftmarginwidth(n.list),n.dir)
@@ -190,7 +189,7 @@ end
 local function identify(list)
     if list then
         for n in traverse_id(hlist_code,list) do
-            if has_attribute(n,a_linenumber) then
+            if n[a_linenumber] then
                 return list
             end
         end
@@ -230,7 +229,7 @@ function boxed.stage_one(n,nested)
                 -- skip funny hlists -- todo: check line subtype
             else
                 local list = n.list
-                local a = has_attribute(list,a_linenumber)
+                local a = list[a_linenumber]
                 if a and a > 0 then
                     if last_a ~= a then
                         local da = data[a]
@@ -245,12 +244,12 @@ function boxed.stage_one(n,nested)
                             report_lines("starting line number range %s: start %s, continue",a,da.start,da.continue or "no")
                         end
                     end
-                    if has_attribute(n,a_displaymath) then
+                    if n[a_displaymath] then
                         if nodes.is_display_math(n) then
                             check_number(n,a,skip)
                         end
                     else
-                        local v = has_attribute(list,a_verbatimline)
+                        local v = list[a_verbatimline]
                         if not v or v ~= last_v then
                             last_v = v
                             check_number(n,a,skip)

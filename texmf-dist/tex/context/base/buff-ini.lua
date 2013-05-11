@@ -23,6 +23,7 @@ local P, Cs, patterns, lpegmatch = lpeg.P, lpeg.Cs, lpeg.patterns, lpeg.match
 
 local variables         = interfaces.variables
 local settings_to_array = utilities.parsers.settings_to_array
+local formatters        = string.formatters
 
 local v_yes             = variables.yes
 
@@ -89,6 +90,44 @@ local function collectcontent(names,separator) -- no print
     end
 end
 
+local function loadcontent(names) -- no print
+    if type(names) == "string" then
+        names = settings_to_array(names)
+    end
+    local nnames = #names
+    local ok = false
+    if nnames == 0 then
+        ok = load(getcontent("")) -- default buffer
+    elseif nnames == 1 then
+        ok = load(getcontent(names[1]))
+    else
+        -- lua 5.2 chunked load
+        local i = 0
+        ok = load(function()
+            while true do
+                i = i + 1
+                if i > nnames then
+                    return nil
+                end
+                local c = getcontent(names[i])
+                if c == "" then
+                    -- would trigger end of load
+                else
+                    return c
+                end
+            end
+        end)
+    end
+    if ok then
+        return ok()
+    elseif nnames == 0 then
+        report_buffers("invalid lua code in default buffer")
+    else
+        report_buffers("invalid lua code in buffer %a",concat(names,","))
+    end
+end
+
+
 buffers.raw            = getcontent
 buffers.erase          = erase
 buffers.assign         = assign
@@ -97,6 +136,7 @@ buffers.exists         = exists
 buffers.getcontent     = getcontent
 buffers.getlines       = getlines
 buffers.collectcontent = collectcontent
+buffers.loadcontent    = loadcontent
 
 -- the context interface
 
@@ -164,6 +204,8 @@ local continue   = false
 --     end
 --     return str
 -- end
+
+-- how about tabs
 
 local getmargin = (Cs(P(" ")^1)*P(-1)+1)^1
 local eol       = patterns.eol
@@ -265,12 +307,12 @@ function commands.runbuffer(name,list,encapsulate)
     local data = io.loaddata(name)
     if data ~= content then
         if trace_run then
-            report_buffers("changes in '%s', processing forced",name)
+            report_buffers("changes in %a, processing forced",name)
         end
         io.savedata(name,content)
         os.execute(format(command,name))
     elseif trace_run then
-        report_buffers("no changes in '%s', not processed",name)
+        report_buffers("no changes in %a, not processed",name)
     end
 end
 
@@ -282,12 +324,12 @@ end
 function commands.getbuffer(name)
     local str = getcontent(name)
     if str ~= "" then
-        context.viafile(str,format("buffer.%s",validstring(name,"noname")))
+        context.viafile(str,formatters["buffer.%s"](validstring(name,"noname")))
     end
 end
 
 function commands.getbuffermkvi(name) -- rather direct !
-    context.viafile(resolvers.macros.preprocessed(getcontent(name)),format("buffer.%s.mkiv",validstring(name,"noname")))
+    context.viafile(resolvers.macros.preprocessed(getcontent(name)),formatters["buffer.%s.mkiv"](validstring(name,"noname")))
 end
 
 function commands.gettexbuffer(name)
@@ -305,14 +347,7 @@ function commands.gettexbuffer(name)
     end
 end
 
-function commands.getbufferctxlua(name)
-    local ok = load(getcontent(name))
-    if ok then
-        ok()
-    else
-        report_buffers("invalid lua code in buffer '%s'",name)
-    end
-end
+commands.getbufferctxlua = loadcontent
 
 function commands.doifelsebuffer(name)
     commands.doifelse(exists(name))

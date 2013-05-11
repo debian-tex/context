@@ -6,146 +6,88 @@ if not modules then modules = { } end modules ['data-lua'] = {
     license   = "see context related readme files"
 }
 
--- We overload the regular loader. We do so because we operate mostly in
--- tds and use our own loader code. Alternatively we could use a more
--- extensive definition of package.path and package.cpath but even then
--- we're not done. Also, we now have better tracing.
---
--- -- local mylib = require("libtest")
--- -- local mysql = require("luasql.mysql")
-
-local searchers = package.searchers or package.loaders
-
-local concat = table.concat
-
-local trace_libraries = false
-
-trackers.register("resolvers.libraries", function(v) trace_libraries = v end)
-trackers.register("resolvers.locating",  function(v) trace_libraries = v end)
-
-local report_libraries = logs.reporter("resolvers","libraries")
-
-local gsub, insert = string.gsub, table.insert
-local P, Cs, lpegmatch = lpeg.P, lpeg.Cs, lpeg.match
-local unpack = unpack or table.unpack
-local is_readable = file.is_readable
+-- This is now a plug in into l-lua (as we also use the extra paths elsewhere).
 
 local resolvers, package = resolvers, package
 
-local  libsuffixes = { 'tex', 'lua' }
-local clibsuffixes = { 'lib' }
-local  libformats  = { 'TEXINPUTS', 'LUAINPUTS' }
-local clibformats  = { 'CLUAINPUTS' }
+local gsub = string.gsub
+local concat = table.concat
+local addsuffix = file.addsuffix
 
-local libpaths   = nil
-local clibpaths  = nil
-local libhash    = { }
-local clibhash   = { }
-local libextras  = { }
-local clibextras = { }
+local P, S, Cs, lpegmatch = lpeg.P, lpeg.S, lpeg.Cs, lpeg.match
+
+local luasuffixes = { 'tex', 'lua' }
+local libsuffixes = { 'lib' }
+local luaformats  = { 'TEXINPUTS', 'LUAINPUTS' }
+local libformats  = { 'CLUAINPUTS' }
+local helpers     = package.helpers or { }
+local methods     = helpers.methods or { }
+
+trackers.register("resolvers.libraries", function(v) helpers.trace = v end)
+trackers.register("resolvers.locating",  function(v) helpers.trace = v end)
+
+helpers.report = logs.reporter("resolvers","libraries")
+
+helpers.sequence = {
+    "already loaded",
+    "preload table",
+    "lua variable format",
+    "lib variable format",
+    "lua extra list",
+    "lib extra list",
+    "path specification",
+    "cpath specification",
+    "all in one fallback",
+    "not loaded",
+}
 
 local pattern = Cs(P("!")^0 / "" * (P("/") * P(-1) / "/" + P("/")^1 / "/" + 1)^0)
 
-local function cleanpath(path) --hm, don't we have a helper for this?
+function helpers.cleanpath(path) -- hm, don't we have a helper for this?
     return resolvers.resolve(lpegmatch(pattern,path))
 end
 
-local function getlibpaths()
-    if not libpaths then
-        libpaths = { }
+local loadedaslib      = helpers.loadedaslib
+local getextraluapaths = package.extraluapaths
+local getextralibpaths = package.extralibpaths
+local registerpath     = helpers.registerpath
+local lualibfile       = helpers.lualibfile
+
+local luaformatpaths
+local libformatpaths
+
+local function getluaformatpaths()
+    if not luaformatpaths then
+        luaformatpaths = { }
+        for i=1,#luaformats do
+            registerpath("lua format","lua",luaformatpaths,resolvers.expandedpathlistfromvariable(luaformats[i]))
+        end
+    end
+    return luaformatpaths
+end
+
+local function getlibformatpaths()
+    if not libformatpaths then
+        libformatpaths = { }
         for i=1,#libformats do
-            local paths = resolvers.expandedpathlistfromvariable(libformats[i])
-            for i=1,#paths do
-                local path = cleanpath(paths[i])
-                if not libhash[path] then
-                    libpaths[#libpaths+1] = path
-                    libhash[path] = true
-                end
-            end
+            registerpath("lib format","lib",libformatpaths,resolvers.expandedpathlistfromvariable(libformats[i]))
         end
     end
-    return libpaths
+    return libformatpaths
 end
 
-local function getclibpaths()
-    if not clibpaths then
-        clibpaths = { }
-        for i=1,#clibformats do
-            local paths = resolvers.expandedpathlistfromvariable(clibformats[i])
-            for i=1,#paths do
-                local path = cleanpath(paths[i])
-                if not clibhash[path] then
-                    clibpaths[#clibpaths+1] = path
-                    clibhash[path] = true
-                end
-            end
-        end
-    end
-    return clibpaths
-end
-
-package.libpaths  = getlibpaths
-package.clibpaths = getclibpaths
-
-function package.extralibpath(...)
-    local libpaths = getlibpaths()
-    local paths = table.flattened { ... }
-    for i=1,#paths do
-        local path = cleanpath(paths[i])
-        if not libhash[path] then
-            if trace_libraries then
-                report_libraries("! extra lua path '%s'",path)
-            end
-            libextras[#libextras+1] = path
-            libpaths[#libpaths  +1] = path
-        end
-    end
-end
-
-function package.extraclibpath(...)
-    local clibpaths = getclibpaths()
-    local paths = table.flattened { ... }
-    for i=1,#paths do
-        local path = cleanpath(paths[i])
-        if not clibhash[path] then
-            if trace_libraries then
-                report_libraries("! extra lib path '%s'",path)
-            end
-            clibextras[#clibextras+1] = path
-            clibpaths[#clibpaths  +1] = path
-        end
-    end
-end
-
-if not searchers[-2] then
-    -- use package-path and package-cpath
-    searchers[-2] = searchers[2]
-end
-
-local function loadedaslib(resolved,rawname)
-    return package.loadlib(resolved,"luaopen_" .. gsub(rawname,"%.","_"))
-end
-
-local function loadedbylua(name)
-    if trace_libraries then
-        report_libraries("! locating %q using normal loader",name)
-    end
-    local resolved = searchers[-2](name)
-end
-
-local function loadedbyformat(name,rawname,suffixes,islib)
-    if trace_libraries then
-        report_libraries("! locating %q as %q using formats %q",rawname,name,concat(suffixes))
-    end
+local function loadedbyformat(name,rawname,suffixes,islib,what)
+    local trace  = helpers.trace
+    local report = helpers.report
     for i=1,#suffixes do -- so we use findfile and not a lookup loop
         local format = suffixes[i]
         local resolved = resolvers.findfile(name,format) or ""
-        if trace_libraries then
-            report_libraries("! checking for %q' using format %q",name,format)
+        if trace then
+            report("%s format, identifying %a using format %a",what,name,format)
         end
         if resolved ~= "" then
-            if trace_libraries then
-                report_libraries("! lib %q located on %q",name,resolved)
+            if trace then
+                report("%s format, %a found on %a",what,name,resolved)
             end
             if islib then
                 return loadedaslib(resolved,rawname)
@@ -156,50 +98,34 @@ local function loadedbyformat(name,rawname,suffixes,islib)
     end
 end
 
-local function loadedbypath(name,rawname,paths,islib,what)
-    if trace_libraries then
-        report_libraries("! locating %q as %q on %q paths",rawname,name,what)
+helpers.loadedbyformat = loadedbyformat
+
+-- print(lualibfile("bar"))
+-- print(lualibfile("foo.bar"))
+-- print(lualibfile("crap/foo...bar"))
+-- print(lualibfile("crap//foo.bar"))
+-- print(lualibfile("crap/../foo.bar"))
+-- print(lualibfile("crap/.././foo.bar"))
+
+-- alternatively we could split in path and base and temporary set the libpath to path
+
+-- we could build a list of relevant paths but for tracing it's better to have the
+-- whole lot (ok, we could skip the duplicates)
+
+methods["lua variable format"] = function(name)
+    if helpers.trace then
+        helpers.report("%s format, checking %s paths","lua",#getluaformatpaths()) -- call triggers building
     end
-    for p=1,#paths do
-        local path = paths[p]
-        local resolved = file.join(path,name)
-        if trace_libraries then -- mode detail
-            report_libraries("! checking for %q using %q path %q",name,what,path)
-        end
-        if is_readable(resolved) then
-            if trace_libraries then
-                report_libraries("! lib %q located on %q",name,resolved)
-            end
-            if islib then
-                return loadedaslib(resolved,rawname)
-            else
-                return loadfile(resolved)
-            end
-        end
-    end
+    return loadedbyformat(addsuffix(lualibfile(name),"lua"),name,luasuffixes,false,"lua")
 end
 
-local function notloaded(name)
-    if trace_libraries then
-        report_libraries("? unable to locate library %q",name)
+methods["lib variable format"] = function(name)
+    if helpers.trace then
+        helpers.report("%s format, checking %s paths","lib",#getlibformatpaths()) -- call triggers building
     end
+    return loadedbyformat(addsuffix(lualibfile(name),os.libsuffix),name,libsuffixes,true,"lib")
 end
 
-searchers[2] = function(name)
-    local thename = gsub(name,"%.","/")
-    local luaname = file.addsuffix(thename,"lua")
-    local libname = file.addsuffix(thename,os.libsuffix)
-    return
-        loadedbyformat(luaname,name,libsuffixes,   false)
-     or loadedbyformat(libname,name,clibsuffixes,  true)
-     or loadedbypath  (luaname,name,getlibpaths (),false,"lua")
-     or loadedbypath  (luaname,name,getclibpaths(),false,"lua")
-     or loadedbypath  (libname,name,getclibpaths(),true, "lib")
-     or loadedbylua   (name)
-     or notloaded     (name)
-end
+-- package.extraclibpath(environment.ownpath)
 
--- searchers[3] = nil
--- searchers[4] = nil
-
-resolvers.loadlualib = require
+resolvers.loadlualib = require -- hm

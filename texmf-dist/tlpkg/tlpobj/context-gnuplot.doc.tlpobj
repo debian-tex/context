@@ -1,9 +1,9 @@
 name context-gnuplot.doc
 category ConTeXt
-revision 27837
+revision 30380
 shortdesc doc files of context-gnuplot
 relocated 1
-docfiles size=116
+docfiles size=119
  RELOC/doc/context/third/gnuplot/example.plt
  RELOC/doc/context/third/gnuplot/fullpage-example.pdf
  RELOC/doc/context/third/gnuplot/fullpage-example.tex

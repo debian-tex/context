@@ -15,6 +15,7 @@ local format, upper, lower, gmatch, gsub, find, rep = string.format, string.uppe
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 
 local setmetatableindex = table.setmetatableindex
+local formatters = string.formatters -- no need (yet) as paths are cached anyway
 
 -- beware, this is not xpath ... e.g. position is different (currently) and
 -- we have reverse-sibling as reversed preceding sibling
@@ -82,7 +83,7 @@ local function fallback (t, name)
     if fn then
         t[name] = fn
     else
-        report_lpath("unknown sub finalizer '%s'",tostring(name))
+        report_lpath("unknown sub finalizer %a",name)
         fn = function() end
     end
     return fn
@@ -608,14 +609,11 @@ local converter = Cs (
 )
 
 cleaner = Cs ( (
---~     lp_fastpos +
+ -- lp_fastpos +
     lp_reserved +
     lp_number +
     lp_string +
 1 )^1 )
-
-
---~ expr
 
 local template_e = [[
     local expr = xml.expressions
@@ -671,6 +669,7 @@ local function errorrunner_e(str,cnv)
     end
     return false
 end
+
 local function errorrunner_f(str,arg)
     report_lpath("error in finalizer: %s(%s)",str,arg or "")
     return false
@@ -872,7 +871,7 @@ lpath = function (pattern) -- the gain of caching is rather minimal
                 local np = #parsed
                 if np == 0 then
                     parsed = { pattern = pattern, register_self, state = "parsing error" }
-                    report_lpath("parsing error in '%s'",pattern)
+                    report_lpath("parsing error in pattern: %s",pattern)
                     lshow(parsed)
                 else
                     -- we could have done this with a more complex parser but this
@@ -1191,7 +1190,7 @@ end
 -- user interface
 
 local function traverse(root,pattern,handle)
-    report_lpath("use 'xml.selection' instead for '%s'",pattern)
+ -- report_lpath("use 'xml.selection' instead for pattern: %s",pattern)
     local collected = applylpath(root,pattern)
     if collected then
         for c=1,#collected do
@@ -1232,7 +1231,7 @@ local function dofunction(collected,fnc,...)
                 f(collected[c],...)
             end
         else
-            report_lpath("unknown function '%s'",fnc)
+            report_lpath("unknown function %a",fnc)
         end
     end
 end
@@ -1244,7 +1243,7 @@ finalizers.tex["function"] = dofunction
 
 expressions.text = function(e,n)
     local rdt = e.__p__.dt
-    return (rdt and rdt[n]) or ""
+    return rdt and rdt[n] or ""
 end
 
 expressions.name = function(e,n) -- ns + tg
@@ -1346,34 +1345,89 @@ end
 </typing>
 --ldx]]--
 
-local wrap, yield = coroutine.wrap, coroutine.yield
+-- local wrap, yield = coroutine.wrap, coroutine.yield
+-- local dummy = function() end
+--
+-- function xml.elements(root,pattern,reverse) -- r, d, k
+--     local collected = applylpath(root,pattern)
+--     if collected then
+--         if reverse then
+--             return wrap(function() for c=#collected,1,-1 do
+--                 local e = collected[c] local r = e.__p__ yield(r,r.dt,e.ni)
+--             end end)
+--         else
+--             return wrap(function() for c=1,#collected    do
+--                 local e = collected[c] local r = e.__p__ yield(r,r.dt,e.ni)
+--             end end)
+--         end
+--     end
+--     return wrap(dummy)
+-- end
+--
+-- function xml.collected(root,pattern,reverse) -- e
+--     local collected = applylpath(root,pattern)
+--     if collected then
+--         if reverse then
+--             return wrap(function() for c=#collected,1,-1 do yield(collected[c]) end end)
+--         else
+--             return wrap(function() for c=1,#collected    do yield(collected[c]) end end)
+--         end
+--     end
+--     return wrap(dummy)
+-- end
+
+-- faster:
+
+local dummy = function() end
 
 function xml.elements(root,pattern,reverse) -- r, d, k
     local collected = applylpath(root,pattern)
-    if collected then
-        if reverse then
-            return wrap(function() for c=#collected,1,-1 do
-                local e = collected[c] local r = e.__p__ yield(r,r.dt,e.ni)
-            end end)
-        else
-            return wrap(function() for c=1,#collected    do
-                local e = collected[c] local r = e.__p__ yield(r,r.dt,e.ni)
-            end end)
+    if not collected then
+        return dummy
+    elseif reverse then
+        local c = #collected + 1
+        return function()
+            if c > 1 then
+                c = c - 1
+                local e = collected[c]
+                local r = e.__p__
+                return r, r.dt, e.ni
+            end
+        end
+    else
+        local n, c = #collected, 0
+        return function()
+            if c < n then
+                c = c + 1
+                local e = collected[c]
+                local r = e.__p__
+                return r, r.dt, e.ni
+            end
         end
     end
-    return wrap(function() end)
 end
 
 function xml.collected(root,pattern,reverse) -- e
     local collected = applylpath(root,pattern)
-    if collected then
-        if reverse then
-            return wrap(function() for c=#collected,1,-1 do yield(collected[c]) end end)
-        else
-            return wrap(function() for c=1,#collected    do yield(collected[c]) end end)
+    if not collected then
+        return dummy
+    elseif reverse then
+        local c = #collected + 1
+        return function()
+            if c > 1 then
+                c = c - 1
+                return collected[c]
+            end
+        end
+    else
+        local n, c = #collected, 0
+        return function()
+            if c < n then
+                c = c + 1
+                return collected[c]
+            end
         end
     end
-    return wrap(function() end)
 end
 
 -- handy
@@ -1381,7 +1435,7 @@ end
 function xml.inspect(collection,pattern)
     pattern = pattern or "."
     for e in xml.collected(collection,pattern or ".") do
-        report_lpath("pattern %q\n\n%s\n",pattern,xml.tostring(e))
+        report_lpath("pattern: %s\n\n%s\n",pattern,xml.tostring(e))
     end
 end
 

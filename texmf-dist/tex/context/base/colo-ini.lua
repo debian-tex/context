@@ -11,6 +11,7 @@ local concat, insert, remove = table.concat, table.insert, table.remove
 local format, gmatch, gsub, lower, match, find = string.format, string.gmatch, string.gsub, string.lower, string.match, string.find
 local P, R, C, Cc = lpeg.P, lpeg.R, lpeg.C, lpeg.Cc
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
+local formatters = string.formatters
 
 local trace_define = false  trackers.register("colors.define",function(v) trace_define = v end)
 
@@ -70,12 +71,12 @@ local function definecolor(name, ca, global)
     if ca and ca > 0 then
         if global then
             if trace_define then
-                report_colors("define global color '%s' with attribute: %s",name,ca)
+                report_colors("define global color %a with attribute %a",name,ca)
             end
             context.colordefagc(name,ca)
         else
             if trace_define then
-                report_colors("define local color '%s' with attribute: %s",name,ca)
+                report_colors("define local color %a with attribute %a",name,ca)
             end
             context.colordefalc(name,ca)
         end
@@ -93,12 +94,12 @@ local function inheritcolor(name, ca, global)
     if ca and ca ~= "" then
         if global then
             if trace_define then
-                report_colors("inherit global color '%s' with attribute: %s",name,ca)
+                report_colors("inherit global color %a with attribute %a",name,ca)
             end
             context.colordeffgc(name,ca) -- some day we will set the macro directly
         else
             if trace_define then
-                report_colors("inherit local color '%s' with attribute: %s",name,ca)
+                report_colors("inherit local color %a with attribute %a",name,ca)
             end
             context.colordefflc(name,ca)
         end
@@ -116,12 +117,12 @@ local function definetransparent(name, ta, global)
     if ta and ta > 0 then
         if global then
             if trace_define then
-                report_colors("define global transparency '%s' with attribute: %s",name,ta)
+                report_colors("define global transparency %a with attribute %a",name,ta)
             end
             context.colordefagt(name,ta)
         else
             if trace_define then
-                report_colors("define local transparency '%s' with attribute: %s",name,ta)
+                report_colors("define local transparency %a with attribute %a",name,ta)
             end
             context.colordefalt(name,ta)
         end
@@ -138,12 +139,12 @@ local function inherittransparent(name, ta, global)
     if ta and ta ~= "" then
         if global then
             if trace_define then
-                report_colors("inherit global transparency '%s' with attribute: %s",name,ta)
+                report_colors("inherit global transparency %a with attribute %a",name,ta)
             end
             context.colordeffgt(name,ta)
         else
             if trace_define then
-                report_colors("inherit local transparency '%s' with attribute: %s",name,ta)
+                report_colors("inherit local transparency %a with attribute %a",name,ta)
             end
             context.colordefflt(name,ta)
         end
@@ -180,8 +181,7 @@ local gray_okay, rgb_okay, cmyk_okay, spot_okay, multichannel_okay, forced = tru
 
 function colors.forcesupport(gray,rgb,cmyk,spot,multichannel) -- pdfx driven
     gray_okay, rgb_okay, cmyk_okay, spot_okay, multichannel_okay, forced = gray, rgb, cmyk, spot, multichannel, true
-    report_colors("supported models: gray=%s, rgb=%s, cmyk=%s, spot=%s",      -- multichannel=%s
-        tostring(gray), tostring(rgb), tostring(cmyk), tostring(spot)) -- tostring(multichannel)
+    report_colors("supported models: gray %a, rgb %a, cmyk %a, spot %a",gray,rgb,cmyk,spot) -- multichannel=%l multichannel
 end
 
 local function forcedmodel(model) -- delayed till the backend but mp directly
@@ -426,7 +426,7 @@ function colors.definemultitonecolor(name,multispec,colorspec,selfspec)
         max = max + 1
         dd[max] = k
         pp[max] = v
-        nn[max] = format("%s_%1.3g",k,tonumber(v) or 0) -- 0 can't happen
+        nn[max] = formatters["%s_%1.3g"](k,tonumber(v) or 0) -- 0 can't happen
     end
     if max > 0 then
         nn = concat(nn,'_')
@@ -470,38 +470,32 @@ local function mpcolor(model,ca,ta,default)
         model = forcedmodel(model)
         if tv then
             if model == 2 then
-                return format("transparent(%s,%s,(%s,%s,%s))",tv[1],tv[2],cv[3],cv[4],cv[5])
+                return formatters["transparent(%s,%s,(%s,%s,%s))"](tv[1],tv[2],cv[3],cv[4],cv[5])
             elseif model == 3 then
-                return format("transparent(%s,%s,(%s,%s,%s))",tv[1],tv[2],cv[3],cv[4],cv[5])
+                return formatters["transparent(%s,%s,(%s,%s,%s))"](tv[1],tv[2],cv[3],cv[4],cv[5])
             elseif model == 4 then
-                return format("transparent(%s,%s,cmyk(%s,%s,%s,%s))",tv[1],tv[2],cv[6],cv[7],cv[8],cv[9])
+                return formatters["transparent(%s,%s,cmyk(%s,%s,%s,%s))"](tv[1],tv[2],cv[6],cv[7],cv[8],cv[9])
             elseif model == 5 then
-                return format('transparent(%s,%s,multitonecolor("%s",%s,"%s","%s"))',tv[1],tv[2],cv[10],cv[11],cv[12],cv[13])
-            else
-                return format("transparent(%s,%s,(%s,%s,%s))",tv[1],tv[2],cv[3],cv[4],cv[5])
--- this will become (see ** in meta-ini.mkiv)
---
--- return format("transparent(%s,%s,(%s))",tv[1],tv[2],cv[2])
+                return formatters['transparent(%s,%s,multitonecolor("%s",%s,"%s","%s"))'](tv[1],tv[2],cv[10],cv[11],cv[12],cv[13])
+            else -- see ** in meta-ini.mkiv: return formatters["transparent(%s,%s,(%s))"](tv[1],tv[2],cv[2])
+                return formatters["transparent(%s,%s,(%s,%s,%s))"](tv[1],tv[2],cv[3],cv[4],cv[5])
             end
         else
             if model == 2 then
-                return format("(%s,%s,%s)",cv[3],cv[4],cv[5])
+                return formatters["(%s,%s,%s)"](cv[3],cv[4],cv[5])
             elseif model == 3 then
-                return format("(%s,%s,%s)",cv[3],cv[4],cv[5])
+                return formatters["(%s,%s,%s)"](cv[3],cv[4],cv[5])
             elseif model == 4 then
-                return format("cmyk(%s,%s,%s,%s)",cv[6],cv[7],cv[8],cv[9])
+                return formatters["cmyk(%s,%s,%s,%s)"](cv[6],cv[7],cv[8],cv[9])
             elseif model == 5 then
-                return format('multitonecolor("%s",%s,"%s","%s")',cv[10],cv[11],cv[12],cv[13])
-            else
-                return format("(%s,%s,%s)",cv[3],cv[4],cv[5])
--- this will become (see ** in meta-ini.mkiv)
---
--- return format("%s",(cv[2]))
+                return formatters['multitonecolor("%s",%s,"%s","%s")'](cv[10],cv[11],cv[12],cv[13])
+            else -- see ** in meta-ini.mkiv: return formatters["%s"]((cv[2]))
+                return formatters["(%s,%s,%s)"](cv[3],cv[4],cv[5])
             end
         end
     else
         default = default or 0 -- rgb !
-        return format("(%s,%s,%s)",default,default,default)
+        return formatters["(%s,%s,%s)"](default,default,default)
     end
 end
 
@@ -510,7 +504,7 @@ local function mpnamedcolor(name)
 end
 
 local function mpoptions(model,ca,ta,default) -- will move to mlib-col
-    return format("withcolor %s",mpcolor(model,ca,ta,default))
+    return formatters["withcolor %s"](mpcolor(model,ca,ta,default))
 end
 
 colors.mpcolor      = mpcolor
@@ -724,7 +718,7 @@ end
 
 local function failure(name)
  -- context.showmessage("colors",5,name)
-    report_colors("unknown: library '%s'",name)
+    report_colors("unknown library %a",name)
 end
 
 function colors.usecolors(name)

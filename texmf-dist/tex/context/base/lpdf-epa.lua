@@ -11,6 +11,7 @@ if not modules then modules = { } end modules ['lpdf-epa'] = {
 
 local type, tonumber = type, tonumber
 local format, gsub = string.format, string.gsub
+local formatters = string.formatters
 
 ----- lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 
@@ -35,17 +36,21 @@ local function makenamespace(filename)
 end
 
 local function add_link(x,y,w,h,destination,what)
+    x = x .. "bp"
+    y = y .. "bp"
+    w = w .. "bp"
+    h = h .. "bp"
     if trace_links then
-        report_link("dx: % 4i, dy: % 4i, wd: % 4i, ht: % 4i, destination: %s, type: %s",x,y,w,h,destination,what)
+        report_link("destination %a, type %a, dx %s, dy %s, wd %s, ht %s",destination,what,x,y,w,h)
     end
     local locationspec = { -- predefining saves time
-        x      = x .. "bp",
-        y      = y .. "bp",
+        x      = x,
+        y      = y,
         preset = "leftbottom",
     }
     local buttonspec = {
-        width  = w .. "bp",
-        height = h .. "bp",
+        width  = w,
+        height = h,
         offset = variables.overlay,
         frame  = trace_links and variables.on or variables.off,
     }
@@ -84,7 +89,7 @@ local function link_uri(x,y,w,h,document,annotation)
      -- url = lpegmatch(urlescaper,url)
      -- url = lpegmatch(utftohigh,url)
         url = escapetex(url)
-        add_link(x,y,w,h,format("url(%s)",url),"url")
+        add_link(x,y,w,h,formatters["url(%s)"](url),"url")
     end
 end
 
@@ -96,15 +101,15 @@ local function link_file(x,y,w,h,document,annotation)
             filename = escapetex(filename)
             local destination = a.D
             if not destination then
-                add_link(x,y,w,h,format("file(%s)",filename),"file")
+                add_link(x,y,w,h,formatters["file(%s)"](filename),"file")
             elseif type(destination) == "string" then
-                add_link(x,y,w,h,format("%s::%s",filename,destination),"file (named)")
+                add_link(x,y,w,h,formatters["%s::%s"](filename,destination),"file (named)")
             else
                 destination = destination[1] -- array
                 if tonumber(destination) then
-                    add_link(x,y,w,h,format("%s::page(%s)",filename,destination),"file (page)")
+                    add_link(x,y,w,h,formatters["%s::page(%s)"](filename,destination),"file (page)")
                 else
-                    add_link(x,y,w,h,format("file(%s)",filename),"file")
+                    add_link(x,y,w,h,formatters["file(%s)"](filename),"file")
                 end
             end
         end
@@ -152,23 +157,23 @@ function codeinjections.mergereferences(specification)
                                 elseif linktype == "URI" then
                                     link_uri(x,y,w,h,document,annotation)
                                 elseif trace_links then
-                                    report_link("unsupported link annotation %q",linktype)
+                                    report_link("unsupported link annotation %a",linktype)
                                 end
                             else
                                 report_link("mising link annotation")
                             end
                         elseif trace_links then
-                            report_link("unsupported annotation %q",subtype)
+                            report_link("unsupported annotation %a",subtype)
                         end
                     elseif trace_links then
-                        report_link("broken annotation, index: %i",i)
+                        report_link("broken annotation, index %a",i)
                     end
                 end
                 context.flushlayer { "epdflinks" }
              -- context("\\gdef\\figurereference{%s}",reference) -- global
                 context.setgvalue("figurereference",reference) -- global
                 if trace_links then
-                    report_link("setting figure reference to %q",reference)
+                    report_link("setting figure reference to %a",reference)
                 end
                 specification.reference = reference
                 return namespace
@@ -200,7 +205,7 @@ function codeinjections.mergeviewerlayers(specification)
                         local tag = namespace .. gsub(layer," ",":")
                         local title = tag
                         if trace_links then
-                            report_link("using layer %q",tag)
+                            report_link("using layer %a",tag)
                         end
                         attributes.viewerlayers.define { -- also does some cleaning
                             tag       = tag, -- todo: #3A or so
@@ -211,7 +216,7 @@ function codeinjections.mergeviewerlayers(specification)
                         }
                         codeinjections.useviewerlayer(tag)
                     elseif trace_links then
-                        report_link("broken layer, index: %i",i)
+                        report_link("broken layer, index %a",i)
                     end
                 end
             end

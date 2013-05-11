@@ -9,7 +9,21 @@ if not modules then modules = { } end modules ['mtx-package'] = {
 local format, gsub, gmatch = string.format, string.gsub, string.gmatch
 
 local helpinfo = [[
---merge               merge 'loadmodule' into merge file
+<?xml version="1.0"?>
+<application>
+ <metadata>
+  <entry name="name">mtx-package</entry>
+  <entry name="detail">Distribution Related Goodies</entry>
+  <entry name="version">0.10</entry>
+ </metadata>
+ <flags>
+  <category name="basic">
+   <subcategory>
+    <flag name="merge"><short>merge 'loadmodule' into merge file</short></flag>
+   </subcategory>
+  </category>
+ </flags>
+</application>
 ]]
 
 local application = logs.application {
@@ -24,18 +38,18 @@ scripts         = scripts         or { }
 messages        = messages        or { }
 scripts.package = scripts.package or { }
 
-function scripts.package.merge_luatex_files(name,strip)
+function scripts.package.merge_luatex_files(name)
     local oldname = resolvers.findfile(name) or ""
     oldname = file.replacesuffix(oldname,"lua")
     if oldname == "" then
-        report("missing '%s'",name)
+        report("missing %q",name)
     else
         local newname = file.removesuffix(oldname) .. "-merged.lua"
         local data = io.loaddata(oldname) or ""
         if data == "" then
-            report("missing '%s'",newname)
+            report("missing %q",newname)
         else
-            report("loading '%s'",oldname)
+            report("loading %q",oldname)
             local collected = { }
             collected[#collected+1] = format("-- merged file : %s\n",newname)
             collected[#collected+1] = format("-- parent file : %s\n",oldname)
@@ -45,23 +59,17 @@ function scripts.package.merge_luatex_files(name,strip)
                 if file.basename(lib) ~= file.basename(newname) then
                     local fullname = resolvers.findfile(lib) or ""
                     if fullname == "" then
-                        report("missing '%s'",lib)
+                        report("missing %q",lib)
                     else
-                        report("fetching '%s'",fullname)
+                        report("fetching %q",fullname)
                         local data = io.loaddata(fullname)
-                        if strip then
-                            data = gsub(data,"%-%-%[%[ldx%-%-.-%-%-%ldx%]%]%-%-[\n\r]*","")
-                            data = gsub(data,"%-%-%~[^\n\r]*[\n\r]*","\n")
-                            data = gsub(data,"%s+%-%-[^\n\r]*[\n\r]*","\n")
-                            data = gsub(data,"[\n\r]+","\n")
-                        end
                         collected[#collected+1] = "\ndo -- begin closure to overcome local limits and interference\n\n"
-                        collected[#collected+1] = data
+                        collected[#collected+1] = utilities.merger.compact(data)
                         collected[#collected+1] = "\nend -- closure\n"
                     end
                 end
             end
-            report("saving '%s'",newname)
+            report("saving %q",newname)
             io.savedata(newname,table.concat(collected))
         end
     end
@@ -69,6 +77,8 @@ end
 
 if environment.argument("merge") then
     scripts.package.merge_luatex_files(environment.files[1] or "")
+elseif environment.argument("exporthelp") then
+    application.export(environment.argument("exporthelp"),environment.files[1])
 else
     application.help()
 end

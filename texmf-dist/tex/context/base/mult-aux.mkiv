@@ -207,7 +207,9 @@
 % In \MKIV\ we can probably use the english variant for all other
 % languages too.
 
-\unexpanded\def\mult_interfaces_install_parameter_set_handler#1#2#3#4#5#6% we can speed this up for english
+% todo: inline the \do*value
+
+\unexpanded\def\mult_interfaces_install_parameter_set_handler#1#2#3#4#5#6%
   {\ifx#2\relax\let#2\empty\fi
    \unexpanded\def#3{\dosetvalue {#1#2:}}%        ##1 {##2} (braces are mandate)
    \unexpanded\def#4{\dosetevalue{#1#2:}}%        ##1 {##2} (braces are mandate)
@@ -264,6 +266,12 @@
 
 \let\definehandlerparent\empty
 
+\def\mult_check_for_parent#1#2#3#4%
+  {\ifcsname#1#4:\s!parent\endcsname \else \ifx#4\empty \else
+     \writestatus\m!system{error: invalid parent #4 for #3, #4 defined too (best check it)}%
+     \expandafter\edef\csname#1#4:\s!parent\endcsname{#2}%
+   \fi \fi}
+
 \unexpanded\def\mult_interfaces_install_define_handler#1#2#3#4#5#6#7#8#9% why is \expanded still needed in clones
   {\ifx#4\relax\let#4\empty\fi                                          % see \defineregister
    \unexpanded\def#2{\dotripleempty#5}%
@@ -275,6 +283,7 @@
       \ifthirdargument
         \the#6% predefine
         \edef#8{##2}%
+        \mult_check_for_parent{#1}{#3}#4#8%
         \expandafter\edef\csname#1#4:\s!parent\endcsname{#1##2}%
         \mult_interfaces_get_parameters{#1#4:}[##3]%
       \else\ifsecondargument
@@ -286,6 +295,7 @@
           \mult_interfaces_get_parameters{#1#4:}[##2]%
         \else
           \edef#8{##2}%
+          \mult_check_for_parent{#1}{#3}#4#8%
           \expandafter\edef\csname#1#4:\s!parent\endcsname{#1##2}%
         \fi
       \else
@@ -309,7 +319,7 @@
         \expandafter\noexpand\csname current#2parent\endcsname
         \expandafter\noexpand\csname saved_defined_#2\endcsname}}
 
-\unexpanded\def\mult_interfaces_install_setup_handler#1#2#3#4#5#6#7#8%
+\unexpanded\def\mult_interfaces_install_setup_handler#1#2#3#4#5#6#7#8#9%
   {\ifx#3\relax\let#3\empty\fi
    \unexpanded\def#2{\dodoubleempty#4}%
    \unexpanded\def#6{\mult_interfaces_get_parameters{#1#3:}}% no every ! don't change it
@@ -318,11 +328,11 @@
    \unexpanded\def#4[##1][##2]% maybe helper
      {\let#7#3%
       \ifsecondargument
-        \def\mult_interfaces_with_comma_list_element####1% we will have a simple one as well
+        \def#9####1% we will have a simple one as well
           {\edef#3{####1}%
            \mult_interfaces_get_parameters{#1#3:}[##2]%
            \the#5}%
-        \processcommalist[##1]\mult_interfaces_with_comma_list_element
+        \processcommalist[##1]#9%
       \else
         \let#3\empty
         \mult_interfaces_get_parameters{#1:}[##1]%
@@ -341,7 +351,8 @@
         \expandafter\noexpand\csname everysetup#2\endcsname
         \expandafter\noexpand\csname setupcurrent#2\endcsname
         \expandafter\noexpand\csname saved_setup_current#2\endcsname
-        \expandafter\noexpand\csname everysetup#2root\endcsname}}
+        \expandafter\noexpand\csname everysetup#2root\endcsname
+        \expandafter\noexpand\csname nested_setup_current#2\endcsname}}
 
 \let\doingrootsetupnamed\plusone    % \setuplayout[name][key=value]
 \let\doingrootsetuproot \plustwo    % \setuplayout      [key=value]
@@ -421,7 +432,7 @@
         \expandafter\noexpand\csname everyswitch#2\endcsname
         \expandafter\noexpand\csname everysetup#2root\endcsname}}
 
-\unexpanded\def\mult_interfaces_install_auto_setup_handler#1#2#3#4#5#6#7#8%
+\unexpanded\def\mult_interfaces_install_auto_setup_handler#1#2#3#4#5#6#7#8#9%
   {\ifx#3\relax\let#3\empty\fi
    \unexpanded\def#2{\dotripleempty#4}%
    \unexpanded\def#6{\mult_interfaces_get_parameters{#1#3:}}%
@@ -429,19 +440,19 @@
    \def#4[##1][##2][##3]%
      {\let#8#3%
       \ifthirdargument
-        \def\mult_interfaces_with_comma_list_element####1%
+        \def#9####1%
           {\edef#3{####1}%
            \expandafter\def\csname#1#3:\s!parent\endcsname{#1##2}%
            \mult_interfaces_get_parameters{#1#3:}[##3]% always sets parent
            \the#5}%
-        \processcommalist[##1]\mult_interfaces_with_comma_list_element
+        \processcommalist[##1]#9%
       \else\ifsecondargument
-        \def\mult_interfaces_with_comma_list_element####1%
+        \def#9####1%
           {\edef#3{####1}%
            #7% checks parent and sets if needed
            \mult_interfaces_get_parameters{#1#3:}[##2]%
            \the#5}%
-        \processcommalist[##1]\mult_interfaces_with_comma_list_element
+        \processcommalist[##1]#9%
       \else
         \let#3\empty
         \mult_interfaces_get_parameters{#1:}[##1]%
@@ -459,7 +470,8 @@
         \expandafter\noexpand\csname everysetup#2\endcsname
         \expandafter\noexpand\csname setupcurrent#2\endcsname
         \expandafter\noexpand\csname check#2parent\endcsname
-        \expandafter\noexpand\csname saved_setup_current#2\endcsname}}
+        \expandafter\noexpand\csname saved_setup_current#2\endcsname
+        \expandafter\noexpand\csname nested_setup_current#2\endcsname}}
 
 \unexpanded\def\installbasicparameterhandler#1#2%
   {\installparameterhandler    {#1}{#2}%
@@ -786,7 +798,7 @@
       \expandafter\mult_interfaces_show_parent_chain\csname#1:\s!parent\endcsname
    \fi}
 
-%D Another helper:
+%D Another helper (needs to be applied):
 
 \unexpanded\def\doifelsecommandhandler#1#2% namespace name
   {\ifcsname#1#2:\s!parent\endcsname
@@ -810,6 +822,23 @@
    \fi}
 
 \let\doifcommandhandlerelse\doifelsecommandhandler
+
+% another set of (fast) helpers (grep for usage):
+
+\def\expandnamespaceparameter#1#2#3% \??xx \getp \c!xx \c!yy
+  {\csname#1\ifcsname#1\expandafter\expandafter\expandafter\mult_aux_expand_namespace_parameter#2#3}
+
+\def\mult_aux_expand_namespace_parameter#1#2% \cs \c!yy
+  {#1\endcsname#1\else#2\fi\endcsname}
+
+\def\expandnamespacemacro#1#2#3% \??xx \some_edefed_cs \c!yy
+  {\csname#1\ifcsname#1#2\endcsname#2\else#3\fi\endcsname}
+
+\def\expandnamespacevalue#1#2% \??xx {...} \c!yy == optimized \expandcheckedcsname
+  {\csname#1\ifcsname#1\normalexpanded{\noexpand\syst_helpers_expand_checked_value{#2}}}
+
+\def\syst_helpers_expand_checked_value#1#2%
+  {#1\endcsname#1\else#2\fi\endcsname}
 
 %D Conventions:
 %D

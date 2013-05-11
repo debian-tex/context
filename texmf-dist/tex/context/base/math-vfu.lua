@@ -46,36 +46,36 @@ fonts.handlers.vf.math  = vfmath
 
 local shared            = { }
 
---~ local push, pop, back = { "push" }, { "pop" }, { "slot", 1, 0x2215 }
-
---~ local function negate(main,characters,id,size,unicode,basecode)
---~     if not characters[unicode] then
---~         local basechar = characters[basecode]
---~         if basechar then
---~             local ht, wd = basechar.height, basechar.width
---~             characters[unicode] = {
---~                 width    = wd,
---~                 height   = ht,
---~                 depth    = basechar.depth,
---~                 italic   = basechar.italic,
---~                 kerns    = basechar.kerns,
---~                 commands = {
---~                     { "slot", 1, basecode },
---~                     push,
---~                     { "down",    ht/5},
---~                     { "right", - wd/2},
---~                     back,
---~                     push,
---~                 }
---~             }
---~         end
---~     end
---~ end
-
---~ \Umathchardef\braceld="0 "1 "FF07A
---~ \Umathchardef\bracerd="0 "1 "FF07B
---~ \Umathchardef\bracelu="0 "1 "FF07C
---~ \Umathchardef\braceru="0 "1 "FF07D
+-- local push, pop, back = { "push" }, { "pop" }, { "slot", 1, 0x2215 }
+--
+-- local function negate(main,characters,id,size,unicode,basecode)
+--     if not characters[unicode] then
+--         local basechar = characters[basecode]
+--         if basechar then
+--             local ht, wd = basechar.height, basechar.width
+--             characters[unicode] = {
+--                 width    = wd,
+--                 height   = ht,
+--                 depth    = basechar.depth,
+--                 italic   = basechar.italic,
+--                 kerns    = basechar.kerns,
+--                 commands = {
+--                     { "slot", 1, basecode },
+--                     push,
+--                     { "down",    ht/5},
+--                     { "right", - wd/2},
+--                     back,
+--                     push,
+--                 }
+--             }
+--         end
+--     end
+-- end
+--
+-- \Umathchardef\braceld="0 "1 "FF07A
+-- \Umathchardef\bracerd="0 "1 "FF07B
+-- \Umathchardef\bracelu="0 "1 "FF07C
+-- \Umathchardef\braceru="0 "1 "FF07D
 
 local function brace(main,characters,id,size,unicode,first,rule,left,right,rule,last)
     if not characters[unicode] then
@@ -92,21 +92,37 @@ local function brace(main,characters,id,size,unicode,first,rule,left,right,rule,
     end
 end
 
-local function arrow(main,characters,id,size,unicode,arrow,minus,isleft)
+local function extension(main,characters,id,size,unicode,first,middle,last)
     local chr = characters[unicode]
     if not chr then
-        -- skip
-    elseif isleft then
-        chr.horiz_variants = {
-            { extender = 0, glyph = arrow },
-            { extender = 1, glyph = minus },
-        }
-    else
-        chr.horiz_variants = {
-            { extender = 1, glyph = minus },
-            { extender = 0, glyph = arrow },
-        }
+        return -- skip
     end
+    local fw = characters[first]
+    if not fw then
+        return
+    end
+    local mw = characters[middle]
+    if not mw then
+        return
+    end
+    local lw = characters[last]
+    if not lw then
+        return
+    end
+    fw = fw.width
+    mw = mw.width
+    lw = lw.width
+    if fw == 0 then
+        fw = 1
+    end
+    if lw == 0 then
+        lw = 1
+    end
+    chr.horiz_variants = {
+        { extender = 0, glyph = first,  ["end"] = fw/2, start = 0,    advance = fw },
+        { extender = 1, glyph = middle, ["end"] = mw/2, start = mw/2, advance = mw },
+        { extender = 0, glyph = last,   ["end"] = 0,    start = lw/2, advance = lw },
+    }
 end
 
 local function parent(main,characters,id,size,unicode,first,rule,last)
@@ -124,10 +140,10 @@ end
 local push, pop, step = { "push" }, { "pop" }, 0.2 -- 0.1 is nicer but gives larger files
 
 local function make(main,characters,id,size,n,m)
-    local old = 0xFF000+n
+    local old = 0xFF000 + n
     local c = characters[old]
     if c then
-        local upslot, dnslot, uprule, dnrule = 0xFF100+n, 0xFF200+n, 0xFF300+m, 0xFF400+m
+        local upslot, dnslot, uprule, dnrule = 0xFF100 + n, 0xFF200 + n, 0xFF300 + m, 0xFF400 + m
         local xu = main.parameters.x_height + 0.3*size
         local xd = 0.3*size
         local w, h, d = c.width, c.height, c.depth
@@ -150,14 +166,24 @@ local function make(main,characters,id,size,n,m)
     end
 end
 
-local function minus(main,characters,id,size,unicode) -- push/pop needed?
-    local minus = characters[0x002D]
+local function clipped(main,characters,id,size,unicode,original) -- push/pop needed?
+    local minus = characters[original]
     if minus then
         local mu = size/18
-        local width = minus.width - 5*mu
+        local step = 3*mu
+        local width = minus.width
+        if width > step then
+            width = width - step
+            step = step / 2
+        else
+            width = width / 2
+            step = width
+        end
         characters[unicode] = {
-            width = width, height = minus.height, depth = minus.depth,
-            commands = { push, { "right", -3*mu }, { "slot", id, 0x002D }, pop }
+            width    = width,
+            height   = minus.height,
+            depth    = minus.depth,
+            commands = { push, { "right", -step }, { "slot", id, original }, pop }
         }
     end
 end
@@ -179,7 +205,7 @@ local function raise(main,characters,id,size,unicode,private,n) -- this is a rea
     local raised = characters[private]
     if raised then
         if not done[unicode] then
-            report_virtual("temporary too large U+%05X due to issues in luatex backend",unicode)
+            report_virtual("temporary too large %U due to issues in luatex backend",unicode)
             done[unicode] = true
         end
         local up = 0.85 * main.parameters.x_height
@@ -290,20 +316,20 @@ local function vertbar(main,characters,id,size,parent,scale,unicode)
     end
 end
 
-local function jointwo(main,characters,id,size,unicode,u1,d12,u2)
+local function jointwo(main,characters,id,size,unicode,u1,d12,u2,what)
     local c1, c2 = characters[u1], characters[u2]
     if c1 and c2 then
         local w1, w2 = c1.width, c2.width
         local mu = size/18
         characters[unicode] = {
-            width    = w1 + w2 - d12*mu,
+            width    = w1 + w2 - d12 * mu,
             height   = max(c1.height or 0, c2.height or 0),
-            depth    = max(c1.depth or 0, c2.depth or 0),
+            depth    = max(c1.depth  or 0, c2.depth  or 0),
             commands = {
                 { "slot", id, u1 },
                 { "right", -d12*mu } ,
                 { "slot", id, u2 },
-            }
+            },
         }
     end
 end
@@ -388,19 +414,20 @@ function vfmath.addmissing(main,id,size)
     for i=0x7A,0x7D do
         make(main,characters,id,size,i,1)
     end
+
     brace    (main,characters,id,size,0x23DE,0xFF17A,0xFF301,0xFF17D,0xFF17C,0xFF301,0xFF17B)
     brace    (main,characters,id,size,0x23DF,0xFF27C,0xFF401,0xFF27B,0xFF27A,0xFF401,0xFF27D)
+
     parent   (main,characters,id,size,0x23DC,0xFF17A,0xFF301,0xFF17B)
     parent   (main,characters,id,size,0x23DD,0xFF27C,0xFF401,0xFF27D)
+
  -- negate   (main,characters,id,size,0x2260,0x003D)
     dots     (main,characters,id,size,0x2026) -- ldots
     dots     (main,characters,id,size,0x22EE) -- vdots
     dots     (main,characters,id,size,0x22EF) -- cdots
     dots     (main,characters,id,size,0x22F1) -- ddots
     dots     (main,characters,id,size,0x22F0) -- udots
-    minus    (main,characters,id,size,0xFF501)
-    arrow    (main,characters,id,size,0x2190,0x2190,0xFF501,true)  -- left
-    arrow    (main,characters,id,size,0x2192,0x2192,0xFF501,false) -- right
+
     vertbar  (main,characters,id,size,0x0007C,0.10,0xFF601) -- big  : 0.85 bodyfontsize
     vertbar  (main,characters,id,size,0xFF601,0.30,0xFF602) -- Big  : 1.15 bodyfontsize
     vertbar  (main,characters,id,size,0xFF602,0.30,0xFF603) -- bigg : 1.45 bodyfontsize
@@ -409,24 +436,69 @@ function vfmath.addmissing(main,id,size)
     vertbar  (main,characters,id,size,0xFF605,0.30,0xFF606)
     vertbar  (main,characters,id,size,0xFF606,0.30,0xFF607)
     vertbar  (main,characters,id,size,0xFF607,0.30,0xFF608)
+
+    clipped  (main,characters,id,size,0xFF501,0x0002D) -- minus
+    clipped  (main,characters,id,size,0xFF502,0x02190) -- lefthead
+    clipped  (main,characters,id,size,0xFF503,0x02192) -- righthead
+    clipped  (main,characters,id,size,0xFF504,0xFE321) -- mapsto
+    clipped  (main,characters,id,size,0xFF505,0xFE322) -- lhook
+    clipped  (main,characters,id,size,0xFF506,0xFE323) -- rhook
+    clipped  (main,characters,id,size,0xFF507,0xFE324) -- mapsfrom
+    clipped  (main,characters,id,size,0xFF508,0x021D0) -- double lefthead
+    clipped  (main,characters,id,size,0xFF509,0x021D2) -- double righthead
+    clipped  (main,characters,id,size,0xFF50A,0x0003D) -- equal
+    clipped  (main,characters,id,size,0xFF50B,0x0219E) -- lefttwohead
+    clipped  (main,characters,id,size,0xFF50C,0x021A0) -- righttwohead
+    clipped  (main,characters,id,size,0xFF50D,0xFF350) -- lr arrow combi snippet
+    clipped  (main,characters,id,size,0xFF50E,0xFF351) -- lr arrow combi snippet
+    clipped  (main,characters,id,size,0xFF50F,0xFF352) -- lr arrow combi snippet
+    clipped  (main,characters,id,size,0xFF510,0x02261) -- equiv
+
+    extension(main,characters,id,size,0x2190,0xFF502,0xFF501,0xFF501)                 -- \leftarrow
+    extension(main,characters,id,size,0x2192,0xFF501,0xFF501,0xFF503)                 -- \rightarrow
+
+    extension(main,characters,id,size,0x002D,0xFF501,0xFF501,0xFF501)                 -- \rel
+    extension(main,characters,id,size,0x003D,0xFF50A,0xFF50A,0xFF50A)                 -- \equal
+    extension(main,characters,id,size,0x2261,0xFF510,0xFF510,0xFF510)                 -- \equiv
+
     jointwo  (main,characters,id,size,0x21A6,0xFE321,0,0x02192)                       -- \mapstochar\rightarrow
     jointwo  (main,characters,id,size,0x21A9,0x02190,joinrelfactor,0xFE323)           -- \leftarrow\joinrel\rhook
     jointwo  (main,characters,id,size,0x21AA,0xFE322,joinrelfactor,0x02192)           -- \lhook\joinrel\rightarrow
-    stack    (main,characters,id,size,0x2259,0x0003D,3,0x02227)                       -- \buildrel\wedge\over=
-    jointwo  (main,characters,id,size,0x22C8,0x022B3,joinrelfactor,0x022B2)           -- \mathrel\triangleright\joinrel\mathrel\triangleleft (4 looks better than 3)
-    jointwo  (main,characters,id,size,0x2260,0x00338,0,0x0003D)                       -- \not\equal
-    jointwo  (main,characters,id,size,0x2284,0x00338,0,0x02282)                       -- \not\subset
-    jointwo  (main,characters,id,size,0x2285,0x00338,0,0x02283)                       -- \not\supset
-    jointwo  (main,characters,id,size,0x2209,0x00338,0,0x02208)                       -- \not\in
-    jointwo  (main,characters,id,size,0x22A7,0x0007C,joinrelfactor,0x0003D)           -- \mathrel|\joinrel=
     jointwo  (main,characters,id,size,0x27F5,0x02190,joinrelfactor,0x0002D)           -- \leftarrow\joinrel\relbar
-    jointwo  (main,characters,id,size,0x27F6,0x0002D,joinrelfactor,0x02192)           -- \relbar\joinrel\rightarrow
+    jointwo  (main,characters,id,size,0x27F6,0x0002D,joinrelfactor,0x02192,2)         -- \relbar\joinrel\rightarrow
     jointwo  (main,characters,id,size,0x27F7,0x02190,joinrelfactor,0x02192)           -- \leftarrow\joinrel\rightarrow
     jointwo  (main,characters,id,size,0x27F8,0x021D0,joinrelfactor,0x0003D)           -- \Leftarrow\joinrel\Relbar
     jointwo  (main,characters,id,size,0x27F9,0x0003D,joinrelfactor,0x021D2)           -- \Relbar\joinrel\Rightarrow
     jointwo  (main,characters,id,size,0x27FA,0x021D0,joinrelfactor,0x021D2)           -- \Leftarrow\joinrel\Rightarrow
     jointhree(main,characters,id,size,0x27FB,0x02190,joinrelfactor,0x0002D,0,0xFE324) -- \leftarrow\joinrel\relbar\mapsfromchar
     jointhree(main,characters,id,size,0x27FC,0xFE321,0,0x0002D,joinrelfactor,0x02192) -- \mapstochar\relbar\joinrel\rightarrow
+
+    extension(main,characters,id,size,0x21A6,0xFF504,0xFF501,0xFF503)                 -- \mapstochar\rightarrow
+    extension(main,characters,id,size,0x21A9,0xFF502,0xFF501,0xFF506)                 -- \leftarrow\joinrel\rhook
+    extension(main,characters,id,size,0x21AA,0xFF505,0xFF501,0xFF503)                 -- \lhook\joinrel\rightarrow
+    extension(main,characters,id,size,0x27F5,0xFF502,0xFF501,0xFF501)                 -- \leftarrow\joinrel\relbar
+    extension(main,characters,id,size,0x27F6,0xFF501,0xFF501,0xFF503)                 -- \relbar\joinrel\rightarrow
+    extension(main,characters,id,size,0x27F7,0xFF502,0xFF501,0xFF503)                 -- \leftarrow\joinrel\rightarrow
+    extension(main,characters,id,size,0x27F8,0xFF508,0xFF50A,0xFF50A)                 -- \Leftarrow\joinrel\Relbar
+    extension(main,characters,id,size,0x27F9,0xFF50A,0xFF50A,0xFF509)                 -- \Relbar\joinrel\Rightarrow
+    extension(main,characters,id,size,0x27FA,0xFF508,0xFF50A,0xFF509)                 -- \Leftarrow\joinrel\Rightarrow
+    extension(main,characters,id,size,0x27FB,0xFF502,0xFF501,0xFF507)                 -- \leftarrow\joinrel\relbar\mapsfromchar
+    extension(main,characters,id,size,0x27FC,0xFF504,0xFF501,0xFF503)                 -- \mapstochar\relbar\joinrel\rightarrow
+
+    extension(main,characters,id,size,0x219E,0xFF50B,0xFF501,0xFF501)                 -- \twoheadleftarrow\joinrel\relbar
+    extension(main,characters,id,size,0x21A0,0xFF501,0xFF501,0xFF50C)                 -- \relbar\joinrel\twoheadrightarrow
+    extension(main,characters,id,size,0x21C4,0xFF50D,0xFF50E,0xFF50F)                 -- leftoverright
+
+    -- 21CB leftrightharpoon
+    -- 21CC rightleftharpoon
+
+    stack    (main,characters,id,size,0x2259,0x0003D,3,0x02227)                       -- \buildrel\wedge\over=
+    jointwo  (main,characters,id,size,0x22C8,0x022B3,joinrelfactor,0x022B2)           -- \mathrel\triangleright\joinrel\mathrel\triangleleft (4 looks better than 3)
+    jointwo  (main,characters,id,size,0x22A7,0x0007C,joinrelfactor,0x0003D)           -- \mathrel|\joinrel=
+    jointwo  (main,characters,id,size,0x2260,0x00338,0,0x0003D)                       -- \not\equal
+    jointwo  (main,characters,id,size,0x2284,0x00338,0,0x02282)                       -- \not\subset
+    jointwo  (main,characters,id,size,0x2285,0x00338,0,0x02283)                       -- \not\supset
+    jointwo  (main,characters,id,size,0x2209,0x00338,0,0x02208)                       -- \not\in
     jointwo  (main,characters,id,size,0x2254,0x03A,0,0x03D)                           -- := (≔)
 
     repeated(main,characters,id,size,0x222C,0x222B,2,0xFF800,1/3)
@@ -452,7 +524,7 @@ local reverse  = { } -- index -> unicode
 
 setmetatableindex(reverse, function(t,name)
     if trace_virtual then
-        report_virtual("initializing math vector '%s'",name)
+        report_virtual("initializing math vector %a",name)
     end
     local m, r = mathencodings[name], { }
     for u, i in next, m do
@@ -473,7 +545,7 @@ function vfmath.define(specification,set,goodies)
         local ssname = ss.name
         if add_optional and ss.optional then
             if trace_virtual then
-                report_virtual("loading font %s subfont %s with name %s at %s is skipped",name,s,ssname,size)
+                report_virtual("loading font %a subfont %s with name %a at %p is skipped",name,s,ssname,size)
             end
         else
             if ss.features then
@@ -487,14 +559,14 @@ function vfmath.define(specification,set,goodies)
             if alreadyloaded then
                 f, id = alreadyloaded.f, alreadyloaded.id
                 if trace_virtual then
-                    report_virtual("loading font %s subfont %s with name %s is reused",name,s,ssname)
+                    report_virtual("loading font %a subfont %s with name %a is reused",name,s,ssname)
                 end
             else
                 f, id = fonts.constructors.readanddefine(ssname,size)
                 names[ssname] = { f = f, id = id }
             end
             if not f or id == 0 then
-                report_virtual("loading font %s subfont %s with name %s at %s is skipped, not found",name,s,ssname,size)
+                report_virtual("loading font %a subfont %s with name %a at %p is skipped, not found",name,s,ssname,size)
             else
                 n = n + 1
                 okset[n] = ss
@@ -504,7 +576,7 @@ function vfmath.define(specification,set,goodies)
                     shared[n] = { }
                 end
                 if trace_virtual then
-                    report_virtual("loading font %s subfont %s with name %s at %s as id %s using encoding %s",name,s,ssname,size,id,ss.vector or "none")
+                    report_virtual("loading font %a subfont %s with name %a at %p as id %s using encoding %p",name,s,ssname,size,id,ss.vector)
                 end
                 if not ss.checked then
                     ss.checked = true
@@ -519,10 +591,10 @@ function vfmath.define(specification,set,goodies)
                                 u = u and u[index]
                                 if u then
                                     if trace_virtual then
-                                        report_virtual("resolving name %s to %s",index,u)
+                                        report_virtual("resolving name %a to %s",index,u) -- maybe more detail for u
                                     end
                                 else
-                                    report_virtual("unable to resolve name %s",index)
+                                    report_virtual("unable to resolve name %a",index)
                                 end
                                 vector[unicode] = u
                             end
@@ -533,7 +605,7 @@ function vfmath.define(specification,set,goodies)
         end
     end
     -- beware, loaded[1] is already passed to tex (we need to make a simple copy then .. todo)
-    local parent         = loaded[1] -- a text font
+    local parent         = loaded[1] or { } -- a text font
     local characters     = { }
     local parameters     = { }
     local mathparameters = { }
@@ -564,7 +636,7 @@ function vfmath.define(specification,set,goodies)
             characters[unicode] = character
         end
     else
-        report_virtual("font %s has no characters",name)
+        report_virtual("font %a has no characters",name)
     end
     --
     if parent.parameters then
@@ -572,7 +644,7 @@ function vfmath.define(specification,set,goodies)
             parameters[key] = value
         end
     else
-        report_virtual("font %s has no parameters",name)
+        report_virtual("font %a has no parameters",name)
     end
     --
     local description = { name = "<unset>" }
@@ -614,7 +686,7 @@ function vfmath.define(specification,set,goodies)
         else
             local newparameters = fs.parameters
             if not newparameters then
-                report_virtual("font %s, no parameters set",name)
+                report_virtual("no parameters set in font %a",name)
             elseif ss.extension then
                 mathparameters.math_x_height          = newparameters.x_height or 0        -- math_x_height          : height of x
                 mathparameters.default_rule_thickness = newparameters[ 8]      or 0        -- default_rule_thickness : thickness of \over bars
@@ -623,7 +695,7 @@ function vfmath.define(specification,set,goodies)
                 mathparameters.big_op_spacing3        = newparameters[11]      or 0        -- big_op_spacing3        : minimum baselineskip above displayed op
                 mathparameters.big_op_spacing4        = newparameters[12]      or 0        -- big_op_spacing4        : minimum baselineskip below displayed op
                 mathparameters.big_op_spacing5        = newparameters[13]      or 0        -- big_op_spacing5        : padding above and below displayed limits
-            --  report_virtual("loading and virtualizing font %s at size %s, setting ex parameters",name,size)
+            --  report_virtual("loading and virtualizing font %a at size %p, setting ex parameters",name,size)
             elseif ss.parameters then
                 mathparameters.x_height      = newparameters.x_height or mathparameters.x_height
                 mathparameters.x_height      = mathparameters.x_height or fp.x_height or 0 -- x_height               : height of x
@@ -642,7 +714,7 @@ function vfmath.define(specification,set,goodies)
                 mathparameters.delim1        = newparameters[20] or 0                      -- delim1                 : size of \atopwithdelims delimiters in display styles
                 mathparameters.delim2        = newparameters[21] or 0                      -- delim2                 : size of \atopwithdelims delimiters in non-displays
                 mathparameters.axis_height   = newparameters[22] or 0                      -- axis_height            : height of fraction lines above the baseline
-            --  report_virtual("loading and virtualizing font %s at size %s, setting sy parameters",name,size)
+            --  report_virtual("loading and virtualizing font %a at size %p, setting sy parameters",name,size)
             end
             local vectorname = ss.vector
             if vectorname then
@@ -664,9 +736,9 @@ function vfmath.define(specification,set,goodies)
                             local ru = rv[unicode]
                             if not ru then
                                 if trace_virtual then
-                                    report_virtual("unicode point U+%05X has no index %04X in vector %s for font %s",unicode,index,vectorname,fontname)
+                                    report_virtual("unicode slot %U has no index %H in vector %a for font %a",unicode,index,vectorname,fontname)
                                 elseif not already_reported then
-                                    report_virtual("the mapping is incomplete for '%s' at %s",name,number.topoints(size))
+                                    report_virtual("the mapping is incomplete for %a at %p",name,size)
                                     already_reported = true
                                 end
                                 rv[unicode] = true
@@ -683,7 +755,7 @@ function vfmath.define(specification,set,goodies)
                             if italic and italic > 0 then
                                     -- int_a^b
                                 if isextension then
-width = width + italic -- for obscure reasons the integral as a width + italic correction
+                                    width = width + italic -- for obscure reasons the integral as a width + italic correction
                                 end
                             end
                             if kerns then
@@ -702,7 +774,6 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                                     height   = fci.height,
                                     depth    = fci.depth,
                                     italic   = italic,
--- italic_correction   = italic,
                                     kerns    = krn,
                                     commands = ref,
                                 }
@@ -719,11 +790,9 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                                     height   = fci.height,
                                     depth    = fci.depth,
                                     italic   = italic,
--- italic_correction   = italic,
                                     commands = ref,
                                 }
                             end
---~ report_virtual("%05X %s %s",unicode,fci.height or "NO HEIGHT",fci.depth or "NO DEPTH")
                         end
                     end
                     if isextension then
@@ -739,12 +808,10 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                                 end
                                 local italic = fci.italic
                                 local t = {
---                                     width    = fci.width + italic, -- watch this !
                                     width    = fci.width,
                                     height   = fci.height,
                                     depth    = fci.depth,
                                     italic   = italic,
--- italic_correction   = italic,
                                     commands = ref,
                                 }
                                 local n = fci.next
@@ -799,9 +866,9 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                                     local kerns = fci.kerns
                                     if kerns then
                                         local krn = { }
---~                                         for k=1,#kerns do
---~                                             krn[offset + k] = kerns[k]
---~                                         end
+                                     -- for k=1,#kerns do
+                                     --     krn[offset + k] = kerns[k]
+                                     -- end
                                         for k, v in next, kerns do -- is kerns sparse?
                                             krn[offset + k] = v
                                         end
@@ -810,7 +877,6 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                                             height   = fci.height,
                                             depth    = fci.depth,
                                             italic   = fci.italic,
--- italic_correction   = italic,
                                             commands = ref,
                                             kerns    = krn,
                                             next     = offset + index,
@@ -821,7 +887,6 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                                             height   = fci.height,
                                             depth    = fci.depth,
                                             italic   = fci.italic,
--- italic_correction   = italic,
                                             commands = ref,
                                             next     = offset + index,
                                         }
@@ -831,7 +896,7 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
                         end
                     end
                 else
-                    report_virtual("error in loading %s: problematic vector %s",name,vectorname)
+                    report_virtual("error in loading %a, problematic vector %a",name,vectorname)
                 end
             end
             mathematics.extras.copy(main) --not needed here (yet)
@@ -851,10 +916,9 @@ width = width + italic -- for obscure reasons the integral as a width + italic c
     fonts.constructors.assignmathparameters(main,main)
     --
     main.MathConstants = main.mathparameters -- we directly pass it to TeX (bypasses the scaler) so this is needed
--- inspect(main.MathConstants)
     --
     if trace_virtual or trace_timings then
-        report_virtual("loading and virtualizing font %s at size %s took %0.3f seconds",name,size,os.clock()-start)
+        report_virtual("loading and virtualizing font %a at size %p took %0.3f seconds",name,size,os.clock()-start)
     end
     --
     return main

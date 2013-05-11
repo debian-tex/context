@@ -9,7 +9,7 @@ if not modules then modules = { } end modules ['luat-sto'] = {
 -- we could nil some function in the productionrun
 
 local type, next, setmetatable, getmetatable, collectgarbage = type, next, setmetatable, getmetatable, collectgarbage
-local gmatch, format, write_nl = string.gmatch, string.format, texio.write_nl
+local gmatch, format = string.gmatch, string.format
 local serialize, concat, sortedhash = table.serialize, table.concat, table.sortedhash
 local bytecode = lua.bytecode
 local strippedloadstring = utilities.lua.strippedloadstring
@@ -22,9 +22,6 @@ local storage      = storage
 
 local data         = { }
 storage.data       = data
-
-local evaluators   = { }
-storage.evaluators = evaluators
 
 storage.min        = 0 -- 500
 storage.max        = storage.min - 1
@@ -44,13 +41,14 @@ function storage.register(...)
     if d then
         storage.mark(d)
     else
-        report_storage("fatal error: invalid storage '%s'",t[1])
+        report_storage("fatal error: invalid storage %a",t[1])
         os.exit()
     end
     data[#data+1] = t
     return t
 end
 
+local n = 0
 local function dump()
     local max = storage.max
     for i=1,#data do
@@ -72,7 +70,7 @@ local function dump()
         end
         c = c + 1 ; code[c] = serialize(original,name)
         if trace_storage then
-            report_storage('saving %s in slot %s (%s bytes)',message,max,#code[c])
+            report_storage('saving %a in slot %a, size %s',message,max,#code[c])
         end
         -- we don't need tracing in such tables
         bytecode[max] = strippedloadstring(concat(code,"\n"),storage.strip,format("slot %s (%s)",max,name))
@@ -99,17 +97,17 @@ function lua.collectgarbage(threshold)
     end
 end
 
--- we also need to count at generation time (nicer for message)
-
---~ if lua.bytecode then -- from 0 upwards
---~     local i, b = storage.min, lua.bytecode
---~     while b[i] do
---~         storage.noftables = i
---~         b[i]()
---~         b[i] = nil
---~         i = i + 1
---~     end
---~ end
+-- -- we also need to count at generation time (nicer for message)
+--
+-- if lua.bytecode then -- from 0 upwards
+--     local i, b = storage.min, lua.bytecode
+--     while b[i] do
+--         storage.noftables = i
+--         b[i]()
+--         b[i] = nil
+--         i = i + 1
+--     end
+-- end
 
 statistics.register("stored bytecode data", function()
     local nofmodules = (storage.nofmodules > 0 and storage.nofmodules) or (status.luabytecodes - lua.firstbytecode - 1)
@@ -155,35 +153,10 @@ if lua.bytedata then
     storage.register("lua/bytedata",lua.bytedata,"lua.bytedata")
 end
 
-function statistics.reportstorage(whereto)
-    whereto = whereto or "term and log"
-    write_nl(whereto," ","stored tables:"," ")
-    for k,v in sortedhash(storage.data) do
-        write_nl(whereto,format("%03i %s",k,v[1]))
-    end
-    write_nl(whereto," ","stored modules:"," ")
-    for k,v in sortedhash(lua.bytedata) do
-        write_nl(whereto,format("%03i %s %s",k,v[2],v[1]))
-    end
-    write_nl(whereto," ","stored attributes:"," ")
-    for k,v in sortedhash(attributes.names) do
-        write_nl(whereto,format("%03i %s",k,v))
-    end
-    write_nl(whereto," ","stored catcodetables:"," ")
-    for k,v in sortedhash(catcodes.names) do
-        write_nl(whereto,format("%03i %s",k,concat(v," ")))
-    end
-    write_nl(whereto," ","used corenamespaces:"," ")
-    for k,v in sortedhash(interfaces.corenamespaces) do
-        write_nl(whereto,format("%03i %s",k,v))
-    end
-    write_nl(whereto," ")
-end
-
-storage.shared = storage.shared or { }
-
 -- Because the storage mechanism assumes tables, we define a table for storing
 -- (non table) values.
+
+storage.shared = storage.shared or { }
 
 storage.register("storage/shared", storage.shared, "storage.shared")
 

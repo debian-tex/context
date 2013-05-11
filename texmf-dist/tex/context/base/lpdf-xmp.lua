@@ -83,7 +83,7 @@ local xmp, xmpfile, xmpname = nil, nil, "lpdf-pdx.xml"
 
 local function setxmpfile(name)
     if xmp then
-        report_xmp("discarding loaded file '%s'",xmpfile)
+        report_xmp("discarding loaded file %a",xmpfile)
         xmp = nil
     end
     xmpfile = name ~= "" and name
@@ -102,7 +102,7 @@ local function valid_xmp()
             xmpfile = resolvers.findfile(xmpname) or ""
         end
         if xmpfile ~= "" then
-            report_xmp("using file '%s'",xmpfile)
+            report_xmp("using file %a",xmpfile)
         end
         local xmpdata = (xmpfile ~= "" and io.loaddata(xmpfile)) or ""
         xmp = xml.convert(xmpdata)
@@ -126,7 +126,7 @@ function lpdf.addtoinfo(tag,pdfvalue,strvalue)
     addtoinfo(tag,pdfvalue)
     local value = strvalue or gsub(tostring(pdfvalue),"^%((.*)%)$","%1") -- hack
     if trace_info then
-        report_info("set '%s' to '%s'",tag,value)
+        report_info("set %a to %a",tag,value)
     end
     addxmpinfo(tag,value)
 end
@@ -180,9 +180,14 @@ local function flushxmpinfo()
         Type    = pdfconstant("Metadata"),
     }
     if trace_xmp then
-        report_xmp("data flushed (see log file)")
-        texio.write_nl("log","")
-        texio.write("log","\n% ",(gsub(blob,"[\r\n]","\n%% ")),"\n")
+        report_xmp("data flushed, see log file")
+        logs.pushtarget("logfile")
+        report_xmp("start xmp blob")
+        logs.newline()
+        logs.writer(blob)
+        logs.newline()
+        report_xmp("stop xmp blob")
+        logs.poptarget()
     end
     blob = format(xpacket,packetid,blob)
     if not verbose and tex.pdfcompresslevel > 0 then

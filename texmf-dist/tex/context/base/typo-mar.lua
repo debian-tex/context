@@ -56,19 +56,19 @@ if not modules then modules = { } end modules ['typo-mar'] = {
 -- local latelua = nodes.pool.latelua
 --
 -- function anchors.node_set(tag)
---     return latelua(format("anchors.set(%q)",tag))
+--     return latelua(formatters["anchors.set(%q)"](tag))
 -- end
 --
 -- function anchors.node_reset(tag)
---     return latelua(format("anchors.reset(%q)",tag))
+--     return latelua(formatters["anchors.reset(%q)"](tag))
 -- end
 --
 -- function anchors.node_start_move(tag,how)
---     return latelua(format("anchors.startmove(%q,%q)",tag,how))
+--     return latelua(formatters["anchors.startmove(%q,%q)](tag,how))
 -- end
 --
 -- function anchors.node_stop_move(tag)
---     return latelua(format("anchors.stopmove(%q)",tag))
+--     return latelua(formatters["anchors.stopmove(%q)"](tag))
 -- end
 
 -- so far
@@ -115,9 +115,6 @@ local v_first            = variables.first
 local v_text             = variables.text
 local v_column           = variables.column
 
-local has_attribute      = node.has_attribute
-local set_attribute      = node.set_attribute
-local unset_attribute    = node.unset_attribute
 local copy_node_list     = node.copy_list
 local slide_nodes        = node.slide
 local hpack_nodes        = node.hpack -- nodes.fasthpack not really faster here
@@ -237,10 +234,10 @@ local function showstore(store,banner,location)
     if next(store) then
         for i, si in table.sortedpairs(store) do
             local si =store[i]
-            report_margindata("%s: stored in %s at %s: %s => %s",banner,location,i,validstring(si.name,"no name"),nodes.toutf(si.box.list))
+            report_margindata("%s: stored in %a at %s: %a => %s",banner,location,i,validstring(si.name,"no name"),nodes.toutf(si.box.list))
         end
     else
-        report_margindata("%s: nothing stored in %s",banner,location)
+        report_margindata("%s: nothing stored in location %a",banner,location)
     end
 end
 
@@ -252,7 +249,7 @@ function margins.save(t)
     local inline   = t.inline
     local scope    = t.scope or v_global
     if not content then
-        report_margindata("ignoring empty margin data: %s",location or "unknown")
+        report_margindata("ignoring empty margin data %a",location or "unknown")
         return
     end
     local store
@@ -261,13 +258,13 @@ function margins.save(t)
     else
         store = displaystore[category][location]
         if not store then
-            report_margindata("invalid location: %s",location)
+            report_margindata("invalid location %a",location)
             return
         end
         store = store[scope]
     end
     if not store then
-        report_margindata("invalid scope: %s",scope)
+        report_margindata("invalid scope %a",scope)
         return
     end
     if enablelocal and scope == v_local then
@@ -341,7 +338,7 @@ function margins.save(t)
         showstore(store,"after",location)
     end
     if trace_margindata then
-        report_margindata("saved: %s, location: %s, scope: %s, inline: %s",nofsaved,location,scope,tostring(inline))
+        report_margindata("saved %a, location %a, scope %a, inline %a",nofsaved,location,scope,inline)
     end
 end
 
@@ -442,11 +439,11 @@ local function realign(current,candidate)
     if move_x then
         delta = delta - move_x
         if trace_margindata then
-            report_margindata("realigned: %s, location: %s, margin: %s, move: %s",candidate.n,location,margin,points(move_x))
+            report_margindata("realigned %a, location %a, margin %a, move %p",candidate.n,location,margin,move_x)
         end
     else
         if trace_margindata then
-            report_margindata("realigned: %s, location: %s, margin: %s",candidate.n,location,margin)
+            report_margindata("realigned %a, location %a, margin %a",candidate.n,location,margin)
         end
     end
 
@@ -504,8 +501,7 @@ local function getovershoot(location)
         local offset = p[location] or 0
         local overshoot = offset - distance
         if trace_marginstack then
-            report_margindata("location: %s, distance: %s, offset: %s, overshoot: %s",
-                location,points(distance),points(offset),points(overshoot))
+            report_margindata("location %a, distance %p, offset %p, overshoot %p",location,distance,offset,overshoot)
         end
         if overshoot > 0 then
             return overshoot
@@ -553,7 +549,7 @@ local function inject(parent,head,candidate)
     candidate.hsize = parent.width -- we can also pass textwidth
     candidate.psubtype = psubtype
     if trace_margindata then
-        report_margindata("processing, index %s, height: %s, depth: %s, parent: %s",candidate.n,height,depth,listcodes[psubtype])
+        report_margindata("processing, index %s, height %p, depth %p, parent %s",candidate.n,height,depth,listcodes[psubtype])
     end
     if firstonstack then
         offset = 0
@@ -579,7 +575,7 @@ local function inject(parent,head,candidate)
     if method == v_top then
         local delta = height - parent.height
         if trace_margindata then
-            report_margindata("top aligned, amount: %s",delta)
+            report_margindata("top aligned by %p",delta)
         end
         if delta < candidate.threshold then
             shift = shift + voffset + delta
@@ -596,18 +592,18 @@ local function inject(parent,head,candidate)
     elseif method == v_depth then
         local delta = strutdepth
         if trace_margindata then
-            report_margindata("depth aligned, amount: %s",delta)
+            report_margindata("depth aligned by %p",delta)
         end
         shift = shift + voffset + delta
     elseif method == v_height then
         local delta = - strutheight
         if trace_margindata then
-            report_margindata("height aligned, amount: %s",delta)
+            report_margindata("height aligned by %p",delta)
         end
         shift = shift + voffset + delta
     elseif voffset ~= 0 then
         if trace_margindata then
-            report_margindata("voffset applied: %s",voffset)
+            report_margindata("voffset %p applied",voffset)
         end
         shift = shift + voffset
     end
@@ -615,7 +611,7 @@ local function inject(parent,head,candidate)
     if line ~= 0 then
         local delta = line * candidate.lineheight
         if trace_margindata then
-            report_margindata("line offset applied: %s (%s)",line,delta)
+            report_margindata("offset %p applied to line %s",delta,line)
         end
         shift = shift + delta
         offset = offset + delta
@@ -635,9 +631,9 @@ local function inject(parent,head,candidate)
         box.next = head
         head = box
     end
-    set_attribute(box,a_margindata,nofstatus)
+    box[a_margindata] = nofstatus
     if trace_margindata then
-        report_margindata("injected, location: %s, shift: %s",location,shift)
+        report_margindata("injected, location %a, shift %p",location,shift)
     end
     -- we need to add line etc to offset as well
     offset = offset + depth
@@ -651,7 +647,7 @@ local function inject(parent,head,candidate)
     stacked[location] = offset -- weird, no table ?
     -- todo: if no real depth then zero
     if trace_margindata then
-        report_margindata("status, offset: %s",offset)
+        report_margindata("status, offset %s",offset)
     end
     return head, room, stack == v_continue
 end
@@ -722,10 +718,10 @@ local function flushed(scope,parent) -- current is hlist
         done = done or don
     end
     if done then
-        local a = has_attribute(head,a_linenumber) -- hack .. we need a more decent critical attribute inheritance mechanism
+        local a = head[a_linenumber] -- hack .. we need a more decent critical attribute inheritance mechanism
         parent.list = hpack_nodes(head,parent.width,"exactly")
         if a then
-            set_attribute(parent.list,a_linenumber,a)
+            parent.list[a_linenumber] = a
         end
      -- resetstacked()
     end
@@ -738,16 +734,16 @@ end
 local function handler(scope,head,group)
    if nofstored > 0 then
         if trace_margindata then
-            report_margindata("flushing stage one, stored: %s, scope: %s, delayed: %s, group: %s",nofstored,scope,nofdelayed,group)
+            report_margindata("flushing stage one, stored %s, scope %s, delayed %s, group %a",nofstored,scope,nofdelayed,group)
         end
         local current = head
         local done = false
         while current do
             local id = current.id
-            if (id == vlist_code or id == hlist_code) and not has_attribute(current,a_margindata) then
+            if (id == vlist_code or id == hlist_code) and not current[a_margindata] then
                 local don, continue = flushed(scope,current)
                 if don then
-                    set_attribute(current,a_margindata,0) -- signal to prevent duplicate processing
+                    current[a_margindata] = 0 -- signal to prevent duplicate processing
                     if continue then
                         markovershoot(current)
                     end
@@ -772,14 +768,14 @@ function margins.localhandler(head,group) -- sometimes group is "" which is weir
     local inhibit = conditionals.inhibitmargindata
     if inhibit then
         if trace_margingroup then
-            report_margindata("ignored: 3, group: %s, stored: %s, inhibit: %s",group,nofstored,tostring(inhibit))
+            report_margindata("ignored 3, group %a, stored %s, inhibit %a",group,nofstored,inhibit)
         end
         return head, false
     elseif nofstored > 0 then
         return handler(v_local,head,group)
     else
         if trace_margingroup then
-            report_margindata("ignored: 4, group: %s, stored: %s, inhibit: %s",group,nofstored,tostring(inhibit))
+            report_margindata("ignored 4, group %a, stored %s, inhibit %a",group,nofstored,inhibit)
         end
         return head, false
     end
@@ -789,7 +785,7 @@ function margins.globalhandler(head,group) -- check group
     local inhibit = conditionals.inhibitmargindata
     if inhibit or nofstored == 0 then
         if trace_margingroup then
-            report_margindata("ignored: 1, group: %s, stored: %s, inhibit: %s",group,nofstored,tostring(inhibit))
+            report_margindata("ignored 1, group %a, stored %s, inhibit %a",group,nofstored,inhibit)
         end
         return head, false
     elseif group == "hmode_par" then
@@ -804,7 +800,7 @@ function margins.globalhandler(head,group) -- check group
         return handler("global",head,group)
     else
         if trace_margingroup then
-            report_margindata("ignored: 2, group: %s, stored: %s, inhibit: %s",group,nofstored,tostring(inhibit))
+            report_margindata("ignored 2, group %a, stored %s, inhibit %a",group,nofstored,inhibit)
         end
         return head, false
     end
@@ -817,7 +813,7 @@ local function finalhandler(head)
         while current do
             local id = current.id
             if id == hlist_code then
-                local a = has_attribute(current,a_margindata)
+                local a = current[a_margindata]
                 if not a or a == 0 then
                     finalhandler(current.list)
                 elseif realigned(current,a) then

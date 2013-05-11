@@ -1,2 +1,1 @@
-#!/bin/sh
-mtxrun --usekpse --execute texexec "$@"
+../../texmf-dist/scripts/context/stubs/unix/texexec

@@ -16,11 +16,8 @@ local penalty_code        = nodecodes.penalty
 
 local insert_node_after   = node.insert_after
 local new_penalty         = nodes.pool.penalty
-local has_attribute       = node.has_attribute
-local unset_attribute     = node.unset_attribute
-local set_attribute       = node.set_attribute
 
-local points              = number.points
+local unsetvalue          = attributes.unsetvalue
 
 local a_keeptogether      = attributes.private("keeptogether")
 
@@ -40,7 +37,7 @@ function builders.paragraphs.registertogether(line,specification) -- might chang
     if not enabled then
         nodes.tasks.enableaction("finalizers","builders.paragraphs.keeptogether")
     end
-    local a = has_attribute(line,a_keeptogether)
+    local a = line[a_keeptogether]
     local c = a and cache[a]
     if c then
         local height = specification.height
@@ -67,7 +64,7 @@ function builders.paragraphs.registertogether(line,specification) -- might chang
         if not specification.slack then
             specification.slack = 0
         end
-        set_attribute(line,a_keeptogether,last)
+        line[a_keeptogether] = last
     end
     if trace_keeptogether then
         local a = a or last
@@ -82,8 +79,7 @@ function builders.paragraphs.registertogether(line,specification) -- might chang
             else
                 noflines = math.round((height + depth - slack) / noflines)
             end
-            report_keeptogether("registered, index: %s, height: %s, depth: %s, slack: %s, noflines: %s",
-                a,points(height),points(depth),points(slack),noflines)
+            report_keeptogether("registered, index %s, height %p, depth %p, slack %p, noflines %a",a,height,depth,slack,noflines)
         end
     end
 end
@@ -98,14 +94,14 @@ local function keeptogether(start,a)
             local slack = specification.slack
             local threshold = specification.depth - slack
             if trace_keeptogether then
-                report_keeptogether("list, index: %s, total: %s, threshold: %s, slack: %s",a,points(total),points(threshold),points(slack))
+                report_keeptogether("%s, index %s, total %p, threshold %p, slack %p","list",a,total,threshold,slack)
             end
             while current do
                 local id = current.id
                 if id == vlist_code or id == hlist_code then
                     total = total + current.height + current.depth
                     if trace_keeptogether then
-                        report_keeptogether("list, index: %s, total: %s, threshold: %s",a,points(total),points(threshold))
+                        report_keeptogether("%s, index %s, total %p, threshold %p","list",a,total,threshold)
                     end
                     if total <= threshold then
                         if previous.id == penalty_code then
@@ -120,7 +116,7 @@ local function keeptogether(start,a)
                     -- hm, breakpoint, maybe turn this into kern
                     total = total + current.spec.width
                     if trace_keeptogether then
-                        report_keeptogether("glue, index: %s, total: %s, threshold: %s",a,points(total),points(threshold))
+                        report_keeptogether("%s, index %s, total %p, threshold %p","glue",a,total,threshold)
                     end
                     if total <= threshold then
                         if previous.id == penalty_code then
@@ -134,7 +130,7 @@ local function keeptogether(start,a)
                 elseif id == kern_code then
                     total = total + current.kern
                     if trace_keeptogether then
-                        report_keeptogether("kern, index: %s, total: %s, threshold: %s",a,points(total),points(threshold))
+                        report_keeptogether("%s, index %s, total %s, threshold %s","kern",a,total,threshold)
                     end
                     if total <= threshold then
                         if previous.id == penalty_code then
@@ -169,10 +165,10 @@ function builders.paragraphs.keeptogether(head)
     local current = head
     while current do
         if current.id == hlist_code then
-            local a = has_attribute(current,a_keeptogether)
+            local a = current[a_keeptogether]
             if a and a > 0 then
                 keeptogether(current,a)
-                unset_attribute(current,a_keeptogether)
+                current[a_keeptogether] = unsetvalue
                 cache[a] = nil
                 done = true
             end

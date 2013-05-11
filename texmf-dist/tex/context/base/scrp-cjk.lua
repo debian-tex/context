@@ -9,9 +9,13 @@ if not modules then modules = { } end modules ['scrp-cjk'] = {
 -- We can speed this up by preallocating nodes and copying them but the
 -- gain is not that large.
 
+-- The input line endings: there is no way to distinguish between
+-- inline spaces and endofline turned into spaces (would not make
+-- sense either because otherwise a wanted space at the end of a
+-- line would have to be a hard coded ones.
+
 local utfchar = utf.char
 
-local has_attribute      = node.has_attribute
 local insert_node_after  = node.insert_after
 local insert_node_before = node.insert_before
 local remove_node        = nodes.remove
@@ -22,7 +26,10 @@ local new_kern           = nodepool.kern
 local new_penalty        = nodepool.penalty
 
 local nodecodes          = nodes.nodecodes
+local skipcodes          = nodes.skipcodes
 local glyph_code         = nodecodes.glyph
+local glue_code          = nodecodes.glue
+local userskip_code      = skipcodes.userskip
 
 local a_prestat          = attributes.private('prestat')
 local a_preproc          = attributes.private('preproc')
@@ -35,6 +42,7 @@ local numbertodataset    = scripts.numbertodataset
 local fonthashes         = fonts.hashes
 local fontdata           = fonthashes.identifiers
 local quaddata           = fonthashes.quads
+local spacedata          = fonthashes.spaces
 
 local trace_details      = false  trackers.register("scripts.details", function(v) trace_details = v end)
 
@@ -83,18 +91,24 @@ local function trace_detail(current,what)
         local c_ch = current.char
         if p_id == glyph_code then
             local p_ch = p_id and prev.char
-            report_details("[U+%05X %s %s] [%s] [U+%05X %s %s]",p_ch,utfchar(p_ch),hash[p_ch] or "unknown",what,c_ch,utfchar(c_ch),hash[c_ch] or "unknown")
+            report_details("[%C %a] [%s] [%C %a]",p_ch,hash[p_ch],what,c_ch,hash[c_ch])
         else
-            report_details("[%s] [U+%05X %s %s]",what,c_ch,utfchar(c_ch),hash[c_ch] or "unknown")
+            report_details("[%s] [%C %a]",what,c_ch,hash[c_ch])
         end
     else
         if p_id == glyph_code then
             local p_ch = p_id and prev.char
-            report_details("[U+%05X %s %s] [%s]",p_ch,utfchar(p_ch),hash[p_ch] or "unknown",what)
+            report_details("[%C %a] [%s]",p_ch,hash[p_ch],what)
         else
             report_details("[%s]",what)
         end
     end
+end
+
+local function trace_detail_between(p,n,what)
+    local p_ch = p.char
+    local n_ch = n.char
+    report_details("[%C %a] [%s] [%C %a]",p_ch,hash[p_ch],what,n_ch,hash[n_ch])
 end
 
 local function nobreak(head,current)
@@ -411,7 +425,7 @@ local function process(head,first,last)
         while true do
             local upcoming, id = first.next, first.id
             if id == glyph_code then
-                local a = has_attribute(first,a_prestat)
+                local a = first[a_prestat]
                 local current = numbertocategory[a]
                 local action = injectors[previous]
                 if action then
@@ -420,7 +434,7 @@ local function process(head,first,last)
                         local font = first.font
                         if font ~= lastfont then
                             lastfont = font
-                            set_parameters(font,numbertodataset[has_attribute(first,a_preproc)])
+                            set_parameters(font,numbertodataset[first[a_preproc]])
                         end
                         action(head,first)
                     end
@@ -431,7 +445,7 @@ local function process(head,first,last)
                 if p and n then
                     local pid, nid = p.id, n.id
                     if pid == glyph_code and nid == glyph_code then
-                        local pa, na = has_attribute(p,a_prestat), has_attribute(n,a_prestat)
+                        local pa, na = p[a_prestat], n[a_prestat]
                         local pcjk, ncjk = pa and numbertocategory[pa], na and numbertocategory[na]
                         if not pcjk                 or not ncjk
                             or pcjk == "korean"     or ncjk == "korean"
@@ -632,7 +646,7 @@ local function process(head,first,last)
         while true do
             local upcoming, id = first.next, first.id
             if id == glyph_code then
-                local a = has_attribute(first,a_prestat)
+                local a = first[a_prestat]
                 local current = numbertocategory[a]
                 local action = injectors[previous]
                 if action then
@@ -641,7 +655,7 @@ local function process(head,first,last)
                         local font = first.font
                         if font ~= lastfont then
                             lastfont = font
-                            set_parameters(font,numbertodataset[has_attribute(first,a_preproc)])
+                            set_parameters(font,numbertodataset[first[a_preproc]])
                         end
                         action(head,first)
                     end
@@ -652,7 +666,7 @@ local function process(head,first,last)
                 if p and n then
                     local pid, nid = p.id, n.id
                     if pid == glyph_code and nid == glyph_code then
-                        local pa, na = has_attribute(p,a_prestat), has_attribute(n,a_prestat)
+                        local pa, na = p[a_prestat], n[a_prestat]
                         local pcjk, ncjk = pa and numbertocategory[pa], na and numbertocategory[na]
                         if not pcjk                       or not ncjk
                             or pcjk == "korean"           or ncjk == "korean"
@@ -854,7 +868,7 @@ local function process(head,first,last)
         while true do
             local upcoming, id = first.next, first.id
             if id == glyph_code then
-                local a = has_attribute(first,a_prestat)
+                local a = first[a_prestat]
                 local current = numbertocategory[a]
                 local action = injectors[previous]
                 if action then
@@ -863,18 +877,23 @@ local function process(head,first,last)
                         local font = first.font
                         if font ~= lastfont then
                             lastfont = font
-                            set_parameters(font,numbertodataset[has_attribute(first,a_preproc)])
+                            set_parameters(font,numbertodataset[first[a_preproc]])
                         end
                         action(head,first)
                     end
                 end
                 previous = current
+
+-- elseif id == math_code then
+--     upcoming = end_of_math(current).next
+--     previous = "start"
+
             else -- glue
-                local p, n = first.prev, upcoming
+                local p, n = first.prev, upcoming -- we should remember prev
                 if p and n then
                     local pid, nid = p.id, n.id
                     if pid == glyph_code and nid == glyph_code then
-                        local pa, na = has_attribute(p,a_prestat), has_attribute(n,a_prestat)
+                        local pa, na = p[a_prestat], n[a_prestat]
                         local pcjk, ncjk = pa and numbertocategory[pa], na and numbertocategory[na]
                         if not pcjk                       or not ncjk
                             or pcjk == "korean"           or ncjk == "korean"
@@ -883,7 +902,17 @@ local function process(head,first,last)
                             or pcjk == "half_width_close" or ncjk == "half_width_open" then -- extra compared to korean
                             previous = "start"
                         else -- if head ~= first then
+if id == glue_code and first.subtype == userskip_code then -- also prestat check?
+    -- for the moment no distinction possible between space and userskip
+    local w = first.spec.width
+    local s = spacedata[p.font]
+    if w == s then -- could be option
+        if trace_details then
+            trace_detail_between(p,n,"space removed")
+        end
                             remove_node(head,first,true)
+    end
+end
                             previous = pcjk
                     --    else
                     --        previous = pcjk

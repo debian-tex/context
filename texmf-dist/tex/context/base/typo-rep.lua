@@ -20,7 +20,6 @@ local nodes, node = nodes, node
 local delete_node   = nodes.delete
 local replace_node  = nodes.replace
 local copy_node     = node.copy
-local has_attribute = node.has_attribute
 
 local chardata      = characters.data
 local collected     = false
@@ -55,20 +54,20 @@ end
 local function process(what,head,current,char)
     if what == true then
         if trace_stripping then
-            report_stripping("deleting 0x%05X from text",char)
+            report_stripping("deleting %C from text",char)
         end
         head, current = delete_node(head,current)
     elseif type(what) == "function" then
         head, current = what(head,current)
         current = current.next
         if trace_stripping then
-            report_stripping("processing 0x%05X in text",char)
+            report_stripping("processing %C in text",char)
         end
     elseif what then  -- assume node
         head, current = replace_node(head,current,copy_node(what))
         current = current.next
         if trace_stripping then
-            report_stripping("replacing 0x%05X in text",char)
+            report_stripping("replacing %C in text",char)
         end
     end
     return head, current
@@ -79,7 +78,7 @@ function nodes.handlers.stripping(head)
     while current do
         if current.id == glyph_code then
             -- it's more efficient to keep track of what needs to be kept
-            local todo = has_attribute(current,a_stripping)
+            local todo = current[a_stripping]
             if todo == 1 then
                 local char = current.char
                 local what = glyphs[char]

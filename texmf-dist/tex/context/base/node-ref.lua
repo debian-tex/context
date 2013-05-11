@@ -68,29 +68,28 @@ local nodepool         = nodes.pool
 
 local new_kern         = nodepool.kern
 
-local has_attribute    = node.has_attribute
 local traverse         = node.traverse
 local find_node_tail   = node.tail or node.slide
 local tosequence       = nodes.tosequence
 
-local function dimensions(parent,start,stop)
-    stop = stop and stop.next
-    if parent then
-        if stop then
-            return list_dimensions(parent.glue_set,parent.glue_sign,parent.glue_order,start,stop)
-        else
-            return list_dimensions(parent.glue_set,parent.glue_sign,parent.glue_order,start)
-        end
-    else
-        if stop then
-            return list_dimensions(start,stop)
-        else
-            return list_dimensions(start)
-        end
-    end
-end
-
---~ more compact
+-- local function dimensions(parent,start,stop)
+--     stop = stop and stop.next
+--     if parent then
+--         if stop then
+--             return list_dimensions(parent.glue_set,parent.glue_sign,parent.glue_order,start,stop)
+--         else
+--             return list_dimensions(parent.glue_set,parent.glue_sign,parent.glue_order,start)
+--         end
+--     else
+--         if stop then
+--             return list_dimensions(start,stop)
+--         else
+--             return list_dimensions(start)
+--         end
+--     end
+-- end
+--
+-- -- more compact
 
 local function dimensions(parent,start,stop)
     if parent then
@@ -111,14 +110,14 @@ local function inject_range(head,first,last,reference,make,stack,parent,pardir,t
     if result and resolved then
         if head == first then
             if trace_backend then
-                report_area("head: %04i %s %s %s => w=%s, h=%s, d=%s, c=%s",reference,pardir or "---",txtdir or "----",tosequence(first,last,true),width,height,depth,resolved)
+                report_area("head: %04i %s %s %s => w=%p, h=%p, d=%p, c=%s",reference,pardir or "---",txtdir or "----",tosequence(first,last,true),width,height,depth,resolved)
             end
             result.next = first
             first.prev = result
             return result, last
         else
             if trace_backend then
-                report_area("middle: %04i %s %s => w=%s, h=%s, d=%s, c=%s",reference,pardir or "---",txtdir or "----",tosequence(first,last,true),width,height,depth,resolved)
+                report_area("middle: %04i %s %s => w=%p, h=%p, d=%p, c=%s",reference,pardir or "---",txtdir or "----",tosequence(first,last,true),width,height,depth,resolved)
             end
             local prev = first.prev
             if prev then
@@ -183,7 +182,7 @@ local function inject_list(id,current,reference,make,stack,pardir,txtdir)
     -- todo: only when width is ok
     if result and resolved then
         if trace_backend then
-            report_area("box: %04i %s %s: w=%s, h=%s, d=%s, c=%s",reference,pardir or "---",txtdir or "----",width,height,depth,resolved)
+            report_area("box: %04i %s %s: w=%p, h=%p, d=%p, c=%s",reference,pardir or "---",txtdir or "----",width,height,depth,resolved)
         end
         if not first then
             current.list = result
@@ -205,65 +204,6 @@ end
 
 -- skip is somewhat messy
 
--- local function inject_areas(head,attribute,make,stack,done,skip,parent,pardir,txtdir)  -- main
---     if head then
---         local current, first, last, firstdir, reference = head, nil, nil, nil, nil
---         pardir = pardir or "==="
---         txtdir = txtdir or "==="
---         while current do
---             local id = current.id
---             local r = has_attribute(current,attribute)
---             if id == hlist_code or id == vlist_code then
---                 -- somehow reference is true so the following fails (second one not done) in
---                 --    test \goto{test}[page(2)] test \gotobox{test}[page(2)]
---                 -- so let's wait till this fails again
---                 -- if not reference and r and (not skip or r > skip) then -- > or ~=
---                 if r and (not skip or r > skip) then -- > or ~=
---                     inject_list(id,current,r,make,stack,pardir,txtdir)
---                 end
---                 if r then
---                     done[r] = (done[r] or 0) + 1
---                 end
---                 local list = current.list
---                 if list then
---                     local _
---                     current.list, _, pardir, txtdir = inject_areas(list,attribute,make,stack,done,r or skip or 0,current,pardir,txtdir)
---                 end
---                 if r then
---                     done[r] = done[r] - 1
---                 end
---             elseif id == whatsit_code then
---                 local subtype = current.subtype
---                 if subtype == localpar_code then
---                     pardir = current.dir
---                 elseif subtype == dir_code then
---                     txtdir = current.dir
---                 end
---             elseif id == glue_code and current.subtype == leftskip_code then -- any glue at the left?
---                 --
---             elseif not r then
---                 -- just go on, can be kerns
---             elseif not reference then
---                 reference, first, last, firstdir = r, current, current, txtdir
---             elseif r == reference then
---                 last = current
---             elseif (done[reference] or 0) == 0 then -- or id == glue_code and current.subtype == right_skip_code
---                 if not skip or r > skip then -- maybe no > test
---                     head, current = inject_range(head,first,last,reference,make,stack,parent,pardir,firstdir)
---                     reference, first, last, firstdir = nil, nil, nil, nil
---                 end
---             else
---                 reference, first, last, firstdir = r, current, current, txtdir
---             end
---             current = current.next
---         end
---         if reference and (done[reference] or 0) == 0 then
---             head = inject_range(head,first,last,reference,make,stack,parent,pardir,firstdir)
---         end
---     end
---     return head, true, pardir, txtdir
--- end
-
 local function inject_areas(head,attribute,make,stack,done,skip,parent,pardir,txtdir)  -- main
     if head then
         local current, first, last, firstdir, reference = head, nil, nil, nil, nil
@@ -272,7 +212,7 @@ local function inject_areas(head,attribute,make,stack,done,skip,parent,pardir,tx
         while current do
             local id = current.id
             if id == hlist_code or id == vlist_code then
-                local r = has_attribute(current,attribute)
+                local r = current[attribute]
                 -- somehow reference is true so the following fails (second one not done) in
                 --    test \goto{test}[page(2)] test \gotobox{test}[page(2)]
                 -- so let's wait till this fails again
@@ -301,7 +241,7 @@ local function inject_areas(head,attribute,make,stack,done,skip,parent,pardir,tx
             elseif id == glue_code and current.subtype == leftskip_code then -- any glue at the left?
                 --
             else
-                local r = has_attribute(current,attribute)
+                local r = current[attribute]
                 if not r then
                     -- just go on, can be kerns
                 elseif not reference then
@@ -326,37 +266,6 @@ local function inject_areas(head,attribute,make,stack,done,skip,parent,pardir,tx
     return head, true, pardir, txtdir
 end
 
--- local function inject_area(head,attribute,make,stack,done,parent,pardir,txtdir) -- singular  !
---     if head then
---         pardir = pardir or "==="
---         txtdir = txtdir or "==="
---         local current = head
---         while current do
---             local id = current.id
---             local r = has_attribute(current,attribute)
---             if id == hlist_code or id == vlist_code then
---                 if r and not done[r] then
---                     done[r] = true
---                     inject_list(id,current,r,make,stack,pardir,txtdir)
---                 end
---                 current.list = inject_area(current.list,attribute,make,stack,done,current,pardir,txtdir)
---             elseif id == whatsit_code then
---                 local subtype = current.subtype
---                 if subtype == localpar_code then
---                     pardir = current.dir
---                 elseif subtype == dir_code then
---                     txtdir = current.dir
---                 end
---             elseif r and not done[r] then
---                 done[r] = true
---                 head, current = inject_range(head,current,current,r,make,stack,parent,pardir,txtdir)
---             end
---             current = current.next
---         end
---     end
---     return head, true
--- end
-
 local function inject_area(head,attribute,make,stack,done,parent,pardir,txtdir) -- singular  !
     if head then
         pardir = pardir or "==="
@@ -365,7 +274,7 @@ local function inject_area(head,attribute,make,stack,done,parent,pardir,txtdir) 
         while current do
             local id = current.id
             if id == hlist_code or id == vlist_code then
-                local r = has_attribute(current,attribute)
+                local r = current[attribute]
                 if r and not done[r] then
                     done[r] = true
                     inject_list(id,current,r,make,stack,pardir,txtdir)
@@ -382,7 +291,7 @@ local function inject_area(head,attribute,make,stack,done,parent,pardir,txtdir) 
                     txtdir = current.dir
                 end
             else
-                local r = has_attribute(current,attribute)
+                local r = current[attribute]
                 if r and not done[r] then
                     done[r] = true
                     head, current = inject_range(head,current,current,r,make,stack,parent,pardir,txtdir)
@@ -430,18 +339,18 @@ local function colorize(width,height,depth,n,reference,what)
     end
     if width == 0 then
         -- probably a strut as placeholder
-        report_area("%s %s has no horizontal dimensions: width=%s, height=%s, depth=%s",what,reference,width,height,depth)
+        report_area("%s %s has no %s dimensions, width %p, height %p, depth %p",what,reference,"horizontal",width,height,depth)
         width = 65536
     end
     if height + depth <= 0 then
-        report_area("%s %s has no vertical dimensions: width=%s, height=%s, depth=%s",what,reference,n,width,height,depth)
+        report_area("%s %s has no %s dimensions, width %p, height %p, depth %p",what,reference,"vertical",width,height,depth)
         height = 65536/2
         depth  = height
     end
     local rule = new_rule(width,height,depth)
-    set_attribute(rule,a_colormodel,1) -- gray color model
-    set_attribute(rule,a_color,u_color)
-    set_attribute(rule,a_transparency,u_transparency)
+    rule[a_colormodel] = 1 -- gray color model
+    rule[a_color] = u_color
+    rule[a_transparency] = u_transparency
     if width < 0 then
         local kern = new_kern(width)
         rule.width = -width
@@ -494,7 +403,7 @@ local function makereference(width,height,depth,reference)
     local sr = stack[reference]
     if sr then
         if trace_references then
-            report_reference("resolving attribute %s",reference)
+            report_reference("resolving attribute %a",reference)
         end
         local resolved, ht, dp, set, n = sr[1], sr[2], sr[3], sr[4], sr[5]
         if ht then
@@ -522,10 +431,10 @@ local function makereference(width,height,depth,reference)
             if cleanupreferences then stack[reference] = nil end
             return result, resolved
         elseif trace_references then
-            report_reference("unable to resolve annotation %s",reference)
+            report_reference("unable to resolve annotation %a",reference)
         end
     elseif trace_references then
-        report_reference("unable to resolve attribute %s",reference)
+        report_reference("unable to resolve attribute %a",reference)
     end
 end
 
@@ -561,7 +470,7 @@ local function makedestination(width,height,depth,reference)
     local sr = stack[reference]
     if sr then
         if trace_destinations then
-            report_destination("resolving attribute %s",reference)
+            report_destination("resolving attribute %a",reference)
         end
         local resolved, ht, dp, name, view = sr[1], sr[2], sr[3], sr[4], sr[5]
         if ht then
@@ -607,7 +516,7 @@ local function makedestination(width,height,depth,reference)
         if cleanupdestinations then stack[reference] = nil end
         return result, resolved
     elseif trace_destinations then
-        report_destination("unable to resolve attribute %s",reference)
+        report_destination("unable to resolve attribute %a",reference)
     end
 end
 

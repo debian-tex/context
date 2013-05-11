@@ -164,7 +164,7 @@ function visualizers.newgrammar(name,t)
     g = g and g.grammar
     if g then
         if trace_visualize then
-            report_visualizers("cloning grammar '%s'",name)
+            report_visualizers("cloning grammar %a",name)
         end
         for k,v in next, g do
             if not t[k] then
@@ -183,12 +183,12 @@ local function getvisualizer(method,nature)
     local m = specifications[method] or specifications.default
     if nature then
         if trace_visualize then
-            report_visualizers("getting visualizer '%s' with nature '%s'",method,nature)
+            report_visualizers("getting visualizer %a with nature %a",method,nature)
         end
         return m and (m[nature] or m.parser) or nil
     else
         if trace_visualize then
-            report_visualizers("getting visualizer '%s'",method)
+            report_visualizers("getting visualizer %a",method)
         end
         return m and m.parser or nil
     end
@@ -198,7 +198,7 @@ local fallback = context.verbatim
 
 local function makepattern(visualizer,replacement,pattern)
     if not pattern then
-        report_visualizers("error in visualizer: %s",replacement)
+        report_visualizers("error in visualizer %a",replacement)
         return patterns.alwaystrue
     else
         if type(visualizer) == "table" and type(replacement) == "string" then
@@ -237,11 +237,11 @@ function visualizers.load(name)
         end
         if texname == "" or luaname == "" then
             if trace_visualize then
-                report_visualizers("unknown visualizer '%s'",name)
+                report_visualizers("unknown visualizer %a",name)
             end
         else
             if trace_visualize then
-                report_visualizers("loading visualizer '%s'",name)
+                report_visualizers("loading visualizer %a",name)
             end
             lua.registercode(luaname)
             context.input(texname)
@@ -255,7 +255,7 @@ end
 function visualizers.register(name,specification)
     name = lower(name)
     if trace_visualize then
-        report_visualizers("registering visualizer '%s'",name)
+        report_visualizers("registering visualizer %a",name)
     end
     specifications[name] = specification
     local parser, handler = specification.parser, specification.handler
@@ -358,7 +358,7 @@ function visualizers.registerescapepattern(name,befores,afters,normalmethod,esca
             local after     = afters[i]
             local processor = processors[i]
             if trace_visualize then
-                report_visualizers("registering escape pattern, name: '%s', index: '%s', before: '%s', after: '%s', processor: '%s'",
+                report_visualizers("registering escape pattern, name %a, index %a, before %a, after %a, processor %a",
                     name,i,before,after,processor or "default")
             end
             before = P(before) * space_pattern
@@ -394,7 +394,7 @@ function visualizers.registerescapeline(name,befores,normalmethod,escapemethod,p
             local before    = befores[i]
             local processor = processors[i]
             if trace_visualize then
-                report_visualizers("registering escape line pattern, name: '%s', before: '%s', after: <<newline>>",name,before)
+                report_visualizers("registering escape line pattern, name %a, before %a, after <<newline>>",name,before)
             end
             before = P(before) * space_pattern
             after = space_pattern * P("\n")
@@ -424,7 +424,7 @@ function visualizers.registerescapecommand(name,token,normalmethod,escapecommand
     local escapepattern = escapepatterns[name]
     if not escapepattern then
         if trace_visualize then
-            report_visualizers("registering escape token, name: '%s', token: '%s'",name,token)
+            report_visualizers("registering escape token, name %a, token %a",name,token)
         end
         token = P(token)
         local notoken = hack((1 - token)^1)
@@ -493,12 +493,12 @@ local function visualize(content,settings) -- maybe also method in settings
         local n = m and m[nature]
         if n then
             if trace_visualize then
-                report_visualizers("visualize using method '%s' and nature '%s'",method,nature)
+                report_visualizers("visualize using method %a and nature %a",method,nature)
             end
             n(content,settings)
         else
             if trace_visualize then
-                report_visualizers("visualize using method '%s'",method)
+                report_visualizers("visualize using method %a",method)
             end
             fallback(content,1,settings)
         end
@@ -508,9 +508,12 @@ end
 visualizers.visualize     = visualize
 visualizers.getvisualizer = getvisualizer
 
+local fallbacks = { }  table.setmetatableindex(fallbacks,function(t,k) local v = { nature = k } t[k] = v return v end)
+
 local function checkedsettings(settings,nature)
     if not settings then
-        return { nature = nature }
+        -- let's avoid dummy tables as much as possible
+        return fallbacks[nature]
     else
         if not settings.nature then
             settings.nature = nature
@@ -695,14 +698,14 @@ end
 
 commands.loadvisualizer = visualizers.load
 
---~ local decodecomment = resolvers.macros.decodecomment -- experiment
+-- local decodecomment = resolvers.macros.decodecomment -- experiment
 
 function commands.typebuffer(settings)
     local lines = getlines(settings.name)
     if lines then
         local content, m = filter(lines,settings)
         if content and content ~= "" then
---~ content = decodecomment(content)
+         -- content = decodecomment(content)
             content = dotabs(content,settings)
             visualize(content,checkedsettings(settings,"display"))
         end
@@ -734,7 +737,7 @@ local strip = Cs((P("\\") * ((1-S("\\ "))^1) * (P(" ")/"") + 1)^0) --
 function commands.typestring(settings)
     local content = settings.data
     if content and content ~= "" then
-        content = lpegmatch(strip,content) -- can be an option, btu needed in e.g. tabulate
+        content = #content > 1 and lpegmatch(strip,content) or content -- can be an option, but needed in e.g. tabulate
      -- content = decodecomment(content)
      -- content = dotabs(content,settings)
         visualize(content,checkedsettings(settings,"inline"))
@@ -752,7 +755,7 @@ function commands.typefile(settings)
                 str = regimes.translate(str,regime)
             end
             if str and str~= "" then
---~ content = decodecomment(content)
+             -- content = decodecomment(content)
                 local lines = splitlines(str)
                 local content, m = filter(lines,settings)
                 if content and content ~= "" then

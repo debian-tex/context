@@ -88,6 +88,15 @@
 
 \installcommandhandler \??combination {combination} \??combination
 
+\setfalse\c_strc_constructions_define_commands
+
+\definelabel
+  [\v!combination] % handy for configuring
+  [\c!numberconversion=\v!character,
+   \c!text=]
+
+\settrue\c_strc_constructions_define_commands
+
 \setupcombination
   [\c!width=\v!fit,
    \c!height=\v!fit,
@@ -105,6 +114,17 @@
 \let\setupcombinations\setupcombination % for the moment (we might distinguish)
 
 \installcorenamespace{combinationlocation}
+\installcorenamespace{combinationalternative}
+
+\appendtoks
+    \setfalse\c_strc_constructions_define_commands
+    \normalexpanded
+      {\definelabel
+         [\v!combination:\currentcombination]%
+         [\v!combination\ifx\currentcombinationparent\empty\else:\currentcombinationparent\fi]}%
+         [\s!counter=\currentcombination,\c!levels=1]%
+    \settrue\c_strc_constructions_define_commands
+\to \everydefinecombination
 
 \setvalue{\??combinationlocation\v!left  }{\let\m_pack_combinations_leftfiller\relax}
 \setvalue{\??combinationlocation\v!right }{\let\m_pack_combinations_rightfiller\relax}
@@ -158,10 +178,12 @@
 \unexpanded\def\pack_common_caption_stop {\removeunwantedspaces\egroup}
 
 \unexpanded\def\stopcombination
-  {\bgroup\normalexpanded{\egroup{}\ctxcommand{ntimes("{}{}",\number\c_pack_combinations_n)}}%
+  {\bgroup\normalexpanded{\egroup{}\ctxcommand{ntimes("{}{}",\number\c_pack_combinations_n)}}% brr
    \dostoptagged
    \egroup
    \egroup}
+
+\newtoks\everycombination
 
 \def\pack_combinations_start[#1][#2]% needs a cleanup, also nx ny (pretty old, this one)
   {\global\setsystemmode{combination}%
@@ -169,18 +191,27 @@
    \edef\currentcombination{#1}%
    \edef\currentcombinationspec{#2}%
    \ifx\currentcombinationspec\empty
-     \doifinstringelse{*}\currentcombination
-       {\edef\currentcombinationspec{\currentcombination*\plusone*}%
-        \let\currentcombination\empty}
-       {\doifnumberelse\currentcombination
+     \doifassignmentelse{#1}%
+       {\let\currentcombination\empty
+        \setupcurrentcombination[#1]%
+        \edef\currentcombinationspec{\combinationparameter\c!nx*\combinationparameter\c!ny*}}
+       {\doifinstringelse{*}\currentcombination
           {\edef\currentcombinationspec{\currentcombination*\plusone*}%
            \let\currentcombination\empty}
-          {\edef\currentcombinationspec{\combinationparameter\c!nx*\combinationparameter\c!ny*}}}%
+          {\doifnumberelse\currentcombination
+             {\edef\currentcombinationspec{\currentcombination*\plusone*}%
+              \let\currentcombination\empty}
+             {\edef\currentcombinationspec{\combinationparameter\c!nx*\combinationparameter\c!ny*}}}}%
    \else
-     \edef\currentcombinationspec{\currentcombinationspec*\plusone*}%
+     \doifassignmentelse{#2}%
+       {\setupcurrentcombination[#2]%
+        \edef\currentcombinationspec{\combinationparameter\c!nx*\combinationparameter\c!ny*}}
+       {\edef\currentcombinationspec{\currentcombinationspec*\plusone*}}%
    \fi
    %
    \forgetall
+   %
+   \the\everycombination
    %
    \let\startcontent\pack_common_content_start
    \let\stopcontent \pack_common_content_stop
@@ -220,6 +251,22 @@
    \cr
    \pack_combinations_pickup}
 
+% \def\pack_combinations_pickup_content % we want to add struts but still ignore an empty box
+%   {\dostoptagged
+%    \setbox\b_pack_combinations_content\box\nextbox
+%    \dostarttagged\t!combinationcaption\empty
+%    \dowithnextboxcs\pack_combinations_pickup_caption\vtop\bgroup
+%      \afterassignment\pack_combinations_caption_first
+%      \let\nexttoken=}
+
+% I've first considered using a constructor directly but it's more overhead
+% and some settings conflict with already used combination settings so instead
+% we plug in labels. This also permits extensions later on.
+
+\appendtoks
+    \edef\p_pack_combinations_alternative{\combinationparameter\c!alternative}%
+\to \everydefinecombination
+
 \def\pack_combinations_pickup % we want to add struts but still ignore an empty box
   {\dostarttagged\t!combinationpair\empty
    \dostarttagged\t!combinationcontent\empty
@@ -229,9 +276,32 @@
   {\dostoptagged
    \setbox\b_pack_combinations_content\box\nextbox
    \dostarttagged\t!combinationcaption\empty
-   \dowithnextboxcs\pack_combinations_pickup_caption\vtop\bgroup
+   \expandnamespacemacro\??combinationalternative\p_pack_combinations_alternative\v!text}
+
+\setvalue{\??combinationalternative\v!text}%
+  {\dowithnextboxcs\pack_combinations_pickup_caption\vtop\bgroup
      \afterassignment\pack_combinations_caption_first
      \let\nexttoken=}
+
+\setvalue{\??combinationalternative\v!label}%
+  {\dowithnextboxcs\pack_combinations_pickup_caption\vtop\bgroup
+     \hsize\wd\b_pack_combinations_content
+     \ifx\p_align\empty\else\setupalign[\p_align]\fi
+     \usecombinationstyleandcolor\c!style\c!color % but label style wins, so independent configuration
+     \begstrut
+       \normalexpanded{\strc_labels_command{\v!combination\ifx\currentcombination\empty\else:\currentcombination\fi}}%
+     \endstrut
+   \egroup}
+
+\appendtoks
+    \edef\p_pack_combinations_alternative{\combinationparameter\c!alternative}%
+    \ifx\p_pack_combinations_alternative\v!label
+      \edef\p_continue{\combinationparameter\c!continue}%
+      \ifx\p_continue\v!yes \else
+        \normalexpanded{\strc_labels_reset{\v!combination\ifx\currentcombination\empty\else:\currentcombination\fi}{1}}%
+     \fi
+    \fi
+\to \everycombination
 
 \def\pack_combinations_pickup_caption
   {\dostoptagged
@@ -291,7 +361,7 @@
   {\aligntab
    \aligntab
    \aligntab
-   \hskip\p_distance
+   \kern\p_distance
    \aligntab
    \pack_combinations_pickup}
 
@@ -574,11 +644,19 @@
    %
    \global\setsystemmode{pairedbox}%
    \pack_pairedboxes_before
-   \dowithnextboxcs\pack_pairedboxes_first\hbox}
+   \dogotopar\pack_pairedboxes_first_pickup}
+
+\def\pack_pairedboxes_first_pickup
+  {\dowithnextboxcs\pack_pairedboxes_first\hbox
+     \bgroup
+     \let\next=}
 
 \def\pack_pairedboxes_first
   {\pack_pairedboxes_between
-   \dowithnextboxcs\pack_pairedboxes_second\vbox
+   \dogotopar\pack_pairedboxes_second_pickup}
+
+\def\pack_pairedboxes_second_pickup
+  {\dowithnextboxcs\pack_pairedboxes_second\vbox
      \bgroup
      \pack_pairedboxes_inside_second
      \let\next=}
@@ -619,12 +697,12 @@
 
 \def\pack_pairedboxes_flush_left
   {\box\b_pack_pairedboxes_second
-   \hskip\pairedboxparameter\c!distance
+   \kern\pairedboxparameter\c!distance
    \box\b_pack_pairedboxes_first}
 
 \def\pack_pairedboxes_flush_right
   {\box\b_pack_pairedboxes_first
-   \hskip\pairedboxparameter\c!distance
+   \kern\pairedboxparameter\c!distance
    \box\b_pack_pairedboxes_second}
 
 \def\pack_pairedboxes_flush_top
@@ -787,7 +865,7 @@
    \usepairedboxstyleandcolor\c!style\c!color
    \tolerantTABLEbreaktrue % hm.
    \blank[\v!disable]% use fast one
-   \everypar{\begstrut}}
+   \everypar{\begstrut}} % also flushers here (see bTABLE)
 
 \definepairedbox[\v!legend]
 

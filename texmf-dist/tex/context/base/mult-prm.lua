@@ -1,3 +1,5 @@
+-- the tex table has overlap
+
 return {
  ["aleph"]={
   "AlephVersion",
@@ -76,13 +78,14 @@ return {
   "widowpenalties",
  },
  ["luatex"]={
+  "Uchar",
   "Udelcode",
   "Udelcodenum",
   "Udelimiter",
   "Udelimiterover",
   "Udelimiterunder",
   "Umathaccent",
-  "Umathaccents",
+--"Umathaccents",
   "Umathaxis",
   "Umathbinbinspacing",
   "Umathbinclosespacing",
@@ -92,7 +95,7 @@ return {
   "Umathbinordspacing",
   "Umathbinpunctspacing",
   "Umathbinrelspacing",
-  "Umathbotaccent",
+--"Umathbotaccent",
   "Umathchar",
   "Umathchardef",
   "Umathcharnum",
@@ -410,7 +413,7 @@ return {
   "Udelimiterover",
   "Udelimiterunder",
   "Umathaccent",
-  "Umathaccents",
+--"Umathaccents",
   "Umathaxis",
   "Umathbinbinspacing",
   "Umathbinclosespacing",
@@ -420,7 +423,7 @@ return {
   "Umathbinordspacing",
   "Umathbinpunctspacing",
   "Umathbinrelspacing",
-  "Umathbotaccent",
+--"Umathbotaccent",
   "Umathchar",
   "Umathchardef",
   "Umathcharnum",

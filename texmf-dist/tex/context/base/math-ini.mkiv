@@ -22,6 +22,10 @@
 %D and AMS math in order to achieve backward compatinility. We also kept an eye on
 %D future usage of these modules in the perspective of MathML and unicode fonts.
 
+%D There is a subtle issue with grouping: the \type {\begingroup} method will not
+%D restore a changed mathstyle so best avoid that one. However, there are cases where
+%D we really need to use such grouping.
+
 \unprotect
 
 %D We move these definitions into the format:
@@ -44,7 +48,7 @@
 \definesystemattribute[mathalphabet]   [public]
 \definesystemattribute[mathsize]       [public]
 \definesystemattribute[mathpunctuation][public]
-\definesystemattribute[mathgreek]      [public]
+\definesystemattribute[mathgreek]      [public] % will become generic
 \definesystemattribute[mathalternate]  [public]
 \definesystemattribute[mathrendering]  [public]
 \definesystemattribute[mathcategory]   [public]
@@ -108,25 +112,20 @@
 
 % todo: only in mmode
 
-\unexpanded\def\mathgreekupright{\attribute\mathgreekattribute22 }
-\unexpanded\def\mathgreekitalic {\attribute\mathgreekattribute33 }
-\unexpanded\def\mathgreekdefault{\attribute\mathgreekattribute\attributeunsetvalue}
+% these commands are semi-public but should not be used directly (lua names wil change)
 
-\let\mathgreeknormal\mathgreekupright
-\let\mathgreeknone  \mathgreekdefault
-
-\unexpanded\def\setmathattribute#1#2{\ifmmode\ctxcommand{setmathattribute("#1","#2")}\fi}
-\unexpanded\def\setmathalphabet   #1{\ifmmode\ctxcommand{setmathalphabet("#1")}\fi}
-\unexpanded\def\setmathstyle      #1{\ifmmode\ctxcommand{setmathstyle("#1")}\fi}
-\unexpanded\def\setmathalternate  #1{\ifmmode\ctxcommand{setmathalternate(\number\defaultmathfamily,"#1")}\fi}
+\unexpanded\def\math_set_attribute   #1#2{\ifmmode\ctxcommand{setmathattribute("#1","#2")}\fi}
+\unexpanded\def\math_set_alphabet      #1{\ifmmode\ctxcommand{setmathalphabet("#1")}\fi}
+\unexpanded\def\math_set_font_style    #1{\ifmmode\ctxcommand{setmathstyle("#1")}\fi}
+\unexpanded\def\math_set_font_alternate#1{\ifmmode\ctxcommand{setmathalternate(\number\defaultmathfamily,"#1")}\fi}
 
 \installcorenamespace{mathstylealternate} % might become a setuphandler
 
-\unexpanded\def\setmathstylealterternate#1%
+\unexpanded\def\math_set_font_style_alterternate#1%
   {\ifcsname\??mathstylealternate\fontclass:#1\endcsname
-     \expandafter\setmathalternate\csname\??mathstylealternate\fontclass:#1\endcsname
+     \expandafter\math_set_font_alternate\csname\??mathstylealternate\fontclass:#1\endcsname
    \else\ifcsname\??mathstylealternate#1\endcsname
-     \expandafter\setmathalternate\csname\??mathstylealternate#1\endcsname
+     \expandafter\math_set_font_alternate\csname\??mathstylealternate#1\endcsname
    \fi\fi}
 
 \unexpanded\def\setupmathrendering % the name might change
@@ -139,28 +138,33 @@
      \getparameters[\??mathstylealternate][#1]%
    \fi}
 
-\unexpanded\def\mathaltcal{\setmathalternate{cal}\cal} % ss01 in xits
+\unexpanded\def\mathaltcal{\math_set_font_alternate{cal}\cal} % ss01 in xits
 
-\let\mathalternate\setmathalternate % obsolete
+\let\setmathattribute            \math_set_attribute
+\let\setmathalphabet             \math_set_alphabet
+\let\setmathfontstyle            \math_set_font_style
+\let\setmathfontalternate        \math_set_font_alternate
+\let\setmathfontstylealterternate\math_set_font_style_alterternate
 
-\unexpanded\def\mr            {\setmathattribute\s!regular\s!tf\setmathstylealterternate\s!tf}
+\let\mathalternate               \math_set_font_alternate % obsolete
 
-\unexpanded\def\mathdefault   {\setmathattribute\s!regular\s!it\setmathstylealterternate\s!it}
-\unexpanded\def\mathscript    {\setmathalphabet \s!script      \setmathstylealterternate\s!script}
-\unexpanded\def\mathfraktur   {\setmathalphabet \s!fraktur     \setmathstylealterternate\s!fraktur}
-\unexpanded\def\mathblackboard{\setmathalphabet \s!blackboard  \setmathstylealterternate\s!blackboard}
+\unexpanded\def\mathupright   {\math_set_attribute\s!regular\s!tf\math_set_font_style_alterternate\s!tf}
+\unexpanded\def\mathdefault   {\math_set_attribute\s!regular\s!it\math_set_font_style_alterternate\s!it}
+\unexpanded\def\mathscript    {\math_set_alphabet \s!script      \math_set_font_style_alterternate\s!script}
+\unexpanded\def\mathfraktur   {\math_set_alphabet \s!fraktur     \math_set_font_style_alterternate\s!fraktur}
+\unexpanded\def\mathblackboard{\math_set_alphabet \s!blackboard  \math_set_font_style_alterternate\s!blackboard}
 
-\unexpanded\def\mathrm        {\setmathattribute\s!rm\s!tf     \setmathstylealterternate\s!tf}
-\unexpanded\def\mathss        {\setmathattribute\s!ss\s!tf     \setmathstylealterternate\s!tf}
-\unexpanded\def\mathtt        {\setmathattribute\s!tt\s!tf     \setmathstylealterternate\s!tf}
+\unexpanded\def\mathrm        {\math_set_attribute\s!rm\s!tf     \math_set_font_style_alterternate\s!tf}
+\unexpanded\def\mathss        {\math_set_attribute\s!ss\s!tf     \math_set_font_style_alterternate\s!tf}
+\unexpanded\def\mathtt        {\math_set_attribute\s!tt\s!tf     \math_set_font_style_alterternate\s!tf}
 
-\unexpanded\def\mathtf        {\setmathstyle\s!tf              \setmathstylealterternate\s!tf}
-\unexpanded\def\mathsl        {\setmathstyle\s!it              \setmathstylealterternate\s!it} % no sl
-\unexpanded\def\mathit        {\setmathstyle\s!it              \setmathstylealterternate\s!it}
+\unexpanded\def\mathtf        {\math_set_font_style\s!tf         \math_set_font_style_alterternate\s!tf}
+\unexpanded\def\mathsl        {\math_set_font_style\s!it         \math_set_font_style_alterternate\s!it} % no sl
+\unexpanded\def\mathit        {\math_set_font_style\s!it         \math_set_font_style_alterternate\s!it}
 
-\unexpanded\def\mathbf        {\setmathstyle\s!bf              \setmathstylealterternate\s!bf}
-\unexpanded\def\mathbs        {\setmathstyle\s!bi              \setmathstylealterternate\s!bi} % no sl
-\unexpanded\def\mathbi        {\setmathstyle\s!bi              \setmathstylealterternate\s!bi}
+\unexpanded\def\mathbf        {\math_set_font_style\s!bf         \math_set_font_style_alterternate\s!bf}
+\unexpanded\def\mathbs        {\math_set_font_style\s!bi         \math_set_font_style_alterternate\s!bi} % no sl
+\unexpanded\def\mathbi        {\math_set_font_style\s!bi         \math_set_font_style_alterternate\s!bi}
 
 \let\tfmath\mathtf % maybe a grouped command
 \let\slmath\mathsl
@@ -183,8 +187,6 @@
 \unexpanded\def\mathfrak#1{{\mathfraktur   #1}}  % for AMS compatibility
 \unexpanded\def\mathbb  #1{{\mathblackboard#1}}  % for AMS compatibility
 
-\let\normalmr\mr
-
 \let\normaltf\tf \unexpanded\def\tf{\ifmmode\mathtf\else\normaltf\fi}
 \let\normalbf\bf \unexpanded\def\bf{\ifmmode\mathbf\else\normalbf\fi}
 \let\normalit\it \unexpanded\def\it{\ifmmode\mathit\else\normalit\fi}
@@ -195,7 +197,9 @@
 \let\normalrm\rm \unexpanded\def\rm{\ifmmode\mathrm\else\normalrm\fi}
 \let\normalss\ss \unexpanded\def\ss{\ifmmode\mathss\else\normalss\fi}
 \let\normaltt\tt \unexpanded\def\tt{\ifmmode\mathtt\else\normaltt\fi}
-                 \unexpanded\def\mr{\ifmmode            \normalmr\fi}
+
+\ifdefined\mr \else \let\mr\relax \fi
+\ifdefined\mb \else \let\mb\relax \fi
 
 \prependtoks
     \mathdefault
@@ -374,11 +378,11 @@
 \let\math_tags_mo\firstofoneunexpanded
 \let\math_tags_mi\firstofoneunexpanded
 
-\unexpanded\def\math_tags_mn#1{\begingroup\mr#1\endgroup}
-\unexpanded\def\math_tags_ms#1{\begingroup\mr#1\endgroup}
+\unexpanded\def\math_tags_mn#1{\begingroup\mathupright#1\endgroup}
+\unexpanded\def\math_tags_ms#1{\begingroup\mathupright#1\endgroup}
 
-\unexpanded\def\mfunction         #1{{\mr\math_tags_function{#1}}}
-\unexpanded\def\mfunctionlabeltext#1{{\mr\math_tags_functionlabeltext{#1}}}
+\unexpanded\def\mfunction         #1{{\mathupright\math_tags_function{#1}}}
+\unexpanded\def\mfunctionlabeltext#1{{\mathupright\math_tags_functionlabeltext{#1}}}
 
 % Once this is stable we can store the number at the tex end which is
 % faster. Functions getnumbers >= 1000.
@@ -386,10 +390,10 @@
 \expanded\def\math_tags_mathfunction_indeed         #1{\ctxcommand{taggedmathfunction("#1",false,\ifconditional\c_apply_function true\else false\fi)}}
 \expanded\def\math_tags_mathfunctionlabeltext_indeed#1{\ctxcommand{taggedmathfunction("#1",true ,\ifconditional\c_apply_function true\else false\fi)}}
 
-\expanded\def\math_tags_mo_indeed#1{\begingroup   \attribute\mathcategoryattribute\plusone  #1\endgroup}
-\expanded\def\math_tags_mi_indeed#1{\begingroup   \attribute\mathcategoryattribute\plustwo  #1\endgroup}
-\expanded\def\math_tags_mn_indeed#1{\begingroup\mr\attribute\mathcategoryattribute\plusthree#1\endgroup}
-\expanded\def\math_tags_ms_indeed#1{\begingroup\mr\attribute\mathcategoryattribute\plusfour #1\endgroup}
+\expanded\def\math_tags_mo_indeed#1{\begingroup            \attribute\mathcategoryattribute\plusone  #1\endgroup}
+\expanded\def\math_tags_mi_indeed#1{\begingroup            \attribute\mathcategoryattribute\plustwo  #1\endgroup}
+\expanded\def\math_tags_mn_indeed#1{\begingroup\mathupright\attribute\mathcategoryattribute\plusthree#1\endgroup}
+\expanded\def\math_tags_ms_indeed#1{\begingroup\mathupright\attribute\mathcategoryattribute\plusfour #1\endgroup}
 
 \newconditional\c_apply_function
 
@@ -499,7 +503,7 @@
 
 \newtoks\activatedmathcharacters
 
-\def\activatemathcharacter#1%
+\unexpanded\def\activatemathcharacter#1%
   {\appendtoks
      \global\mathcode#1=\activemathcharcode
    \to \activatedmathcharacters}
@@ -794,31 +798,40 @@
 
 \newconstant\c_math_greek_attribute
 
-\setvalue{\??mathgreek\v!normal :\v!normal}{22}
-\setvalue{\??mathgreek\v!normal :\v!italic}{23}
-\setvalue{\??mathgreek\v!normal :\v!none  }{21}
-
-\setvalue{\??mathgreek\v!italic :\v!normal}{32}
-\setvalue{\??mathgreek\v!italic :\v!italic}{33}
-\setvalue{\??mathgreek\v!italic :\v!none  }{31}
-
-\setvalue{\??mathgreek\v!none   :\v!normal}{12}
-\setvalue{\??mathgreek\v!none   :\v!italic}{13}
-\letvalue{\??mathgreek\v!none   :\v!none  }\attributeunsetvalue
+\setvalue{\??mathgreek\v!none  }{1}
+\setvalue{\??mathgreek\v!normal}{2}
+\setvalue{\??mathgreek\v!italic}{3}
 
 \appendtoks
-    \edef\p_lcgreek_ucgreek{\mathematicsparameter\s!lcgreek:\mathematicsparameter\s!ucgreek}%
-    \c_math_greek_attribute\csname\??mathgreek
-        \ifcsname\??mathgreek\p_lcgreek_ucgreek\endcsname\p_lcgreek_ucgreek\else\v!none\fi
-    \endcsname\relax
+    \edef\p_sygreek{\mathematicsparameter\s!sygreek}%
+    \edef\p_lcgreek{\mathematicsparameter\s!lcgreek}%
+    \edef\p_ucgreek{\mathematicsparameter\s!ucgreek}%
+    \c_math_greek_attribute"% hex digits
+      \csname\??mathgreek\ifcsname\??mathgreek\p_sygreek\endcsname\p_sygreek\else\v!none\fi\endcsname
+      \csname\??mathgreek\ifcsname\??mathgreek\p_lcgreek\endcsname\p_lcgreek\else\v!none\fi\endcsname
+      \csname\??mathgreek\ifcsname\??mathgreek\p_ucgreek\endcsname\p_ucgreek\else\v!none\fi\endcsname
+    \relax
+    \ifcase\c_math_greek_attribute
+      \c_math_greek_attribute\attributeunsetvalue
+    \fi
 \to \everyswitchmathematics
+
+% only used local
+
+\unexpanded\def\mathgreekupright{\attribute\mathgreekattribute"222\relax}
+\unexpanded\def\mathgreekitalic {\attribute\mathgreekattribute"333\relax}
+\unexpanded\def\mathgreekdefault{\attribute\mathgreekattribute"000\relax}
+
+\let\mathgreeknormal\mathgreekupright
+\let\mathgreeknone  \mathgreekdefault
 
 \appendtoks
     \attribute\mathgreekattribute\c_math_greek_attribute
 \to \everymathematics
 
 \setupmathematics
-  [\s!lcgreek=\v!italic,
+  [\s!sygreek=\v!normal,
+   \s!lcgreek=\v!italic,
    \s!ucgreek=\v!normal] % was: none
 
 %D Math italics (experiment)
@@ -1044,7 +1057,7 @@
     #1}}
 
 \def\triggermathstyle#1% #1 is number
-  {\ifcase#1\relax
+  {\ifcase\numexpr#1\relax
      \displaystyle             \or
      \crampeddisplaystyle      \or
      \textstyle                \or
@@ -1057,7 +1070,7 @@
    \fi}
 
 \def\mathstylefont#1% #1 is number (\normalmathstyle)
-  {\ifcase#1\relax
+  {\ifcase\numexpr#1\relax
      \textfont         \or
      \textfont         \or
      \textfont         \or
@@ -1070,7 +1083,7 @@
    \fi\zerocount} % hm, can ie other value as well
 
 \def\mathsmallstylefont#1% #1 is number (\normalmathstyle)
-  {\ifcase#1\relax
+  {\ifcase\numexpr#1\relax
      \scriptfont       \or
      \scriptfont       \or
      \scriptfont       \or
@@ -1083,7 +1096,7 @@
    \fi\zerocount} % hm, can ie other value as well
 
 \def\mathstyleface#1% #1 is number (\normalmathstyle)
-  {\ifcase#1
+  {\ifcase\numexpr#1\relax
      \textface         \or
      \textface         \or
      \textface         \or
@@ -1096,7 +1109,7 @@
    \fi}
 
 \def\mathsmallstyleface#1% #1 is number (\normalmathstyle)
-  {\ifcase#1
+  {\ifcase\numexpr#1\relax
      \scriptface       \or
      \scriptface       \or
      \scriptface       \or
@@ -1109,7 +1122,7 @@
    \fi}
 
 \def\mathstylecommand#1#2#3%
-  {\ifcase\normalmathstyle
+  {\ifcase\numexpr\normalmathstyle\relax
      \expandafter#1\or
      \expandafter#1\or
      \expandafter#1\or
@@ -1139,23 +1152,23 @@
 
 \unexpanded\def\mathstylehbox#1%
   {\normalexpanded{\hbox\bgroup
-     $\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1$\egroup}
+     \startimath\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1\stopimath\egroup}
 
 \unexpanded\def\mathstylevbox#1%
   {\normalexpanded{\vbox\bgroup
-     $\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1$\egroup}
+     \startimath\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1\stopimath\egroup}
 
 \unexpanded\def\mathstylevcenter#1%
   {\normalexpanded{\vcenter\bgroup
-     $\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1$\egroup}
+     \startimath\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1\stopimath\egroup}
 
 \unexpanded\def\mathstylevcenteredhbox#1%
   {\normalexpanded{\vcenter\bgroup\hbox\bgroup
-     $\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1$\egroup\egroup}
+     \startimath\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1\stopimath\egroup\egroup}
 
 \unexpanded\def\mathstylevcenteredvbox#1%
   {\normalexpanded{\vcenter\bgroup\vbox\bgroup
-     $\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1$\egroup\egroup}
+     \startimath\triggermathstyle\normalmathstyle}\mathsurround\zeropoint#1\stopimath\egroup\egroup}
 
 \unexpanded\def\setmathsmalltextbox#1#2#%
   {\normalizebodyfontsize\m_math_text_choice_face{\mathsmallstyleface\normalmathstyle}%
@@ -1168,6 +1181,384 @@
    \setbox#1#2\bgroup
      \font_basics_switchtobodyfont\m_math_text_choice_face
      \let\next}
+
+%D Here is the new mechanism ... it might replace some of the above but we will do
+%D that stepwise. Keep in mind that cramped only affects superscripts and even then,
+%D only when in a smaller size than normal.
+%D
+%D \def\TestMe#1%
+%D   {\NC \ttbf #1
+%D    \NC \ruledhbox{$\setupmathstyle[#1]x + x_j^2 + x_i^{e^2} + \frac{1}{x}$}
+%D    \NC \ruledhbox{$\setupmathstyle[#1,small]x + x_j^2 + x_i^{e^2} + \frac{1}{x}$}
+%D    \NC \NR}
+%D
+%D \starttabulate[|l|r|l|]
+%D \HL
+%D \NC \NC \NC \ttbf ...,small \NC \NR
+%D \HL
+%D \TestMe{text}         \TestMe{text,cramped}
+%D \TestMe{script}       \TestMe{script,cramped}
+%D \TestMe{scriptscript} \TestMe{scriptscript,cramped}
+%D \TestMe{display}      \TestMe{display,cramped}
+%D \HL
+%D \stoptabulate
+
+\def\triggerdisplaystyle
+  {\ifcase\normalmathstyle\relax
+     \displaystyle        \or
+     \crampeddisplaystyle \or
+     \displaystyle        \or
+     \crampeddisplaystyle \or
+     \displaystyle        \or
+     \crampeddisplaystyle \or
+     \displaystyle        \or
+     \crampeddisplaystyle \or
+   \fi}
+
+\def\triggertextstyle
+  {\ifcase\normalmathstyle\relax
+     \textstyle        \or
+     \crampedtextstyle \or
+     \textstyle        \or
+     \crampedtextstyle \or
+     \textstyle        \or
+     \crampedtextstyle \or
+     \textstyle        \or
+     \crampedtextstyle \else
+   \fi}
+
+\def\triggerscriptstyle
+  {\ifcase\normalmathstyle\relax
+     \scriptstyle        \or
+     \crampedscriptstyle \or
+     \scriptstyle        \or
+     \crampedscriptstyle \or
+     \scriptstyle        \or
+     \crampedscriptstyle \or
+     \scriptstyle        \or
+     \crampedscriptstyle \or
+   \fi}
+
+\def\triggerscriptscriptstyle
+  {\ifcase\normalmathstyle\relax
+     \scriptscriptstyle        \or
+     \crampedscriptscriptstyle \or
+     \scriptscriptstyle        \or
+     \crampedscriptscriptstyle \or
+     \scriptscriptstyle        \or
+     \crampedscriptscriptstyle \or
+     \scriptscriptstyle        \or
+     \crampedscriptscriptstyle \or
+   \fi}
+
+\def\triggeruncrampedstyle
+  {\ifcase\normalmathstyle\relax
+    \or \displaystyle      \or
+    \or \textstyle         \or
+    \or \scriptstyle       \or
+    \or \scriptscriptstyle \fi}
+
+\def\triggercrampedstyle
+  {\ifcase\normalmathstyle\relax
+   \crampeddisplaystyle      \or \or
+   \crampedtextstyle         \or \or
+   \crampedscriptstyle       \or \or
+   \crampedscriptscriptstyle \fi}
+
+\def\triggersmallstyle
+  {\ifcase\normalmathstyle\relax
+     \scriptstyle              \or
+     \crampedscriptstyle       \or
+     \scriptstyle              \or
+     \crampedscriptstyle       \or
+     \scriptscriptstyle        \or
+     \crampedscriptscriptstyle \or
+     \scriptscriptstyle        \or
+     \crampedscriptscriptstyle \or
+    \fi}
+
+\def\triggeruncrampedsmallstyle
+  {\ifcase\normalmathstyle\relax
+     \scriptstyle       \or
+     \scriptstyle       \or
+     \scriptstyle       \or
+     \scriptstyle       \or
+     \scriptscriptstyle \or
+     \scriptscriptstyle \or
+     \scriptscriptstyle \or
+     \scriptscriptstyle \or
+    \fi}
+
+\def\triggercrampedsmallstyle
+  {\ifcase\normalmathstyle\relax
+     \crampedscriptstyle       \or
+     \crampedscriptstyle       \or
+     \crampedscriptstyle       \or
+     \crampedscriptstyle       \or
+     \crampedscriptscriptstyle \or
+     \crampedscriptscriptstyle \or
+     \crampedscriptscriptstyle \or
+     \crampedscriptscriptstyle \or
+    \fi}
+
+\def\triggerbigstyle
+  {\ifcase\normalmathstyle\relax
+     \displaystyle        \or
+     \crampeddisplaystyle \or
+     \textstyle           \or
+     \crampedtextstyle    \or
+     \textstyle           \or
+     \crampedtextstyle    \or
+     \scriptstyle         \or
+     \crampedscriptstyle  \or
+    \fi}
+
+\def\triggeruncrampedbigstyle
+  {\ifcase\normalmathstyle\relax
+     \displaystyle \or
+     \displaystyle \or
+     \textstyle    \or
+     \textstyle    \or
+     \textstyle    \or
+     \textstyle    \or
+     \scriptstyle  \or
+     \scriptstyle  \or
+    \fi}
+
+\def\triggercrampedbigstyle
+  {\ifcase\normalmathstyle\relax
+     \crampeddisplaystyle \or
+     \crampeddisplaystyle \or
+     \crampedtextstyle    \or
+     \crampedtextstyle    \or
+     \crampedtextstyle    \or
+     \crampedtextstyle    \or
+     \crampedscriptstyle  \or
+     \crampedscriptstyle  \or
+    \fi}
+
+\installcorenamespace{mathstylecommand}
+\installcorenamespace{mathstylecache}
+
+\newconstant\c_math_styles_state_style
+\newconstant\c_math_styles_state_cramped
+\newconstant\c_math_styles_state_size
+
+\def\math_style_add_to_cache_choice {%
+  \ifcase\c_math_styles_state_size
+    \ifcase\c_math_styles_state_style
+        \ifcase\c_math_styles_state_cramped
+        \relax                               \or
+        \noexpand\triggeruncrampedstyle      \or
+        \noexpand\triggercrampedstyle        \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerdisplaystyle        \or
+        \displaystyle                        \or
+        \crampeddisplaystyle                 \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggertextstyle           \or
+        \textstyle                           \or
+        \crampedtextstyle                    \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptstyle         \or
+        \scriptstyle                         \or
+        \crampedscriptstyle                  \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptscriptstyle   \or
+        \scriptscriptstyle                   \or
+        \crampedscriptscriptstyle            \fi
+    \fi
+  \or % small
+    \ifcase\c_math_styles_state_style
+        \ifcase\c_math_styles_state_cramped
+        \noexpand\triggersmallstyle          \or
+        \noexpand\triggeruncrampedsmallstyle \or
+        \noexpand\triggercrampedsmallstyle   \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptstyle         \or
+        \scriptstyle                         \or
+        \crampedscriptstyle                  \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptstyle         \or
+        \scriptstyle                         \or
+        \crampedscriptstyle                  \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptscriptstyle   \or
+        \scriptscriptstyle                   \or
+        \crampedscriptscriptstyle            \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptscriptstyle   \or
+        \scriptscriptstyle                   \or
+        \crampedscriptscriptstyle            \fi
+    \fi
+  \or % large
+    \ifcase\c_math_styles_state_style
+        \ifcase\c_math_styles_state_cramped
+        \noexpand\triggerbigstyle            \or
+        \noexpand\triggeruncrampedbigstyle   \or
+        \noexpand\triggercrampedbigstyle     \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerdisplaystyle        \or
+        \displaystyle                        \or
+        \crampeddisplaystyle                 \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggertextstyle           \or
+        \textstyle                           \or
+        \crampedtextstyle                    \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggertextstyle           \or
+        \textstyle                           \or
+        \crampedtextstyle                    \fi
+    \or\ifcase\c_math_styles_state_cramped
+        \noexpand\triggerscriptstyle         \or
+        \scriptstyle                         \or
+        \crampedscriptstyle                  \fi
+    \fi
+  \fi
+}
+
+\unexpanded\def\math_style_set#1%
+  {\edef\m_math_style_asked{#1}%
+   \ifx\m_math_style_asked\empty \else
+     \math_style_set_indeed
+   \fi}
+
+\let\setmathstyle\math_style_set
+
+\def\installmathstyle#1#2%
+  {\ifcsname\??mathstylecommand#1\endcsname \else
+     \setvalue{\??mathstylecommand#1}{#2}%
+   \fi}
+
+\def\math_style_collect#1%
+  {\csname\??mathstylecommand#1\endcsname}
+
+\setvalue{\??mathstylecommand\s!display     }{\c_math_styles_state_style  \plusone}
+\setvalue{\??mathstylecommand\s!text        }{\c_math_styles_state_style  \plustwo}
+\setvalue{\??mathstylecommand\s!script      }{\c_math_styles_state_style  \plusthree}
+\setvalue{\??mathstylecommand\s!scriptscript}{\c_math_styles_state_style  \plusfour}
+
+\setvalue{\??mathstylecommand\s!uncramped   }{\c_math_styles_state_cramped\plusone}
+\setvalue{\??mathstylecommand\s!cramped     }{\c_math_styles_state_cramped\plustwo}
+\setvalue{\??mathstylecommand\v!normal      }{\c_math_styles_state_cramped\plusone}
+\setvalue{\??mathstylecommand\v!packed      }{\c_math_styles_state_cramped\plustwo}
+
+\setvalue{\??mathstylecommand\v!small       }{\c_math_styles_state_size   \plusone}
+\setvalue{\??mathstylecommand\v!big         }{\c_math_styles_state_size   \plustwo}
+
+\unexpanded\def\setupmathstyle[#1]%
+  {\edef\m_math_style_asked{#1}%
+   \ifx\m_math_style_asked\empty \else
+     \math_style_set_indeed
+   \fi}
+
+\unexpanded\def\usemathstyleparameter#1% faster local variant
+  {\edef\m_math_style_asked{#1\c!mathstyle}%
+   \ifx\m_math_style_asked\empty \else
+     \math_style_set_indeed
+   \fi}
+
+%D \startbuffer
+%D \definemathstyle[mystyle][scriptscript]
+%D
+%D $text\startmathstyle[mystyle]scriptscript\stopmathstyle text$
+%D \stopbuffer
+%D
+%D \typebuffer \blank \start \getbuffer \stop \blank
+
+\installcorenamespace {mathstyle}
+
+\unexpanded\def\definemathstyle
+  {\dodoubleargument\math_style_define}
+
+\def\math_style_define[#1][#2]%
+  {\c_math_styles_state_style  \zerocount
+   \c_math_styles_state_cramped\zerocount
+   \c_math_styles_state_size   \zerocount
+   \rawprocesscommacommand[#2]\math_style_collect
+   \expandafter\let\csname\??mathstyle#1\normalexpanded{\endcsname\math_style_add_to_cache_choice}}
+
+% \def\math_style_set_indeed
+%   {\ifcsname\??mathstyle\m_math_style_asked\endcsname
+%      \csname\??mathstyle\m_math_style_asked\endcsname
+%    \else
+%      \math_style_set_indeed_cached
+%    \fi}
+%
+% \def\math_style_set_indeed_cached
+%   {\ifcsname\??mathstylecache\m_math_style_asked\endcsname
+%      % already in cache
+%    \else
+%      \math_style_add_to_cache
+%    \fi
+%    \csname\??mathstylecache\m_math_style_asked\endcsname}
+%
+% \def\math_style_add_to_cache
+%   {\c_math_styles_state_style  \zerocount
+%    \c_math_styles_state_cramped\zerocount
+%    \c_math_styles_state_size   \zerocount
+%    \rawprocesscommacommand[\m_math_style_asked]\math_style_collect
+%    \global\expandafter\let\csname\??mathstylecache\m_math_style_asked\normalexpanded{\endcsname\math_style_add_to_cache_choice}}
+%
+% ugly but more efficient (as called often)
+
+\def\math_style_set_indeed
+  {\csname\??mathstyle
+     \ifcsname\??mathstyle\m_math_style_asked\endcsname
+       \m_math_style_asked
+     \else
+       \??mathstyle
+     \fi
+   \endcsname}
+
+\setvalue{\??mathstyle\??mathstyle}%
+  {\csname\??mathstylecache
+     \ifcsname\??mathstylecache\m_math_style_asked\endcsname
+       \m_math_style_asked
+     \else
+       \??mathstylecache
+     \fi
+   \endcsname}
+
+\setvalue{\??mathstylecache\??mathstylecache}%
+  {\c_math_styles_state_style  \zerocount
+   \c_math_styles_state_cramped\zerocount
+   \c_math_styles_state_size   \zerocount
+   \rawprocesscommacommand[\m_math_style_asked]\math_style_collect
+   \global\expandafter\let\csname\??mathstylecache\m_math_style_asked\normalexpanded{\endcsname\math_style_add_to_cache_choice}%
+   \csname\??mathstylecache\m_math_style_asked\endcsname}
+
+%D \startbuffer
+%D $x\begingroup\setupmathstyle[script]x\endgroup x$
+%D $x{\setupmathstyle[script]x}x$
+%D $x\startmathstyle[script]x\stopmathstyle x$
+%D \stopbuffer
+%D
+%D \typebuffer \getbuffer
+
+\unexpanded\def\startmathstyle[#1]%
+  {\edef\m_math_style_asked{#1}%
+   \ifx\m_math_style_asked\empty
+     \let\stopmathstyle\relax
+   \else
+     \bgroup
+     \math_style_set_indeed
+     \let\stopmathstyle\egroup
+   \fi}
+
+\let\stopmathstyle\relax
+
+\unexpanded\def\startusemathstyleparameter#1%
+  {\edef\m_math_style_asked{#1\c!mathstyle}%
+   \ifx\m_math_style_asked\empty
+     \let\stopusemathstyleparameter\relax
+   \else
+     \bgroup
+     \math_style_set_indeed
+     \let\stopusemathstyleparameter\egroup
+   \fi}
+
+\let\stopusemathstyleparameter\relax
 
 %D Something similar can be used in the (re|)|definition of \type {\text}. This
 %D version is a variation on the one in the math module (see \type{m-math} and|/|or
@@ -1282,10 +1673,6 @@
 
 \unexpanded\def\mathoptext#1{\mathop{\text{#1}}}
 
-% for a while:
-
-\def\Umathbotaccent{\Umathaccent bottom }
-
 % new:
 
 % \startsetups math:morespacing
@@ -1312,7 +1699,7 @@
 % \def\mathextensiblecode#1#2%
 %   {\cldcontext{mathematics.extensiblecode(\number#1,\number#2)}}
 
-\def\mathextensiblecode#1#2% should be a primitive
-  {\ctxcommand{extensiblecode(\number#1,\number#2)}}
+\def\mathextensiblecode#1#2{\ctxcommand{extensiblecode(\number#1,\number#2)}}
+\def\mathhorizontalcode#1#2{\ctxcommand{horizontalcode(\number#1,\number#2)}}
 
 \protect \endinput

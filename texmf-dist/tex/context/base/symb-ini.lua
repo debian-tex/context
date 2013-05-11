@@ -9,8 +9,10 @@ if not modules then modules = { } end modules ['symb-ini'] = {
 
 local variables = interfaces.variables
 
-fonts.symbols = fonts.symbols or { }
-local symbols = fonts.symbols
+fonts = fonts or { } -- brrrr
+
+local symbols = fonts.symbols or { }
+fonts.symbols = symbols
 
 local report_symbols = logs.reporter ("fonts","symbols")
 local status_symbols = logs.messenger("fonts","symbols")
@@ -22,13 +24,13 @@ local function action(name,foundname)
     -- context.startnointerference()
     context.startreadingfile()
     context.input(foundname)
-    status_symbols("loaded: library '%s'",name)
+    status_symbols("library %a loaded",name)
     context.stopreadingfile()
     -- context.stopnointerference()
 end
 
 local function failure(name)
-    report_symbols("unknown: library '%s'",name)
+    report_symbols("library %a is unknown",name)
 end
 
 function symbols.uselibrary(name)
