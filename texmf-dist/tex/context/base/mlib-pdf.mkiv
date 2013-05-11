@@ -21,15 +21,15 @@
 %D Some code is shared between MPLIB and MPS. The following variables
 %D are also available for introspection and other purposes.
 
-\newdimen\MPwidth
-\newdimen\MPheight
+\ifdefined\MPwidth  \else \newdimen\MPwidth  \fi
+\ifdefined\MPheight \else \newdimen\MPheight \fi
 
-\newdimen\MPllx
-\newdimen\MPlly
-\newdimen\MPurx
-\newdimen\MPury
+\ifdefined\MPllx    \else \newdimen\MPllx    \fi
+\ifdefined\MPlly    \else \newdimen\MPlly    \fi
+\ifdefined\MPurx    \else \newdimen\MPurx    \fi
+\ifdefined\MPury    \else \newdimen\MPury    \fi
 
-\newbox  \MPbox
+\ifdefined\MPbox    \else \newbox  \MPbox    \fi
 
 \def\setMPboundingbox#1#2#3#4% at some point we might pass them as base or scaled points
   {\global\MPllx   #1\onebasepoint
@@ -49,7 +49,7 @@
 
 \def\repositionMPboxindeed
   {\setbox\MPbox\hbox\bgroup
-     \hskip-\MPllx
+     \kern-\MPllx
      \raise-\MPlly
      \box\MPbox
    \egroup}
@@ -140,15 +140,21 @@
    \let\stopMPLIBtoPDF \directstopMPLIBtoPDF
    \meta_start_current_graphic
    \forgetall
-   \normalexpanded{\noexpand\ctxlua{metapost.graphic(
-     "\currentMPinstance",
-     "\currentMPformat",
-      \!!bs#2;\!!es,
-      \!!bs\meta_flush_current_initializations;\!!es,
-      \!!bs\meta_flush_current_preamble;\!!es,
-      \!!bs\meta_flush_current_instance\!!es,
-     "all"
-   )}}%
+   \edef\p_extensions{\MPinstanceparameter\s!extensions}%
+   \normalexpanded{\noexpand\ctxlua{metapost.graphic {
+       instance        = "\currentMPinstance",
+       format          = "\currentMPformat",
+       data            = \!!bs#2;\!!es,
+       initializations = \!!bs\meta_flush_current_initializations\!!es,
+%      useextensions   = "\MPinstanceparameter\s!extensions",
+\ifx\p_extensions\v!yes
+       extensions      = \!!bs\ctxcommand{getmpextensions("\currentMPinstance")}\!!es,
+\fi
+       inclusions      = \!!bs\meta_flush_current_inclusions\!!es,
+       definitions     = \!!bs\meta_flush_current_definitions\!!es,
+       figure          = "all",
+       method          = "\MPinstanceparameter\c!method",
+     }}}%
    \meta_stop_current_graphic
    \meta_end_graphic_group}
 

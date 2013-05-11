@@ -235,6 +235,7 @@ local function construct(t)
             t.compiled = format("%s\nreturn function(%s)\n%s\nend",variables,arguments,calls)
         end
     end
+-- print(t.compiled)
     return t.compiled -- also stored so that we can trace
 end
 
@@ -257,7 +258,7 @@ compile = function(t,compiler,n) -- already referred to in sequencers.new
     if compiled == "" then
         runner = false
     else
-        runner = compiled and load(compiled)()
+        runner = compiled and load(compiled)() -- we can use loadstripped here
     end
     t.runner = runner
     return runner
@@ -273,12 +274,17 @@ sequencers.compile = compile
 
 -- todo: use sequencer (can have arguments and returnvalues etc now)
 
-local template = [[
+local template_yes = [[
 %s
 return function(head%s)
   local ok, done = false, false
 %s
   return head, done
+end]]
+
+local template_nop = [[
+return function()
+  return false, false
 end]]
 
 function sequencers.nodeprocessor(t,nofarguments) -- todo: handle 'kind' in plug into tostring
@@ -319,7 +325,6 @@ function sequencers.nodeprocessor(t,nofarguments) -- todo: handle 'kind' in plug
             end
         end
     end
-    local processor = format(template,concat(vars,"\n"),args,concat(calls,"\n"))
- -- print(processor)
+    local processor = #calls > 0 and format(template_yes,concat(vars,"\n"),args,concat(calls,"\n")) or template_nop
     return processor
 end

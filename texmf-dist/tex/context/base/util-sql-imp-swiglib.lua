@@ -15,13 +15,20 @@ local concat = table.concat
 local format = string.format
 local lpegmatch = lpeg.match
 local setmetatable, type = setmetatable, type
+local sleep = os.sleep
 
 local trace_sql              = false  trackers.register("sql.trace",  function(v) trace_sql     = v end)
 local trace_queries          = false  trackers.register("sql.queries",function(v) trace_queries = v end)
 local report_state           = logs.reporter("sql","swiglib")
 
-local sql                    = require("util-sql")
-local mysql                  = require("swigluamysql")
+local sql                    = utilities.sql
+local mysql                  = require("swiglib.mysql.core") -- "5.6"
+
+-- inspect(table.sortedkeys(mysql))
+
+local nofretries             = 5
+local retrydelay             = 1
+
 local cache                  = { }
 local helpers                = sql.helpers
 local methods                = sql.methods
@@ -53,15 +60,28 @@ local mysql_options_argument = mysql.mysql_options_argument
 
 local instance               = mysql.MYSQL()
 
-local mysql_constant_false   = mysql_options_argument(false) -- 0 "\0"
-local mysql_constant_true    = mysql_options_argument(true)  -- 1 "\1"
+local mysql_constant_false   = false
+local mysql_constant_true    = true
 
--- print(swig_type(mysql_constant_false))
--- print(swig_type(mysql_constant_true))
+-- if mysql_options_argument then
+--
+--     mysql_constant_false = mysql_options_argument(false) -- 0 "\0"
+--     mysql_constant_true  = mysql_options_argument(true)  -- 1 "\1"
+--
+--     -- print(swig_type(mysql_constant_false))
+--     -- print(swig_type(mysql_constant_true))
+--
+--     mysql.mysql_options(instance,mysql.MYSQL_OPT_RECONNECT,mysql_constant_true);
+--
+-- else
+--
+--     print("")
+--     print("incomplete swiglib.mysql interface")
+--     print("")
+--
+-- end
 
-mysql.mysql_options(instance,mysql.MYSQL_OPT_RECONNECT,mysql_constant_true);
-
-local typemap = {
+local typemap = mysql.MYSQL_TYPE_VAR_STRING and {
     [mysql.MYSQL_TYPE_VAR_STRING ]  = "string",
     [mysql.MYSQL_TYPE_STRING     ]  = "string",
     [mysql.MYSQL_TYPE_DECIMAL    ]  = "number",
@@ -90,7 +110,10 @@ local typemap = {
 -- real_escape_string
 
 local function finish(t)
-    mysql_free_result(t._result_)
+    local r = t._result_
+    if r then
+        mysql_free_result(r)
+    end
 end
 
 -- will become metatable magic
@@ -183,8 +206,16 @@ local mt = { __index = {
         numrows     = numrows,
         getcolnames = getcolnames,
         getcoltypes = getcoltypes,
+        -- fallback
+        _result_    = nil,
+        names       = { },
+        types       = { },
+        noffields   = 0,
+        nofrows     = 0,
     }
 }
+
+local nt = setmetatable({},mt)
 
 -- session
 
@@ -198,24 +229,28 @@ local function execute(t,query)
         local result = mysql_execute_query(connection,query,#query)
         if result == 0 then
             local result = mysql_store_result(connection)
-            mysql_field_seek(result,0)
-            local nofrows   = mysql_num_rows(result) or 0
-            local noffields = mysql_num_fields(result)
-            local names     = { }
-            local types     = { }
-            for i=1,noffields do
-                local field = mysql_fetch_field(result)
-                names[i] = field.name
-                types[i] = field.type
+            if result then
+                mysql_field_seek(result,0)
+                local nofrows   = mysql_num_rows(result) or 0
+                local noffields = mysql_num_fields(result)
+                local names     = { }
+                local types     = { }
+                for i=1,noffields do
+                    local field = mysql_fetch_field(result)
+                    names[i] = field.name
+                    types[i] = field.type
+                end
+                local t = {
+                    _result_  = result,
+                    names     = names,
+                    types     = types,
+                    noffields = noffields,
+                    nofrows   = nofrows,
+                }
+                return setmetatable(t,mt)
+            else
+                return nt
             end
-            local t = {
-                _result_  = result,
-                names     = names,
-                types     = types,
-                noffields = noffields,
-                nofrows   = nofrows,
-            }
-            return setmetatable(t,mt)
         end
     end
     return false
@@ -272,6 +307,16 @@ local function connect(session,specification)
     )
 end
 
+local function error_in_connection(specification,action)
+    report_state("error in connection: [%s] %s@%s to %s:%s",
+            action or "unknown",
+            specification.database or "no database",
+            specification.username or "no username",
+            specification.host     or "no host",
+            specification.port     or "no port"
+        )
+end
+
 local function datafetched(specification,query,converter)
     if not query or query == "" then
         report_state("no valid query")
@@ -288,11 +333,45 @@ local function datafetched(specification,query,converter)
         if not connection then
             session = initialize()
             connection = connect(session,specification)
-            cache[id] = { session = session, connection = connection }
+            if not connection then
+                for i=1,nofretries do
+                    sleep(retrydelay)
+                    report_state("retrying to connect: [%s.%s] %s@%s to %s:%s",
+                            id,i,
+                            specification.database or "no database",
+                            specification.username or "no username",
+                            specification.host     or "no host",
+                            specification.port     or "no port"
+                        )
+                    connection = connect(session,specification)
+                    if connection then
+                        break
+                    end
+                end
+            end
+            if connection then
+                cache[id] = { session = session, connection = connection }
+            end
         end
     else
         session = initialize()
         connection = connect(session,specification)
+        if not connection then
+            for i=1,nofretries do
+                sleep(retrydelay)
+                report_state("retrying to connect: [%s] %s@%s to %s:%s",
+                        i,
+                        specification.database or "no database",
+                        specification.username or "no username",
+                        specification.host     or "no host",
+                        specification.port     or "no port"
+                    )
+                connection = connect(session,specification)
+                if connection then
+                    break
+                end
+            end
+        end
     end
     if not connection then
         report_state("error in connection: %s@%s to %s:%s",
@@ -399,18 +478,18 @@ return function(result)
         return { }
     end
     local noffields = result.noffields or 0
-    local data = { }
+    local target = { } -- no %s needed here
     result = result._result_
     for i=1,nofrows do
      -- local row = mysql_fetch_row(result)
      -- local len = mysql_fetch_lengths(result)
      -- local cells = util_unpackbytearray(row,noffields,len)
         local cells = util_mysql_fetch_fields_from_current_row(result)
-        data[i] = {
+        target[%s] = {
             %s
         }
     end
-    return data
+    return target
 end
 ]]
 

@@ -153,7 +153,7 @@
       \ifvoid\floatbox
         \exitloop
       \else
-        \def    {#1}%
+        \def\currentfloat{#1}%
         \blank[\rootfloatparameter\c!spacebefore]%
         \box\floatbox
         \blank[\rootfloatparameter\c!spaceafter]%
@@ -280,8 +280,6 @@
 % \dorecurse{700}{text } \placefigure[top][]{First} {\framed{bla 1}}
 %                        \placefigure[top][]{Second}{\framed{bla 2}}
 % \dorecurse {40}{text } \placefigure[top][]{Third} {\framed{bla 3}}
-
-\newbox\savedfloatbox
 
 \appendtoks
     \global\setbox\savedfloatbox\box\floatbox

@@ -6,10 +6,14 @@ if not modules then modules = { } end modules ['trac-lmx'] = {
     license   = "see context related readme files"
 }
 
+-- this one will be adpated to the latest helpers
+
 local type, tostring, rawget, loadstring, pcall = type, tostring, rawget, loadstring, pcall
 local format, sub, gsub = string.format, string.sub, string.gsub
 local concat = table.concat
+local collapsespaces = string.collapsespaces
 local P, Cc, Cs, C, Carg, lpegmatch = lpeg.P, lpeg.Cc, lpeg.Cs, lpeg.C, lpeg.Carg, lpeg.match
+local joinpath, replacesuffix, pathpart, filesuffix = file.join, file.replacesuffix, file.pathpart, file.suffix
 
 local allocate          = utilities.storage.allocate
 local setmetatableindex = table.setmetatableindex
@@ -131,17 +135,26 @@ end)
 -- Loading templates:
 
 local function loadedfile(name)
-    name = (resolvers and resolvers.findfile and resolvers.findfile(name)) or name
+    name = resolvers and resolvers.findfile and resolvers.findfile(name) or name
     local data = io.loaddata(name)
     if not data or data == "" then
-        report_lmx("empty file: %s",name)
+        report_lmx("file %a is empty",name)
     end
     return data
+end
+
+local function loadedsubfile(name)
+    return io.loaddata(resolvers and resolvers.findfile and resolvers.findfile(name) or name)
 end
 
 lmx.loadedfile = loadedfile
 
 -- A few helpers (the next one could end up in l-lpeg):
+
+local usedpaths = { }
+local givenpath = nil
+
+local do_nested_include = nil
 
 local pattern = lpeg.replacer {
     ["&"] = "&amp;",
@@ -160,14 +173,14 @@ local function do_variable(str)
         -- nothing
     elseif type(value) == "string" then
         if #value > 80 then
-            report_lmx("variable %q => %s ...",str,string.collapsespaces(sub(value,1,80)))
+            report_lmx("variable %a is set to: %s ...",str,collapsespaces(sub(value,1,80)))
         else
-            report_lmx("variable %q => %s",str,string.collapsespaces(value))
+            report_lmx("variable %a is set to: %s",str,collapsespaces(value))
         end
     elseif type(value) == "nil" then
-        report_lmx("variable %q => <!-- unset -->",str)
+        report_lmx("variable %a is set to: %s",str,"<!-- unset -->")
     else
-        report_lmx("variable %q => %q",str,tostring(value))
+        report_lmx("variable %a is set to: %S",str,value)
     end
     if type(value) == "function" then -- obsolete ... will go away
         return value(str)
@@ -188,6 +201,12 @@ local function do_fprint(str,...)
     end
 end
 
+local function do_eprint(str,...)
+    if str and str ~= "" then
+        result[#result+1] = lpegmatch(pattern,format(str,...))
+    end
+end
+
 local function do_print_variable(str)
     local str = do_variable(str) -- variables[str]
     if str and str ~= "" then
@@ -202,14 +221,28 @@ local function do_type_variable(str)
     end
 end
 
-local function do_include(filename) -- todo: store paths of loaded files
-    local stylepath = lmxvariables.includepath
-    local data = loadedfile(filename)
-    if (not data or data == "") and stylepath and stylepath ~= "" then
-        data = loadedfile(file.join(stylepath,filename))
+local function do_include(filename,option)
+    local data = loadedsubfile(filename)
+    if (not data or data == "") and givenpath then
+        data = loadedsubfile(joinpath(givenpath,filename))
+    end
+    if (not data or data == "") and type(usedpaths) == "table" then
+        for i=1,#usedpaths do
+            data = loadedsubfile(joinpath(usedpaths[i],filename))
+            if data and data ~= "" then
+                break
+            end
+        end
     end
     if not data or data == "" then
         data = format("<!-- unknown lmx include file: %s -->",filename)
+        report_lmx("include file %a is empty",filename)
+    else
+     -- report_lmx("included file: %s",filename)
+        data = do_nested_include(data)
+    end
+    if filesuffix(filename,"css") and option == "strip" then -- new
+        data = lmx.stripcss(data)
     end
     return data
 end
@@ -218,6 +251,7 @@ end
 
 lmx.print     = do_print
 lmx.type      = do_type
+lmx.eprint    = do_eprint
 lmx.fprint    = do_fprint
 
 lmx.escape    = do_escape
@@ -227,6 +261,7 @@ lmx.include   = do_include
 
 lmx.inject    = do_print
 lmx.finject   = do_fprint
+lmx.einject   = do_eprint
 
 lmx.pv        = do_print_variable
 lmx.tv        = do_type_variable
@@ -239,10 +274,10 @@ function lmx.initialize(d,v)
         if variables ~= d then
             setmetatableindex(variables,d)
             if trace_variables then
-                report_lmx("variables => given defaults => lmx variables")
+                report_lmx("using chain: variables => given defaults => lmx variables")
             end
         elseif trace_variables then
-            report_lmx("variables == given defaults => lmx variables")
+            report_lmx("using chain: variables == given defaults => lmx variables")
         end
     elseif d ~= v then
         setmetatableindex(v,d)
@@ -251,19 +286,19 @@ function lmx.initialize(d,v)
             if variables ~= v then
                 setmetatableindex(variables,v)
                 if trace_variables then
-                    report_lmx("variables => given variables => given defaults => lmx variables")
+                    report_lmx("using chain: variables => given variables => given defaults => lmx variables")
                 end
             elseif trace_variables then
-                report_lmx("variables == given variables => given defaults => lmx variables")
+                report_lmx("using chain: variables == given variables => given defaults => lmx variables")
             end
         else
             if variables ~= v then
                 setmetatableindex(variables,v)
                 if trace_variables then
-                    report_lmx("variabes => given variables => given defaults")
+                    report_lmx("using chain: variabes => given variables => given defaults")
                 end
             elseif trace_variables then
-                report_lmx("variables == given variables => given defaults")
+                report_lmx("using chain: variables == given variables => given defaults")
             end
         end
     else
@@ -271,10 +306,10 @@ function lmx.initialize(d,v)
         if variables ~= v then
             setmetatableindex(variables,v)
             if trace_variables then
-                report_lmx("variables => given variables => lmx variables")
+                report_lmx("using chain: variables => given variables => lmx variables")
             end
         elseif trace_variables then
-            report_lmx("variables == given variables => lmx variables")
+            report_lmx("using chain: variables == given variables => lmx variables")
         end
     end
     result = { }
@@ -296,22 +331,60 @@ end
 
 -- Creation: (todo: strip <!-- -->)
 
+-- local template = [[
+-- return function(defaults,variables)
+--
+-- -- initialize
+--
+-- lmx.initialize(defaults,variables)
+--
+-- -- interface
+--
+-- local definitions = { }
+-- local variables   = lmx.getvariables()
+-- local html        = lmx.html
+-- local inject      = lmx.print
+-- local finject     = lmx.fprint
+-- local einject     = lmx.eprint
+-- local escape      = lmx.escape
+-- local verbose     = lmx.type
+--
+-- -- shortcuts (sort of obsolete as there is no gain)
+--
+-- local p  = lmx.print
+-- local f  = lmx.fprint
+-- local v  = lmx.variable
+-- local e  = lmx.escape
+-- local t  = lmx.type
+-- local pv = lmx.pv
+-- local tv = lmx.tv
+--
+-- -- generator
+--
+-- %s
+--
+-- -- finalize
+--
+-- return lmx.finalized()
+--
+-- end
+-- ]]
+
 local template = [[
-return function(defaults,variables)
-
--- initialize
-
-lmx.initialize(defaults,variables)
-
 -- interface
 
-local definitions = { }
-local variables   = lmx.getvariables()
 local html        = lmx.html
 local inject      = lmx.print
-local finject     = lmx.fprint
+local finject     = lmx.fprint -- better use the following
+local einject     = lmx.eprint -- better use the following
+local injectf     = lmx.fprint
+local injecte     = lmx.eprint
+local injectfmt   = lmx.fprint
+local injectesc   = lmx.eprint
 local escape      = lmx.escape
 local verbose     = lmx.type
+
+local i_n_j_e_c_t = lmx.print
 
 -- shortcuts (sort of obsolete as there is no gain)
 
@@ -323,13 +396,22 @@ local t  = lmx.type
 local pv = lmx.pv
 local tv = lmx.tv
 
+local lmx_initialize   = lmx.initialize
+local lmx_finalized    = lmx.finalized
+local lmx_getvariables = lmx.getvariables
+
 -- generator
 
-%s
+return function(defaults,variables)
 
--- finalize
+    lmx_initialize(defaults,variables)
 
-return lmx.finalized()
+    local definitions = { }
+    local variables   = lmx_getvariables()
+
+    %s -- the action: appends to result
+
+    return lmx_finalized()
 
 end
 ]]
@@ -346,6 +428,8 @@ end
 local whitespace     = lpeg.patterns.whitespace
 local optionalspaces = whitespace^0
 
+local dquote         = P('"')
+
 local begincomment   = P("<!--")
 local endcomment     = P("-->")
 
@@ -355,10 +439,15 @@ local endembedxml    = P("?>")
 local beginembedcss  = P("/*")
 local endembedcss    = P("*/")
 
-local gobbledend     = (optionalspaces * endembedxml) / ""
-local argument       = (1-gobbledend)^0
+local gobbledendxml  = (optionalspaces * endembedxml) / ""
+----- argumentxml    = (1-gobbledendxml)^0
+local argumentxml    = (whitespace^1 + dquote * C((1-dquote)^1) * dquote + C((1-gobbledendxml-whitespace)^1))^0
 
-local comment        = (begincomment * (1-endcomment)^0 * endcomment) / ""
+local gobbledendcss  = (optionalspaces * endembedcss) / ""
+----- argumentcss    = (1-gobbledendcss)^0
+local argumentcss    = (whitespace^1 + dquote * C((1-dquote)^1) * dquote + C((1-gobbledendcss-whitespace)^1))^0
+
+local commentxml     = (begincomment * (1-endcomment)^0 * endcomment) / ""
 
 local beginluaxml    = (beginembedxml * P("lua")) / ""
 local endluaxml      = endembedxml / ""
@@ -374,30 +463,50 @@ local luacodecss     = beginluacss
                      * (1-endluacss)^1
                      * endluacss
 
-local othercode      = (1-beginluaxml-beginluacss)^1 / " p[==[%0]==] "
+local othercode      = (1-beginluaxml-beginluacss)^1 / " i_n_j_e_c_t[==[%0]==] "
 
-local include        = ((beginembedxml * P("lmx-include") * optionalspaces) / "")
-                     * (argument / lmx.include)
-                     * gobbledend
+local includexml     = ((beginembedxml * P("lmx-include") * optionalspaces) / "")
+                     * (argumentxml / do_include)
+                     * gobbledendxml
 
-local define_b       = ((beginembedxml * P("lmx-define-begin") * optionalspaces) / "")
-                     * argument
-                     * gobbledend
+local includecss     = ((beginembedcss * P("lmx-include") * optionalspaces) / "")
+                     * (argumentcss / do_include)
+                     * gobbledendcss
 
-local define_e       = ((beginembedxml * P("lmx-define-end") * optionalspaces) / "")
-                     * argument
-                     * gobbledend
+local definexml_b    = ((beginembedxml * P("lmx-define-begin") * optionalspaces) / "")
+                     * argumentxml
+                     * gobbledendxml
 
-local define_c       = C((1-define_e)^0)
+local definexml_e    = ((beginembedxml * P("lmx-define-end") * optionalspaces) / "")
+                     * argumentxml
+                     * gobbledendxml
 
-local define         = (Carg(1) * C(define_b) * define_c * define_e) / savedefinition
+local definexml_c    = C((1-definexml_e)^0)
 
-local resolve        = ((beginembedxml * P("lmx-resolve") * optionalspaces) / "")
-                     * ((Carg(1) * C(argument)) / getdefinition)
-                     * gobbledend
+local definexml      = (Carg(1) * C(definexml_b) * definexml_c * definexml_e) / savedefinition
 
-local pattern_1      = Cs((comment + include + P(1))^0) -- get rid of comments asap
-local pattern_2      = Cs((define  + resolve + P(1))^0)
+local resolvexml     = ((beginembedxml * P("lmx-resolve") * optionalspaces) / "")
+                     * ((Carg(1) * C(argumentxml)) / getdefinition)
+                     * gobbledendxml
+
+local definecss_b    = ((beginembedcss * P("lmx-define-begin") * optionalspaces) / "")
+                     * argumentcss
+                     * gobbledendcss
+
+local definecss_e    = ((beginembedcss * P("lmx-define-end") * optionalspaces) / "")
+                     * argumentcss
+                     * gobbledendcss
+
+local definecss_c    = C((1-definecss_e)^0)
+
+local definecss      = (Carg(1) * C(definecss_b) * definecss_c * definecss_e) / savedefinition
+
+local resolvecss     = ((beginembedcss * P("lmx-resolve") * optionalspaces) / "")
+                     * ((Carg(1) * C(argumentcss)) / getdefinition)
+                     * gobbledendcss
+
+local pattern_1      = Cs((commentxml + includexml + includecss + P(1))^0) -- get rid of xml comments asap
+local pattern_2      = Cs((definexml + resolvexml + definecss + resolvecss + P(1))^0)
 local pattern_3      = Cs((luacodexml + luacodecss + othercode)^0)
 
 local cache = { }
@@ -416,10 +525,19 @@ local function wrapper(converter,defaults,variables)
     end
 end
 
-function lmxnew(data,defaults,nocache) -- todo: use defaults in calling routines
+do_nested_include = function(data) -- also used in include
+    return lpegmatch(pattern_1,data)
+end
+
+function lmxnew(data,defaults,nocache,path) -- todo: use defaults in calling routines
     data = data or ""
     local known = cache[data]
     if not known then
+        givenpath = path
+        usedpaths = lmxvariables.includepath or { }
+        if type(usedpaths) == "string" then
+            usedpaths = { usedpaths }
+        end
         data = lpegmatch(pattern_1,data)
         data = lpegmatch(pattern_2,data,1,{})
         data = lpegmatch(pattern_3,data)
@@ -434,6 +552,7 @@ function lmxnew(data,defaults,nocache) -- todo: use defaults in calling routines
                 return wrapper(converted,defaults,variables)
             end
         else
+            report_error("error in:\n%s\n:",data)
             converter = function() lmxerror("error in template") end
         end
         known = {
@@ -472,17 +591,17 @@ lmx.result = lmxresult
 
 local loadedfiles = { }
 
-function lmx.convertstring(templatestring,variables,nocache)
-    return lmxresult(lmxnew(templatestring,nil,nocache),variables)
+function lmx.convertstring(templatestring,variables,nocache,path)
+    return lmxresult(lmxnew(templatestring,nil,nocache,path),variables)
 end
 
 function lmx.convertfile(templatefile,variables,nocache)
     if trace_variables then -- will become templates
-        report_lmx("converting file: %s",templatefile)
+        report_lmx("converting file %a",templatefile)
     end
     local converter = loadedfiles[templatefile]
     if not converter then
-        converter = lmxnew(loadedfile(templatefile),nil,nocache)
+        converter = lmxnew(loadedfile(templatefile),nil,nocache,pathpart(templatefile))
         loadedfiles[templatefile] = converter
     end
     return lmxresult(converter,variables)
@@ -490,14 +609,14 @@ end
 
 function lmxconvert(templatefile,resultfile,variables,nocache) -- or (templatefile,variables)
     if trace_variables then -- will become templates
-        report_lmx("converting file: %s",templatefile)
+        report_lmx("converting file %a",templatefile)
     end
     if not variables and type(resultfile) == "table" then
         variables = resultfile
     end
     local converter = loadedfiles[templatefile]
     if not converter then
-        converter = lmxnew(loadedfile(templatefile),nil,nocache)
+        converter = lmxnew(loadedfile(templatefile),nil,nocache,pathpart(templatefile))
         if cache_files then
             loadedfiles[templatefile] = converter
         end
@@ -539,9 +658,9 @@ function lmx.color(r,g,b,a)
         a = 1
     end
     if a > 0 then
-        return string.format("rgba(%s%%,%s%%,%s%%,%s)",r*100,g*100,b*100,a)
+        return format("rgba(%s%%,%s%%,%s%%,%s)",r*100,g*100,b*100,a)
     else
-        return string.format("rgb(%s%%,%s%%,%s%%)",r*100,g*100,b*100)
+        return format("rgb(%s%%,%s%%,%s%%)",r*100,g*100,b*100)
     end
 end
 
@@ -556,7 +675,7 @@ function lmxmake(name,variables)
     local lmxfile = lmx.lmxfile(name)
     local htmfile = lmx.htmfile(name)
     if lmxfile == htmfile then
-        htmfile = file.replacesuffix(lmxfile,"html")
+        htmfile = replacesuffix(lmxfile,"html")
     end
     lmxconvert(lmxfile,htmfile,variables)
     return htmfile
@@ -585,7 +704,7 @@ end
 -- Test 2:
 
 -- local str = [[
---     <?lmx-include somefile.css ?>
+--     <?lmx-include context.css strip ?>
 --     <test>
 --         <?lmx-define-begin whatever?>some content a<?lmx-define-end ?>
 --         <?lmx-define-begin somemore?>some content b<?lmx-define-end ?>
@@ -603,7 +722,7 @@ end
 --         <td><?lua pv('title-default') ?></td>
 --     </test>
 -- ]]
---
+
 -- local defaults = { trace = true, a = 3, b = 3 }
 -- local result = lmx.new(str,defaults)
 -- inspect(result.data)

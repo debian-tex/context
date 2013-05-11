@@ -156,6 +156,20 @@ local fillcodes = allocate {
     [4] = "filll",
 }
 
+local margincodes = allocate {
+    [0] = "left",
+    [1] = "right",
+}
+
+local disccodes = allocate {
+    [0] = "discretionary", -- \discretionary
+    [1] = "explicit",      -- \-
+    [2] = "automatic",     -- following a -
+    [3] = "regular",       -- simple
+    [4] = "first",         -- hard first item
+    [5] = "second",        -- hard second item
+}
+
 local function simplified(t)
     local r = { }
     for k, v in next, t do
@@ -167,27 +181,31 @@ end
 local nodecodes = simplified(node.types())
 local whatcodes = simplified(node.whatsits())
 
-skipcodes     = allocate(swapped(skipcodes,    skipcodes ))
-noadcodes     = allocate(swapped(noadcodes,    noadcodes ))
-nodecodes     = allocate(swapped(nodecodes,    nodecodes ))
-whatcodes     = allocate(swapped(whatcodes,    whatcodes ))
-listcodes     = allocate(swapped(listcodes,    listcodes ))
-glyphcodes    = allocate(swapped(glyphcodes,   glyphcodes))
-kerncodes     = allocate(swapped(kerncodes,    kerncodes ))
-penaltycodes  = allocate(swapped(penaltycodes, penaltycodes ))
-mathcodes     = allocate(swapped(mathcodes,    mathcodes ))
-fillcodes     = allocate(swapped(fillcodes,    fillcodes ))
+skipcodes    = allocate(swapped(skipcodes,skipcodes))
+noadcodes    = allocate(swapped(noadcodes,noadcodes))
+nodecodes    = allocate(swapped(nodecodes,nodecodes))
+whatcodes    = allocate(swapped(whatcodes,whatcodes))
+listcodes    = allocate(swapped(listcodes,listcodes))
+glyphcodes   = allocate(swapped(glyphcodes,glyphcodes))
+kerncodes    = allocate(swapped(kerncodes,kerncodes))
+penaltycodes = allocate(swapped(penaltycodes,penaltycodes))
+mathcodes    = allocate(swapped(mathcodes,mathcodes))
+fillcodes    = allocate(swapped(fillcodes,fillcodes))
+margincodes  = allocate(swapped(margincodes,margincodes))
+disccodes    = allocate(swapped(disccodes,disccodes))
 
-nodes.skipcodes    = skipcodes  nodes.gluecodes    = skipcodes -- more official
+nodes.skipcodes    = skipcodes     nodes.gluecodes    = skipcodes -- more official
 nodes.noadcodes    = noadcodes
 nodes.nodecodes    = nodecodes
-nodes.whatcodes    = whatcodes  nodes.whatsitcodes = whatcodes -- more official
+nodes.whatcodes    = whatcodes     nodes.whatsitcodes = whatcodes -- more official
 nodes.listcodes    = listcodes
 nodes.glyphcodes   = glyphcodes
 nodes.kerncodes    = kerncodes
 nodes.penaltycodes = kerncodes
 nodes.mathcodes    = mathcodes
 nodes.fillcodes    = fillcodes
+nodes.margincodes  = margincodes
+nodes.disccodes    = disccodes     nodes.discretionarycodes = disccodes
 
 listcodes.row              = listcodes.alignment
 listcodes.column           = listcodes.alignment
@@ -195,16 +213,23 @@ listcodes.column           = listcodes.alignment
 kerncodes.italiccorrection = kerncodes.userkern
 kerncodes.kerning          = kerncodes.fontkern
 
-nodes.codes = allocate {
+nodes.codes = allocate { -- mostly for listing
+    glue    = skipcodes,
+    noad    = noadcodes,
+    node    = nodecodes,
     hlist   = listcodes,
     vlist   = listcodes,
     glyph   = glyphcodes,
-    glue    = skipcodes,
     kern    = kerncodes,
-    whatsit = whatcodes,
+    penalty = penaltycodes,
     math    = mathnodes,
-    noad    = noadcodes,
+    fill    = fillcodes,
+    margin  = margincodes,
+    disc    = disccodes,
+    whatsit = whatcodes,
 }
+
+local report_codes = logs.reporter("nodes","codes")
 
 function nodes.showcodes()
     local t = { }
@@ -219,7 +244,7 @@ function nodes.showcodes()
     end
     formatcolumns(t)
     for k=1,#t do
-        texio.write_nl(t[k])
+        report_codes (t[k])
     end
 end
 
@@ -256,19 +281,18 @@ local hlist_code = nodecodes.hlist
 local vlist_code = nodecodes.vlist
 local glue_code  = nodecodes.glue
 
---~ if t.id == glue_code then
---~     local s = t.spec
---~ print(t)
---~ print(s,s and s.writable)
---~     if s and s.writable then
---~         free_node(s)
---~     end
---~     t.spec = nil
---~ end
+-- if t.id == glue_code then
+--     local s = t.spec
+-- print(t)
+-- print(s,s and s.writable)
+--     if s and s.writable then
+--         free_node(s)
+--     end
+--     t.spec = nil
+-- end
 
 local function remove(head, current, free_too)
    local t = current
---~ print(t)
    head, current = remove_node(head,current)
    if t then
         if free_too then

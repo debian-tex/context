@@ -9,6 +9,7 @@ if not modules then modules = { } end modules ['mlib-ctx'] = {
 -- todo
 
 local format, concat = string.format, table.concat
+local settings_to_hash = utilities.parsers.settings_to_hash
 
 local report_metapost = logs.reporter("metapost")
 
@@ -18,6 +19,8 @@ local mplib = mplib
 
 metapost       = metapost or {}
 local metapost = metapost
+
+local v_no = interfaces.variables.no
 
 metapost.defaultformat   = "metafun"
 metapost.defaultinstance = "metafun"
@@ -42,12 +45,48 @@ local function setmpsformat(specification)
     specification.mpx = metapost.format(instance,format,method)
 end
 
+local extensiondata    = metapost.extensiondata or storage.allocate { }
+metapost.extensiondata = extensiondata
+
+storage.register("metapost/extensiondata",extensiondata,"metapost.extensiondata")
+
+function metapost.setextensions(instances,data)
+    if data and data ~= "" then
+        extensiondata[#extensiondata+1] = {
+            usedinall  = not instances or instances == "",
+            instances  = settings_to_hash(instances or ""),
+            extensions = data,
+        }
+    end
+end
+
+function metapost.getextensions(instance,state)
+    if state and state == v_no then
+        return ""
+    else
+        local t = { }
+        for i=1,#extensiondata do
+            local e = extensiondata[i]
+            local status = e.instances[instance]
+            if (status ~= true) and (e.usedinall or status) then
+                t[#t+1] = e.extensions
+                e.instances[instance] = true
+            end
+        end
+        return concat(t," ")
+    end
+end
+
+function commands.getmpextensions(instance,state)
+    context(metapost.getextensions(instance,state))
+end
+
 function metapost.graphic(specification)
     setmpsformat(specification)
     metapost.graphic_base_pass(specification)
 end
 
-function metapost.getclippath(specification)
+function metapost.getclippath(specification) -- why not a special instance for this
     setmpsformat(specification)
     local mpx = specification.mpx
     local data = specification.data or ""
@@ -103,11 +142,15 @@ end
 statistics.register("metapost processing time", function()
     local n =  metapost.n
     if n and n > 0 then
-        local e, t = metapost.makempy.nofconverted, statistics.elapsedtime
-        local str = format("%s seconds, loading: %s seconds, execution: %s seconds, n: %s",
-            t(metapost), t(mplib), t(metapost.exectime), n)
-        if e > 0 then
-            return format("%s, external: %s seconds (%s calls)", str, t(metapost.makempy), e)
+        local nofconverted = metapost.makempy.nofconverted
+        local elapsedtime = statistics.elapsedtime
+        local elapsed = statistics.elapsed
+        local str = format("%s seconds, loading: %s, execution: %s, n: %s, average: %s",
+            elapsedtime(metapost), elapsedtime(mplib), elapsedtime(metapost.exectime), n,
+            elapsedtime((elapsed(metapost) + elapsed(mplib) + elapsed(metapost.exectime)) / n))
+        if nofconverted > 0 then
+            return format("%s, external: %s (%s calls)",
+                str, elapsedtime(metapost.makempy), nofconverted)
         else
             return str
         end

@@ -59,6 +59,8 @@ local constants    = { }
 
 do -- todo: only once, store in global
 
+    -- commands helpers primitives
+
     local definitions = context.loaddefinitions("scite-context-data-interfaces")
 
     if definitions then
@@ -80,10 +82,17 @@ do -- todo: only once, store in global
     end
 
     local definitions = context.loaddefinitions("scite-context-data-context")
+    local overloaded  = { }
 
     if definitions then
         helpers   = definitions.helpers   or { }
         constants = definitions.constants or { }
+        for i=1,#helpers do
+            overloaded[helpers[i]] = true
+        end
+        for i=1,#constants do
+            overloaded[constants[i]] = true
+        end
     end
 
     local definitions = context.loaddefinitions("scite-context-data-tex")
@@ -92,20 +101,25 @@ do -- todo: only once, store in global
         local function add(data,normal)
             for k, v in next, data do
                 if v ~= "/" and v ~= "-" then
-                    primitives[#primitives+1] = v
+                    if not overloaded[v] then
+                        primitives[#primitives+1] = v
+                    end
                     if normal then
-                        primitives[#primitives+1] = "normal" .. v
+                        v = "normal" .. v
+                        if not overloaded[v] then
+                            primitives[#primitives+1] = v
+                        end
                     end
                 end
             end
         end
         add(definitions.tex,true)
-        add(definitions.etex)
-        add(definitions.pdftex)
-        add(definitions.aleph)
-        add(definitions.omega)
-        add(definitions.luatex)
-        add(definitions.xetex)
+        add(definitions.etex,true)
+        add(definitions.pdftex,true)
+        add(definitions.aleph,true)
+        add(definitions.omega,true)
+        add(definitions.luatex,true)
+        add(definitions.xetex,true)
     end
 
 end
@@ -227,13 +241,15 @@ local p_unit                 = P("pt") + P("bp") + P("sp") + P("mm") + P("cm") +
 --     if validwords then
 --         return checkedword(validwords,validminimum,s,i)
 --     else
---         return true, { "text", i }
+--      -- return true, { "text", i }
+--         return true, "text", i
 --     end
 -- end)
 --
 -- So we use this one instead:
 
-local p_word = Ct( iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() ) -- the function can be inlined
+----- p_word = Ct( iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() ) -- the function can be inlined
+local p_word =  iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() -- the function can be inlined
 
 ----- p_text = (1 - p_grouping - p_special - p_extra - backslash - space + hspace)^1
 
@@ -373,12 +389,13 @@ contextlexer._reset_parser = function()
     lualevel  = 0
 end
 
-local luaenvironment         = P("luacode") + P("lua")
+local luaenvironment         = P("lua") * (P("setups") + P("code") + P(true))
 
 local inlinelua              = P("\\") * (
                                     P("ctx") * ( P("lua") + P("command") + P("late") * (P("lua") + P("command")) )
                                   + P("cld") * ( P("command") + P("context") )
                                   + P("luaexpr")
+                                  + (P("direct") + P("late")) * P("lua")
                                )
 
 local startlua               = P("\\start") * Cmt(luaenvironment,startdisplaylua)
@@ -393,6 +410,7 @@ local stopluacode            = #stoplua * token("embedded", stoplua)
 
 local metafuncall            = ( P("reusable") + P("usable") + P("unique") + P("use") + P("reuse") ) * ("MPgraphic")
                              + P("uniqueMPpagegraphic")
+                             + P("MPpositiongraphic")
 
 local metafunenvironment     = metafuncall -- ( P("use") + P("reusable") + P("unique") ) * ("MPgraphic")
                              + P("MP") * ( P("code")+ P("page") + P("inclusions") + P("initializations") + P("definitions") + P("extensions") + P("graphic") )
@@ -446,22 +464,33 @@ contextlexer._tokenstyles = context.styleset
 -- contextlexer._tokenstyles[#contextlexer._tokenstyles + 1] = { cldlexer._NAME..'_whitespace', lexer.style_whitespace }
 -- contextlexer._tokenstyles[#contextlexer._tokenstyles + 1] = { mpslexer._NAME..'_whitespace', lexer.style_whitespace }
 
-
-local folds = {
-    ["\\start"] = 1, ["\\stop" ] = -1,
-    ["\\begin"] = 1, ["\\end"  ] = -1,
+local environment = {
+    ["\\start"] = 1, ["\\stop"] = -1,
+ -- ["\\begin"] = 1, ["\\end" ] = -1,
 }
 
-contextlexer._foldsymbols = {
+-- local block = {
+--     ["\\begin"] = 1, ["\\end" ] = -1,
+-- }
+
+local group = {
+    ["{"] = 1, ["}"] = -1,
+}
+
+contextlexer._foldpattern = P("\\" ) * (P("start") + P("stop")) + S("{}") -- separate entry else interference
+
+contextlexer._foldsymbols = { -- these need to be style references
     _patterns    = {
         "\\start", "\\stop", -- regular environments
-        "\\begin", "\\end",  -- (moveable) blocks
+     -- "\\begin", "\\end",  -- (moveable) blocks
+        "[{}]",
     },
-    ["helper"]   = folds,
-    ["data"]   = folds,
-    ["command"]  = folds,
-    ["user"]     = folds, -- csname
-    ["grouping"] = folds,
+    ["command"]  = environment,
+    ["constant"] = environment,
+    ["data"]     = environment,
+    ["user"]     = environment,
+    ["embedded"] = environment,
+    ["grouping"] = group,
 }
 
 return contextlexer

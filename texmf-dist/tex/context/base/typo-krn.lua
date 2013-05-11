@@ -11,8 +11,6 @@ local utfchar = utf.char
 
 local nodes, node, fonts = nodes, node, fonts
 
-local has_attribute      = node.has_attribute
-local unset_attribute    = node.unset_attribute
 local find_node_tail     = node.tail or node.slide
 local free_node          = node.free
 local free_nodelist      = node.flush_list
@@ -20,6 +18,7 @@ local copy_node          = node.copy
 local copy_nodelist      = node.copy_list
 local insert_node_before = node.insert_before
 local insert_node_after  = node.insert_after
+local end_of_math        = node.end_of_math
 
 local texattribute       = tex.attribute
 local unsetvalue         = attributes.unsetvalue
@@ -41,6 +40,7 @@ local disc_code          = nodecodes.disc
 local glue_code          = nodecodes.glue
 local hlist_code         = nodecodes.hlist
 local vlist_code         = nodecodes.vlist
+local math_code          = nodecodes.math
 
 local kerning_code       = kerncodes.kerning
 local userkern_code      = kerncodes.userkern
@@ -109,6 +109,8 @@ local function spec_injector(fillup,width,stretch,shrink)
     end
 end
 
+-- needs checking ... base mode / node mode
+
 local function do_process(namespace,attribute,head,force) -- todo: glue so that we can fully stretch
     local start, done, lastfont = head, false, nil
     local keepligature = kerns.keepligature
@@ -116,9 +118,9 @@ local function do_process(namespace,attribute,head,force) -- todo: glue so that 
     local fillup = false
     while start do
         -- faster to test for attr first
-        local attr = force or has_attribute(start,attribute)
+        local attr = force or start[attribute]
         if attr and attr > 0 then
-            unset_attribute(start,attribute)
+            start[attribute] = unsetvalue
             local krn = mapping[attr]
             if krn == v_max then
                 krn = .25
@@ -166,7 +168,7 @@ local function do_process(namespace,attribute,head,force) -- todo: glue so that 
                         if not pid then
                             -- nothing
                         elseif pid == kern_code then
-                            if prev.subtype == kerning_code or has_attribute(prev,a_fontkern) then
+                            if prev.subtype == kerning_code or prev[a_fontkern] then
                                 if keeptogether and prev.prev.id == glyph_code and keeptogether(prev.prev,start) then -- we could also pass start
                                     -- keep 'm
                                 else
@@ -248,7 +250,7 @@ local function do_process(namespace,attribute,head,force) -- todo: glue so that 
                                 else
                                     krn = quaddata[lastfont]*krn -- here
                                 end
-                                disc.replace = kern_injector(fillup,krn)
+                                disc.replace = kern_injector(false,krn) -- only kerns permitted, no glue
                             end
                         end
                     end
@@ -282,6 +284,8 @@ local function do_process(namespace,attribute,head,force) -- todo: glue so that 
                         insert_node_after(head,start,kern_injector(fillup,quaddata[lastfont]*krn))
                         done = true
                     end
+                elseif id == math_code then
+                    start = end_of_math(start)
                 end
             end
         end

@@ -6,10 +6,63 @@ if not modules then modules = { } end modules ['trac-log'] = {
     license   = "see context related readme files"
 }
 
--- todo: less categories, more subcategories (e.g. nodes)
+-- if tex and (tex.jobname or tex.formatname) then
+--
+--     -- quick hack, awaiting speedup in engine (8 -> 6.4 sec for --make with console2)
+--     -- still needed for luajittex
+--
+--     local texio_write_nl = texio.write_nl
+--     local texio_write    = texio.write
+--     local io_write       = io.write
+--
+--     local write_nl = function(target,...)
+--         if not io_write then
+--             io_write = io.write
+--         end
+--         if target == "term and log" then
+--             texio_write_nl("log",...)
+--             texio_write_nl("term","")
+--             io_write(...)
+--         elseif target == "log" then
+--             texio_write_nl("log",...)
+--         elseif target == "term" then
+--             texio_write_nl("term","")
+--             io_write(...)
+--         else
+--             texio_write_nl("log",target,...)
+--             texio_write_nl("term","")
+--             io_write(target,...)
+--         end
+--     end
+--
+--     local write = function(target,...)
+--         if not io_write then
+--             io_write = io.write
+--         end
+--         if target == "term and log" then
+--             texio_write("log",...)
+--             io_write(...)
+--         elseif target == "log" then
+--             texio_write("log",...)
+--         elseif target == "term" then
+--             io_write(...)
+--         else
+--             texio_write("log",target,...)
+--             io_write(target,...)
+--         end
+--     end
+--
+--     texio.write    = write
+--     texio.write_nl = write_nl
+--
+-- else
+--
+--     -- texlua or just lua
+--
+-- end
 
---~ io.stdout:setvbuf("no")
---~ io.stderr:setvbuf("no")
+-- todo: less categories, more subcategories (e.g. nodes)
+-- todo: split into basics and ctx specific
 
 local write_nl, write = texio and texio.write_nl or print, texio and texio.write or io.write
 local format, gmatch, find = string.format, string.gmatch, string.find
@@ -17,13 +70,14 @@ local concat, insert, remove = table.concat, table.insert, table.remove
 local topattern = string.topattern
 local texcount = tex and tex.count
 local next, type, select = next, type, select
+local utfchar = utf.char
 
 local setmetatableindex = table.setmetatableindex
 local formatters        = string.formatters
 
 --[[ldx--
 <p>This is a prelude to a more extensive logging module. We no longer
-provide <l n='xml'/> based logging a sparsing is relatively easy anyway.</p>
+provide <l n='xml'/> based logging as parsing is relatively easy anyway.</p>
 --ldx]]--
 
 logs       = logs or { }
@@ -31,11 +85,41 @@ local logs = logs
 
 local moreinfo = [[
 More information about ConTeXt and the tools that come with it can be found at:
-
+]] .. "\n" .. [[
 maillist : ntg-context@ntg.nl / http://www.ntg.nl/mailman/listinfo/ntg-context
 webpage  : http://www.pragma-ade.nl / http://tex.aanhet.net
 wiki     : http://contextgarden.net
 ]]
+
+-- -- we extend the formatters:
+--
+-- function utilities.strings.unichr(s) return "U+" .. format("%05X",s) .. " (" .. utfchar(s) .. ")" end
+-- function utilities.strings.chruni(s) return utfchar(s) .. " (U+" .. format("%05X",s) .. ")" end
+--
+-- utilities.strings.formatters.add (
+--     string.formatters, "uni",
+--     [[unichr(%s)]],
+--     [[local unichr = utilities.strings.unichr]]
+-- )
+--
+-- utilities.strings.formatters.add (
+--     string.formatters, "chr",
+--     [[chruni(%s)]],
+--     [[local chruni = utilities.strings.chruni]]
+-- )
+
+utilities.strings.formatters.add (
+    formatters, "unichr",
+    [["U+" .. format("%%05X",%s) .. " (" .. utfchar(%s) .. ")"]]
+)
+
+utilities.strings.formatters.add (
+    formatters, "chruni",
+    [[utfchar(%s) .. " (U+" .. format("%%05X",%s) .. ")"]]
+)
+
+-- print(formatters["Missing character %!chruni! in font."](234))
+-- print(formatters["Missing character %!unichr! in font."](234))
 
 -- basic loggers
 
@@ -48,6 +132,8 @@ local report, subreport, status, settarget, setformats, settranslations
 local direct, subdirect, writer, pushtarget, poptarget
 
 if tex and (tex.jobname or tex.formatname) then
+
+ -- local format = string.formatter
 
     local valueiskey   = { __index = function(t,k) t[k] = k return k end } -- will be helper
 
@@ -69,9 +155,13 @@ if tex and (tex.jobname or tex.formatname) then
     local f_one = formatters["%-15s > %s\n"]
     local f_two = formatters["%-15s >\n"]
 
+    -- we can use formatters but best check for % then because for simple messages
+    -- we con't want this overhead for single messages (not that there are that
+    -- many; we could have a special weak table)
+
     report = function(a,b,c,...)
         if c then
-            write_nl(target,f_one(translations[a],format(formats[b],c,...)))
+            write_nl(target,f_one(translations[a],formatters[formats[b]](c,...)))
         elseif b then
             write_nl(target,f_one(translations[a],formats[b]))
         elseif a then
@@ -86,7 +176,7 @@ if tex and (tex.jobname or tex.formatname) then
 
     direct = function(a,b,c,...)
         if c then
-            return f_one(translations[a],format(formats[b],c,...))
+            return f_one(translations[a],formatters[formats[b]](c,...))
         elseif b then
             return f_one(translations[a],formats[b])
         elseif a then
@@ -101,7 +191,7 @@ if tex and (tex.jobname or tex.formatname) then
 
     subreport = function(a,s,b,c,...)
         if c then
-            write_nl(target,f_one(translations[a],translations[s],format(formats[b],c,...)))
+            write_nl(target,f_one(translations[a],translations[s],formatters[formats[b]](c,...)))
         elseif b then
             write_nl(target,f_one(translations[a],translations[s],formats[b]))
         elseif a then
@@ -116,7 +206,7 @@ if tex and (tex.jobname or tex.formatname) then
 
     subdirect = function(a,s,b,c,...)
         if c then
-            return f_one(translations[a],translations[s],format(formats[b],c,...))
+            return f_one(translations[a],translations[s],formatters[formats[b]](c,...))
         elseif b then
             return f_one(translations[a],translations[s],formats[b])
         elseif a then
@@ -131,7 +221,7 @@ if tex and (tex.jobname or tex.formatname) then
 
     status = function(a,b,c,...)
         if c then
-            write_nl(target,f_one(translations[a],format(formats[b],c,...)))
+            write_nl(target,f_one(translations[a],formatters[formats[b]](c,...)))
         elseif b then
             write_nl(target,f_one(translations[a],formats[b]))
         elseif a then
@@ -195,7 +285,7 @@ else
 
     report = function(a,b,c,...)
         if c then
-            write_nl(f_one(a,format(b,c,...)))
+            write_nl(f_one(a,formatters[b](c,...)))
         elseif b then
             write_nl(f_one(a,b))
         elseif a then
@@ -210,7 +300,7 @@ else
 
     subreport = function(a,sub,b,c,...)
         if c then
-            write_nl(f_one(a,sub,format(b,c,...)))
+            write_nl(f_one(a,sub,formatters[b](c,...)))
         elseif b then
             write_nl(f_one(a,sub,b))
         elseif a then
@@ -225,7 +315,7 @@ else
 
     status = function(a,b,c,...) -- not to be used in lua anyway
         if c then
-            write_nl(f_one(a,format(b,c,...)))
+            write_nl(f_one(a,formatters[b](c,...)))
         elseif b then
             write_nl(f_one(a,b)) -- b can have %'s
         elseif a then
@@ -407,9 +497,21 @@ function logs.show()
             state = "unknown"
         end
         -- no new here
-        report("logging","category: '%s', subcategories: '%s', state: '%s'",category,subcategories,state)
+        report("logging","category %a, subcategories %a, state %a",category,subcategories,state)
     end
     report("logging","categories: %s, max category: %s, max subcategory: %s, max combined: %s",n,c,s,max)
+end
+
+local delayed_reporters = { }
+
+setmetatableindex(delayed_reporters,function(t,k)
+    local v = logs.reporter(k.name)
+    t[k] = v
+    return v
+end)
+
+function utilities.setters.report(setter,...)
+    delayed_reporters[setter](...)
 end
 
 directives.register("logs.blocked", function(v)
@@ -453,46 +555,35 @@ function logs.stop_page_number() -- the first page can includes the initializati
             average  = (stoptime - starttime) / (real - 1)
         end
         lasttime = stoptime
-        if real > 0 then
-            if user > 0 then
-                if sub > 0 then
-                    report_pages("flushing realpage %s, userpage %s, subpage %s, time %0.04f / %0.04f",real,user,sub,elapsed,average)
-                else
-                    report_pages("flushing realpage %s, userpage %s, time %0.04f / %0.04f",real,user,elapsed,average)
-                end
-            else
-                report_pages("flushing realpage %s, time %0.04f / %0.04f",real,elapsed,average)
-            end
-        else
+        if real <= 0 then
             report_pages("flushing page, time %0.04f / %0.04f",elapsed,average)
+        elseif user <= 0 then
+            report_pages("flushing realpage %s, time %0.04f / %0.04f",real,elapsed,average)
+        elseif sub <= 0 then
+            report_pages("flushing realpage %s, userpage %s, time %0.04f / %0.04f",real,user,elapsed,average)
+        else
+            report_pages("flushing realpage %s, userpage %s, subpage %s, time %0.04f / %0.04f",real,user,sub,elapsed,average)
         end
     else
-        if real > 0 then
-            if user > 0 then
-                if sub > 0 then
-                    report_pages("flushing realpage %s, userpage %s, subpage %s",real,user,sub)
-                else
-                    report_pages("flushing realpage %s, userpage %s",real,user)
-                end
-            else
-                report_pages("flushing realpage %s",real)
-            end
-        else
+        if real <= 0 then
             report_pages("flushing page")
+        elseif user <= 0 then
+            report_pages("flushing realpage %s",real)
+        elseif sub <= 0 then
+            report_pages("flushing realpage %s, userpage %s",real,user)
+        else
+            report_pages("flushing realpage %s, userpage %s, subpage %s",real,user,sub)
         end
     end
     logs.flush()
 end
 
-logs.report_job_stat = statistics and statistics.showjobstat
+-- we don't have show_open and show_close callbacks yet
 
 local report_files = logs.reporter("files")
-
-local nesting   = 0
-local verbose   = false
-local hasscheme = url.hasscheme
-
--- we don't have show_open and show_close callbacks yet
+local nesting      = 0
+local verbose      = false
+local hasscheme    = url.hasscheme
 
 function logs.show_open(name)
  -- if hasscheme(name) ~= "virtual" then
@@ -500,7 +591,7 @@ function logs.show_open(name)
  --         nesting = nesting + 1
  --         report_files("level %s, opening %s",nesting,name)
  --     else
- --         write(format("(%s",name)) -- tex adds a space
+ --         write(formatters["(%s"](name)) -- tex adds a space
  --     end
  -- end
 end
@@ -521,7 +612,7 @@ function logs.show_load(name)
  --     if verbose then
  --         report_files("level %s, loading %s",nesting+1,name)
  --     else
- --         write(format("(%s)",name))
+ --         write(formatters["(%s)"](name))
  --     end
  -- end
 end
@@ -545,11 +636,26 @@ function logs.help        () end -- obsolete
 
 -- applications
 
+-- local function reportlines(t,str)
+--     if str then
+--         for line in gmatch(str,"([^\n\r]*)[\n\r]") do
+--             t.report(line)
+--         end
+--     end
+-- end
+
+local Carg, C, lpegmatch = lpeg.Carg, lpeg.C, lpeg.match
+local p_newline = lpeg.patterns.newline
+
+local linewise = (
+    Carg(1) * C((1-p_newline)^1) / function(t,s) t.report(s) end
+  + Carg(1) * p_newline^2        / function(t)   t.report()  end
+  + p_newline
+)^1
+
 local function reportlines(t,str)
     if str then
-        for line in gmatch(str,"(.-)[\n\r]") do
-            t.report(line)
-        end
+        lpegmatch(linewise,str,1,t)
     end
 end
 
@@ -573,8 +679,7 @@ local function reporthelp(t,...)
     if type(helpinfo) == "string" then
         reportlines(t,helpinfo)
     elseif type(helpinfo) == "table" then
-        local n = select("#",...)
-        for i=1,n do
+        for i=1,select("#",...) do
             reportlines(t,t.helpinfo[select(i,...)])
             if i < n then
                 t.report()
@@ -585,33 +690,65 @@ end
 
 local function reportinfo(t)
     t.report()
-    reportlines(t,moreinfo)
+    reportlines(t,t.moreinfo)
 end
+
+local function reportexport(t,method)
+    report(t.helpinfo)
+end
+
+local reporters = {
+    lines    = reportlines, -- not to be overloaded
+    banner   = reportbanner,
+    version  = reportversion,
+    help     = reporthelp,
+    info     = reportinfo,
+    export   = reportexport,
+}
+
+local exporters = {
+    -- empty
+}
+
+logs.reporters = reporters
+logs.exporters = exporters
 
 function logs.application(t)
     t.name     = t.name   or "unknown"
     t.banner   = t.banner
+    t.moreinfo = moreinfo
     t.report   = logs.reporter(t.name)
-    t.help     = function(...) reportbanner(t) ; reporthelp(t,...) ; reportinfo(t) end
-    t.identify = function() reportbanner(t) end
-    t.version  = function() reportversion(t) end
+    t.help     = function(...)
+        reporters.banner(t)
+        reporters.help(t,...)
+        reporters.info(t)
+    end
+    t.export   = function(...)
+        reporters.export(t,...)
+    end
+    t.identify = function()
+        reporters.banner(t)
+    end
+    t.version  = function()
+        reporters.version(t)
+    end
     return t
 end
 
--- somewhat special
+-- somewhat special .. will be redone (already a better solution in place in lmx)
 
 -- logging to a file
 
---~ local syslogname = "oeps.xxx"
---~
---~ for i=1,10 do
---~     logs.system(syslogname,"context","test","fonts","font %s recached due to newer version (%s)","blabla","123")
---~ end
+-- local syslogname = "oeps.xxx"
+--
+-- for i=1,10 do
+--     logs.system(syslogname,"context","test","fonts","font %s recached due to newer version (%s)","blabla","123")
+-- end
 
 function logs.system(whereto,process,jobname,category,...)
-    local message = format("%s %s => %s => %s => %s\r",os.date("%d/%m/%y %H:%m:%S"),process,jobname,category,format(...))
+    local message = formatters["%s %s => %s => %s => %s\r"](os.date("%d/%m/%y %H:%m:%S"),process,jobname,category,format(...))
     for i=1,10 do
-        local f = io.open(whereto,"a") -- we can consider keepint the file open
+        local f = io.open(whereto,"a") -- we can consider keeping the file open
         if f then
             f:write(message)
             f:close()
@@ -628,18 +765,18 @@ function logs.obsolete(old,new)
     local o = loadstring("return " .. new)()
     if type(o) == "function" then
         return function(...)
-            report_system("function %s is obsolete, use %s",old,new)
+            report_system("function %a is obsolete, use %a",old,new)
             loadstring(old .. "=" .. new  .. " return ".. old)()(...)
         end
     elseif type(o) == "table" then
         local t, m = { }, { }
         m.__index = function(t,k)
-            report_system("table %s is obsolete, use %s",old,new)
+            report_system("table %a is obsolete, use %a",old,new)
             m.__index, m.__newindex = o, o
             return o[k]
         end
         m.__newindex = function(t,k,v)
-            report_system("table %s is obsolete, use %s",old,new)
+            report_system("table %a is obsolete, use %a",old,new)
             m.__index, m.__newindex = o, o
             o[k] = v
         end
@@ -665,7 +802,15 @@ else
     end
 end
 
--- do we still need io.flush then?
+-- this is somewhat slower but prevents out-of-order messages when print is mixed
+-- with texio.write
 
 io.stdout:setvbuf('no')
 io.stderr:setvbuf('no')
+
+-- windows: > nul  2>&1
+-- unix   : > null 2>&1
+
+if package.helpers.report then
+    package.helpers.report = logs.reporter("package loader") -- when used outside mtxrun
+end

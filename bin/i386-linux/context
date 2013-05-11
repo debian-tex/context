@@ -1,2 +1,1 @@
-#!/bin/sh
-mtxrun --script context "$@"
+../../texmf-dist/scripts/context/stubs/unix/context

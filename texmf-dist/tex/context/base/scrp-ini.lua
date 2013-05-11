@@ -18,8 +18,6 @@ local report_preprocessing = logs.reporter("scripts","preprocessing")
 
 local utfchar = utf.char
 
-local set_attribute     = node.set_attribute
-local has_attribute     = node.has_attribute
 local first_glyph       = node.first_glyph or node.first_character
 local traverse_id       = node.traverse_id
 
@@ -219,7 +217,7 @@ function scripts.installmethod(handler)
     local attributes = { }
     local datasets = handler.datasets
     if not datasets or not datasets.default then
-        report_preprocessing("missing (default) dataset in script '%s'",name)
+        report_preprocessing("missing (default) dataset in script %a",name)
         datasets.default = { } -- slower but an error anyway
     end
     for k, v in next, datasets do
@@ -259,7 +257,7 @@ function scripts.installdataset(specification) -- global overload
                         if p then
                             defaultset = p
                         else
-                            report_preprocessing("dataset, unknown parent '%s' for method '%s'",parent,method)
+                            report_preprocessing("dataset, unknown parent %a for method %a",parent,method)
                         end
                     end
                     setmetatable(dataset,defaultset)
@@ -272,13 +270,13 @@ function scripts.installdataset(specification) -- global overload
                         datasets[name] = dataset
                     end
                 else
-                    report_preprocessing("dataset, no default for method '%s'",method)
+                    report_preprocessing("dataset, no default for method %a",method)
                 end
             else
-                report_preprocessing("dataset, no datasets for method '%s'",method)
+                report_preprocessing("dataset, no datasets for method %a",method)
             end
         else
-            report_preprocessing("dataset, no method '%s'",method)
+            report_preprocessing("dataset, no method %a",method)
         end
     else
         report_preprocessing("dataset, invalid specification") -- maybe report table
@@ -347,7 +345,7 @@ scripts.numbertocategory = numbertocategory
 
 local function colorize(start,stop)
     for n in traverse_id(glyph_code,start) do
-        local kind = numbertocategory[has_attribute(n,a_prestat)]
+        local kind = numbertocategory[n[a_prestat]]
         if kind then
             local ac = scriptcolors[kind]
             if ac then
@@ -378,8 +376,8 @@ end
 
 -- we can have a fonts.hashes.originals
 
-function scripts.preprocess(head) -- we could probably pass the first glyph (as it's already known)
-    local start = first_glyph(head)
+function scripts.preprocess(head)
+    local start = first_glyph(head) -- we already have glyphs here (subtype 1)
     if not start then
         return head, false
     else
@@ -388,7 +386,7 @@ function scripts.preprocess(head) -- we could probably pass the first glyph (as 
         while start do
             local id = start.id
             if id == glyph_code then
-                local a = has_attribute(start,a_preproc)
+                local a = start[a_preproc]
                 if a then
                     if a ~= last_a then
                         if first then
@@ -426,15 +424,15 @@ function scripts.preprocess(head) -- we could probably pass the first glyph (as 
                         end
                         local h = hash[c]
                         if h then
-                            set_attribute(start,a_prestat,categorytonumber[h])
+                            start[a_prestat] = categorytonumber[h]
                             if not first then
                                 first, last = start, start
                             else
                                 last = start
                             end
-                        --    if cjk == "chinese" or cjk == "korean" then -- we need to prevent too much ( ) processing
+                         -- if cjk == "chinese" or cjk == "korean" then -- we need to prevent too much ( ) processing
                                 ok = true
-                        --    end
+                         -- end
                         elseif first then
                             if ok then
                                 if trace_analyzing then
@@ -535,26 +533,26 @@ setmetatableindex(cache_nop,function(t,k) local v = { } t[k] = v return v end)
 
 function autofontfeature.handler(head)
     for n in traverse_id(glyph_code,head) do
-     -- if has_attribute(n,a_preproc) then
+     -- if n[a_preproc] then
      --     -- already tagged by script feature, maybe some day adapt
      -- else
             local char = n.char
             local script = otfscripts[char]
             if script then
-                local dynamic = has_attribute(n,0) or 0
+                local dynamic = n[0] or 0
                 local font = n.font
                 if dynamic > 0 then
                     local slot = cache_yes[font]
                     local attr = slot[script]
                     if not attr then
-                        attr = mergecontext(dynamic,name,what)
+                        attr = mergecontext(dynamic,name,2)
                         slot[script] = attr
                         if trace_scripts then
-                            report_scripts("script: %s, trigger 0x%05X (%s), dynamic: %s (extended)",script,char,utfchar(char),attr)
+                            report_scripts("script: %s, trigger %C, dynamic: %a, variant: %a",script,char,attr,"extended")
                         end
                     end
                     if attr ~= 0 then
-                        set_attribute(n,0,attr)
+                        n[0] = attr
                         -- maybe set preproc when associated
                     end
                 else
@@ -564,11 +562,11 @@ function autofontfeature.handler(head)
                         attr = registercontext(font,script,2)
                         slot[script] = attr
                         if trace_scripts then
-                            report_scripts("script: %s, trigger 0x%05X (%s), dynamic: %s",script,char,utfchar(char),attr)
+                            report_scripts("script: %s, trigger %C, dynamic: %s, variant: %a",script,char,attr,"normal")
                         end
                     end
                     if attr ~= 0 then
-                        set_attribute(n,0,attr)
+                        n[0] = attr
                         -- maybe set preproc when associated
                     end
                 end

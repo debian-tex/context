@@ -115,12 +115,31 @@ end
 
 job.register('structures.lists.collected', tobesaved, initializer)
 
+local groupindices = table.setmetatableindex("table")
+
+function lists.groupindex(name,group)
+    local groupindex = groupindices[name]
+    return groupindex and groupindex[group] or 0
+end
+
 function lists.addto(t)
+    local m = t.metadata
     local u = t.userdata
     if u and type(u) == "string" then
         t.userdata = helpers.touserdata(u) -- nicer at the tex end
     end
-    local m = t.metadata
+    local numberdata = t.numberdata
+    local group = numberdata and numberdata.group
+    if not group then
+        -- forget about it
+    elseif group == "" then
+        group, numberdata.group = nil, nil
+    else
+        local groupindex = groupindices[m.name][group]
+        if groupindex then
+            numberdata.numbers = cached[groupindex].numberdata.numbers
+        end
+    end
     local r = t.references
     local i = r and r.internal or 0 -- brrr
     local p = pushed[i]
@@ -133,6 +152,9 @@ function lists.addto(t)
     local setcomponent = references.setcomponent
     if setcomponent then
         setcomponent(t) -- might move to the tex end
+    end
+    if group then
+        groupindices[m.name][group] = p
     end
     return p
 end
@@ -196,11 +218,12 @@ end
 local nesting = { }
 
 function lists.pushnesting(i)
-    local r = lists.result[i]
-    local name = r.metadata.name
-    local numberdata = r and r.numberdata
-    local n = (numberdata and numberdata.numbers[sections.getlevel(name)]) or 0
-    insert(nesting, { number = n, name = name, result = lists.result, parent = r })
+    local parent = lists.result[i]
+    local name = parent.metadata.name
+    local numberdata = parent and parent.numberdata
+    local numbers = numberdata and numberdata.numbers
+    local number = numbers and numbers[sections.getlevel(name)] or 0
+    insert(nesting, { number = number, name = name, result = lists.result, parent = parent })
 end
 
 function lists.popnesting()
@@ -239,10 +262,10 @@ local function filtercollected(names, criterium, number, collected, forced, nest
     criterium = gsub(criterium or ""," ","") -- not needed
     -- new, will be applied stepwise
     local wantedblock, wantedcriterium = lpegmatch(splitter,criterium) -- block:criterium
-    if not wantedcriterium then
-        block = documents.data.block
-    elseif wantedblock == "" or wantedblock == variables.all or wantedblock == variables.text then
+    if wantedblock == "" or wantedblock == variables.all or wantedblock == variables.text then
         criterium = wantedcriterium ~= "" and wantedcriterium or criterium
+    elseif not wantedcriterium then
+        block = documents.data.block
     else
         block, criterium = wantedblock, wantedcriterium
     end
@@ -257,8 +280,7 @@ local function filtercollected(names, criterium, number, collected, forced, nest
     end
     local all = not next(names) or names[variables.all] or false
     if trace_lists then
-        report_lists("filtering names: %s, criterium: %s, block: %s, number: %s",
-            simple_hash_to_string(names),criterium,block or "*", number or "-")
+        report_lists("filtering names %a, criterium %a, block %a, number %a",names,criterium,block or "*",number)
     end
     if criterium == variables.intro then
         -- special case, no structure yet
@@ -412,7 +434,7 @@ local function filtercollected(names, criterium, number, collected, forced, nest
         local number = tonumber(number) or numberatdepth(depth) or 0
         if trace_lists then
             local t = sections.numbers()
-            detail = format("depth: %s, number: %s, numbers: %s, startset: %s",depth,number,(#t>0 and concat(t,".",1,depth)) or "?",#collected)
+            detail = format("depth %s, number %s, numbers %s, startset %s",depth,number,(#t>0 and concat(t,".",1,depth)) or "?",#collected)
         end
         if number > 0 then
             local pnumbers = nil
@@ -442,18 +464,14 @@ local function filtercollected(names, criterium, number, collected, forced, nest
         end
     end
     if trace_lists then
-        if detail then
-            report_lists("criterium: %s, block: %s, %s, found: %s",criterium,block or "*",detail,#result)
-        else
-            report_lists("criterium: %s, block: %s, found: %s",criterium,block or "*",#result)
-        end
+        report_lists("criterium %a, block %a, found %a, detail %a",criterium,block or "*",#result,detail)
     end
 
     if sortorder then -- experiment
         local sorter = sorters[sortorder]
         if sorter then
             if trace_lists then
-                report_lists("sorting list using method %s",sortorder)
+                report_lists("sorting list using method %a",sortorder)
             end
             for i=1,#result do
                 result[i].references.order = i
@@ -622,7 +640,6 @@ function lists.prefixednumber(name,n,prefixspec,numberspec)
         helpers.prefix(data,prefixspec)
         local numberdata = data.numberdata
         if numberdata then
---~     print(table.serialize(numberspec))
             sections.typesetnumber(numberdata,"number",numberspec or false,numberdata or false)
         end
     end
@@ -662,11 +679,12 @@ commands.listprefixednumber = lists.prefixednumber
 commands.listprefixedpage   = lists.prefixedpage
 
 
-function commands.addtolist   (...) context(lists.addto   (...)) end -- we could use variables instead of print
-function commands.listsize    (...) context(lists.size    (...)) end
-function commands.listlocation(...) context(lists.location(...)) end
-function commands.listlabel   (...) context(lists.label   (...)) end
-function commands.listrealpage(...) context(lists.realpage(...)) end
+function commands.addtolist     (...) context(lists.addto     (...)) end -- we could use variables instead of print
+function commands.listsize      (...) context(lists.size      (...)) end
+function commands.listlocation  (...) context(lists.location  (...)) end
+function commands.listlabel     (...) context(lists.label     (...)) end
+function commands.listrealpage  (...) context(lists.realpage  (...)) end
+function commands.listgroupindex(...) context(lists.groupindex(...)) end
 
 function commands.listuserdata(...)
     local str, metadata = lists.userdata(...)

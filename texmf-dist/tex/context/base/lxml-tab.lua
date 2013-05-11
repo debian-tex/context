@@ -16,7 +16,7 @@ if not modules then modules = { } end modules ['lxml-tab'] = {
 
 local trace_entities = false  trackers.register("xml.entities", function(v) trace_entities = v end)
 
-local report_xml = logs and logs.reporter("xml","core") or function(...) print(format(...)) end
+local report_xml = logs and logs.reporter("xml","core") or function(...) print(string.format(...)) end
 
 --[[ldx--
 <p>The parser used here is inspired by the variant discussed in the lua book, but
@@ -41,10 +41,11 @@ local xml = xml
 
 local concat, remove, insert = table.concat, table.remove, table.insert
 local type, next, setmetatable, getmetatable, tonumber = type, next, setmetatable, getmetatable, tonumber
-local format, lower, find, match, gsub = string.format, string.lower, string.find, string.match, string.gsub
+local lower, find, match, gsub = string.lower, string.find, string.match, string.gsub
 local utfchar = utf.char
 local lpegmatch = lpeg.match
 local P, S, R, C, V, C, Cs = lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.V, lpeg.C, lpeg.Cs
+local formatters = string.formatters
 
 --[[ldx--
 <p>First a hack to enable namespace resolving. A namespace is characterized by
@@ -208,7 +209,7 @@ local function add_empty(spacing, namespace, tag)
     if #spacing > 0 then
         dt[#dt+1] = spacing
     end
-    local resolved = (namespace == "" and xmlns[#xmlns]) or nsremap[namespace] or namespace
+    local resolved = namespace == "" and xmlns[#xmlns] or nsremap[namespace] or namespace
     top = stack[#stack]
     dt = top.dt
     local t = { ns=namespace or "", rn=resolved, tg=tag, at=at, dt={}, __p__ = top }
@@ -224,7 +225,7 @@ local function add_begin(spacing, namespace, tag)
     if #spacing > 0 then
         dt[#dt+1] = spacing
     end
-    local resolved = (namespace == "" and xmlns[#xmlns]) or nsremap[namespace] or namespace
+    local resolved = namespace == "" and xmlns[#xmlns] or nsremap[namespace] or namespace
     top = { ns=namespace or "", rn=resolved, tg=tag, at=at, dt={}, __p__ = stack[#stack] }
     setmetatable(top, mt)
     dt = top.dt
@@ -239,9 +240,9 @@ local function add_end(spacing, namespace, tag)
     local toclose = remove(stack)
     top = stack[#stack]
     if #stack < 1 then
-        errorstr = format("nothing to close with %s %s", tag, xml.checkerror(top,toclose) or "")
+        errorstr = formatters["unable to close %s %s"](tag,xml.checkerror(top,toclose) or "")
     elseif toclose.tg ~= tag then -- no namespace check
-        errorstr = format("unable to close %s with %s %s", toclose.tg, tag, xml.checkerror(top,toclose) or "")
+        errorstr = formatters["unable to close %s with %s %s"](toclose.tg,tag,xml.checkerror(top,toclose) or "")
     end
     dt = top.dt
     dt[#dt+1] = toclose
@@ -278,7 +279,7 @@ local reported_attribute_errors = { }
 
 local function attribute_value_error(str)
     if not reported_attribute_errors[str] then
-        report_xml("invalid attribute value: %q",str)
+        report_xml("invalid attribute value %a",str)
         reported_attribute_errors[str] = true
         at._error_ = str
     end
@@ -287,7 +288,7 @@ end
 
 local function attribute_specification_error(str)
     if not reported_attribute_errors[str] then
-        report_xml("invalid attribute specification: %q",str)
+        report_xml("invalid attribute specification %a",str)
         reported_attribute_errors[str] = true
         at._error_ = str
     end
@@ -295,9 +296,9 @@ local function attribute_specification_error(str)
 end
 
 xml.placeholders = {
-    unknown_dec_entity = function(str) return (str == "" and "&error;") or format("&%s;",str) end,
-    unknown_hex_entity = function(str) return format("&#x%s;",str) end,
-    unknown_any_entity = function(str) return format("&#x%s;",str) end,
+    unknown_dec_entity = function(str) return str == "" and "&error;" or formatters["&%s;"](str) end,
+    unknown_hex_entity = function(str) return formatters["&#x%s;"](str) end,
+    unknown_any_entity = function(str) return formatters["&#x%s;"](str) end,
 }
 
 local placeholders = xml.placeholders
@@ -307,7 +308,7 @@ local function fromhex(s)
     if n then
         return utfchar(n)
     else
-        return format("h:%s",s), true
+        return formatters["h:%s"](s), true
     end
 end
 
@@ -316,7 +317,7 @@ local function fromdec(s)
     if n then
         return utfchar(n)
     else
-        return format("d:%s",s), true
+        return formatters["d:%s"](s), true
     end
 end
 
@@ -392,14 +393,14 @@ local function handle_hex_entity(str)
         h = unify_predefined and predefined_unified[n]
         if h then
             if trace_entities then
-                report_xml("utfize, converting hex entity &#x%s; into %s",str,h)
+                report_xml("utfize, converting hex entity &#x%s; into %a",str,h)
             end
         elseif utfize then
             h = (n and utfchar(n)) or xml.unknown_hex_entity(str) or ""
             if not n then
                 report_xml("utfize, ignoring hex entity &#x%s;",str)
             elseif trace_entities then
-                report_xml("utfize, converting hex entity &#x%s; into %s",str,h)
+                report_xml("utfize, converting hex entity &#x%s; into %a",str,h)
             end
         else
             if trace_entities then
@@ -419,14 +420,14 @@ local function handle_dec_entity(str)
         d = unify_predefined and predefined_unified[n]
         if d then
             if trace_entities then
-                report_xml("utfize, converting dec entity &#%s; into %s",str,d)
+                report_xml("utfize, converting dec entity &#%s; into %a",str,d)
             end
         elseif utfize then
             d = (n and utfchar(n)) or placeholders.unknown_dec_entity(str) or ""
             if not n then
                 report_xml("utfize, ignoring dec entity &#%s;",str)
             elseif trace_entities then
-                report_xml("utfize, converting dec entity &#%s; into %s",str,d)
+                report_xml("utfize, converting dec entity &#%s; into %a",str,d)
             end
         else
             if trace_entities then
@@ -448,7 +449,7 @@ local function handle_any_entity(str)
             a = resolve_predefined and predefined_simplified[str]
             if a then
                 if trace_entities then
-                    report_xml("resolved entity &%s; -> %s (predefined)",str,a)
+                    report_xml("resolving entity &%s; to predefined %a",str,a)
                 end
             else
                 if type(resolve) == "function" then
@@ -459,13 +460,13 @@ local function handle_any_entity(str)
                 if a then
                     if type(a) == "function" then
                         if trace_entities then
-                            report_xml("expanding entity &%s; (function)",str)
+                            report_xml("expanding entity &%s; to function call",str)
                         end
                         a = a(str) or ""
                     end
                     a = lpegmatch(parsedentity,a) or a -- for nested
                     if trace_entities then
-                        report_xml("resolved entity &%s; -> %s (internal)",str,a)
+                        report_xml("resolving entity &%s; to internal %a",str,a)
                     end
                 else
                     local unknown_any_entity = placeholders.unknown_any_entity
@@ -474,7 +475,7 @@ local function handle_any_entity(str)
                     end
                     if a then
                         if trace_entities then
-                            report_xml("resolved entity &%s; -> %s (external)",str,a)
+                            report_xml("resolving entity &%s; to external %s",str,a)
                         end
                     else
                         if trace_entities then
@@ -491,7 +492,7 @@ local function handle_any_entity(str)
             acache[str] = a
         elseif trace_entities then
             if not acache[str] then
-                report_xml("converting entity &%s; into %s",str,a)
+                report_xml("converting entity &%s; to %a",str,a)
                 acache[str] = a
             end
         end
@@ -504,7 +505,7 @@ local function handle_any_entity(str)
                 -- one of the predefined
                 acache[str] = a
                 if trace_entities then
-                    report_xml("entity &%s; becomes %s",str,tostring(a))
+                    report_xml("entity &%s; becomes %a",str,a)
                 end
             elseif str == "" then
                 if trace_entities then
@@ -526,7 +527,7 @@ local function handle_any_entity(str)
 end
 
 local function handle_end_entity(chr)
-    report_xml("error in entity, %q found instead of ';'",chr)
+    report_xml("error in entity, %a found instead of %a",chr,";")
 end
 
 local space            = S(' \r\n\t')
@@ -680,8 +681,6 @@ local function _xmlconvert_(data, settings)
         resolve_predefined = true
     end
     --
---~ inspect(settings)
-    --
     stack, top, at, xmlns, errorstr = { }, { }, { }, { }, nil
     acache, hcache, dcache = { }, { }, { } -- not stored
     reported_attribute_errors = { }
@@ -722,9 +721,9 @@ local function _xmlconvert_(data, settings)
             if errorhandler then
                 local currentresource = settings.currentresource
                 if currentresource and currentresource ~= "" then
-                    xml.errorhandler(format("load error in [%s]: %s",currentresource,errorstr))
+                    xml.errorhandler(formatters["load error in [%s]: %s"](currentresource,errorstr))
                 else
-                    xml.errorhandler(format("load error: %s",errorstr))
+                    xml.errorhandler(formatters["load error: %s"](errorstr))
                 end
             end
         end
@@ -923,7 +922,7 @@ local function verbose_element(e,handlers) -- options
     local ats = eat and next(eat) and { }
     if ats then
         for k,v in next, eat do
-            ats[#ats+1] = format('%s=%q',k,escaped(v))
+            ats[#ats+1] = formatters['%s=%q'](k,escaped(v))
         end
     end
     if ern and trace_entities and ern ~= ens then
@@ -1053,7 +1052,7 @@ end
 local handlers = { }
 
 local function newhandlers(settings)
-    local t = table.copy(handlers.verbose or { }) -- merge
+    local t = table.copy(handlers[settings and settings.parent or "verbose"] or { }) -- merge
     if settings then
         for k,v in next, settings do
             if type(v) == "table" then
@@ -1177,7 +1176,7 @@ local xmlstringhandler = newhandlers {
 local function xmltostring(root) -- 25% overhead due to collecting
     if not root then
         return ""
-    elseif type(root) == 'string' then
+    elseif type(root) == "string" then
         return root
     else -- if next(root) then -- next is faster than type (and >0 test)
         return serialize(root,xmlstringhandler) or ""
@@ -1253,16 +1252,19 @@ function xml.parent(root)
 end
 
 function xml.body(root)
-    return (root.ri and root.dt[root.ri]) or root -- not ok yet
+    return root.ri and root.dt[root.ri] or root -- not ok yet
 end
 
 function xml.name(root)
     if not root then
         return ""
-    elseif root.ns == "" then
-        return root.tg
+    end
+    local ns = root.ns
+    local tg = root.tg
+    if ns == "" then
+        return tg
     else
-        return root.ns .. ":" .. root.tg
+        return ns .. ":" .. tg
     end
 end
 
@@ -1292,7 +1294,7 @@ dt[k] = xml.assign(root) or xml.assign(dt,k,root)
 
 function xml.assign(dt,k,root)
     if dt and k then
-        dt[k] = (type(root) == "table" and xml.body(root)) or root
+        dt[k] = type(root) == "table" and xml.body(root) or root
         return dt[k]
     else
         return xml.body(root)
@@ -1312,7 +1314,7 @@ xml.tocdata(e,"error")
 function xml.tocdata(e,wrapper) -- a few more in the aux module
     local whatever = type(e) == "table" and xmltostring(e.dt) or e or ""
     if wrapper then
-        whatever = format("<%s>%s</%s>",wrapper,whatever,wrapper)
+        whatever = formatters["<%s>%s</%s>"](wrapper,whatever,wrapper)
     end
     local t = { special = true, ns = "", tg = "@cd@", at = { }, rn = "", dt = { whatever }, __p__ = e }
     setmetatable(t,getmetatable(e))

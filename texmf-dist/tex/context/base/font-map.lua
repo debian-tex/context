@@ -11,6 +11,7 @@ local tonumber = tonumber
 local match, format, find, concat, gsub, lower = string.match, string.format, string.find, table.concat, string.gsub, string.lower
 local P, R, S, C, Ct, Cc, lpegmatch = lpeg.P, lpeg.R, lpeg.S, lpeg.C, lpeg.Ct, lpeg.Cc, lpeg.match
 local utfbyte = utf.byte
+local floor = math.floor
 
 local trace_loading = false  trackers.register("fonts.loading", function(v) trace_loading    = v end)
 local trace_mapping = false  trackers.register("fonts.mapping", function(v) trace_unimapping = v end)
@@ -32,7 +33,7 @@ local function loadlumtable(filename) -- will move to font goodies
     local lumfile = resolvers.findfile(lumname,"map") or ""
     if lumfile ~= "" and lfs.isfile(lumfile) then
         if trace_loading or trace_mapping then
-            report_fonts("enhance: loading %s ",lumfile)
+            report_fonts("loading map table %a",lumfile)
         end
         lumunic = dofile(lumfile)
         return lumunic, lumfile
@@ -65,25 +66,27 @@ local function makenameparser(str)
     end
 end
 
---~ local parser = mappings.makenameparser("Japan1")
---~ local parser = mappings.makenameparser()
---~ local function test(str)
---~     local b, a = lpegmatch(parser,str)
---~     print((a and table.serialize(b)) or b)
---~ end
---~ test("a.sc")
---~ test("a")
---~ test("uni1234")
---~ test("uni1234.xx")
---~ test("uni12349876")
---~ test("index1234")
---~ test("Japan1.123")
+-- local parser = mappings.makenameparser("Japan1")
+-- local parser = mappings.makenameparser()
+-- local function test(str)
+--     local b, a = lpegmatch(parser,str)
+--     print((a and table.serialize(b)) or b)
+-- end
+-- test("a.sc")
+-- test("a")
+-- test("uni1234")
+-- test("uni1234.xx")
+-- test("uni12349876")
+-- test("index1234")
+-- test("Japan1.123")
 
 local function tounicode16(unicode)
     if unicode < 0x10000 then
         return format("%04X",unicode)
+    elseif unicode < 0x1FFFFFFFFF then
+        return format("%04X%04X",floor(unicode/1024),unicode%1024+0xDC00)
     else
-        return format("%04X%04X",unicode/1024+0xD800,unicode%1024+0xDC00)
+        report_fonts("can't convert %a into tounicode",unicode)
     end
 end
 
@@ -93,8 +96,10 @@ local function tounicode16sequence(unicodes)
         local unicode = unicodes[l]
         if unicode < 0x10000 then
             t[l] = format("%04X",unicode)
+        elseif unicode < 0x1FFFFFFFFF then
+            t[l] = format("%04X%04X",floor(unicode/1024),unicode%1024+0xDC00)
         else
-            t[l] = format("%04X%04X",unicode/1024+0xD800,unicode%1024+0xDC00)
+            report_fonts ("can't convert %a into tounicode",unicode)
         end
     end
     return concat(t)
@@ -297,13 +302,13 @@ function mappings.addtounicode(data,filename)
             local index = glyph.index
             local toun  = tounicode[index]
             if toun then
-                report_fonts("internal: 0x%05X, name: %s, unicode: U+%05X, tounicode: %s",index,name,unic,toun)
+                report_fonts("internal slot %U, name %a, unicode %U, tounicode %a",index,name,unic,toun)
             else
-                report_fonts("internal: 0x%05X, name: %s, unicode: U+%05X",index,name,unic)
+                report_fonts("internal slot %U, name %a, unicode %U",index,name,unic)
             end
         end
     end
     if trace_loading and (ns > 0 or nl > 0) then
-        report_fonts("enhance: %s tounicode entries added (%s ligatures)",nl+ns, ns)
+        report_fonts("%s tounicode entries added, ligatures %s",nl+ns,ns)
     end
 end

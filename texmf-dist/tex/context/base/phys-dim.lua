@@ -646,7 +646,7 @@ labels.suffixes = allocate {
 
 local function dimpus(p,u,s)
     if trace_units then
-        report_units("p: [%s], u: [%s], s: [%s]",p or "?",u or "?",s or "?")
+        report_units("prefix %a, unit %a, suffix %a",p,u,s)
     end    --
     if p ~= "" then
         if u ~= ""  then
@@ -683,7 +683,7 @@ end
 
 local function dimop(o)
     if trace_units then
-        report_units("o: [%s]",o or "?")
+        report_units("operator %a",o)
     end
     if o then
         unitsO(o)
@@ -692,7 +692,7 @@ end
 
 local function dimsym(s)
     if trace_units then
-        report_units("s: [%s]",s or "?")
+        report_units("symbol %a",s)
     end
     s = symbol_units[s] or s
     if s then
@@ -702,7 +702,7 @@ end
 
 local function dimpre(p)
     if trace_units then
-        report_units("p: [%s]",p or "?")
+        report_units("prefix [%a",p)
     end
     p = packaged_units[p] or p
     if p then
@@ -816,6 +816,8 @@ local function update_parsers() -- todo: don't remap utf sequences
     local start  = Cc(nil) / unitsNstart
     local stop   = Cc(nil) / unitsNstop
     local space  = Cc(nil) / unitsNspace
+
+    -- todo: avoid \unitsNstart\unitsNstop (weird that it can happen .. now catched at tex end)
 
     local p_c_combinedparser  = P { "start",
         number = start * dleader * (p_c_dparser + number) * stop,

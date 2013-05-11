@@ -46,9 +46,23 @@ if not modules then modules = { } end modules ['mtx-rsync'] = {
 -- }
 
 local helpinfo = [[
---job                 use given file as specification
---dryrun              show what would happen
---force               force run
+<?xml version="1.0"?>
+<application>
+ <metadata>
+  <entry name="name">mtx-rsync</entry>
+  <entry name="detail">Rsync Helpers</entry>
+  <entry name="version">0.10</entry>
+ </metadata>
+ <flags>
+  <category name="basic">
+   <subcategory>
+    <flag name="job"><short>use given file as specification</short></flag>
+    <flag name="dryrun"><short>show what would happen</short></flag>
+    <flag name="force"><short>force run</short></flag>
+   </subcategory>
+  </category>
+ </flags>
+</application>
 ]]
 
 local application = logs.application {
@@ -79,7 +93,7 @@ else
 end
 
 function rsynccommand(dryrun,recurse,origin,target)
-    local command = "rsync -ptlv "
+    local command = "rsync -ptlva "
     if dryrun then
         command = command .. "-n "
     end
@@ -104,6 +118,11 @@ function rsync.run(origin,target,message,recurse)
     end
     origin = cleanup(origin)
     target = cleanup(target)
+    local path = gsub(target,"^/cygdrive/(.)","%1:")
+    if not lfs.isdir(path) then
+        report_message("creating target dir %s",path)
+        dir.makedirs(path) -- as rsync only creates them when --recursive
+    end
     if message then
         report_message(message)
     end
@@ -159,7 +178,9 @@ elseif arguments.force then
     rsync.mode = "force"
 end
 
-if arguments.job then
+if arguments.exporthelp then
+    application.export(arguments.exporthelp,environment.files[1])
+elseif arguments.job then
     rsync.job(files[1])
 elseif files[1] and files[2] then
     rsync.run(files[1],files[2])

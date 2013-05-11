@@ -26,7 +26,7 @@
 
     local arguments = environment.arguments
     local suffix    = environment.suffix
-    local filename  = environment.filename
+    local filename  = environment.filename -- hm, not inputfilename !
 
     if suffix == "xml" or arguments.forcexml then
 
@@ -80,7 +80,9 @@
         -- We have a regular tex file so no \starttext yet as we can
         -- load fonts.
 
+     -- context.enabletrackers { "resolvers.*" }
         context.input(filename)
+     -- context.disabletrackers { "resolvers.*" }
 
     end
 

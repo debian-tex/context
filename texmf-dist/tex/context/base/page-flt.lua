@@ -112,12 +112,12 @@ function floats.save(which,data)
         insert(stack,t)
         setcount("global","savednoffloats",#stacks[default])
         if trace_floats then
-            report_floats("saving %s float %s in slot %s (%i,%i,%i)",which,noffloats,#stack,w,h,d)
+            report_floats("%s, category %a, number %a, slot %a, width %p, height %p, depth %p","saving",which,noffloats,#stack,w,h,d)
         else
             interfaces.showmessage("floatblocks",2,noffloats)
         end
     else
-        report_floats("unable to save %s float %s (empty)",which,noffloats)
+        report_floats("ignoring empty, category %a, number %a",which,noffloats)
     end
 end
 
@@ -132,7 +132,7 @@ function floats.resave(which)
         insert(stack,1,last)
         setcount("global","savednoffloats",#stacks[default])
         if trace_floats then
-            report_floats("resaving %s float %s in slot %s (%i,%i,%i)",which,noffloats,#stack,w,h,d)
+            report_floats("%s, category %a, number %a, slot %a width %p, height %p, depth %p","resaving",which,noffloats,#stack,w,h,d)
         else
             interfaces.showmessage("floatblocks",2,noffloats)
         end
@@ -148,7 +148,7 @@ function floats.flush(which,n,bylabel)
     if t then
         local w, h, d = setdimensions(b)
         if trace_floats then
-            report_floats("flushing %s float %s from slot %s (%i,%i,%i)",which,t.n,n,w,h,d)
+            report_floats("%s, category %a, number %a, slot %a width %p, height %p, depth %p","flushing",which,t.n,n,w,h,d)
         else
             interfaces.showmessage("floatblocks",3,t.n)
         end
@@ -168,7 +168,7 @@ function floats.consult(which,n)
     if t then
         local w, h, d = setdimensions(b)
         if trace_floats then
-            report_floats("consulting %s float %s in slot %s (%i,%i,%i)",which,t.n,n,w,h,d)
+            report_floats("%s, category %a, number %a, slot %a width %p, height %p, depth %p","consulting",which,t.n,n,w,h,d)
         end
         return t, b, n
     else
@@ -236,13 +236,15 @@ function floats.nofstacked()
     return #stacks[which or default] or 0
 end
 
+-- todo: check for digits !
+
 local method   = C((1-S(", :"))^1)
-local position = P(":") * C((1-S("*,"))^1) * P("*") * C((1-S(","))^1)
+local position = P(":") * C((1-S("*,"))^1) * (P("*") * C((1-S(","))^1))^0
 local label    = P(":") * C((1-S(",*: "))^0)
 
 local pattern = method * (
-    label * position
-  + C("") * position
+    label * position * C("")
+  + C("") * position * C("")
   + label * C("") * C("")
   + C("") * C("") * C("")
 ) + C("") * C("") * C("") * C("")
@@ -255,7 +257,7 @@ local pattern = method * (
 -- inspect { lpegmatch(pattern,"somewhere") }
 -- inspect { lpegmatch(pattern,"") }
 
-function floats.analysemethod(str)
+function floats.analysemethod(str) -- will become a more extensive parser
     return lpegmatch(pattern,str or "")
 end
 
@@ -278,10 +280,10 @@ function commands.checkedpagefloat  (...) local v = floats.checkedpagefloat(...)
 function commands.nofstackedfloats  (...) context(floats.nofstacked(...))             end
 function commands.doifelsesavedfloat(...) commands.doifelse(floats.nofstacked(...)>0) end
 
-function commands.analysefloatmethod(str)
+function commands.analysefloatmethod(str) -- currently only one method
     local method, label, row, column = floats.analysemethod(str)
-    setvalue("floatmethod",method)
-    setvalue("floatlabel", label )
-    setvalue("floatrow",   row   )
-    setvalue("floatcolumn",column)
+    setvalue("floatmethod",method or "")
+    setvalue("floatlabel", label  or "")
+    setvalue("floatrow",   row    or "")
+    setvalue("floatcolumn",column or "")
 end

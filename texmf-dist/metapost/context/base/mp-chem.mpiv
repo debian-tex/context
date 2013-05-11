@@ -32,15 +32,14 @@ numeric
     chem_front_b[] ;
 
 boolean
-    chem_setting_axis, chem_setting_fitwidth, chem_setting_fitheight,
-    chem_doing_pb, chem_text_trace, chem_bd_wedge,
+    chem_setting_axis,
+    chem_doing_pb, chem_bd_wedge,
     chem_star[], chem_front[], chem_stacked[], chem_tetra[] ;
 
 string
     chem_previous ;
 
 path
-    chem_setting_bbox,
     chem_path[], % scratch
     chem_b_path[], chem_c_path[],
     chem_r_path[], chem_r_path.lft[], chem_r_path.rt[] ;
@@ -61,6 +60,12 @@ transform
 
 color lightblue ; lightblue := (173/255,216/255,230/255) ;
 
+% debugging
+
+boolean chem_trace_nesting     ; chem_trace_nesting     := false ;
+boolean chem_trace_text        ; chem_trace_text        := false ;
+boolean chem_trace_boundingbox ; chem_trace_boundingbox := false ;
+
 chem_axis_color         := image(draw origin withcolor lightblue) ;
 chem_setting_axis       := false ;
 chem_axis_rulethickness := 1pt ;
@@ -79,7 +84,6 @@ chem_sb_pair.m          := (0.25,1   ) ; %chem_sb_dash.m := dashpattern(off 0.25
 chem_sb_pair.p          := (0   ,0.75) ; %chem_sb_dash.p := dashpattern(on  0.75 off 0.25) ;
 chem_sb_pair.b          := (0,   1   ) ; %chem_sb_dash.b := dashpattern(on  1) ;
 
-chem_text_trace         := false ; % debugging
 chem_bd_wedge           := false ; % true is incorrect, but quite common...
 
 def chem_reset =
@@ -302,23 +306,29 @@ chem_init_all ; % WHY does this not work unless defined and then called?
 % unless of course the error be too harmful...
 
 % \startchemical
-def chem_start_structure(expr i, l, r, t, b, scale, rotation, fitwidth, fitheight,
-                                 emwidth, offset, axis, rulethickness, axiscolor) =
 
-    chem_emwidth            := emwidth ; % EmWidth or \the\emwidth does not work...
-    chem_b_length           := if scale<>0: scale* fi 3chem_emwidth ;
-    chem_setting_fitwidth   := if boolean fitwidth :  fitwidth  else : (fitwidth<>0) fi ;
-    chem_setting_fitheight  := if boolean fitheight : fitheight else : (fithheight<>0) fi ;;
-    chem_setting_l          := l * chem_b_length ;
-    chem_setting_r          := r * chem_b_length ;
-    chem_setting_t          := t * chem_b_length ;
-    chem_setting_b          := b * chem_b_length ;
+def chem_start_structure(expr i, l, r, t, b, rotation, unit, factor, offset, axis, rulethickness, axiscolor) =
+    save chem_setting_l, chem_setting_r, chem_setting_t, chem_setting_b ;
+
+    chem_emwidth            := unit ;
+    chem_b_length           := factor * unit ;
+    if numeric l :
+        chem_setting_l      := -l ;
+    fi
+    if numeric r :
+        chem_setting_r      := r ;
+    fi
+    if numeric t :
+        chem_setting_t      := t ;
+    fi
+    if numeric b  :
+        chem_setting_b      := -b ;
+    fi
     chem_setting_rotation   := rotation ;
     chem_setting_offset     := offset ;
     chem_setting_axis       := if boolean axis : axis else : (axis<>0) fi ;
     chem_axis_rulethickness := .75*(rulethickness) ; % axis 50% thinner than frame and bonds.
-    % We store the following as a picture in order to allow ALL color models...
-    chem_axis_color         := image(draw origin withcolor axiscolor) ; % \MPcolor{axiscolor}) ;
+    chem_axis_color         := image(draw origin withcolor axiscolor) ; % so we handle all color models
 
     chem_reset ;
 enddef ;
@@ -333,51 +343,58 @@ vardef chem_stop_structure =
     endfor
 
     currentpicture := (currentpicture shifted -chem_origin) rotated chem_setting_rotation ;
-    % axis here
-    if chem_setting_fitwidth :
-        chem_setting_l := - xpart llcorner currentpicture ;
-        chem_setting_r :=   xpart urcorner currentpicture ;
-    fi ;
-    if chem_setting_fitheight :
-        chem_setting_t :=   ypart urcorner currentpicture ;
-        chem_setting_b := - ypart llcorner currentpicture ;
-    fi ;
-    chem_setting_bbox :=
-        (-chem_setting_l,-chem_setting_b) -- ( chem_setting_r,-chem_setting_b) --
-        ( chem_setting_r, chem_setting_t) -- (-chem_setting_l, chem_setting_t) -- cycle ;
+
+    save l, r, b, t ;
+    l := min(xpart llcorner currentpicture, xpart lrcorner currentpicture) ;
+    r := max(xpart llcorner currentpicture, xpart lrcorner currentpicture) ;
+    b := min(ypart llcorner currentpicture, ypart ulcorner currentpicture) ;
+    t := max(ypart llcorner currentpicture, ypart ulcorner currentpicture) ;
+
+    if unknown chem_setting_l : chem_setting_l := l ; fi
+    if unknown chem_setting_r : chem_setting_r := r ; fi
+    if unknown chem_setting_b : chem_setting_b := b ; fi
+    if unknown chem_setting_t : chem_setting_t := t ; fi
+
     if chem_setting_axis : % put it behind the picture
         chem_pic := currentpicture ; currentpicture := nullpicture ;
         chem_num0 := .5chem_b_length ;
         chem_num1 := .2chem_num0 ;
-        draw (-chem_setting_l,0) -- (chem_setting_r,0)
+        % draw the axes to the bounding box of the entire structure,
+        % not necessarily the bounding box of the final figure
+        draw (l,0) -- (r,0)
             withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
-        draw (0,-chem_setting_b) -- (0,chem_setting_t)
+        draw (0,b) -- (0,t)
             withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
-        for i = 0 step  chem_num0 until  chem_setting_r :
+        for i = 0 step  chem_num0 until r :
             draw (i,-chem_num1) -- (i,chem_num1)
             withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
         endfor
-        for i = 0 step -chem_num0 until -chem_setting_l :
+        for i = 0 step -chem_num0 until l :
             draw (i,-chem_num1) -- (i,chem_num1)
             withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
         endfor
-        for i = 0 step  chem_num0 until  chem_setting_t :
+        for i = 0 step  chem_num0 until t :
             draw (-chem_num1,i) -- (chem_num1,i)
             withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
         endfor
-        for i = 0 step -chem_num0 until -chem_setting_b :
+        for i = 0 step -chem_num0 until b :
             draw (-chem_num1,i) -- (chem_num1,i)
             withpen pencircle scaled chem_axis_rulethickness withcolor colorpart(chem_axis_color) ;
         endfor
-        % frame=on : draw chem_setting_bbox withcolor colorpart(chem_axis_color) ;
         addto currentpicture also chem_pic ;
     fi ;
-    setbounds currentpicture to chem_setting_bbox ;
+    if chem_trace_boundingbox :
+        fill boundingbox currentpicture withcolor blue withtransparency(1,.25) ;
+    fi ;
+    setbounds currentpicture to
+        ((chem_setting_l,chem_setting_b) -- (chem_setting_r,chem_setting_b) --
+         (chem_setting_r,chem_setting_t) -- (chem_setting_l,chem_setting_t) -- cycle) ;
+    if chem_trace_boundingbox :
+        fill boundingbox currentpicture withcolor red withtransparency(1,.25) ;
+    fi ;
 enddef ;
 
 % \chemical
-
-boolean chem_trace_nesting ; chem_trace_nesting := false ;
 
 vardef chem_start_component = enddef ;
 vardef chem_stop_component  = enddef ;
@@ -1513,7 +1530,7 @@ vardef chem_text@#(expr txt, z) =
         fi
     chem_pic := (chem_pic rotated -chem_setting_rotation) shifted z ;
 
-    if chem_text_trace :
+    if chem_trace_text :
         draw z                    withpen pencircle scaled 2pt withcolor red ;
         draw boundingbox chem_pic withpen pencircle scaled 1pt withcolor red ;
     fi

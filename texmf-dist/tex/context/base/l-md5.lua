@@ -7,11 +7,23 @@ if not modules then modules = { } end modules ['l-md5'] = {
 
 -- This also provides file checksums and checkers.
 
+if not md5 then
+    md5 = optionalrequire("md5")
+end
+
+if not md5 then
+    md5 = {
+        sum     = function(str) print("error: md5 is not loaded (sum     ignored)") return str end,
+        sumhexa = function(str) print("error: md5 is not loaded (sumhexa ignored)") return str end,
+    }
+end
+
 local md5, file = md5, file
 local gsub, format, byte = string.gsub, string.format, string.byte
+local md5sum = md5.sum
 
 local function convert(str,fmt)
-    return (gsub(md5.sum(str),".",function(chr) return format(fmt,byte(chr)) end))
+    return (gsub(md5sum(str),".",function(chr) return format(fmt,byte(chr)) end))
 end
 
 if not md5.HEX then function md5.HEX(str) return convert(str,"%02X") end end

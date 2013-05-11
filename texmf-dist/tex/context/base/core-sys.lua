@@ -43,7 +43,7 @@ local report_files = logs.reporter("system","files")
 --     end)
 --     --
 --     statistics.register("job file properties", function()
---         return format("jobname: %s, input: %s, suffix: %s",jobfilename,inputfilename,inputfilesuffix)
+--         return format("jobname %a, input %a, suffix %a",jobfilename,inputfilename,inputfilesuffix)
 --     end)
 --     --
 -- end
@@ -67,22 +67,25 @@ function environment.initializefilenames() -- commands.updatefilenames(jobname,f
     local jobfilename    = jobname or inputfilename or tex.jobname or ""
     local inputfilename  = inputfilename or ""
 
-    jobfilename          = gsub(jobfilename,  "^./","")
-    inputfilename        = gsub(inputfilename,"^./","")
+    local jobfilebase    = basename(jobfilename)
+    local inputfilebase  = basename(inputfilename)
 
-    environment.jobfilename       = jobfilename
-    environment.jobfilesuffix     = lower(suffixonly(jobfilename))
+ -- jobfilename          = gsub(jobfilename,  "^./","")
+ -- inputfilename        = gsub(inputfilename,"^./","")
 
-    environment.inputfilename     = inputfilename
-    environment.inputfilebarename = removesuffix(basename(inputfilename))
-    environment.inputfilesuffix   = lower(suffixonly(inputfilename))
+    environment.jobfilename       = jobfilebase
+    environment.jobfilesuffix     = lower(suffixonly(jobfilebase))
+
+    environment.inputfilename     = inputfilename -- so here we keep e.g. ./ or explicit paths
+    environment.inputfilebarename = removesuffix(inputfilebase)
+    environment.inputfilesuffix   = lower(suffixonly(inputfilebase))
 
     environment.outputfilename    = outputfilename or environment.inputfilebarename or ""
 
     environment.filename          = filename
     environment.suffix            = suffix
 
-    report_files("jobname: %s, input: %s, result: %s",jobfilename,inputfilename,outputfilename)
+    report_files("jobname %a, input %a, result %a",jobfilename,inputfilename,outputfilename)
 
     function environment.initializefilenames() end
 end
@@ -91,8 +94,8 @@ statistics.register("result saved in file", function()
     -- suffix will be fetched from backend
     local outputfilename = environment.outputfilename or environment.jobname or tex.jobname or "<unset>"
     if tex.pdfoutput > 0 then
-        return format( "%s.%s, compresslevel %s, objectcompreslevel %s",outputfilename,"pdf",tex.pdfcompresslevel, tex.pdfobjcompresslevel)
+        return format("%s.%s, compresslevel %s, objectcompreslevel %s",outputfilename,"pdf",tex.pdfcompresslevel, tex.pdfobjcompresslevel)
     else
-        return format( "%s.%s",outputfilename,"dvi") -- hard to imagine
+        return format("%s.%s",outputfilename,"dvi") -- hard to imagine
     end
 end)
