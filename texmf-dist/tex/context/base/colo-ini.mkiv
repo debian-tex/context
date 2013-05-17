@@ -275,6 +275,19 @@
   {\csname\??colorstack\number\c_colo_nesting\endcsname
    \global\advance\c_colo_nesting\minusone}
 
+% a simple one: assumes grouping
+
+\newcount\c_colo_saved_attribute_color
+\newcount\c_colo_saved_attribute_transparency
+
+\unexpanded\def\savecolor
+  {\c_colo_saved_attribute_color       \attribute\colorattribute
+   \c_colo_saved_attribute_transparency\attribute\transparencyattribute}
+
+\unexpanded\def\restorecolor
+  {\attribute\colorattribute       \c_colo_saved_attribute_color
+   \attribute\transparencyattribute\c_colo_saved_attribute_transparency}
+
 %D In this documentation we will not go into too much details
 %D on palets. Curious users can find more information on this
 %D topic in \from[use of color].
@@ -587,6 +600,34 @@
 \letvalue{\??colorsetter-}\empty % used?
 \letvalue{\??transparencysetter-}\empty % used?
 
+% new: expandable (see tbl)
+
+\def\colo_helpers_fast_activate
+  {\ifx\currentcolorprefix\empty
+     \expandafter\colo_helpers_fast_activate_nop
+   \else
+     \expandafter\colo_helpers_fast_activate_yes
+   \fi}
+
+\def\colo_helpers_fast_activate_yes#1%
+  {\ifcsname\??colorsetter\currentcolorprefix#1\endcsname
+     \csname\??colorsetter\currentcolorprefix#1\endcsname
+     \csname\??transparencysetter\currentcolorprefix#1\endcsname
+   \else\ifcsname\??colorsetter#1\endcsname
+     \csname\??colorsetter#1\endcsname
+     \csname\??transparencysetter#1\endcsname
+   \fi\fi}
+
+\def\colo_helpers_fast_activate_nop#1%
+  {\ifcsname\??colorsetter#1\endcsname
+     \csname\??colorsetter#1\endcsname
+     \csname\??transparencysetter#1\endcsname
+   \fi}
+
+\let\dofastcoloractivation\colo_helpers_fast_activate
+
+% so far
+
 \def\colo_helpers_activate % two-step is not that much faster but less tracing
   {\ifx\currentcolorprefix\empty
      \expandafter\colo_helpers_activate_nop
@@ -728,7 +769,7 @@
   {\ctxcommand{defineintermediatecolor("#1","#2",
      \thecolorattribute{#3},\thecolorattribute{#4},
      \thetransparencyattribute{#3},\thetransparencyattribute{#4},
-     "#5",false,\iffreezecolors true\else false\fi)}% not global
+     "#5",false,\v_colo_freeze_state)}% not global
    \unexpanded\setvalue{#1}{\colo_helpers_activate{#1}}}
 
 %D Here is a more efficient helper for pgf:

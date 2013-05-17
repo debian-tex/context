@@ -16,7 +16,9 @@ moduledata.progress = progress
 
 local report_timing = logs.reporter("timing")
 
-progress.parameters      = nodes.snapshots.getparameters
+if not nodes then nodes = { } end -- when loaded in mtxrun
+
+progress.parameters      = nodes and nodes.snapshots.getparameters
 progress.defaultfilename = ((tex and tex.jobname) or "whatever") .. "-luatex-progress"
 
 -- storage
@@ -27,7 +29,7 @@ end
 
 function progress.save(name)
     local filename = (name or progress.defaultfilename) .. ".lut"
-    report_timing("saving data in %q",filename)
+    report_timing("saving data in %a",filename)
     table.save(filename,nodes.snapshots.getsamples())
     nodes.snapshots.resetsamples()
 end

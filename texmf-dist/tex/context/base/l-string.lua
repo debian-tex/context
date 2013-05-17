@@ -49,7 +49,7 @@ end
 -- print(string.unquoted('"test"'))
 
 function string.quoted(str)
-    return format("%q",str) -- always "
+    return format("%q",str) -- always double quote
 end
 
 function string.count(str,pattern) -- variant 3
@@ -69,8 +69,9 @@ function string.limit(str,n,sentinel) -- not utf proof
     end
 end
 
-local stripper  = patterns.stripper
-local collapser = patterns.collapser
+local stripper     = patterns.stripper
+local collapser    = patterns.collapser
+local longtostring = patterns.longtostring
 
 function string.strip(str)
     return lpegmatch(stripper,str) or ""
@@ -78,6 +79,10 @@ end
 
 function string.collapsespaces(str)
     return lpegmatch(collapser,str) or ""
+end
+
+function string.longtostring(str)
+    return lpegmatch(longtostring,str) or ""
 end
 
 -- function string.is_empty(str)
@@ -93,7 +98,6 @@ function string.is_empty(str)
         return lpegmatch(pattern,str) and true or false
     end
 end
-
 
 -- if not string.escapedpattern then
 --
@@ -152,7 +156,7 @@ function string.escapedpattern(str,simple)
 end
 
 function string.topattern(str,lowercase,strict)
-    if str == "" then
+    if str=="" or type(str) ~= "string" then
         return ".*"
     elseif strict then
         str = lpegmatch(pattern_c,str)

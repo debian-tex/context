@@ -10,7 +10,7 @@ if not modules then modules = { } end modules ['l-dir'] = {
 
 local type, select = type, select
 local find, gmatch, match, gsub = string.find, string.gmatch, string.match, string.gsub
-local concat, insert, remove = table.concat, table.insert, table.remove
+local concat, insert, remove, unpack = table.concat, table.insert, table.remove, table.unpack
 local lpegmatch = lpeg.match
 
 local P, S, R, C, Cc, Cs, Ct, Cv, V = lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.Cc, lpeg.Cs, lpeg.Ct, lpeg.Cv, lpeg.V
@@ -24,6 +24,7 @@ local walkdir    = lfs.dir
 local isdir      = lfs.isdir
 local isfile     = lfs.isfile
 local currentdir = lfs.currentdir
+local chdir      = lfs.chdir
 
 -- in case we load outside luatex
 
@@ -385,7 +386,7 @@ if onwindows then
     function dir.expandname(str) -- will be merged with cleanpath and collapsepath
         local first, nothing, last = match(str,"^(//)(//*)(.*)$")
         if first then
-            first = dir.current() .. "/"
+            first = dir.current() .. "/" -- dir.current sanitizes
         end
         if not first then
             first, last = match(str,"^(//)/*(.*)$")
@@ -394,10 +395,10 @@ if onwindows then
             first, last = match(str,"^([a-zA-Z]:)(.*)$")
             if first and not find(last,"^/") then
                 local d = currentdir()
-                if lfs.chdir(first) then
+                if chdir(first) then
                     first = dir.current()
                 end
-                lfs.chdir(d)
+                chdir(d)
             end
         end
         if not first then
@@ -433,13 +434,37 @@ file.expandname = dir.expandname -- for convenience
 local stack = { }
 
 function dir.push(newdir)
-    insert(stack,lfs.currentdir())
+    insert(stack,currentdir())
+    if newdir and newdir ~= "" then
+        chdir(newdir)
+    end
 end
 
 function dir.pop()
     local d = remove(stack)
     if d then
-        lfs.chdir(d)
+        chdir(d)
     end
     return d
 end
+
+local function found(...) -- can have nil entries
+    for i=1,select("#",...) do
+        local path = select(i,...)
+        local kind = type(path)
+        if kind == "string" then
+            if isdir(path) then
+                return path
+            end
+        elseif kind == "table" then
+            -- here we asume no holes, i.e. an indexed table
+            local path = found(unpack(path))
+            if path then
+                return path
+            end
+        end
+    end
+ -- return nil -- if we want print("crappath") to show something
+end
+
+dir.found = found

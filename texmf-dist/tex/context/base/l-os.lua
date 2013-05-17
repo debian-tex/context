@@ -157,7 +157,7 @@ function os.launch(str)
     os.execute(format(launchers[os.name] or launchers.unix,str))
 end
 
-if not os.times then
+if not os.times then -- ?
     -- utime  = user time
     -- stime  = system time
     -- cutime = children user time
@@ -193,14 +193,10 @@ os.resolvers = os.resolvers or { } -- will become private
 
 local resolvers = os.resolvers
 
-local osmt = getmetatable(os) or { __index = function(t,k) t[k] = "unset" return "unset" end } -- maybe nil
-local osix = osmt.__index
-
-osmt.__index = function(t,k)
-    return (resolvers[k] or osix)(t,k)
-end
-
-setmetatable(os,osmt)
+setmetatable(os, { __index = function(t,k)
+    local r = resolvers[k]
+    return r and r(t,k) or nil -- no memoize
+end })
 
 -- we can use HOSTTYPE on some platforms
 
@@ -456,6 +452,21 @@ function os.now()
     return date("!%Y-%m-%d %H:%M:%S") -- 2011-12-04 14:59:12
 end
 
+-- if not os.sleep and socket then
+--     os.sleep = socket.sleep
+-- end
+
+if not os.sleep then
+    local socket = socket
+    function os.sleep(n)
+        if not socket then
+            -- so we delay ... if os.sleep is really needed then one should also
+            -- be sure that socket can be found
+            socket = require("socket")
+        end
+        socket.sleep(n)
+    end
+end
 
 -- print(os.which("inkscape.exe"))
 -- print(os.which("inkscape"))

@@ -51,8 +51,6 @@ local settings_to_hash   = utilities.parsers.settings_to_hash
 local find_node_tail     = node.tail or node.slide
 local free_node          = node.free
 local free_nodelist      = node.flush_list
-local has_attribute      = node.has_attribute
-local set_attribute      = node.set_attribute
 local copy_nodelist      = node.copy_list
 local traverse_nodes     = node.traverse
 local traverse_ids       = node.traverse_id
@@ -214,10 +212,10 @@ local function convert(featuresets,name,list)
                 nofnumbers = nofnumbers + 1
                 numbers[nofnumbers] = fn
                 if trace_goodies or trace_optimize then
-                    report_solutions("solution %s of '%s' uses feature '%s' with number %s",i,name,feature,fn)
+                    report_solutions("solution %a of %a uses feature %a with number %s",i,name,feature,fn)
                 end
             else
-                report_solutions("solution %s has an invalid feature reference '%s'",i,name,tostring(feature))
+                report_solutions("solution %a of %a has an invalid feature reference %a",i,name,feature)
             end
         end
         return nofnumbers > 0 and numbers
@@ -230,7 +228,7 @@ local function initialize(goodies)
         local featuresets = goodies.featuresets
         local goodiesname = goodies.name
         if trace_goodies or trace_optimize then
-            report_solutions("checking solutions in '%s'",goodiesname)
+            report_solutions("checking solutions in %a",goodiesname)
         end
         for name, set in next, solutions do
             set.less = convert(featuresets,name,set.less)
@@ -288,7 +286,7 @@ function splitters.define(name,settings)
         end
     end
     if trace_optimize then
-        report_solutions("defining solutions '%s', less: '%s', more: '%s'",name,concat(less_set or {}," "),concat(more_set or {}," "))
+        report_solutions("defining solutions %a, less %a, more %a",name,concat(less_set or {}," "),concat(more_set or {}," "))
     end
     local nofsolutions = #solutions + 1
     local t = {
@@ -334,7 +332,7 @@ function splitters.split(head)
         else
             local current = start
             while true do
-                set_attribute(current,a_word,n)
+                current[a_word] = n
                 if current == stop then
                     break
                 else
@@ -355,7 +353,7 @@ function splitters.split(head)
             font      = font
         }
         if trace_split then
-            report_splitters("cached %4i: font: %s, attribute: %s, direction: %s, word: %s",
+            report_splitters("cached %4i: font %a, attribute %a, direction %a, word %a",
                 n, font, attribute, nodes_to_utf(list,true), rlmode and "r2l" or "l2r")
         end
         cache[n] = c
@@ -370,7 +368,7 @@ function splitters.split(head)
         local id = current.id
         if id == glyph_code then
             if current.subtype < 256 then
-                local a = has_attribute(current,a_split)
+                local a = current[a_split]
                 if not a then
                     start, stop = nil, nil
                 elseif not start then
@@ -440,7 +438,7 @@ local function collect_words(list) -- can be made faster for attributes
             -- todo: disc and kern
             local id = current.id
             if id == glyph_code or id == disc_code then
-                local a = has_attribute(current,a_word)
+                local a = current[a_word]
                 if a then
                     if a == index then
                         -- same word
@@ -470,10 +468,10 @@ local function collect_words(list) -- can be made faster for attributes
                     if id == disc_code then
                         report_splitters("skipped: disc node")
                     else
-                        report_splitters("skipped: %s",utfchar(current.char))
+                        report_splitters("skipped: %C",current.char)
                     end
                 end
-            elseif id == kern_code and (current.subtype == fontkern_code or has_attribute(current,a_fontkern)) then
+            elseif id == kern_code and (current.subtype == fontkern_code or current[a_fontkern]) then
                 if first then
                     last = current
                 else
@@ -487,7 +485,7 @@ local function collect_words(list) -- can be made faster for attributes
                 first = nil
                 if id == disc_node then
                     if trace_split then
-                        report_splitters("skipped disc node")
+                        report_splitters("skipped: disc node")
                     end
                 end
             end
@@ -503,9 +501,9 @@ local function collect_words(list) -- can be made faster for attributes
                 local n, f, l = w[1], w[2], w[3]
                 local c = cache[n]
                 if c then
-                    report_splitters("found %4i: word: %s, cached: %s",n,nodes_to_utf(f,true,true,l),nodes_to_utf(c.original,true))
+                    report_splitters("found %4i: word %a, cached %a",n,nodes_to_utf(f,true,true,l),nodes_to_utf(c.original,true))
                 else
-                    report_splitters("found %4i: word: %s, not in cache",n,nodes_to_utf(f,true,true,l))
+                    report_splitters("found %4i: word %a, not in cache",n,nodes_to_utf(f,true,true,l))
                 end
             end
         end
@@ -557,31 +555,20 @@ local function doit(word,list,best,width,badness,line,set,listdir)
                 local first = copy_nodelist(original)
                 if not trace_colors then
                     for n in traverse_nodes(first) do -- maybe fast force so no attr needed
-                        set_attribute(n,0,featurenumber) -- this forces dynamics
+                        n[0] = featurenumber -- this forces dynamics
                     end
                 elseif set == "less" then
                     for n in traverse_nodes(first) do
                         setnodecolor(n,"font:isol") -- yellow
-                        set_attribute(n,0,featurenumber)
+                        n[0] = featurenumber
                     end
                 else
                     for n in traverse_nodes(first) do
                         setnodecolor(n,"font:medi") -- green
-                        set_attribute(n,0,featurenumber)
+                        n[0] = featurenumber
                     end
                 end
                 local font = found.font
-             -- local dynamics = found.dynamics
-             -- local shared = fontdata[font].shared
-             -- if not dynamics then -- we cache this
-             --     dynamics = shared.dynamics
-             --     found.dynamics = dynamics
-             -- end
-             -- local processors = found[featurenumber]
-             -- if not processors then -- we cache this too
-             --     processors = fonts.handlers.otf.setdynamics(font,featurenumber)
-             --     found[featurenumber] = processors
-             -- end
                 local setdynamics = setfontdynamics[font]
                 if setdynamics then
                     local processes = setdynamics(font,featurenumber)
@@ -589,7 +576,7 @@ local function doit(word,list,best,width,badness,line,set,listdir)
                         first = processes[i](first,font,featurenumber)
                     end
                 else
-                    report_solutions("fatal error, no dynamics for font %s",font)
+                    report_solutions("fatal error, no dynamics for font %a",font)
                 end
                 first = inject_kerns(first)
                 if first.id == whatsit_code then
@@ -611,7 +598,7 @@ local function doit(word,list,best,width,badness,line,set,listdir)
                 local temp, b = repack_hlist(list,width,'exactly',listdir)
                 if b > badness then
                     if trace_optimize then
-                        report_optimizers("line %s, badness before: %s, after: %s, criterium: %s -> quit",line,badness,b,criterium)
+                        report_optimizers("line %a, badness before %a, after %a, criterium %a, verdict %a",line,badness,b,criterium,"quit")
                     end
                     -- remove last insert
                     prev.next = h
@@ -626,7 +613,7 @@ local function doit(word,list,best,width,badness,line,set,listdir)
                     free_nodelist(first)
                 else
                     if trace_optimize then
-                        report_optimizers("line %s, badness before: %s, after: %s, criterium: %s -> continue",line,badness,b,criterium)
+                        report_optimizers("line %a, badness before: %a, after %a, criterium %a, verdict %a",line,badness,b,criterium,"continue")
                     end
                     -- free old h->t
                     t.next = nil
@@ -714,7 +701,7 @@ local function show_quality(current,what,line)
     local sign   = current.glue_sign
     local order  = current.glue_order
     local amount = set * ((sign == 2 and -1) or 1)
-    report_optimizers("line %s, %s, amount %s, set %s, sign %s (%s), order %s",line,what,amount,set,sign,how,order)
+    report_optimizers("line %a, category %a, amount %a, set %a, sign %a, how %a, order %a",line,what,amount,set,sign,how,order)
 end
 
 function splitters.optimize(head)
@@ -736,34 +723,33 @@ function splitters.optimize(head)
     local tex_hbadness, tex_hfuzz = tex.hbadness, tex.hfuzz
     tex.hbadness, tex.hfuzz = 10000, number.maxdimen
     if trace_optimize then
-        report_optimizers("preroll: %s, variant: %s, preroll criterium: %s, cache size: %s",
-            tostring(preroll),variant,criterium,nc)
+        report_optimizers("preroll %a, variant %a, criterium %a, cache size %a",preroll,variant,criterium,nc)
     end
     for current in traverse_ids(hlist_code,head) do
      -- report_splitters("before: [%s] => %s",current.dir,nodes.tosequence(current.list,nil))
         line = line + 1
         local sign, dir, list, width = current.glue_sign, current.dir, current.list, current.width
-if not encapsulate and list.id == glyph_code then
-    -- nasty .. we always assume a prev being there .. future luatex will always have a leftskip set
- -- current.list, list = insert_node_before(list,list,new_glue(0))
-    current.list, list = insert_node_before(list,list,new_leftskip(0))
-end
+        if not encapsulate and list.id == glyph_code then
+            -- nasty .. we always assume a prev being there .. future luatex will always have a leftskip set
+         -- current.list, list = insert_node_before(list,list,new_glue(0))
+            current.list, list = insert_node_before(list,list,new_leftskip(0))
+        end
         local temp, badness = repack_hlist(list,width,'exactly',dir) -- it would be nice if the badness was stored in the node
         if badness > 0 then
             if sign == 0 then
                 if trace_optimize then
-                    report_optimizers("line %s, badness %s, okay",line,badness)
+                    report_optimizers("line %a, badness %a, outcome %a, verdict %a",line,badness,"okay","okay")
                 end
             else
                 local set, max
                 if sign == 1 then
                     if trace_optimize then
-                        report_optimizers("line %s, badness %s, underfull, trying more",line,badness)
+                        report_optimizers("line %a, badness %a, outcome %a, verdict %a",line,badness,"underfull","trying more")
                     end
                     set, max = "more", max_more
                 else
                     if trace_optimize then
-                        report_optimizers("line %s, badness %s, overfull, trying less",line,badness)
+                        report_optimizers("line %a, badness %a, outcome %a, verdict %a",line,badness,"overfull","trying less")
                     end
                     set, max = "less", max_less
                 end
@@ -781,7 +767,7 @@ end
                             local temp, done, changes, b = optimize(words,base,j,width,badness,line,set,dir)
                             base = temp
                             if trace_optimize then
-                                report_optimizers("line %s, alternative: %s.%s, changes: %s, badness %s",line,i,j,changes,b)
+                                report_optimizers("line %a, alternative %a.%a, changes %a, badness %a",line,i,j,changes,b)
                             end
                             bb = b
                             if b <= criterium then
@@ -808,7 +794,7 @@ end
                     local temp, done, changes, b = optimize(words,list,best,width,badness,line,set,dir)
                     current.list = temp
                     if trace_optimize then
-                        report_optimizers("line %s, alternative: %s, changes: %s, badness %s",line,best,changes,b)
+                        report_optimizers("line %a, alternative %a, changes %a, badness %a",line,best,changes,b)
                     end
                     if done then
                         if b <= criterium then -- was == 0
@@ -820,7 +806,7 @@ end
             end
         else
             if trace_optimize then
-                report_optimizers("line %s, not bad enough",line)
+                report_optimizers("line %a, verdict %a",line,"not bad enough")
             end
         end
         -- we pack inside the outer hpack and that way keep the original wd/ht/dp as bonus

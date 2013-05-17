@@ -70,7 +70,7 @@ local trace_sql          = false  trackers.register("sql.trace",  function(v) tr
 local trace_queries      = false  trackers.register("sql.queries",function(v) trace_queries = v end)
 local report_state       = logs.reporter("sql","library")
 
-local sql                = require("util-sql")
+local sql                = utilities.sql
 local mysql              = require("luasql.mysql")
 local cache              = { }
 local helpers            = sql.helpers
@@ -80,6 +80,7 @@ local querysplitter      = helpers.querysplitter
 local dataprepared       = helpers.preparetemplate
 local serialize          = sql.serialize
 local deserialize        = sql.deserialize
+local formatters         = string.formatters
 
 local initialize         = mysql.mysql
 
@@ -109,11 +110,11 @@ local function fetched(specification,query,converter)
         if not connection then
             session = initialize()
             if not session then
-                return format("no session for %q",id)
+                return formatters["no session for %a"](id)
             end
             connection = connect(session,specification)
             if not connection then
-                return format("no connection for %q",id)
+                return formatters["no connection for %a"](id)
             end
             cache[id] = { session = session, connection = connection }
         end
@@ -142,7 +143,7 @@ local function fetched(specification,query,converter)
         local q = query[i]
         local r, m = connection:execute(q)
         if m then
-            report_state("error in query to host %s: %s",specification.host or "?",string.collapsespaces(q))
+            report_state("error in query to host %a: %s",specification.host,string.collapsespaces(q))
             if m then
                 report_state("message: %s",m)
             end
@@ -208,13 +209,13 @@ local function datafetched(specification,query,converter)
         report_state("call error, retrying")
         callokay, connectionerror, data, keys = pcall(fetched,specification,query,converter)
     elseif connectionerror then
-        report_state("error: %q, retrying",connectionerror)
+        report_state("error: %s, retrying",connectionerror)
         callokay, connectionerror, data, keys = pcall(fetched,specification,query,converter)
     end
     if not callokay then
         report_state("persistent call error")
     elseif connectionerror then
-        report_state("persistent error: %q",connectionerror)
+        report_state("persistent error: %s",connectionerror)
     end
     return data or { }, keys or { }
 end
@@ -244,6 +245,9 @@ local function execute(specification)
     return data, keys
 end
 
+-- Here we build the dataset stepwise so we don't use the data hack that
+-- is used in the client variant.
+
 local wraptemplate = [[
 local converters    = utilities.sql.converters
 local deserialize   = utilities.sql.deserialize
@@ -262,14 +266,14 @@ return function(result)
     if nofrows == 0 then
         return { }
     end
-    local data = { }
+    local target = { } -- no %s needed here
     for i=1,nofrows do
         local cells = { result:fetch() }
-        data[i] = {
+        target[%s] = {
             %s
         }
     end
-    return data
+    return target
 end
 ]]
 

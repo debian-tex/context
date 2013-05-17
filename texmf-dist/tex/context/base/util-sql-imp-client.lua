@@ -15,7 +15,7 @@ local trace_sql          = false  trackers.register("sql.trace",  function(v) tr
 local trace_queries      = false  trackers.register("sql.queries",function(v) trace_queries = v end)
 local report_state       = logs.reporter("sql","client")
 
-local sql                = require("util-sql")
+local sql                = utilities.sql
 local helpers            = sql.helpers
 local methods            = sql.methods
 local validspecification = helpers.validspecification
@@ -87,14 +87,14 @@ local function splitdata(data) -- todo: hash on first line ... maybe move to cli
         if n == 1 then
             local key = keys[1]
             if trace_sql then
-                report_state("one field with name",key)
+                report_state("one field with name %a",key)
             end
             p = Cg(Cc(key) * entry)
         else
             for i=1,n do
                 local key = keys[i]
                 if trace_sql then
-                    report_state("field %s has name %q",i,key)
+                    report_state("field %s has name %a",i,key)
                 end
                 local s = Cg(Cc(key) * entry)
                 if p then
@@ -166,12 +166,12 @@ local function dataconverted(data,converter)
     if converter then
         local data = getdata(data)
         if data then
-            converter.client(data)
+            data = converter.client(data)
         end
         return data
     elseif trace_sql then
         local t = osclock()
-        local data, keys = splitdata(data)
+        local data, keys = splitdata(data,target)
         report_state("converttime: %.3f",osclock()-t)
         report_state("keys: %s ",#keys)
         report_state("entries: %s ",#data)
@@ -206,7 +206,7 @@ local function execute(specification)
     end
     local data, keys = dataconverted(data,specification.converter)
     if not data then
-        report_state("error in converting")
+        report_state("error in converting or no data")
         return
     end
     local one = data[1]
@@ -220,6 +220,8 @@ end
 -- the lib anyway. Of course we could make a dedicated converter and/or
 -- hook into the splitter code but ... it makes not much sense because then
 -- we can as well move the builder to the library modules.
+--
+-- Here we reuse data as the indexes are the same, unless we hash.
 
 local wraptemplate = [[
 local converters    = utilities.sql.converters
@@ -232,13 +234,14 @@ local booleanstring = string.booleanstring
 %s
 
 return function(data)
+    local target = %s -- data or { }
     for i=1,#data do
         local cells = data[i]
-        data[i] = {
+        target[%s] = {
             %s
         }
     end
-    return data
+    return target
 end
 ]]
 

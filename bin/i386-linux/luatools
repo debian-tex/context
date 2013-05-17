@@ -1,2 +1,1 @@
-#!/bin/sh
-mtxrun --script base "$@"
+../../texmf-dist/scripts/context/stubs/unix/luatools

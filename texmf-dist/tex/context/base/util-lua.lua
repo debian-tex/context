@@ -7,6 +7,8 @@ if not modules then modules = { } end modules ['util-lua'] = {
     license   = "see context related readme files"
 }
 
+-- we will remove the 5.1 code some day soon
+
 local rep, sub, byte, dump, format = string.rep, string.sub, string.byte, string.dump, string.format
 local load, loadfile, type = load, loadfile, type
 
@@ -14,7 +16,7 @@ utilities          = utilities or {}
 utilities.lua      = utilities.lua or { }
 local luautilities = utilities.lua
 
-utilities.report   = logs and logs.reporter("system") or print -- can be overloaded later
+local report_lua = logs.reporter("system","lua")
 
 local tracestripping           = false
 local forcestupidcompile       = true  -- use internal bytecode compiler
@@ -37,15 +39,13 @@ luautilities.suffixes = {
     tuc = "tuc",
 }
 
-local function fatalerror(name)
-    utilities.report(format("fatal error in %q",name or "unknown"))
-end
+-- environment.loadpreprocessedfile can be set to a preprocessor
 
 if jit or status.luatex_version >= 74 then
 
     local function register(name)
         if tracestripping then
-            utilities.report("stripped bytecode: %s",name or "unknown")
+            report_lua("stripped bytecode from %a",name or "unknown")
         end
         strippedchunks[#strippedchunks+1] = name
         luautilities.nofstrippedchunks = luautilities.nofstrippedchunks + 1
@@ -63,10 +63,10 @@ if jit or status.luatex_version >= 74 then
                     return true, 0
                 end
             else
-                fatalerror()
+                report_lua("fatal error %a in file %a",1,luafile)
             end
         else
-            fatalerror()
+            report_lua("fatal error %a in file %a",2,luafile)
         end
         return false, 0
     end
@@ -76,7 +76,7 @@ if jit or status.luatex_version >= 74 then
     function luautilities.loadedluacode(fullname,forcestrip,name)
         -- quite subtle ... doing this wrong incidentally can give more bytes
         name = name or fullname
-        local code = loadfile(fullname)
+        local code = environment.loadpreprocessedfile and environment.loadpreprocessedfile(fullname) or loadfile(fullname)
         if code then
             code()
         end
@@ -102,7 +102,7 @@ if jit or status.luatex_version >= 74 then
         if forcestrip and luautilities.stripcode or luautilities.alwaysstripcode then
             code = load(code)
             if not code then
-                fatalerror(name)
+                report_lua("fatal error %a in file %a",3,name)
             end
             register(name)
             code = dump(code,true)
@@ -111,17 +111,24 @@ if jit or status.luatex_version >= 74 then
     end
 
     function luautilities.compile(luafile,lucfile,cleanup,strip,fallback) -- defaults: cleanup=false strip=true
-        utilities.report("lua: compiling %s into %s",luafile,lucfile)
+        report_lua("compiling %a into %a",luafile,lucfile)
         os.remove(lucfile)
         local done = stupidcompile(luafile,lucfile,strip ~= false)
         if done then
-            utilities.report("lua: %s dumped into %s (stripped)",luafile,lucfile)
+            report_lua("dumping %a into %a stripped",luafile,lucfile)
             if cleanup == true and lfs.isfile(lucfile) and lfs.isfile(luafile) then
-                utilities.report("lua: removing %s",luafile)
+                report_lua("removing %a",luafile)
                 os.remove(luafile)
             end
         end
         return done
+    end
+
+    function luautilities.loadstripped(...)
+        local l = load(...)
+        if l then
+            return load(dump(l,true))
+        end
     end
 
 else
@@ -140,7 +147,7 @@ else
     local function register(name,before,after)
         local delta = before - after
         if tracestripping then
-            utilities.report("stripped bytecode: %s, before %s, after %s, delta %s",name or "unknown",before,after,delta)
+            report_lua("bytecodes stripped from %a, # before %s, # after %s, delta %s",name,before,after,delta)
         end
         strippedchunks[#strippedchunks+1] = name
         luautilities.nofstrippedchunks = luautilities.nofstrippedchunks + 1
@@ -229,8 +236,7 @@ else
 
     function luautilities.loadedluacode(fullname,forcestrip,name)
         -- quite subtle ... doing this wrong incidentally can give more bytes
-        name = name or fullname
-        local code = loadfile(fullname)
+        local code = environment.loadpreprocessedfile and environment.preprocessedloadfile(fullname) or loadfile(fullname)
         if code then
             code()
         end
@@ -258,7 +264,7 @@ else
         if (forcestrip and luautilities.stripcode) or luautilities.alwaysstripcode then
             code = load(code)
             if not code then
-                fatalerror(name)
+                report_lua("fatal error in file %a",name)
             end
             code, n = strip_code_pc(dump(code),name)
         end
@@ -271,7 +277,7 @@ else
         if code and code ~= "" then
             code = load(code)
             if not code then
-                fatalerror()
+                report_lua("fatal error in file %a",luafile)
             end
             code = dump(code)
             if strip then
@@ -288,7 +294,7 @@ else
     local luac_strip  = "texluac -s -o %q %q"
 
     function luautilities.compile(luafile,lucfile,cleanup,strip,fallback) -- defaults: cleanup=false strip=true
-        utilities.report("lua: compiling %s into %s",luafile,lucfile)
+        report_lua("compiling %a into %a",luafile,lucfile)
         os.remove(lucfile)
         local done = false
         if strip ~= false then
@@ -304,19 +310,21 @@ else
         if not done and fallback then
             local n = stupidcompile(luafile,lucfile,strip)
             if n > 0 then
-                utilities.report("lua: %s dumped into %s (%i bytes stripped)",luafile,lucfile,n)
+                report_lua("%a dumped into %a (%i bytes stripped)",luafile,lucfile,n)
             else
-                utilities.report("lua: %s dumped into %s (unstripped)",luafile,lucfile)
+                report_lua("%a dumped into %a (unstripped)",luafile,lucfile)
             end
             cleanup = false -- better see how bad it is
             done = true -- hm
         end
         if done and cleanup == true and lfs.isfile(lucfile) and lfs.isfile(luafile) then
-            utilities.report("lua: removing %s",luafile)
+            report_lua("removing %a",luafile)
             os.remove(luafile)
         end
         return done
     end
+
+    luautilities.loadstripped = loadstring
 
 end
 

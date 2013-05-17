@@ -123,6 +123,10 @@
 \def\s!to    {to}         \let\!!to    \s!to     % obsolete
 \def\s!attr  {attr}
 
+\def\s!bottom{bottom}
+\def\s!top   {top}
+\def\s!both  {both}
+
 %D Kind of special:
 
 \edef\!!TLT{\detokenize{TLT}}
@@ -815,7 +819,7 @@
 
 \def\contextbanner
   {ConTeXt \space
-   ver: \contextversion \space \contextmark \space \space
+   ver: \contextversion \space \contextmark \space \contextkind \space \space
    fmt: \formatversion \space \space
    int: \currentinterface/\currentresponses}
 

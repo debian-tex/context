@@ -23,14 +23,14 @@ local status_metapost = logs.messenger("metapost")
 local patterns = { "meta-imp-%s.mkiv", "meta-imp-%s.tex", "meta-%s.mkiv", "meta-%s.tex" } -- we are compatible
 
 local function action(name,foundname)
-    status_metapost("loaded: library '%s'",name)
+    status_metapost("library %a is loaded",name)
     context.startreadingfile()
     context.input(foundname)
     context.stopreadingfile()
 end
 
 local function failure(name)
-    report_metapost("unknown: library '%s'",name)
+    report_metapost("library %a is unknown or invalid",name)
 end
 
 function commands.useMPlibrary(name)
@@ -153,8 +153,12 @@ end
 --     context.mathematics(f)
 -- end
 
+-- formatters["\\times10^{%N}"](s) -- strips leading zeros too
+
 local one = Cs((P("@")/"%%." * (R("09")^1) + P("@")/"%%" + 1)^0)
-local two = Cs((P("e")/"" * ((S("+-")^0 * R("09")^1)/function(s) return format("\\times10^{%s}",tonumber(s) or s) end) + 1)^1)
+local two = Cs((P("e")/"" * ((S("+-")^0 * R("09")^1) / function(s) return format("\\times10^{%s}",tonumber(s) or s) end) + 1)^1)
+
+-- local two = Cs((P("e")/"" * ((S("+-")^0 * R("09")^1) / formatters["\\times10^{%N}"]) + 1)^1)
 
 function metapost.formatnumber(fmt,n) -- just lua format
     context.mathematics(lpegmatch(two,format(lpegmatch(one,fmt),n)))

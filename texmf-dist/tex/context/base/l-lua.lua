@@ -6,12 +6,19 @@ if not modules then modules = { } end modules ['l-lua'] = {
     license   = "see context related readme files"
 }
 
--- compatibility hacks ... try to avoid usage
+-- compatibility hacksand helpers
 
 local major, minor = string.match(_VERSION,"^[^%d]+(%d+)%.(%d+).*$")
 
 _MAJORVERSION = tonumber(major) or 5
 _MINORVERSION = tonumber(minor) or 1
+_LUAVERSION   = _MAJORVERSION + _MINORVERSION/10
+
+-- lpeg
+
+if not lpeg then
+    lpeg = require("lpeg")
+end
 
 -- basics:
 
@@ -35,12 +42,11 @@ end
 
 -- table:
 
--- Starting with version 5.2 Lua no longer provide ipairs, which makes
--- sense. As we already used the for loop and # in most places the
--- impact on ConTeXt was not that large; the remaining ipairs already
--- have been replaced. In a similar fashion we also hardly used pairs.
---
--- Hm, actually ipairs was retained, but we no longer use it anyway.
+-- At some point it was announced that i[pairs would be dropped, which makes
+-- sense. As we already used the for loop and # in most places the impact on
+-- ConTeXt was not that large; the remaining ipairs already have been replaced.
+-- Hm, actually ipairs was retained, but we no longer use it anyway (nor
+-- pairs).
 --
 -- Just in case, we provide the fallbacks as discussed in Programming
 -- in Lua (http://www.lua.org/pil/7.3.html):
@@ -104,4 +110,41 @@ if not package.loaders then -- brr, searchers is a special "loadlib function" us
 
     package.loaders = package.searchers
 
+end
+
+-- moved from util-deb to here:
+
+local print, select, tostring = print, select, tostring
+
+local inspectors = { }
+
+function setinspector(inspector) -- global function
+    inspectors[#inspectors+1] = inspector
+end
+
+function inspect(...) -- global function
+    for s=1,select("#",...) do
+        local value = select(s,...)
+        local done = false
+        for i=1,#inspectors do
+            done = inspectors[i](value)
+            if done then
+                break
+            end
+        end
+        if not done then
+            print(tostring(value))
+        end
+    end
+end
+
+--
+
+local dummy = function() end
+
+function optionalrequire(...)
+    local ok, result = xpcall(require,dummy,...)
+    if ok then
+        return result
+    end
 end

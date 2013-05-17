@@ -39,8 +39,12 @@
 %   {\relax\iffontchar\font#1 \expandafter\firstoftwoarguments\else\expandafter\secondoftwoarguments\fi{\char#1}}
 %
 % impossible in math mode so there always fallback (till we have gyre):
+%
+% use \normalUchar when possible .. the next one is nice for documents and it also accepts
+% 0x prefixed numbers
 
-\def\utfchar          #1{\ctxcommand{utfchar(\number#1)}}
+\def\utfchar#1{\ctxcommand{utfchar(\number#1)}}
+
 \def\checkedchar        {\relax\ifmmode\expandafter\checkedmathchar\else\expandafter\checkedtextchar\fi} % #1#2
 \def\checkedmathchar#1#2{#2}
 \def\checkedtextchar  #1{\iffontchar\font#1 \expandafter\firstoftwoarguments\else\expandafter\secondoftwoarguments\fi{\char#1}}

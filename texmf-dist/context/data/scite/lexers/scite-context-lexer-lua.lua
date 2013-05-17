@@ -6,6 +6,8 @@ local info = {
     license   = "see context related readme files",
 }
 
+-- todo: _G.print (keep _G colored)
+
 if not lexer._CONTEXTEXTENSIONS then require("scite-context-lexer") end
 
 local lexer = lexer
@@ -43,7 +45,17 @@ local functions = {
 }
 
 local constants = {
-    '_G', '_VERSION', '_M', "...", '_ENV'
+    '_G', '_VERSION', '_M', '...', '_ENV',
+    -- here too
+    '__add', '__call', '__concat', '__div', '__eq', '__gc', '__index',
+    '__le', '__lt', '__metatable', '__mode', '__mul', '__newindex',
+    '__pow', '__sub', '__tostring', '__unm',
+}
+
+local internals = { -- __
+    'add', 'call', 'concat', 'div', 'eq', 'gc', 'index',
+    'le', 'lt', 'metatable', 'mode', 'mul', 'newindex',
+    'pow', 'sub', 'tostring', 'unm',
 }
 
 local depricated = {
@@ -151,7 +163,7 @@ local operator      = token("special", S('+-*/%^#=<>;:,{}[]().') + P('~=') ) -- 
 local structure     = token("special", S('{}[]()'))
 
 local optionalspace = spacing^0
-local hasargument   = #S("{(")
+local hasargument   = #S("{([")
 
 local gotokeyword   = token("keyword", P("goto"))
                     * spacing
@@ -160,21 +172,28 @@ local gotolabel     = token("keyword", P("::"))
                     * token("grouping",validword)
                     * token("keyword", P("::"))
 
-local p_keywords    = exact_match(keywords )
+local p_keywords    = exact_match(keywords)
 local p_functions   = exact_match(functions)
 local p_constants   = exact_match(constants)
-local p_csnames     = exact_match(csnames  )
+local p_internals   = P("__")
+                    * exact_match(internals)
+local p_csnames     = exact_match(csnames)
 
 local keyword       = token("keyword", p_keywords)
 local builtin       = token("plain",   p_functions)
 local constant      = token("data",    p_constants)
+local internal      = token("data",    p_internals)
 local csname        = token("user",    p_csnames)
                     * (
                         optionalspace * hasargument
                       + ( optionalspace * token("special", S(".:")) * optionalspace * token("user", validword) )^1
                     )
 local identifier    = token("default", validword)
-                    * ( optionalspace * token("special", S(".:")) * optionalspace * (token("warning", p_keywords) + token("default", validword)) )^0
+                    * ( optionalspace * token("special", S(".:")) * optionalspace * (
+                            token("warning", p_keywords) +
+                            token("data", p_internals) +
+                            token("default", validword )
+                    ) )^0
 
 lualexer._rules = {
     { 'whitespace',   spacing      },
@@ -189,7 +208,6 @@ lualexer._rules = {
     { 'number',       number       },
     { 'longcomment',  longcomment  },
     { 'shortcomment', shortcomment },
---  { 'number',       number       },
     { 'label',        gotolabel    },
     { 'operator',     operator     },
     { 'rest',         rest         },
@@ -243,28 +261,30 @@ lualexer._rules = {
 
 lualexer._tokenstyles = context.styleset
 
+-- lualexer._foldpattern = R("az")^2 + S("{}[]") -- separate entry else interference
+
+lualexer._foldpattern = (P("end") + P("if") + P("do") + P("function") + P("repeat") + P("until")) * P(#(1 - R("az")))
+                      + S("{}[]")
+
 lualexer._foldsymbols = {
     _patterns = {
-     -- '%l+', -- costly
-     -- '%l%l+',
         '[a-z][a-z]+',
-     -- '[%({%)}%[%]]',
         '[{}%[%]]',
     },
     ['keyword'] = { -- challenge:  if=0  then=1  else=-1  elseif=-1
-        ['if']       =  1,
-        ['end']      = -1,
-        ['do']       =  1,
-        ['function'] =  1,
-        ['repeat']   =  1,
+        ['if']       =  1, -- if .. [then|else] .. end
+        ['do']       =  1, -- [while] do .. end
+        ['function'] =  1, -- function .. end
+        ['repeat']   =  1, -- repeat .. until
         ['until']    = -1,
+        ['end']      = -1,
       },
     ['comment'] = {
         ['['] = 1, [']'] = -1,
     },
-    ['quote'] = { -- to be tested
-        ['['] = 1, [']'] = -1,
-    },
+ -- ['quote'] = { -- confusing
+ --     ['['] = 1, [']'] = -1,
+ -- },
     ['special'] = {
      -- ['('] = 1, [')'] = -1,
         ['{'] = 1, ['}'] = -1,

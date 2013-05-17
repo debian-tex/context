@@ -48,6 +48,10 @@
    tlig=yes,
    trep=yes] % texligatures=yes,texquotes=yes
 
+% \definefontfeature
+%   [newstyle]
+%   [onum=no]
+
 \definefontfeature % == default unless redefined
   [ligatures]
   [always]
@@ -90,6 +94,42 @@
   [simplehebrew]
   [simplearabic]
   [script=hebr]
+
+% \definefont [DevaOne] [file:chandas.ttf*devanagari-one at 12pt]
+% \definefont [DevaTwo] [file:kokila.ttf*devanagari-two  at 18pt]
+
+\definefontfeature
+  [devanagari-one]
+  [mode=node,
+   language=dflt,
+   script=deva,
+   nukt=yes,
+   akhn=yes,
+   rphf=yes,
+   blwf=yes,
+   half=yes,
+   vatu=yes,
+   pres=yes,
+   abvs=yes,
+   blws=yes,
+   psts=yes,
+   haln=yes,
+   abvm=yes,
+   blwm=yes,
+   dist=yes]
+
+\definefontfeature
+  [devanagari-two]
+  [devanagari-one]
+  [script=dev2,
+   locl=yes,
+   pref=yes,
+   rkrf=yes,
+   pstf=yes,
+   cjct=yes,
+   init=yes,
+   calt=yes,
+   kern=yes]
 
 % symbols:
 
@@ -171,6 +211,7 @@
 \definecolor[font:mark][r=.75,b=.75] % [m=.75]
 \definecolor[font:rest][b=.75,g=.75] % [c=.75]
 
+\definecolor[trace:w][s=1]
 \definecolor[trace:r][r=.75,t=.5,a=1]
 \definecolor[trace:g][g=.75,t=.5,a=1]
 \definecolor[trace:b][b=.75,t=.5,a=1]
@@ -180,6 +221,7 @@
 \definecolor[trace:s][s=.75,t=.5,a=1]
 \definecolor[trace:o][r=1,g=.6,b=.1,t=.5,a=1]
 
+\definecolor[trace:dw][s=1]
 \definecolor[trace:dr][r=.75,t=.75,a=1]
 \definecolor[trace:dg][g=.75,t=.75,a=1]
 \definecolor[trace:db][b=.75,t=.75,a=1]
@@ -189,6 +231,7 @@
 \definecolor[trace:ds][s=.75,t=.75,a=1]
 \definecolor[trace:do][r=1,g=.6,b=.1,t=.75,a=1]
 
+\definecolor[font:0] [s=1]
 \definecolor[font:1] [r=.75]
 \definecolor[font:2] [g=.75]
 \definecolor[font:3] [b=.75]
@@ -443,8 +486,6 @@
 %D We treat {\sc Small Caps} and \cap {Pseudo Caps} a bit
 %D different. We also provide an \WORD {uppercase} style.
 
-\definealternativestyle [\v!smallcaps]       [\sc]          [\sc]
-
 \definealternativestyle [\v!WORD]    [{\setcharactercasing[\v!WORD   ]}] [{\setcharactercasing[\v!WORD   ]}]
 \definealternativestyle [\v!word]    [{\setcharactercasing[\v!word   ]}] [{\setcharactercasing[\v!word   ]}]
 \definealternativestyle [\v!Word]    [{\setcharactercasing[\v!Word   ]}] [{\setcharactercasing[\v!Word   ]}]
@@ -454,6 +495,14 @@
 
 \definealternativestyle [\v!cap]     [{\setcharactercasing[\v!cap    ]}] [{\setcharactercasing[\v!cap    ]}]
 \definealternativestyle [\v!Cap]     [{\setcharactercasing[\v!Cap    ]}] [{\setcharactercasing[\v!Cap    ]}]
+
+%D From now (2013-03-17) on we have:
+
+\definefontfeature[f:smallcaps][smcp=yes]
+\definefontfeature[f:oldstyle] [onum=yes]
+
+\definealternativestyle [\v!smallcaps] [\doaddfeature{f:smallcaps}] [\doaddfeature{f:smallcaps}]
+\definealternativestyle [\v!oldstyle]  [\doaddfeature{f:oldstyle}]  [\doaddfeature{f:oldstyle}]
 
 %D \macros
 %D   {tinyfont}

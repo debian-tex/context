@@ -19,6 +19,7 @@ local texcount, texsetcount = tex.count, tex.setcount
 local rawget, tonumber = rawget, tonumber
 local lpegmatch = lpeg.match
 local copytable = table.copy
+local formatters = string.formatters
 
 local allocate           = utilities.storage.allocate
 local mark               = utilities.storage.mark
@@ -28,6 +29,7 @@ local trace_referencing  = false  trackers.register("structures.referencing",   
 local trace_analyzing    = false  trackers.register("structures.referencing.analyzing",   function(v) trace_analyzing   = v end)
 local trace_identifying  = false  trackers.register("structures.referencing.identifying", function(v) trace_identifying = v end)
 local trace_importing    = false  trackers.register("structures.referencing.importing",   function(v) trace_importing   = v end)
+local trace_empty        = false  trackers.register("structures.referencing.empty",       function(v) trace_empty       = v end)
 
 local check_duplicates   = true
 
@@ -36,9 +38,10 @@ directives.register("structures.referencing.checkduplicates", function(v)
 end)
 
 local report_references  = logs.reporter("references")
-local report_unknown     = logs.reporter("unknown")
+local report_unknown     = logs.reporter("references","unknown")
 local report_identifying = logs.reporter("references","identifying")
 local report_importing   = logs.reporter("references","importing")
+local report_empty       = logs.reporter("references","empty")
 
 local variables          = interfaces.variables
 local constants          = interfaces.constants
@@ -291,9 +294,9 @@ function references.set(kind,prefix,tag,data)
         if ref ~= "" then
             if check_duplicates and pd[ref] then
                 if prefix and prefix ~= "" then
-                    report_references("redundant reference: %q in namespace %q",ref,prefix)
+                    report_references("redundant reference %a in namespace %a",ref,prefix)
                 else
-                    report_references("redundant reference %q",ref)
+                    report_references("redundant reference %a",ref)
                 end
             else
                 n = n + 1
@@ -394,7 +397,7 @@ local function register_from_lists(collected,derived,pages,sections)
                     local t = { kind, i, entry }
                     for s in gmatch(reference,"%s*([^,]+)") do
                         if trace_referencing then
-                            report_references("list entry %s provides %s reference '%s' on realpage %s",i,kind,s,realpage)
+                            report_references("list entry %a provides %a reference %a on realpage %a",i,kind,s,realpage)
                         end
                         c[s] = c[s] or t -- share them
                         d[s] = d[s] or t -- share them
@@ -431,7 +434,7 @@ function references.urls.get(name)
     if u then
         local url, file = u[1], u[2]
         if file and file ~= "" then
-            return format("%s/%s",url,file)
+            return formatters["%s/%s"](url,file)
         else
             return url
         end
@@ -712,7 +715,7 @@ local function resolve(prefix,reference,args,set) -- we start with prefix,refere
                         set.has_tex = true
                     end
                 else
-                --  report_references("funny pattern: %s",ri or "?")
+                --  report_references("funny pattern %a",ri)
                 end
             end
         end
@@ -774,7 +777,8 @@ local function loadexternalreferences(name,utilitydata)
         for prefix, set in next, external do
             for reference, data in next, set do
                 if trace_importing then
-                    report_importing("registering external reference: regular | %s | %s | %s",name,prefix,reference)
+                    report_importing("registering %a reference, kind %a, name %a, prefix %a, reference %a",
+                        "external","regular",name,prefix,reference)
                 end
                 local section  = reference.section
                 local realpage = reference.realpage
@@ -805,7 +809,8 @@ local function loadexternalreferences(name,utilitydata)
                         end
                         for s in gmatch(reference,"%s*([^,]+)") do
                             if trace_importing then
-                                report_importing("registering external reference: %s | %s | %s | %s",kind,name,prefix,s)
+                                report_importing("registering %s reference, kind %a, name %a, prefix %a, reference %a",
+                                    "external",kind,name,prefix,s)
                             end
                             target[s] = target[s] or entry
                         end
@@ -864,7 +869,8 @@ local function loadproductreferences(productname,componentname,utilitydata)
         for prefix, set in next, productreferences do
             for reference, data in next, set do
                 if trace_importing then
-                    report_importing("registering product reference: regular | %s | %s | %s",productname,prefix,reference)
+                    report_importing("registering %s reference, kind %a, name %a, prefix %a, reference %a",
+                        "product","regular",productname,prefix,reference)
                 end
                 local section  = reference.section
                 local realpage = reference.realpage
@@ -918,13 +924,15 @@ local function loadproductreferences(productname,componentname,utilitydata)
                         for s in gmatch(reference,"%s*([^,]+)") do
                             if ptarget then
                                 if trace_importing then
-                                    report_importing("registering product reference: %s | %s | %s | %s",kind,productname,prefix,s)
+                                    report_importing("registering %s reference, kind %a, name %a, prefix %a, reference %a",
+                                        "product",kind,productname,prefix,s)
                                 end
                                 ptarget[s] = ptarget[s] or entry
                             end
                             if ctarget then
                                 if trace_importing then
-                                    report_importing("registering component reference: %s | %s | %s | %s",kind,productname,prefix,s)
+                                    report_importing("registering %s reference, kind %a, name %a, prefix %a, referenc %a",
+                                        "component",kind,productname,prefix,s)
                                 end
                                 ctarget[s] = ctarget[s] or entry
                             end
@@ -952,7 +960,7 @@ local function loadproductvariables(product,component,utilitydata)
                         local numbers = firstsection.numberdata.numbers
                         if numbers then
                             if trace_importing then
-                                report_importing("initializing section number to %s",concat(numbers,":"))
+                                report_importing("initializing section number to %:t",numbers)
                             end
                             productdata.firstsection = firstsection
                             structures.documents.preset(numbers)
@@ -963,7 +971,7 @@ local function loadproductvariables(product,component,utilitydata)
                         local number = firstpage and firstpage.number
                         if number then
                             if trace_importing then
-                                report_importing("initializing page number to %s",number)
+                                report_importing("initializing page number to %a",number)
                             end
                             productdata.firstpage = firstpage
                             counters.set("userpage",1,number)
@@ -1015,7 +1023,7 @@ function structures.references.loadpresets(product,component) -- we can consider
             local utilitydata = job.loadother(fullname)
             if utilitydata then
                 if trace_importing then
-                    report_importing("loading references for component %s of product %s from %s",component,product,fullname)
+                    report_importing("loading references for component %a of product %a from %a",component,product,fullname)
                 end
                 loadproductvariables (product,component,utilitydata)
                 loadproductreferences(product,component,utilitydata)
@@ -1038,7 +1046,7 @@ if useproduct then
             local component = justacomponent()
             if component then
                 if trace_referencing or trace_importing then
-                    report_references("loading presets for component '%s' of product '%s'",component,product)
+                    report_references("loading presets for component %a of product %a",component,product)
                 end
                 structures.references.loadpresets(product,component)
             end
@@ -1057,9 +1065,9 @@ local function report_identify_special(set,var,i,type)
     local error     = var.error
     local kind      = var.kind
     if error then
-        report_identifying("type %s: %s, n: %s, prefix: %s, special: %s, error: %s",type,reference,i,prefix,special,error)
+        report_identifying("type %a, reference %a, index %a, prefix %a, special %a, error %a",type,reference,i,prefix,special,error)
     else
-        report_identifying("type %s: %s, n: %s, prefix: %s, special: %s, kind: %s",type,reference,i,prefix,special,kind)
+        report_identifying("type %a, reference %a, index %a, prefix %a, special %a, kind %a",type,reference,i,prefix,special,kind)
     end
 end
 
@@ -1070,9 +1078,9 @@ local function report_identify_arguments(set,var,i,type)
     local error     = var.error
     local kind      = var.kind
     if error then
-        report_identifying("type %s: %s, n: %s, prefix: %s, arguments: %s, error: %s",type,reference,i,prefix,arguments,error)
+        report_identifying("type %a, reference %a, index %a, prefix %a, arguments %a, error %a",type,reference,i,prefix,arguments,error)
     else
-        report_identifying("type %s: %s, n: %s, prefix: %s, arguments: %s, kind: %s",type,reference,i,prefix,arguments,kind)
+        report_identifying("type %a, reference %a, index %a, prefix %a, arguments %a, kind %a",type,reference,i,prefix,arguments,kind)
     end
 end
 
@@ -1084,15 +1092,15 @@ local function report_identify_outer(set,var,i,type)
     local kind      = var.kind
     if outer then
         if error then
-            report_identifying("type %s: %s, n: %s, prefix: %s, outer: %s, error: %s",type,reference,i,prefix,outer,error)
+            report_identifying("type %a, reference %a, index %a, prefix %a, outer %a, error %a",type,reference,i,prefix,outer,error)
         else
-            report_identifying("type %s: %s, n: %s, prefix: %s, outer: %s, kind: %s",type,reference,i,prefix,outer,kind)
+            report_identifying("type %a, reference %a, index %a, prefix %a, outer %a, kind %a",type,reference,i,prefix,outer,kind)
         end
     else
         if error then
-            report_identifying("type %s: %s, n: %s, prefix: %s, error: %s",type,reference,i,prefix,error)
+            report_identifying("type %a, reference %a, index %a, prefix %a, error %a",type,reference,i,prefix,error)
         else
-            report_identifying("type %s: %s, n: %s, prefix: %s, kind: %s",type,reference,i,prefix,kind)
+            report_identifying("type %a, reference %a, index %a, prefix %a, kind %a",type,reference,i,prefix,kind)
         end
     end
 end
@@ -1236,7 +1244,7 @@ local function identify_inner(set,var,prefix,collected,derived,tobesaved)
                 ri(var)
             else
                 -- can't happen as we catch it with a metatable now
-                report_references("unknown inner resolver for '%s'",i[1])
+                report_references("unknown inner resolver for %a",i[1])
             end
         else
             -- no prefixes here
@@ -1569,14 +1577,14 @@ end
 
 references.identify = identify
 
-local unknowns, nofunknowns = { }, 0
+local unknowns, nofunknowns, f_valid = { }, 0, formatters["[%s][%s]"]
 
 function references.valid(prefix,reference,highlight,newwindow,layer)
     local set, bug = identify(prefix,reference)
     local unknown = bug or #set == 0
     if unknown then
         currentreference = nil -- will go away
-        local str = format("[%s][%s]",prefix,reference)
+        local str = f_valid(prefix,reference)
         local u = unknowns[str]
         if not u then
             interfaces.showmessage("references",1,str) -- 1 = unknown, 4 = illegal
@@ -1586,7 +1594,7 @@ function references.valid(prefix,reference,highlight,newwindow,layer)
             unknowns[str] = u + 1
         end
     else
-        set.highlight, set.newwindow,set.layer = highlight, newwindow, layer
+        set.highlight, set.newwindow, set.layer = highlight, newwindow, layer
         currentreference = set[1]
     end
     -- we can do the expansion here which saves a call
@@ -1629,7 +1637,7 @@ function references.setinnermethod(m)
         end
     end
     function references.setinnermethod()
-        report_references("inner method is already set and frozen to '%s'",innermethod)
+        report_references("inner method is already set and frozen to %a",innermethod)
     end
 end
 
@@ -1731,7 +1739,7 @@ function references.filter(name,...) -- number page title ...
     if data then
         if name == "realpage" then
             local cs = references.analyze() -- normally already analyzed but also sets state
-            context(cs.realpage or 0) -- todo, return and in command namespace
+            context(tonumber(cs.realpage) or 0) -- todo, return and in command namespace
         else -- assumes data is table
             local kind = type(data) == "table" and data.metadata and data.metadata.kind
             if kind then
@@ -1739,23 +1747,30 @@ function references.filter(name,...) -- number page title ...
                 filter = filter and (filter[name] or filter.unknown or filters.generic[name] or filters.generic.unknown)
                 if filter then
                     if trace_referencing then
-                        report_references("name '%s', kind '%s', using dedicated filter",name,kind)
+                        report_references("name %a, kind %a, using dedicated filter",name,kind)
                     end
                     filter(data,name,...)
                 elseif trace_referencing then
-                    report_references("name '%s', kind '%s', using generic filter",name,kind)
+                    report_references("name %a, kind %a, using generic filter",name,kind)
                 end
             elseif trace_referencing then
-                report_references("name '%s', unknown kind",name)
+                report_references("name %a, unknown kind",name)
             end
         end
+    elseif name == "realpage" then
+        context(0)
     elseif trace_referencing then
-        report_references("name '%s', no reference",name)
+        report_references("name %a, no reference",name)
     end
 end
 
 function references.filterdefault()
     return references.filter("default",getcurrentprefixspec(v_default))
+end
+
+function commands.currentreferencedefault(tag)
+    if not tag then tag = "default" end
+    references.filter(tag,context.delayed(getcurrentprefixspec(tag)))
 end
 
 filters.generic = { }
@@ -1858,13 +1873,19 @@ filters.section = { }
 function filters.section.number(data,what,prefixspec)
     if data then
         local numberdata = data.numberdata
-        if numberdata then
-            sections.typesetnumber(numberdata,"number",prefixspec,numberdata)
-        else
+        if not numberdata then
             local useddata = data.useddata
             if useddata and useddata.number then
                 context(useddata.number)
             end
+        elseif numberdata.hidenumber then
+            local references = data.references
+            if trace_empty then
+                report_empty("reference %a has a hidden number",references.reference)
+                context.emptyreference() -- maybe an option
+            end
+        else
+            sections.typesetnumber(numberdata,"number",prefixspec,numberdata)
         end
     end
 end

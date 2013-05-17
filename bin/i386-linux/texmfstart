@@ -1,2 +1,1 @@
-#!/bin/sh
-mtxrun --usekpse "$@"
+../../texmf-dist/scripts/context/stubs/unix/texmfstart

@@ -6,18 +6,17 @@ if not modules then modules = { } end modules ['util-sto'] = {
     license   = "see context related readme files"
 }
 
-local setmetatable, getmetatable = setmetatable, getmetatable
+local setmetatable, getmetatable, type = setmetatable, getmetatable, type
 
 utilities         = utilities or { }
 utilities.storage = utilities.storage or { }
 local storage     = utilities.storage
 
-local report = texio and texio.write_nl or print
-
 function storage.mark(t)
     if not t then
-        report("fatal error: storage cannot be marked")
-        return -- os.exit()
+        print("\nfatal error: storage cannot be marked\n")
+        os.exit()
+        return
     end
     local m = getmetatable(t)
     if not m then
@@ -46,8 +45,9 @@ end
 
 function storage.checked(t)
     if not t then
-        report("fatal error: storage has not been allocated")
-        return -- os.exit()
+        report("\nfatal error: storage has not been allocated\n")
+        os.exit()
+        return
     end
     return t
 end
@@ -111,6 +111,9 @@ local t_table  = { __index    = f_table  }
 local t_ignore = { __newindex = f_ignore }
 
 function table.setmetatableindex(t,f)
+    if type(t) ~= "table" then
+        f, t = t, { }
+    end
     local m = getmetatable(t)
     if m then
         if f == "empty" then
@@ -137,6 +140,9 @@ function table.setmetatableindex(t,f)
 end
 
 function table.setmetatablenewindex(t,f)
+    if type(t) ~= "table" then
+        f, t = t, { }
+    end
     local m = getmetatable(t)
     if m then
         if f == "ignore" then
@@ -155,6 +161,9 @@ function table.setmetatablenewindex(t,f)
 end
 
 function table.setmetatablecall(t,f)
+    if type(t) ~= "table" then
+        f, t = t, { }
+    end
     local m = getmetatable(t)
     if m then
         m.__call = f

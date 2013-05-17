@@ -8,8 +8,12 @@ if not modules then modules = { } end modules ['font-enh'] = {
 
 local next = next
 
-local trace_defining     = false  trackers.register("fonts.defining", function(v) trace_defining = v end)
-local report_defining    = logs.reporter("fonts","defining")
+local trace_unicoding    = false
+
+trackers.register("fonts.defining",  function(v) trace_unicoding = v end)
+trackers.register("fonts.unicoding", function(v) trace_unicoding = v end)
+
+local report_unicoding   = logs.reporter("fonts","unicoding")
 
 local fonts              = fonts
 local constructors       = fonts.constructors
@@ -43,8 +47,8 @@ local registerotffeature = otffeatures.register
 --             end
 --             for newcode, oldcode in next, data.unicodes do
 --                 if newcode ~= oldcode then
---                     if trace_defining then
---                         report_defining("reencoding U+%05X to U+%05X",oldcode,newcode)
+--                     if trace_unicoding then
+--                         report_unicoding("reencoding %U to %U",oldcode,newcode)
 --                     end
 --                     characters[newcode] = original[oldcode]
 --                 end
@@ -71,8 +75,8 @@ local registerotffeature = otffeatures.register
 --         end
 --         for k,v in next, vector do
 --             if k ~= v then
---                 if trace_defining then
---                     report_defining("remapping U+%05X to U+%05X",k,v)
+--                 if trace_unicoding then
+--                     report_unicoding("remapping %U to %U",k,v)
 --                 end
 --                 local c = original[k]
 --                 characters[v] = c
@@ -137,22 +141,33 @@ local function initializeunicoding(tfmdata)
                     description = descriptions[newcode],
                 }
             end
-            local original = originals[oldcode]
-            if original then
-                characters  [newcode] = original.character
-                descriptions[newcode] = original.description
+            if oldcode then
+                local original = originals[oldcode]
+                if original then
+                    characters  [newcode] = original.character
+                    descriptions[newcode] = original.description
+                else
+                    characters  [newcode] = characters  [oldcode]
+                    descriptions[newcode] = descriptions[oldcode]
+                end
             else
-                characters  [newcode] = characters  [oldcode]
-                descriptions[newcode] = descriptions[oldcode]
+                oldcoding[name] = newcode
             end
             if tounicode then
-                local index = descriptions[newcode].index
-                if not tounicodes[index] then
-                    tounicodes[index] = tosixteen(newcode) -- shared (we could have a metatable)
+                local description = descriptions[newcode]
+                if description then
+                    local index = description.index
+                    if not tounicodes[index] then
+                        tounicodes[index] = tosixteen(newcode) -- shared (we could have a metatable)
+                    end
                 end
             end
-            if trace_defining then
-                report_defining("aliasing glyph '%s' from U+%05X to U+%05X",name,oldcode,newcode)
+            if trace_unicoding then
+                if oldcode then
+                    report_unicoding("aliasing glyph %a from %U to %U",name,oldcode,newcode)
+                else
+                    report_unicoding("aliasing glyph %a to %U",name,newcode)
+                end
             end
         end
     end

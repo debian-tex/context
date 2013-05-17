@@ -6630,6 +6630,18 @@ return {
    ["en"]="layout",
    ["nl"]="layout",
   },
+  ["topcommand"]={
+   ["en"]="topcommand",
+   ["nl"]="bovencommando",
+  },
+  ["middlecommand"]={
+   ["en"]="middlecommand",
+   ["nl"]="middencommando",
+  },
+  ["bottomcommand"]={
+   ["en"]="bottomcommand",
+   ["nl"]="ondercommando",
+  },
   ["action"]={
    ["cs"]="akce",
    ["de"]="aktion",
@@ -10351,6 +10363,9 @@ return {
    ["pe"]="بست",
    ["ro"]="strut",
   },
+  ["mathstyle"]={
+   ["en"]="mathstyle",
+  },
   ["style"]={
    ["cs"]="pismeno",
    ["de"]="stil",
@@ -11310,6 +11325,14 @@ return {
   },
  },
  ["variables"]={
+  ["more"]={
+   ["en"]="more",
+   ["nl"]="meer",
+  },
+  ["less"]={
+   ["en"]="less",
+   ["nl"]="minder",
+  },
   ["embed"]={
    ["en"]="embed",
    ["nl"]="sluitin",
@@ -12585,6 +12608,10 @@ return {
    ["nl"]="letters",
    ["pe"]="حرفها",
    ["ro"]="caractere",
+  },
+  ["chemistry"]={
+   ["en"]="chemistry",
+   ["nl"]="chemie",
   },
   ["color"]={
    ["cs"]="barevne",

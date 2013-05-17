@@ -4,22 +4,63 @@
 %D          title=\METAPOST\ Graphics,
 %D       subtitle=Initialization,
 %D         author=Hans Hagen,
-%D           date=\currentdate,
+%D           date=\ currentdate,
 %D      copyright={PRAGMA ADE \& \CONTEXT\ Development Team}]
 %C
 %C This module is part of the \CONTEXT\ macro||package and is
 %C therefore copyrighted by \PRAGMA. See mreadme.pdf for
 %C details.
 
+% initializations:
+%
+% - pass settings from tex to mp (delayed expansion)
+% - used by context core (and modules)
+% - cummulative definitions
+% - flushed each graphic
+% - can be disabled per instance
+% - managed at the tex end
+%
+% extensions:
+%
+% - add mp functionality (immediate expansion)
+% - cummulative
+% - all instances or subset of instances
+% - can be disabled per instance
+% - managed at the lua/mp end
+% - could be managed at the tex end but no real reason and also messy
+%
+% definitions:
+%
+% - add mp functionality (delayed expansion)
+% - cummulative
+% - per instance
+% - managed at the tex end
+%
+% inclusions:
+%
+% - add mp functionality (delayed expansion)
+% - cummulative only when [+]
+% - per instance
+% - managed at the tex end
+%
+% order of execution:
+%
+%   definitions
+%   extensions
+%   inclusions
+%   beginfig
+%     initializations
+%     graphic
+%   endfig
+
+% The instance will be implemented stepwise ... I should redo some code in order to
+% make the macros look better than they do now.
+
 \writestatus{loading}{MetaPost Graphics / Initializations}
 
 \registerctxluafile{meta-ini}{1.001}
 
 \unprotect
-
-\newtoks \t_meta_extensions       % mp, once
-\newtoks \t_meta_initializations  % tex, each
-\newtoks \t_meta_userinclusions   % mp, user
 
 \newtoks \everyMPgraphic          % mp % public or not ?
 
@@ -33,10 +74,15 @@
 
 %installcorenamespace{graphicvariable} % todo
 \installcorenamespace{mpinstance}
-\installcorenamespace{mpinstancetokens}
+\installcorenamespace{mpinclusions}
+\installcorenamespace{mpdefinitions}
 \installcorenamespace{mpgraphic}
 \installcorenamespace{mpstaticgraphic}
 \installcorenamespace{mpclip}
+
+\newtoks \t_meta_initializations  % tex, each
+\def     \t_meta_inclusions     {\csname\??mpinclusions \currentMPinstance\endcsname} % token register
+\def     \t_meta_definitions    {\csname\??mpdefinitions\currentMPinstance\endcsname} % token register
 
 % The next command is, of course, dedicated to Mojca, who
 % needs it for gnuplot. Anyway, the whole multiple engine
@@ -56,8 +102,11 @@
 
 \let\stopMPdefinitions\relax
 
-\unexpanded\def\startMPextensions#1\stopMPextensions % for all instances, when enabled
-  {\global\t_meta_extensions\expandafter{\the\t_meta_extensions#1}}
+\unexpanded\def\startMPextensions
+  {\dosinglegroupempty\meta_start_extensions}
+
+\def\meta_start_extensions#1#2\stopMPextensions % we could use buffers instead
+  {\ctxlua{metapost.setextensions("#1",\!!bs#2\!!es)}}
 
 \let\stopMPextensions\relax
 
@@ -69,24 +118,42 @@
 \unexpanded\def\startMPinclusions
   {\dosingleempty\meta_start_inclusions}
 
-\def\meta_start_inclusions[#1]#2\stopMPinclusions
+\unexpanded\def\meta_start_inclusions[#1]%
   {\edef\m_meta_option{#1}%
-   \ifx\m_meta_option\!!plustoken \else
-     \global\t_meta_userinclusions\emptytoks
+   \dosinglegroupempty\meta_start_inclusions_indeed}
+
+\def\meta_start_inclusions_indeed#1#2\stopMPinclusions
+  {\let\m_meta_saved_instance\currentMPinstance
+   \edef\currentMPinstance{#1}%
+   \ifx\currentMPinstance\empty
+     \let\currentMPinstance\defaultMPinstance
    \fi
-   \global\t_meta_userinclusions\expandafter{\the\t_meta_userinclusions#2}}
+   \ifx\m_meta_option\!!plustoken \else
+     \global\t_meta_inclusions\emptytoks
+   \fi
+   \global\t_meta_inclusions\expandafter{\the\t_meta_inclusions#2}%
+   \let\currentMPinstance\m_meta_saved_instance}
 
 \let\stopMPinclusions\relax
 
 \unexpanded\def\MPinclusions
   {\dosingleempty\meta_inclusions}
 
-\def\meta_inclusions[#1]#2%
+\def\meta_inclusions[#1]%
   {\edef\m_meta_option{#1}%
-   \ifx\m_meta_option\!!plustoken \else
-     \global\t_meta_userinclusions\emptytoks
+   \dosinglegroupempty\meta_inclusions_indeed}
+
+\def\meta_inclusions_indeed#1#2%
+  {\let\m_meta_saved_instance\currentMPinstance
+   \edef\currentMPinstance{#1}%
+   \ifx\currentMPinstance\empty
+     \let\currentMPinstance\defaultMPinstance
    \fi
-   \global\t_meta_userinclusions\expandafter{\the\t_meta_userinclusions#2}}
+   \ifx\m_meta_option\!!plustoken \else
+     \global\t_meta_inclusions\emptytoks
+   \fi
+   \global\t_meta_inclusions\expandafter{\the\t_meta_inclusions#2}%
+   \let\currentMPinstance\m_meta_saved_instance}
 
 \def\meta_preset_definitions
   {\edef\overlaywidth    {\overlaywidth    \space}%
@@ -94,8 +161,6 @@
    \edef\overlaylinewidth{\overlaylinewidth\space}%
    \edef\currentwidth    {\the\hsize       \space}%
    \edef\currentheight   {\the\vsize       \space}}
-
-\def\t_meta_definitions{\csname\??mpinstancetokens\currentMPinstance\endcsname} % token register
 
 \installcommandhandler \??mpinstance {MPinstance} \??mpinstance
 
@@ -108,24 +173,29 @@
    \c!textcolor=]
 
 \appendtoks
-    \ifcsname\??mpinstancetokens\currentMPinstance\endcsname \else
-        \expandafter\newtoks\csname\??mpinstancetokens\currentMPinstance\endcsname
+    \ifcsname\??mpdefinitions\currentMPinstance\endcsname \else
+        \expandafter\newtoks\csname\??mpdefinitions\currentMPinstance\endcsname
+    \fi
+    \ifcsname\??mpinclusions\currentMPinstance\endcsname \else
+        \expandafter\newtoks\csname\??mpinclusions\currentMPinstance\endcsname
     \fi
     \t_meta_definitions\emptytoks % in case we redefine
+    \t_meta_inclusions \emptytoks % in case we redefine
 \to \everydefineMPinstance
 
 \unexpanded\def\resetMPinstance[#1]%
   {\writestatus\m!metapost{reset will be implemented when needed}}
 
 \def\meta_analyze_graphicname[#1]%
-  {\meta_analyze_graphicname_indeed[#1::::]}
+ %{\normalexpanded{\meta_analyze_graphicname_indeed[#1::::]}}
+  {\normalexpanded{\meta_analyze_graphicname_indeed[#1}::::]}
 
-\def\meta_analyze_graphicname_indeed[#1::#2::#3]% instance ::
+\unexpanded\def\meta_analyze_graphicname_indeed[#1::#2::#3]% instance ::
   {\edef\currentMPgraphicname{#2}%
    \ifx\currentMPgraphicname\empty
      \edef\currentMPgraphicname{#1}%
      \let\currentMPinstance\defaultMPinstance
-   \else\ifcsname\??mpinstancetokens#1\endcsname
+   \else\ifcsname\??mpdefinitions#1\endcsname
      \edef\currentMPinstance{#1}%
    \else
      \let\currentMPinstance\defaultMPinstance
@@ -143,7 +213,6 @@
 \defineMPinstance[metapost]  [\s!format=mpost]
 \defineMPinstance[nofun]     [\s!format=mpost]
 
-\newconditional\c_meta_include_extensions
 \newconditional\c_meta_include_initializations
 
 \def\meta_begin_graphic_group#1%
@@ -161,29 +230,11 @@
    \fi
    \theMPrandomseed;}
 
-% \def\meta_flush_current_preamble
-%   {\ifconditional\c_meta_include_extensions
-%      \the\t_meta_extensions
-%      \the\t_meta_userinclusions
-%    \fi}
-
-\def\meta_flush_current_extensions
-  {\ifconditional\c_meta_include_extensions
-     \the\t_meta_extensions
-   \fi}
-
-\def\meta_flush_current_userinclusions
-  {\ifconditional\c_meta_include_extensions
-     \the\t_meta_userinclusions
-   \fi}
+\def\meta_flush_current_inclusions
+  {\the\t_meta_inclusions}
 
 \def\meta_flush_current_definitions
   {\the\t_meta_definitions}
-
-\def\meta_reset_current_preamble
-  {\ifconditional\c_meta_include_extensions
-     \global\t_meta_extensions\emptytoks
-   \fi}
 
 \def\meta_start_current_graphic
   {\begingroup
@@ -191,14 +242,6 @@
    \the\everyMPgraphic
    \meta_preset_definitions
    \setMPrandomseed % this has to change
-   % we need to preexpand the token lists
-   \edef\p_extensions{\MPinstanceparameter\s!extensions}%
-   \ifx\p_extensions\v!yes
-     \settrue \c_meta_include_extensions
-    %\global\letMPinstanceparameter\s!extensions\v!no % needs checking
-   \else
-     \setfalse\c_meta_include_extensions
-   \fi
    \edef\p_initializations{\MPinstanceparameter\s!initializations}%
    \ifx\p_initializations\v!yes
      \settrue \c_meta_include_initializations
@@ -213,6 +256,7 @@
 
 \def\meta_stop_current_graphic
   {\global\t_meta_definitions\emptytoks
+   \global\t_meta_inclusions\emptytoks
    \endgroup}
 
 \def\meta_process_graphic_start
@@ -222,23 +266,34 @@
   {\egroup
    \meta_place_graphic}
 
+\unexpanded\def\meta_process_graphic_instance#1%
+  {\edef\currentMPinstance{#1}%
+   \ifx\currentMPinstance\empty
+     \let\currentMPinstance\defaultMPinstance
+   \fi
+   \edef\currentMPformat{\MPinstanceparameter\s!format}%
+   \meta_process_graphic}
+
 \unexpanded\def\meta_process_graphic#1% todo: extensions and inclusions outside beginfig
   {\meta_start_current_graphic
    \forgetall
+   \edef\p_extensions{\MPinstanceparameter\s!extensions}%
    \meta_process_graphic_start
      \normalexpanded{\noexpand\ctxlua{metapost.graphic {
        instance        = "\currentMPinstance",
        format          = "\currentMPformat",
        data            = \!!bs#1;\!!es,
        initializations = \!!bs\meta_flush_current_initializations\!!es,
-       extensions      = \!!bs\meta_flush_current_extensions\!!es,
-       inclusions      = \!!bs\meta_flush_current_userinclusions\!!es,
+%      useextensions   = "\MPinstanceparameter\s!extensions",
+\ifx\p_extensions\v!yes
+       extensions      = \!!bs\ctxcommand{getmpextensions("\currentMPinstance")}\!!es,
+\fi
+       inclusions      = \!!bs\meta_flush_current_inclusions\!!es,
        definitions     = \!!bs\meta_flush_current_definitions\!!es,
        figure          = "\MPaskedfigure",
        method          = "\MPinstanceparameter\c!method",
      }}}%
    \meta_process_graphic_stop
-   \meta_reset_current_preamble
    \meta_stop_current_graphic}
 
 \let\meta_process_graphic_figure_start\relax
@@ -339,12 +394,11 @@
             format          = "\currentMPformat",
             data            = \!!bs\getvalue{\??mpclip#1}\!!es,
             initializations = \!!bs\meta_flush_current_initializations\!!es,
-            extensions      = \!!bs\meta_flush_current_extensions\!!es,
-            inclusions      = \!!bs\meta_flush_current_userinclusions\!!es,
+            useextensions   = "\MPinstanceparameter\s!extensions",
+            inclusions      = \!!bs\meta_flush_current_inclusions\!!es,
             method          = "\MPinstanceparameter\c!method",
        }}}}%
      \meta_stop_current_graphic
-     \meta_reset_current_preamble
      \ifx\MPclippath\empty
        \xdef\MPclippath{#4}%
      \fi
@@ -566,7 +620,7 @@
 
 \unexpanded\def\meta_obey_box_origin
   {\setbox\b_meta_graphic\hbox\bgroup
-     \hskip\MPllx\raise\MPlly\box\b_meta_graphic
+     \kern\MPllx\raise\MPlly\box\b_meta_graphic
    \egroup}
 
 \unexpanded\def\obeyMPboxdepth  {\let\meta_relocate_box\meta_obey_box_depth  }
@@ -600,7 +654,13 @@
 \unexpanded\def\startuniqueMPgraphic
   {\dodoublegroupempty\meta_start_unique_graphic}
 
-\def\meta_start_unique_graphic#1#2#3\stopuniqueMPgraphic
+% \def\meta_start_unique_graphic#1#2#3\stopuniqueMPgraphic
+%   {\setgvalue{\??mpgraphic#1}{\meta_handle_unique_graphic{#1}{#2}{#3}}}
+
+\def\meta_start_unique_graphic#1%
+  {\normalexpanded{\meta_start_unique_graphic_indeed{#1}}}
+
+\unexpanded\def\meta_start_unique_graphic_indeed#1#2#3\stopuniqueMPgraphic
   {\setgvalue{\??mpgraphic#1}{\meta_handle_unique_graphic{#1}{#2}{#3}}}
 
 \let\stopuniqueMPgraphic\relax
@@ -629,7 +689,22 @@
 \unexpanded\def\startuseMPgraphic
   {\dodoublegroupempty\meta_start_use_graphic}
 
-\def\meta_start_use_graphic#1#2#3\stopuseMPgraphic
+% \def\meta_start_use_graphic#1#2#3\stopuseMPgraphic
+%   {\setgvalue{\??mpgraphic#1}{\meta_handle_use_graphic{#1}{#2}{#3}}}
+%
+% better, expansion of #1:
+%
+% \def\meta_start_use_graphic#1#2#3\stopuseMPgraphic
+%  %{\setgvalue{\??mpgraphic#1}{\meta_handle_use_graphic{#1}{#2}{#3}}}
+%  %{\setxvalue{\??mpgraphic#1}{\noexpand\meta_handle_use_graphic{#1}{\normalunexpanded{#2}}{\normalunexpanded{#3}}}}
+%   {\global\expandafter\gdef\csname\??mpgraphic#1\expandafter\endcsname\expandafter{\expandafter\meta_handle_use_graphic\expandafter{\normalexpanded{#1}}{#2}{#3}}}
+%
+% cleaner:
+
+\def\meta_start_use_graphic#1%
+  {\normalexpanded{\meta_start_use_graphic_indeed{#1}}}
+
+\unexpanded\def\meta_start_use_graphic_indeed#1#2#3\stopuseMPgraphic
   {\setgvalue{\??mpgraphic#1}{\meta_handle_use_graphic{#1}{#2}{#3}}}
 
 \let\stopuseMPgraphic\relax
@@ -637,7 +712,13 @@
 \unexpanded\def\startusableMPgraphic % redundant but handy
   {\dodoublegroupempty\meta_start_usable_graphic}
 
-\def\meta_start_usable_graphic#1#2#3\stopusableMPgraphic
+% \def\meta_start_usable_graphic#1#2#3\stopusableMPgraphic
+%   {\setgvalue{\??mpgraphic#1}{\meta_handle_use_graphic{#1}{#2}{#3}}}
+
+\def\meta_start_usable_graphic#1%
+  {\normalexpanded{\meta_start_usable_graphic_indeed{#1}}}
+
+\unexpanded\def\meta_start_usable_graphic_indeed#1#2#3\stopusableMPgraphic
   {\setgvalue{\??mpgraphic#1}{\meta_handle_use_graphic{#1}{#2}{#3}}}
 
 \let\stopusableMPgraphic\relax
@@ -659,7 +740,13 @@
 \unexpanded\def\startreusableMPgraphic
   {\dodoublegroupempty\meta_start_reusable_graphic}
 
-\def\meta_start_reusable_graphic#1#2#3\stopreusableMPgraphic
+% \def\meta_start_reusable_graphic#1#2#3\stopreusableMPgraphic
+%   {\setgvalue{\??mpgraphic#1}{\meta_handle_reusable_graphic{#1}{#2}{#3}}}
+
+\def\meta_start_reusable_graphic#1%
+  {\normalexpanded{\meta_start_reusable_graphic_indeed{#1}}}
+
+\unexpanded\def\meta_start_reusable_graphic_indeed#1#2#3\stopreusableMPgraphic
   {\setgvalue{\??mpgraphic#1}{\meta_handle_reusable_graphic{#1}{#2}{#3}}}
 
 \let\stopreusableMPgraphic\relax
@@ -694,9 +781,16 @@
 \unexpanded\def\startuniqueMPpagegraphic
   {\dodoublegroupempty\meta_start_unique_page_graphic}
 
-\def\meta_start_unique_page_graphic#1#2#3\stopuniqueMPpagegraphic              % inefficient, double storage
-  {\setgvalue{\??mpgraphic o:#1}{\meta_handle_unique_graphic{o:#1}{#2}{#3}}%   % but these also keep the state
-   \setgvalue{\??mpgraphic e:#1}{\meta_handle_unique_graphic{e:#1}{#2}{#3}}}   % and meaning will be redefined
+% \def\meta_start_unique_page_graphic#1#2#3\stopuniqueMPpagegraphic              % inefficient, double storage
+%   {\setgvalue{\??mpgraphic o:#1}{\meta_handle_unique_graphic{o:#1}{#2}{#3}}%   % but these also keep the state
+%    \setgvalue{\??mpgraphic e:#1}{\meta_handle_unique_graphic{e:#1}{#2}{#3}}}   % and meaning will be redefined
+
+\def\meta_start_unique_page_graphic#1%
+  {\normalexpanded{\meta_start_unique_page_graphic_indeed{#1}}}
+
+\unexpanded\def\meta_start_unique_page_graphic_indeed#1#2#3\stopuniqueMPpagegraphic % inefficient, double storage
+  {\setgvalue{\??mpgraphic o:#1}{\meta_handle_unique_graphic{o:#1}{#2}{#3}}%        % but these also keep the state
+   \setgvalue{\??mpgraphic e:#1}{\meta_handle_unique_graphic{e:#1}{#2}{#3}}}        % and meaning will be redefined
 
 \let\stopuniqueMPpagegraphic\relax
 
@@ -849,34 +943,44 @@
    \fi}
 
 \def\meta_start_code_instance#1#2\stopMPcode
-  {\meta_begin_graphic_group{#1::\s!dummy}% name does not matter
+  {\begingroup
+   \edef\currentMPinstance{#1}%
+   \let\currentMPgraphicname\empty
+   \edef\currentMPformat{\MPinstanceparameter\s!format}%
    \meta_enable_include
    \meta_process_graphic{#2}%
-   \meta_end_graphic_group}
+   \endgroup}
 
 \def\meta_start_code_standard#1#2\stopMPcode
-  {\let\currentMPinstance\defaultMPinstance
-   \meta_process_graphic{#2}}
+  {\begingroup
+   \let\currentMPinstance\defaultMPinstance
+   \let\currentMPgraphicname\empty
+   \edef\currentMPformat{\MPinstanceparameter\s!format}%
+   \meta_process_graphic{#2}%
+   \endgroup}
 
 \let\stopMPcode\relax
 
 \unexpanded\def\MPcode
-  {\dosinglegroupempty\meta_code}
+  {\dodoublegroupempty\meta_code}
 
 \def\meta_code
-  {\iffirstargument
+  {\ifsecondargument
      \expandafter\meta_code_instance
    \else
      \expandafter\meta_code_standard
    \fi}
 
 \def\meta_code_instance#1#2%
-  {\meta_begin_graphic_group{#1::\s!dummy}% name does not matter
+  {\meta_begin_graphic_group{#1}%
+   \meta_enable_include
    \meta_process_graphic{#2}%
    \meta_end_graphic_group}
 
-\def\meta_code_standard#1% #2
-  {\meta_process_graphic}
+\def\meta_code_standard#1#2%
+  {\let\currentMPinstance\defaultMPinstance
+   \meta_enable_include
+   \meta_process_graphic{#1}}
 
 % a bit nasty (also needed for compatibility:
 

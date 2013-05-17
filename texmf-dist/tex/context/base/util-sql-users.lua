@@ -10,13 +10,16 @@ if not modules then modules = { } end modules ['util-sql-users'] = {
 -- because it's easier to dirtribute this way. Eventually it will be documented
 -- and the related scripts will show up as well.
 
-local sql = require("util-sql")
-local md5 = require("md5")
+-- local sql = sql or (utilities and utilities.sql) or require("util-sql")
+-- local md5 = md5  or require("md5")
+
+local sql = utilities.sql
 
 local format, upper, find, gsub, topattern = string.format, string.upper, string.find, string.gsub, string.topattern
 local sumhexa = md5.sumhexa
 local booleanstring = string.booleanstring
 
+local sql   = utilities.sql
 local users = { }
 sql.users   = users
 
@@ -105,6 +108,7 @@ local template =[[
     CREATE TABLE `users` (
         `id`       int(11)      NOT NULL AUTO_INCREMENT,
         `name`     varchar(80)  NOT NULL,
+        `fullname` varchar(80)  NOT NULL,
         `password` varchar(50)  DEFAULT NULL,
         `group`    int(11)      NOT NULL,
         `enabled`  int(11)      DEFAULT '1',
@@ -120,6 +124,7 @@ local template =[[
 local converter, fields = sql.makeconverter {
     { name = "id",       type = "number"      },
     { name = "name",     type = "string"      },
+    { name = "fullname", type = "string"      },
     { name = "password", type = "string"      },
     { name = "group",    type = groupnames    },
     { name = "enabled",  type = "boolean"     },
@@ -140,7 +145,7 @@ function users.createdb(presets,datatable)
         },
     }
 
-    report("datatable %q created in %q",db.name,db.base)
+    report("datatable %a created in %a",db.name,db.base)
 
     return db
 
@@ -152,9 +157,9 @@ local template =[[
     FROM
         %basename%
     WHERE
-        `name` = '%name%'
+        `name` = '%[name]%'
     AND
-        `password` = '%password%'
+        `password` = '%[password]%'
     ;
 ]]
 
@@ -164,7 +169,7 @@ local template =[[
     FROM
         %basename%
     WHERE
-        `name` = '%name%'
+        `name` = '%[name]%'
     ;
 ]]
 
@@ -200,6 +205,7 @@ end
 local template =[[
     INSERT INTO %basename% (
         `name`,
+        `fullname`,
         `password`,
         `group`,
         `enabled`,
@@ -209,9 +215,10 @@ local template =[[
         `data`
     ) VALUES (
         '%[name]%',
-        '%password%',
-        '%group%',
-        '%enabled%',
+        '%[fullname]%',
+        '%[password]%',
+        '%[group]%',
+        '%[enabled]%',
         '%[email]%',
         '%[address]%',
         '%[theme]%',
@@ -234,6 +241,7 @@ function users.add(db,specification)
         variables = {
             basename = db.basename,
             name     = name,
+            fullname = name or fullname,
             password = encryptpassword(specification.password or ""),
             group    = groupnumbers[specification.group] or groupnumbers.guest,
             enabled  = booleanstring(specification.enabled) and "1" or "0",
@@ -252,7 +260,7 @@ local template =[[
     FROM
         %basename%
     WHERE
-        `name` = '%name%' ;
+        `name` = '%[name]%' ;
 ]]
 
 function users.getbyname(db,name)
@@ -302,9 +310,10 @@ local template =[[
     UPDATE
         %basename%
     SET
-        `password` = '%password%',
-        `group`    = '%group%',
-        `enabled`  = '%enabled%',
+        `fullname` = '%[fullname]%',
+        `password` = '%[password]%',
+        `group`    = '%[group]%',
+        `enabled`  = '%[enabled]%',
         `email`    = '%[email]%',
         `address`  = '%[address]%',
         `theme`    = '%[theme]%',
@@ -328,6 +337,7 @@ function users.save(db,id,specification)
         return
     end
 
+    local fullname = specification.fullname == nil and user.fulname   or specification.fullname
     local password = specification.password == nil and user.password  or specification.password
     local group    = specification.group    == nil and user.group     or specification.group
     local enabled  = specification.enabled  == nil and user.enabled   or specification.enabled
@@ -341,6 +351,7 @@ function users.save(db,id,specification)
         variables = {
             basename = db.basename,
             id       = id,
+            fullname = fullname,
             password = encryptpassword(password),
             group    = groupnumbers[group],
             enabled  = booleanstring(enabled) and "1" or "0",

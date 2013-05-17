@@ -19,9 +19,6 @@ local report_digits = logs.reporter("typesetting","digits")
 
 local nodes, node = nodes, node
 
-local has_attribute      = node.has_attribute
-local unset_attribute    = node.unset_attribute
-local set_attribute      = node.set_attribute
 local hpack_node         = node.hpack
 local traverse_id        = node.traverse_id
 local insert_node_before = node.insert_before
@@ -95,7 +92,7 @@ actions[1] = function(head,start,attribute,attr)
         local oldwidth, newwidth = start.width, getdigitwidth(font)
         if newwidth ~= oldwidth then
             if trace_digits then
-                report_digits("digit trigger %s, instance %s, char 0x%05X, unicode 0x%05X, delta %s",
+                report_digits("digit trigger %a, instance %a, char %C, unicode %U, delta %s",
                     attr%100,div(attr,100),char,what,newwidth-oldwidth)
             end
             head, start = nodes.aligned(head,start,start,newwidth,"middle")
@@ -109,15 +106,15 @@ local function process(namespace,attribute,head)
     local done, current, ok = false, head, false
     while current do
         if current.id == glyph_code then
-            local attr = has_attribute(current,attribute)
+            local attr = current[attribute]
             if attr and attr > 0 then
-                unset_attribute(current,attribute)
+                current[attribute] = unsetvalue
                 local action = actions[attr%100] -- map back to low number
                 if action then
                     head, current, ok = action(head,current,attribute,attr)
                     done = done and ok
                 elseif trace_digits then
-                    report_digits("unknown digit trigger %s",attr)
+                    report_digits("unknown digit trigger %a",attr)
                 end
             end
         end

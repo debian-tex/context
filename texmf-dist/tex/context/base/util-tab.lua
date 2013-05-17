@@ -10,12 +10,13 @@ utilities        = utilities or {}
 utilities.tables = utilities.tables or { }
 local tables     = utilities.tables
 
-local format, gmatch, rep, gsub = string.format, string.gmatch, string.rep, string.gsub
+local format, gmatch, gsub = string.format, string.gmatch, string.gsub
 local concat, insert, remove = table.concat, table.insert, table.remove
 local setmetatable, getmetatable, tonumber, tostring = setmetatable, getmetatable, tonumber, tostring
-local type, next, rawset, tonumber, load, select = type, next, rawset, tonumber, load, select
-local lpegmatch, P, Cs = lpeg.match, lpeg.P, lpeg.Cs
-local serialize = table.serialize
+local type, next, rawset, tonumber, tostring, load, select = type, next, rawset, tonumber, tostring, load, select
+local lpegmatch, P, Cs, Cc = lpeg.match, lpeg.P, lpeg.Cs, lpeg.Cc
+local serialize, sortedkeys, sortedpairs = table.serialize, table.sortedkeys, table.sortedpairs
+local formatters = string.formatters
 
 local splitter = lpeg.tsplitat(".")
 
@@ -27,12 +28,12 @@ function tables.definetable(target,nofirst,nolast) -- defines undefined tables
         if composed then
             composed = shortcut .. "." .. name
             shortcut = shortcut .. "_" .. name
-            t[#t+1] = format("local %s = %s if not %s then %s = { } %s = %s end",shortcut,composed,shortcut,shortcut,composed,shortcut)
+            t[#t+1] = formatters["local %s = %s if not %s then %s = { } %s = %s end"](shortcut,composed,shortcut,shortcut,composed,shortcut)
         else
             composed = name
             shortcut = name
             if not nofirst then
-                t[#t+1] = format("%s = %s or { }",composed,composed)
+                t[#t+1] = formatters["%s = %s or { }"](composed,composed)
             end
         end
     end
@@ -126,35 +127,131 @@ end
 
 -- experimental
 
-local function toxml(t,d,result,step)
-    for k, v in table.sortedpairs(t) do
-        if type(v) == "table" then
-            if type(k) == "number" then
-                result[#result+1] = format("%s<entry n='%s'>",d,k)
-                toxml(v,d..step,result,step)
-                result[#result+1] = format("%s</entry>",d,k)
-            else
-                result[#result+1] = format("%s<%s>",d,k)
-                toxml(v,d..step,result,step)
-                result[#result+1] = format("%s</%s>",d,k)
+local escape = Cs(Cc('"') * ((P('"')/'""' + P(1))^0) * Cc('"'))
+
+function table.tocsv(t,specification)
+    if t and #t > 0 then
+        local result = { }
+        local r = { }
+        specification = specification or { }
+        local fields = specification.fields
+        if type(fields) ~= "string" then
+            fields = sortedkeys(t[1])
+        end
+        local separator = specification.separator or ","
+        if specification.preamble == true then
+            for f=1,#fields do
+                r[f] = lpegmatch(escape,tostring(fields[f]))
             end
-        elseif type(k) == "number" then
-            result[#result+1] = format("%s<entry n='%s'>%s</entry>",d,k,v,k)
+            result[1] = concat(r,separator)
+        end
+        for i=1,#t do
+            local ti = t[i]
+            for f=1,#fields do
+                local field = ti[fields[f]]
+                if type(field) == "string" then
+                    r[f] = lpegmatch(escape,field)
+                else
+                    r[f] = tostring(field)
+                end
+            end
+            result[#result+1] = concat(r,separator)
+        end
+        return concat(result,"\n")
+    else
+        return ""
+    end
+end
+
+-- local nspaces = utilities.strings.newrepeater(" ")
+-- local escape  = Cs((P("<")/"&lt;" + P(">")/"&gt;" + P("&")/"&amp;" + P(1))^0)
+--
+-- local function toxml(t,d,result,step)
+--     for k, v in sortedpairs(t) do
+--         local s = nspaces[d]
+--         local tk = type(k)
+--         local tv = type(v)
+--         if tv == "table" then
+--             if tk == "number" then
+--                 result[#result+1] = format("%s<entry n='%s'>",s,k)
+--                 toxml(v,d+step,result,step)
+--                 result[#result+1] = format("%s</entry>",s,k)
+--             else
+--                 result[#result+1] = format("%s<%s>",s,k)
+--                 toxml(v,d+step,result,step)
+--                 result[#result+1] = format("%s</%s>",s,k)
+--             end
+--         elseif tv == "string" then
+--             if tk == "number" then
+--                 result[#result+1] = format("%s<entry n='%s'>%s</entry>",s,k,lpegmatch(escape,v),k)
+--             else
+--                 result[#result+1] = format("%s<%s>%s</%s>",s,k,lpegmatch(escape,v),k)
+--             end
+--         elseif tk == "number" then
+--             result[#result+1] = format("%s<entry n='%s'>%s</entry>",s,k,tostring(v),k)
+--         else
+--             result[#result+1] = format("%s<%s>%s</%s>",s,k,tostring(v),k)
+--         end
+--     end
+-- end
+--
+-- much faster
+
+local nspaces = utilities.strings.newrepeater(" ")
+
+local function toxml(t,d,result,step)
+    for k, v in sortedpairs(t) do
+        local s = nspaces[d] -- inlining this is somewhat faster but gives more formatters
+        local tk = type(k)
+        local tv = type(v)
+        if tv == "table" then
+            if tk == "number" then
+                result[#result+1] = formatters["%s<entry n='%s'>"](s,k)
+                toxml(v,d+step,result,step)
+                result[#result+1] = formatters["%s</entry>"](s,k)
+            else
+                result[#result+1] = formatters["%s<%s>"](s,k)
+                toxml(v,d+step,result,step)
+                result[#result+1] = formatters["%s</%s>"](s,k)
+            end
+        elseif tv == "string" then
+            if tk == "number" then
+                result[#result+1] = formatters["%s<entry n='%s'>%!xml!</entry>"](s,k,v,k)
+            else
+                result[#result+1] = formatters["%s<%s>%!xml!</%s>"](s,k,v,k)
+            end
+        elseif tk == "number" then
+            result[#result+1] = formatters["%s<entry n='%s'>%S</entry>"](s,k,v,k)
         else
-            result[#result+1] = format("%s<%s>%s</%s>",d,k,tostring(v),k)
+            result[#result+1] = formatters["%s<%s>%S</%s>"](s,k,v,k)
         end
     end
 end
 
-function table.toxml(t,name,nobanner,indent,spaces)
+-- function table.toxml(t,name,nobanner,indent,spaces)
+--     local noroot = name == false
+--     local result = (nobanner or noroot) and { } or { "<?xml version='1.0' standalone='yes' ?>" }
+--     local indent = rep(" ",indent or 0)
+--     local spaces = rep(" ",spaces or 1)
+--     if noroot then
+--         toxml( t, inndent, result, spaces)
+--     else
+--         toxml( { [name or "root"] = t }, indent, result, spaces)
+--     end
+--     return concat(result,"\n")
+-- end
+
+function table.toxml(t,specification)
+    specification = specification or { }
+    local name   = specification.name
     local noroot = name == false
-    local result = (nobanner or noroot) and { } or { "<?xml version='1.0' standalone='yes' ?>" }
-    local indent = rep(" ",indent or 0)
-    local spaces = rep(" ",spaces or 1)
+    local result = (specification.nobanner or noroot) and { } or { "<?xml version='1.0' standalone='yes' ?>" }
+    local indent = specification.indent or 0
+    local spaces = specification.spaces or 1
     if noroot then
-        toxml( t, inndent, result, spaces)
+        toxml( t, indent, result, spaces)
     else
-        toxml( { [name or "root"] = t }, indent, result, spaces)
+        toxml( { [name or "data"] = t }, indent, result, spaces)
     end
     return concat(result,"\n")
 end
@@ -172,7 +269,7 @@ function tables.encapsulate(core,capsule,protect)
     end
     for key, value in next, core do
         if capsule[key] then
-            print(format("\ninvalid inheritance '%s' in '%s': %s",key,tostring(core)))
+            print(formatters["\ninvalid %s %a in %a"]("inheritance",key,core))
             os.exit()
         else
             capsule[key] = value
@@ -186,7 +283,7 @@ function tables.encapsulate(core,capsule,protect)
             __index = capsule,
             __newindex = function(t,key,value)
                 if capsule[key] then
-                    print(format("\ninvalid overload '%s' in '%s'",key,tostring(core)))
+                    print(formatters["\ninvalid %s %a' in %a"]("overload",key,core))
                     os.exit()
                 else
                     rawset(t,key,value)
@@ -204,27 +301,27 @@ local function fastserialize(t,r,outer) -- no mixes
             local v = t[i]
             local tv = type(v)
             if tv == "string" then
-                r[#r+1] = format("%q,",v)
+                r[#r+1] = formatters["%q,"](v)
             elseif tv == "number" then
-                r[#r+1] = format("%s,",v)
+                r[#r+1] = formatters["%s,"](v)
             elseif tv == "table" then
                 fastserialize(v,r)
             elseif tv == "boolean" then
-                r[#r+1] = format("%s,",tostring(v))
+                r[#r+1] = formatters["%S,"](v)
             end
         end
     else
         for k, v in next, t do
             local tv = type(v)
             if tv == "string" then
-                r[#r+1] = format("[%q]=%q,",k,v)
+                r[#r+1] = formatters["[%q]=%q,"](k,v)
             elseif tv == "number" then
-                r[#r+1] = format("[%q]=%s,",k,v)
+                r[#r+1] = formatters["[%q]=%s,"](k,v)
             elseif tv == "table" then
-                r[#r+1] = format("[%q]=",k)
+                r[#r+1] = formatters["[%q]="](k)
                 fastserialize(v,r)
             elseif tv == "boolean" then
-                r[#r+1] = format("[%q]=%s,",k,tostring(v))
+                r[#r+1] = formatters["[%q]=%S,"](k,v)
             end
         end
     end
@@ -336,11 +433,11 @@ local function slowdrop(t)
         local j = 0
         for k, v in next, ti do
             j = j + 1
-            l[j] = format("%s=%q",k,v)
+            l[j] = formatters["%s=%q"](k,v)
         end
-        r[i] = format(" {%s},\n",concat(l))
+        r[i] = formatters[" {%t},\n"](l)
     end
-    return format("return {\n%s}",concat(r))
+    return formatters["return {\n%st}"](r)
 end
 
 local function fastdrop(t)
@@ -349,7 +446,7 @@ local function fastdrop(t)
         local ti = t[i]
         r[#r+1] = " {"
         for k, v in next, ti do
-            r[#r+1] = format("%s=%q",k,v)
+            r[#r+1] = formatters["%s=%q"](k,v)
         end
         r[#r+1] = "},\n"
     end
@@ -357,7 +454,7 @@ local function fastdrop(t)
     return concat(r)
 end
 
-function table.drop(t,slow)
+function table.drop(t,slow) -- only  { { a=2 }, {a=3} }
     if #t == 0 then
         return "return { }"
     elseif slow == true then
@@ -372,3 +469,25 @@ function table.autokey(t,k)
     t[k] = v
     return v
 end
+
+local selfmapper = { __index = function(t,k) t[k] = k return k end }
+
+function table.twowaymapper(t)
+    if not t then
+        t = { }
+    else
+        for i=0,#t do
+            local ti = t[i]       -- t[1]     = "one"
+            if ti then
+                local i = tostring(i)
+                t[i]    = ti      -- t["1"]   = "one"
+                t[ti]   = i       -- t["one"] = "1"
+            end
+        end
+        t[""] = t[0] or ""
+    end
+ -- setmetatableindex(t,"key")
+    setmetatable(t,selfmapper)
+    return t
+end
+

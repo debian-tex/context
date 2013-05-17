@@ -1,6 +1,6 @@
 local info = {
     version   = 1.002,
-    comment   = "scintilla lpeg lexer for metafun",
+    comment   = "scintilla lpeg lexer for xml",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
     license   = "see context related readme files",
@@ -27,6 +27,8 @@ local context          = lexer.context
 
 local xmlcommentlexer  = lexer.load("scite-context-lexer-xml-comment") -- indirect (some issue with the lexer framework)
 local xmlcdatalexer    = lexer.load("scite-context-lexer-xml-cdata")   -- indirect (some issue with the lexer framework)
+local xmlscriptlexer   = lexer.load("scite-context-lexer-xml-script")  -- indirect (some issue with the lexer framework)
+local lualexer         = lexer.load("scite-context-lexer-lua")         --
 
 local space            = lexer.space -- S(" \t\n\r\v\f")
 local any              = lexer.any -- P(1)
@@ -51,6 +53,11 @@ local opencdata        = P("<![CDATA[")
 local closecdata       = P("]]>")
 local opendoctype      = P("<!DOCTYPE") -- could grab the whole doctype
 local closedoctype     = P("]>") + P(">")
+local openscript       = openbegin * (P("script") + P("SCRIPT")) * (1-closeend)^0 * closeend -- begin
+local closescript      = openend   * (P("script") + P("SCRIPT"))                  * closeend
+
+local openlua          = "<?lua"
+local closelua         = "?>"
 
 -- <!DOCTYPE Something PUBLIC "... ..." "..." [ ... ] >
 -- <!DOCTYPE Something PUBLIC "... ..." "..." >
@@ -92,7 +99,8 @@ local p_preamble = Cmt(#P("<?xml "), function(input,i,_) -- todo: utf bomb
 end)
 
 local p_word =
-    Ct( iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() ) -- the function can be inlined
+--     Ct( iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() ) -- the function can be inlined
+    iwordpattern / function(s) return styleofword(validwords,validminimum,s) end * Cp() -- the function can be inlined
 
 local p_rest =
     token("default", any)
@@ -218,8 +226,10 @@ local p_doctype = token("command",P("<!DOCTYPE"))
                 * p_optionalwhitespace
                 * token("command",P(">"))
 
-lexer.embed_lexer(xmllexer, xmlcommentlexer, token("command",opencomment), token("command",closecomment))
-lexer.embed_lexer(xmllexer, xmlcdatalexer,   token("command",opencdata),   token("command",closecdata))
+lexer.embed_lexer(xmllexer, lualexer,        token("command", openlua),     token("command", closelua))
+lexer.embed_lexer(xmllexer, xmlcommentlexer, token("command", opencomment), token("command", closecomment))
+lexer.embed_lexer(xmllexer, xmlcdatalexer,   token("command", opencdata),   token("command", closecdata))
+lexer.embed_lexer(xmllexer, xmlscriptlexer,  token("command", openscript),  token("command", closescript))
 
 -- local p_name =
 --     token("plain",name)
@@ -299,9 +309,9 @@ xmllexer._rules = {
     { "whitespace",  p_spacing     },
     { "preamble",    p_preamble    },
     { "word",        p_word        },
---  { "text",        p_text        },
---  { "comment",     p_comment     },
---  { "cdata",       p_cdata       },
+ -- { "text",        p_text        },
+ -- { "comment",     p_comment     },
+ -- { "cdata",       p_cdata       },
     { "doctype",     p_doctype     },
     { "instruction", p_instruction },
     { "close",       p_close       },
@@ -313,12 +323,18 @@ xmllexer._rules = {
 
 xmllexer._tokenstyles = context.styleset
 
+xmllexer._foldpattern = P("</") + P("<") + P("/>") -- separate entry else interference
+
 xmllexer._foldsymbols = { -- somehow doesn't work yet
     _patterns = {
-        "[<>]",
+        "</",
+        "/>",
+        "<",
     },
     ["keyword"] = {
-        ["<"] = 1, [">"] = -1,
+        ["</"] = -1,
+        ["/>"] = -1,
+        ["<"]  =  1,
     },
 }
 

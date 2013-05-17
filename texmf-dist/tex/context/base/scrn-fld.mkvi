@@ -231,7 +231,6 @@
         depth                = \number\dimexpr\fieldbodyparameter\c!depth \relax,
         align                = "\fieldbodyparameter\c!align",
         length               = "\fieldbodyparameter\c!n",
-        style                = "\fieldbodyparameter\c!style",
         fontstyle            = "\fontstyle",
         fontalternative      = "\fontalternative",
         fontsize             = "\fontbody",
@@ -241,7 +240,6 @@
     \ifx\currentfieldbackgroundcolor\empty \else
         backgroundcolor      = "\currentfieldbackgroundcolor",
         backgroundcolorvalue = "\currentfieldbackgroundcolorvalue",
-
     \fi
     \ifx\currentfieldframecolor\empty \else
         framecolor           = "\currentfieldframecolor",
@@ -369,7 +367,7 @@
      \begingroup
        \edef\currentdefaultfieldvalue{\ctxcommand{getdefaultfieldvalue("#tag")}}%
        \setbox\b_scrn_field_fit_symbol\hbox{\symbol[\currentdefaultfieldvalue]}%
-       \fitfieldframed[#tag]
+       \fitfieldframed
          {\fieldbody[#tag]
             [\c!width=\wd\b_scrn_field_fit_symbol,
              \c!height=\ht\b_scrn_field_fit_symbol,
@@ -954,14 +952,14 @@
 
 \def\scrn_rollbutton_symbol_m
   {\scrn_rollbutton_symbol_indeed
-     \getinteractionmenuparameter
+     \interactionmenuparameter
      \inheritedinteractionmenuframed
      \setinteractionmenuparameter
      \useinteractionmenustyleandcolor}
 
 \def\scrn_rollbutton_symbol_b
   {\scrn_rollbutton_symbol_indeed
-     \getbuttonparameter
+     \buttonparameter
      \inheritedbuttonframed
      \setbuttonparameter
      \usebuttonstyleandcolor}
@@ -969,8 +967,8 @@
 \def\scrn_rollbutton[#tag][#settings]#text[#reference]%
   {\dontleavehmode
    \bgroup
-   \doglobal\advance\c_scrn_rollbutton_n_button
-   \doglobal\advance\c_scrn_rollbutton_n_symbol
+   \advance\c_scrn_rollbutton_n_button\plusone
+   \advance\c_scrn_rollbutton_n_symbol\plusone
    \iffirstargument
      \ifsecondargument
        \edef\currentinteractionmenu{#tag}%

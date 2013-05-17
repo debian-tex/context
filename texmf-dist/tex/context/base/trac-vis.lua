@@ -8,8 +8,9 @@ if not modules then modules = { } end modules ['trac-vis'] = {
 
 local string, number, table = string, number, table
 local node, nodes, attributes, fonts, tex = node, nodes, attributes, fonts, tex
-
+local type = type
 local format = string.format
+local formatters = string.formatters
 
 -- This module started out in the early days of mkiv and luatex with
 -- visualizing kerns related to fonts. In the process of cleaning up the
@@ -43,6 +44,7 @@ local glue_code           = nodecodes.glue
 local penalty_code        = nodecodes.penalty
 local whatsit_code        = nodecodes.whatsit
 local user_code           = nodecodes.user
+local gluespec_code       = nodecodes.gluespec
 
 local kerncodes           = nodes.kerncodes
 local font_kern_code      = kerncodes.fontkern
@@ -67,14 +69,13 @@ local copy_node           = node.copy
 local copy_list           = node.copy_list
 local free_node           = node.free
 local free_node_list      = node.flush_list
-local has_attribute       = node.has_attribute
-local set_attribute       = node.set_attribute
-local unset_attribute     = node.unset_attribute
 local insert_node_before  = node.insert_before
 local insert_node_after   = node.insert_after
 local fast_hpack          = nodes.fasthpack
+local traverse_nodes      = node.traverse
 
 local tex_attribute       = tex.attribute
+local tex_box             = tex.box
 local unsetvalue          = attributes.unsetvalue
 
 local current_font        = font.current
@@ -99,13 +100,6 @@ local setlisttransparency = tracers.transparencies.setlist
 
 local starttiming         = statistics.starttiming
 local stoptiming          = statistics.stoptiming
-
--- local function setlistattribute(list,a,v)
---     while list do
---         set_attribute(list,a,v)
---         list = list.next
---     end
--- end
 
 local a_visual            = attributes.private("visual")
 local a_fontkern          = attributes.private("fontkern")
@@ -157,81 +151,106 @@ local l_penalty, l_glue, l_kern, l_fontkern, l_hbox, l_vbox, l_vtop, l_strut, l_
 local enabled = false
 local layers  = { }
 
+local preset_boxes  = modes.hbox + modes.vbox
+local preset_makeup = preset_boxes + modes.kern + modes.glue + modes.penalty
+local preset_all    = preset_makeup + modes.fontkern + modes.whatsit + modes.glyph + modes.user
+
 function visualizers.setfont(id)
     usedfont = id or current_font()
     exheight = exheights[usedfont]
     emwidth = emwidths[usedfont]
 end
 
+-- we can preset a bunch of bits
+
+local function enable()
+    if not usedfont then
+        -- we use a narrow monospaced font
+        visualizers.setfont(fonts.definers.define { name = "lmmonoltcond10regular", size = tex.sp("4pt") })
+    end
+    for mode, value in next, modes do
+        local tag = formatters["v_%s"](mode)
+        attributes.viewerlayers.define {
+            tag       = tag,
+            title     = formatters["visualizer %s"](mode),
+            visible   = "start",
+            editable  = "yes",
+            printable = "yes"
+        }
+        layers[mode] = attributes.viewerlayers.register(tag,true)
+    end
+    l_hbox     = layers.hbox
+    l_vbox     = layers.vbox
+    l_vtop     = layers.vtop
+    l_glue     = layers.glue
+    l_kern     = layers.kern
+    l_penalty  = layers.penalty
+    l_fontkern = layers.fontkern
+    l_strut    = layers.strut
+    l_whatsit  = layers.whatsit
+    l_glyph    = layers.glyph
+    l_user     = layers.user
+    nodes.tasks.enableaction("shipouts","nodes.visualizers.handler")
+    report_visualize("enabled")
+    enabled = true
+    tex.setcount("global","c_syst_visualizers_state",1) -- so that we can optimize at the tex end
+end
+
 local function setvisual(n,a,what) -- this will become more efficient when we have the bit lib linked in
     if not n or n == "reset" then
         return unsetvalue
     elseif n == "makeup" then
-        for i=1,#modes_makeup do
-            a = setvisual(modes_makeup[i],a)
+        if not a or a == 0 or a == unsetvalue then
+            a = preset_makeup
+        else
+            a = setbit(a,preset_makeup)
+         -- for i=1,#modes_makeup do
+         --     a = setvisual(modes_makeup[i],a)
+         -- end
         end
     elseif n == "boxes" then
-        for i=1,#modes_boxes do
-            a = setvisual(modes_boxes[i],a)
+        if not a or a == 0 or a == unsetvalue then
+            a = preset_boxes
+        else
+            a = setbit(a,preset_boxes)
+         -- for i=1,#modes_boxes do
+         --     a = setvisual(modes_boxes[i],a)
+         -- end
         end
     elseif n == "all" then
         if what == false then
             return unsetvalue
+        elseif not a or a == 0 or a == unsetvalue then
+            a = preset_all
         else
-            for i=1,#modes_all do
-                a = setvisual(modes_all[i],a)
-            end
+            a = setbit(a,preset_all)
+         -- for i=1,#modes_all do
+         --     a = setvisual(modes_all[i],a)
+         -- end
         end
     else
         local m = modes[n]
-        if m then
-            if a == unsetvalue then
-                if what == false then
-                    return unsetvalue
-                else
-                    a = setbit(0,m)
-                end
-            elseif what == false then
-                a = clearbit(a,m)
+        if not m then
+            -- go on
+        elseif a == unsetvalue then
+            if what == false then
+                return unsetvalue
             else
-                a = setbit(a,m)
+             -- a = setbit(0,m)
+                a = m
             end
-        elseif not a then
-            return unsetvalue
+        elseif what == false then
+            a = clearbit(a,m)
+        elseif not a or a == 0 then
+            a = m
+        else
+            a = setbit(a,m)
         end
     end
-    if a == unsetvalue or a == 0 then
+    if not a or a == 0 or a == unsetvalue then
         return unsetvalue
     elseif not enabled then -- must happen at runtime (as we don't store layers yet)
-        if not usedfont then
-            -- we use a narrow monospaced font
-            visualizers.setfont(fonts.definers.define { name = "lmmonoltcond10regular", size = tex.sp("4pt") })
-        end
-        for mode, value in next, modes do
-            local tag = format("v_%s",mode)
-            attributes.viewerlayers.define {
-                tag       = format(tag),
-                title     = format("visualizer %s",mode),
-                visible   = "start",
-                editable  = "yes",
-                printable = "yes"
-            }
-            layers[mode] = attributes.viewerlayers.register(tag,true)
-        end
-        l_hbox     = layers.hbox
-        l_vbox     = layers.vbox
-        l_vtop     = layers.vtop
-        l_glue     = layers.glue
-        l_kern     = layers.kern
-        l_penalty  = layers.penalty
-        l_fontkern = layers.fontkern
-        l_strut    = layers.strut
-        l_whatsit  = layers.whatsit
-        l_glyph    = layers.glyph
-        l_user     = layers.user
-        nodes.tasks.enableaction("shipouts","nodes.visualizers.handler")
-        report_visualize("enabled")
-        enabled = true
+        enable()
     end
     return a
 end
@@ -248,7 +267,7 @@ commands.setvisual = visualizers.setvisual
 commands.setlayer  = visualizers.setlayer
 
 function commands.visual(n)
-    context(setvisual(n,0))
+    context(setvisual(n))
 end
 
 local function set(mode,v)
@@ -256,7 +275,7 @@ local function set(mode,v)
 end
 
 for mode, value in next, modes do
-    trackers.register(format("visualizers.%s",mode), function(v) set(mode,v) end)
+    trackers.register(formatters["visualizers.%s"](mode), function(v) set(mode,v) end)
 end
 
 trackers.register("visualizers.reset", function(v) set("reset", v) end)
@@ -272,6 +291,7 @@ local c_space      = "trace:y"
 local c_skip_a     = "trace:c"
 local c_skip_b     = "trace:m"
 local c_glyph      = "trace:o"
+local c_white      = "trace:w"
 
 local c_positive_d = "trace:db"
 local c_negative_d = "trace:dr"
@@ -281,13 +301,19 @@ local c_space_d    = "trace:dy"
 local c_skip_a_d   = "trace:dc"
 local c_skip_b_d   = "trace:dm"
 local c_glyph_d    = "trace:do"
+local c_white_d    = "trace:dw"
 
-local function sometext(str,layer,color)
+local function sometext(str,layer,color,textcolor) -- we can just paste verbatim together .. no typesteting needed
     local text = fast_hpack_string(str,usedfont)
     local size = text.width
     local rule = new_rule(size,2*exheight,exheight/2)
     local kern = new_kern(-size)
-    setcolor(rule,color)
+    if color then
+        setcolor(rule,color)
+    end
+    if textcolor then
+        setlistcolor(text.list,textcolor)
+    end
     local info = concat_nodes {
         rule,
         kern,
@@ -296,7 +322,7 @@ local function sometext(str,layer,color)
     setlisttransparency(info,c_zero)
     info = fast_hpack(info)
     if layer then
-        set_attribute(info,a_layer,layer)
+        info[a_layer] = layer
     end
     local width = info.width
     info.width = 0
@@ -313,7 +339,7 @@ local function fontkern(head,current)
     if info then
         -- print("hit fontkern")
     else
-        local text = fast_hpack_string(format(" %0.3f",kern*pt_factor),usedfont)
+        local text = fast_hpack_string(formatters[" %0.3f"](kern*pt_factor),usedfont)
         local rule = new_rule(emwidth/10,6*exheight,2*exheight)
         local list = text.list
         if kern > 0 then
@@ -331,7 +357,7 @@ local function fontkern(head,current)
             text,
         }
         info = fast_hpack(info)
-        set_attribute(info,a_layer,l_fontkern)
+        info[a_layer] = l_fontkern
         info.width = 0
         info.height = 0
         info.depth = 0
@@ -381,8 +407,9 @@ local function whatsit(head,current)
         -- print("hit whatsit")
     else
         local tag = whatsitcodes[what]
-        info = sometext(format("W:%s",tag and tags[tag] or what),usedfont)
-        set_attribute(info,a_layer,l_whatsit)
+        -- maybe different text colors per tag
+        info = sometext(formatters["W:%s"](tag and tags[tag] or what),usedfont,nil,c_white)
+        info[a_layer] = l_whatsit
         w_cache[what] = info
     end
     head, current = insert_node_after(head,current,copy_list(info))
@@ -395,8 +422,8 @@ local function user(head,current)
     if info then
         -- print("hit user")
     else
-        info = sometext(format("U:%s",what),usedfont)
-        set_attribute(info,a_layer,l_user)
+        info = sometext(formatters["U:%s"](what),usedfont)
+        info[a_layer] = l_user
         w_cache[what] = info
     end
     head, current = insert_node_after(head,current,copy_list(info))
@@ -480,7 +507,7 @@ local function ruledbox(head,current,vertical,layer,what,simple)
         info.width = 0
         info.height = 0
         info.depth = 0
-        set_attribute(info,a_layer,layer)
+        info[a_layer] = layer
         local info = concat_nodes {
             current,
             new_kern(-wd),
@@ -495,8 +522,12 @@ local function ruledbox(head,current,vertical,layer,what,simple)
             next.prev = info
         end
         if prev then
+if prev.id == gluespec_code then
+    -- weird, how can this happen, an inline glue-spec
+else
             info.prev = prev
             prev.next = info
+end
         end
         if head == current then
             return info, info
@@ -535,7 +566,7 @@ local function ruledglyph(head,current)
         info.width = 0
         info.height = 0
         info.depth = 0
-        set_attribute(info,a_layer,l_glyph)
+        info[a_layer] = l_glyph
         local info = concat_nodes {
             current,
             new_kern(-wd),
@@ -595,7 +626,7 @@ local function ruledglue(head,current,vertical)
     local spec = current.spec
     local width = spec.width
     local subtype = current.subtype
-    local amount = format("%s:%0.3f",tags[subtype] or (vertical and "VS") or "HS",width*pt_factor)
+    local amount = formatters["%s:%0.3f"](tags[subtype] or (vertical and "VS") or "HS",width*pt_factor)
     local info = g_cache[amount]
     if info then
         -- print("glue hit")
@@ -633,7 +664,7 @@ local function ruledkern(head,current,vertical)
     if info then
         -- print("kern hit")
     else
-        local amount = format("%s:%0.3f",vertical and "VK" or "HK",kern*pt_factor)
+        local amount = formatters["%s:%0.3f"](vertical and "VK" or "HK",kern*pt_factor)
         if kern > 0 then
             info = sometext(amount,l_kern,c_positive)
         elseif kern < 0 then
@@ -659,7 +690,7 @@ local function ruledpenalty(head,current,vertical)
     if info then
         -- print("penalty hit")
     else
-        local amount = format("%s:%s",vertical and "VP" or "HP",penalty)
+        local amount = formatters["%s:%s"](vertical and "VP" or "HP",penalty)
         if penalty > 0 then
             info = sometext(amount,l_penalty,c_positive)
         elseif penalty < 0 then
@@ -695,7 +726,7 @@ local function visualize(head,vertical)
     local attr = unsetvalue
     while current do
         local id = current.id
-        local a = has_attribute(current,a_visual) or unsetvalue
+        local a = current[a_visual] or unsetvalue
         if a ~= attr then
             prev_trace_fontkern = trace_fontkern
             if a == unsetvalue then
@@ -728,7 +759,7 @@ local function visualize(head,vertical)
             attr = a
         end
         if trace_strut then
-            set_attribute(current,a_layer,l_strut)
+            current[a_layer] = l_strut
         elseif id == glyph_code then
             if trace_glyph then
                 head, current = ruledglyph(head,current)
@@ -751,7 +782,7 @@ local function visualize(head,vertical)
         elseif id == kern_code then
             local subtype = current.subtype
             -- tricky ... we don't copy the trace attribute in node-inj (yet)
-            if subtype == font_kern_code or has_attribute(current,a_fontkern) then
+            if subtype == font_kern_code or current[a_fontkern] then
                 if trace_fontkern or prev_trace_fontkern then
                     head, current = fontkern(head,current)
                 end
@@ -848,7 +879,43 @@ function visualizers.handler(head)
 end
 
 function visualizers.box(n)
-    tex.box[n].list = visualizers.handler(tex.box[n].list)
+    tex_box[n].list = visualizers.handler(tex_box[n].list)
+end
+
+local last = nil
+local used = nil
+
+local mark = {
+    "trace:1", "trace:2", "trace:3",
+    "trace:4", "trace:5", "trace:6",
+    "trace:7",
+}
+
+local function markfonts(list)
+    for n in traverse_nodes(list) do
+        local id = n.id
+        if id == glyph_code then
+            local font = n.font
+            local okay = used[font]
+            if not okay then
+                last = last + 1
+                okay = mark[last]
+                used[font] = okay
+            end
+            setcolor(n,okay)
+        elseif id == hlist_code or id == vlist_code then
+            markfonts(n.list)
+        end
+    end
+end
+
+function visualizers.markfonts(list)
+    last, used = 0, { }
+    markfonts(type(n) == "number" and tex_box[n].list or n)
+end
+
+function commands.markfonts(n)
+    visualizers.markfonts(n)
 end
 
 statistics.register("visualization time",function()

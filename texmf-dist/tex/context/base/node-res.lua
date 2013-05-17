@@ -46,7 +46,9 @@ end
 pool.register = register_node
 
 function pool.cleanup(nofboxes) -- todo
-    nodes.tracers.steppers.reset() -- todo: make a registration subsystem
+    if nodes.tracers.steppers then -- to be resolved
+        nodes.tracers.steppers.reset() -- todo: make a registration subsystem
+    end
     local nl, nr = 0, nofreserved
     for i=1,nofreserved do
         local ri = reserved[i]
@@ -230,7 +232,7 @@ function pool.textdir(dir)
     return t
 end
 
-function pool.rule(width,height,depth,dir)
+function pool.rule(width,height,depth,dir) -- w/h/d == nil will let them adapt
     local n = copy_node(rule)
     if width  then n.width  = width  end
     if height then n.height = height end
@@ -258,7 +260,7 @@ function pool.leftmarginkern(glyph,width)
     if not glyph then
         report_nodes("invalid pointer to left margin glyph node")
     elseif glyph.id ~= glyph_code then
-        report_nodes("invalid node type %s for left margin glyph node",nodecodes[glyph])
+        report_nodes("invalid node type %a for %s margin glyph node",nodecodes[glyph],"left")
     else
         n.glyph = glyph
     end
@@ -273,7 +275,7 @@ function pool.rightmarginkern(glyph,width)
     if not glyph then
         report_nodes("invalid pointer to right margin glyph node")
     elseif glyph.id ~= glyph_code then
-        report_nodes("invalid node type %s for right margin glyph node",nodecodes[p])
+        report_nodes("invalid node type %a for %s margin glyph node",nodecodes[p],"right")
     else
         n.glyph = glyph
     end

@@ -11,8 +11,58 @@ if not modules then modules = { } end modules ['l-file'] = {
 file       = file or { }
 local file = file
 
+if not lfs then
+    lfs = optionalrequire("lfs")
+end
+
+if not lfs then
+
+    lfs = {
+        getcurrentdir = function()
+            return "."
+        end,
+        attributes = function()
+            return nil
+        end,
+        isfile = function(name)
+            local f = io.open(name,'rb')
+            if f then
+                f:close()
+                return true
+            end
+        end,
+        isdir = function(name)
+            print("you need to load lfs")
+            return false
+        end
+    }
+
+elseif not lfs.isfile then
+
+    local attributes = lfs.attributes
+
+    function lfs.isdir(name)
+        return attributes(name,"mode") == "directory"
+    end
+
+    function lfs.isfile(name)
+        return attributes(name,"mode") == "file"
+    end
+
+ -- function lfs.isdir(name)
+ --     local a = attributes(name)
+ --     return a and a.mode == "directory"
+ -- end
+
+ -- function lfs.isfile(name)
+ --     local a = attributes(name)
+ --     return a and a.mode == "file"
+ -- end
+
+end
+
 local insert, concat = table.insert, table.concat
-local match = string.match
+local match, find = string.match, string.find
 local lpegmatch = lpeg.match
 local getcurrentdir, attributes = lfs.currentdir, lfs.attributes
 local checkedsplit = string.checkedsplit
@@ -33,7 +83,8 @@ local noslashes = 1-slashes
 local name      = noperiod^1
 local suffix    = period/"" * (1-period-slashes)^1 * -1
 
-local pattern = C((noslashes^0 * slashes^1)^1)
+----- pattern = C((noslashes^0 * slashes^1)^1)
+local pattern = C((1 - (slashes^1 * noslashes^1 * -1))^1) * P(1) -- there must be a more efficient way
 
 local function pathpart(name,default)
     return name and lpegmatch(pattern,name) or default or ""
@@ -44,6 +95,13 @@ local pattern = (noslashes^0 * slashes)^1 * C(noslashes^1) * -1
 local function basename(name)
     return name and lpegmatch(pattern,name) or name
 end
+
+-- print(pathpart("file"))
+-- print(pathpart("dir/file"))
+-- print(pathpart("/dir/file"))
+-- print(basename("file"))
+-- print(basename("dir/file"))
+-- print(basename("/dir/file"))
 
 local pattern = (noslashes^0 * slashes^1)^0 * Cs((1-suffix)^1) * suffix^0
 
@@ -69,7 +127,7 @@ file.extname    = suffixonly -- obsolete
 -- actually these are schemes
 
 local drive  = C(R("az","AZ")) * colon
-local path   = C(((1-slashes)^0 * slashes)^0)
+local path   = C((noslashes^0 * slashes)^0)
 local suffix = period * C(P(1-period)^0 * P(-1))
 local base   = C((1-suffix)^0)
 local rest   = C(P(1)^0)
@@ -98,9 +156,14 @@ function file.splitbase(str)
     return str and lpegmatch(pattern_d,str) -- returns path, base+suffix
 end
 
-function file.nametotable(str,splitdrive) -- returns table
+---- stripslash = C((1 - P("/")^1*P(-1))^0)
+
+function file.nametotable(str,splitdrive)
     if str then
         local path, drive, subpath, name, base, suffix = lpegmatch(pattern_c,str)
+     -- if path ~= "" then
+     --     path = lpegmatch(stripslash,path) -- unfortunate hack, maybe this becomes default
+     -- end
         if splitdrive then
             return {
                 path    = path,
@@ -121,7 +184,22 @@ function file.nametotable(str,splitdrive) -- returns table
     end
 end
 
-local pattern = Cs(((period * noperiod^1 * -1)/"" + 1)^1)
+-- print(file.splitname("file"))
+-- print(file.splitname("dir/file"))
+-- print(file.splitname("/dir/file"))
+-- print(file.splitname("file"))
+-- print(file.splitname("dir/file"))
+-- print(file.splitname("/dir/file"))
+
+-- inspect(file.nametotable("file.ext"))
+-- inspect(file.nametotable("dir/file.ext"))
+-- inspect(file.nametotable("/dir/file.ext"))
+-- inspect(file.nametotable("file.ext"))
+-- inspect(file.nametotable("dir/file.ext"))
+-- inspect(file.nametotable("/dir/file.ext"))
+
+----- pattern = Cs(((period * noperiod^1 * -1) / "" + 1)^1)
+local pattern = Cs(((period * (1-period-slashes)^1 * -1) / "" + 1)^1)
 
 function file.removesuffix(name)
     return name and lpegmatch(pattern,name)
@@ -332,11 +410,11 @@ local untouched    = periods + (1-period)^1 * P(-1)
 local splitstarter = (Cs(drivespec * (bwslash/"/" + fwslash)^0) + Cc(false)) * Ct(lpeg.splitat(S("/\\")^1))
 local absolute     = fwslash
 
-function file.collapsepath(str,anchor)
+function file.collapsepath(str,anchor) -- anchor: false|nil, true, "."
     if not str then
         return
     end
-    if anchor and not lpegmatch(anchors,str) then
+    if anchor == true and not lpegmatch(anchors,str) then
         str = getcurrentdir() .. "/" .. str
     end
     if str == "" or str =="." then
@@ -377,12 +455,17 @@ function file.collapsepath(str,anchor)
     elseif lpegmatch(absolute,str) then
         return "/" .. concat(newelements,'/')
     else
-        return concat(newelements, '/')
+        newelements = concat(newelements, '/')
+        if anchor == "." and find(str,"^%./") then
+            return "./" .. newelements
+        else
+            return newelements
+        end
     end
 end
 
--- local function test(str)
---    print(string.format("%-20s %-15s %-15s",str,file.collapsepath(str),file.collapsepath(str,true)))
+-- local function test(str,...)
+--    print(string.format("%-20s %-15s %-30s %-20s",str,file.collapsepath(str),file.collapsepath(str,true),file.collapsepath(str,".")))
 -- end
 -- test("a/b.c/d") test("b.c/d") test("b.c/..")
 -- test("/") test("c:/..") test("sys://..")
@@ -390,6 +473,7 @@ end
 -- test("a") test("./a") test("/a") test("a/../..")
 -- test("a/./b/..") test("a/aa/../b/bb") test("a/.././././b/..") test("a/./././b/..")
 -- test("a/b/c/../..") test("./a/b/c/../..") test("a/b/c/../..")
+-- test("./a")
 
 local validchars = R("az","09","AZ","--","..")
 local pattern_a  = lpeg.replacer(1-validchars)
@@ -413,7 +497,10 @@ file.savedata = io.savedata
 
 function file.copy(oldname,newname)
     if oldname and newname then
-        file.savedata(newname,io.loaddata(oldname))
+        local data = io.loaddata(oldname)
+        if data and data ~= "" then
+            file.savedata(newname,data)
+        end
     end
 end
 

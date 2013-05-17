@@ -15,6 +15,8 @@
 % are limited by what mp can do. We support @ as replacement for
 % the percent symbol. We also add a specifier when no one is given.
 
+\unprotect
+
 \startluacode
     local format, gsub, find, match = string.format, string.gsub, string.find, string.match
 
@@ -54,16 +56,31 @@
 
 % We could also delegate parsing using lower level plugins.
 
-\startMPextensions
-    if unknown Fe_plus : picture Fe_plus ; Fe_plus := textext("+") ; fi ;
+\defineMPinstance
+  [graph]
+  [\s!format=metafun,
+   \s!extensions=\v!yes,
+   \s!initializations=\v!yes,
+   \c!method=\s!double]
+
+\startMPdefinitions{graph}
     if unknown context_grap: input "mp-grap.mpiv" ; fi ;
-\stopMPextensions
+\stopMPdefinitions
+
+% For backwards compatibility (for the moment), also load the graph macros in 
+% the standard MP instance (scaled integer):
+
+\startMPdefinitions
+    if unknown context_grap: input "mp-grap.mpiv" ; fi ;
+\stopMPdefinitions
+
+\protect
 
 \continueifinputfile{m-graph.mkiv}
 
 \starttext
 
-\startMPpage
+\startMPpage[instance=graph]
     label(format("@g","1e-8"),  (0,       0)) ;
     label(format("@g","1e+8"),  (2cm,     0)) ;
     label(format("@g","1e-10"), (0,  -0.5cm)) ;
@@ -78,19 +95,19 @@
     label(format("@g","1e+102"),(2cm,-2.5cm)) ;
 \stopMPpage
 
-% \startMPpage
+% \startMPpage[instance=graph]
 % draw begingraph(3in,2in);
 %     gdraw "t:/metapost/grphdata/agepop91.d";
 % endgraph;
 % \stopMPpage
 
-% \startMPpage
+% \startMPpage[instance=graph]
 % draw begingraph(3in,2in);
 %     gdraw "agepop91.d" plot btex $\bullet$ etex;
 % endgraph;
 % \stopMPpage
 
-% \startMPpage
+% \startMPpage[instance=graph]
 % draw begingraph(3in,2in);
 %     glabel.lft(btex \vbox{\hbox{Population} \hbox{in millions}} etex, OUT);
 %     glabel.bot(btex Age in years etex, OUT);
@@ -98,7 +115,7 @@
 % endgraph;
 % \stopMPpage
 
-% \startMPpage
+% \startMPpage[instance=graph]
 % draw begingraph(3in,2in);
 %     glabel.lft(btex \vbox{\hbox{Population} \hbox{in millions}} etex, OUT);
 %     glabel.bot(btex Age in years etex, OUT);
@@ -107,7 +124,7 @@
 % endgraph;
 % \stopMPpage
 
-% \startMPpage
+% \startMPpage[instance=graph]
 % draw begingraph(2.3in,2in);
 %     setcoords(log,log);
 %     glabel.lft(btex Seconds etex,OUT);
@@ -120,7 +137,7 @@
 % endgraph;
 % \stopMPpage
 
-% \startMPpage
+% \startMPpage[instance=graph]
 % draw begingraph(6.5cm,4.5cm);
 %     setrange(80,0, 90,whatever);
 %     glabel.bot(btex Year etex, OUT);

@@ -20,15 +20,19 @@ if not modules then modules = { } end modules ['cldf-ini'] = {
 --
 -- tex.print == line with endlinechar appended
 
+-- todo: context("%bold{total: }%s",total)
+-- todo: context.documentvariable("title")
+
 local tex = tex
 
 context       = context or { }
 local context = context
 
 local format, gsub, validstring = string.format, string.gsub, string.valid
-local next, type, tostring, tonumber, setmetatable = next, type, tostring, tonumber, setmetatable
+local next, type, tostring, tonumber, setmetatable, unpack, select = next, type, tostring, tonumber, setmetatable, unpack, select
 local insert, remove, concat = table.insert, table.remove, table.concat
 local lpegmatch, lpegC, lpegS, lpegP, lpegCc, patterns = lpeg.match, lpeg.C, lpeg.S, lpeg.P, lpeg.Cc, lpeg.patterns
+local formatters = string.formatters -- using formatteds is slower in this case
 
 local texsprint         = tex.sprint
 local textprint         = tex.tprint
@@ -78,7 +82,7 @@ end
 local function _flush_f_(n)
     local sn = _stack_f_[n]
     if not sn then
-        report_cld("data with id %s cannot be found on stack",n)
+        report_cld("data with id %a cannot be found on stack",n)
     else
         local tn = type(sn)
         if tn == "function" then
@@ -102,7 +106,7 @@ end
 local function _flush_n_(n)
     local sn = _stack_n_[n]
     if not sn then
-        report_cld("data with id %s cannot be found on stack",n)
+        report_cld("data with id %a cannot be found on stack",n)
     elseif texcount["@@trialtypesetting"] == 0 then  -- @@trialtypesetting is private!
         writenode(sn)
         _stack_n_[n] = nil
@@ -155,12 +159,6 @@ context.pushcatcodes = pushcatcodes
 context.popcatcodes  = popcatcodes
 
 -- -- --
-
---~     local capture  = (
---~         space^0 * newline^2  * lpeg.Cc("")            / texprint  +
---~         space^0 * newline    * space^0 * lpeg.Cc(" ") / texsprint +
---~         content                                       / texsprint
---~     )^0
 
 local newline       = patterns.newline
 local space         = patterns.spacer
@@ -355,7 +353,7 @@ function context.viafile(data,tag)
     end
 end
 
--- -- --
+-- -- -- "{" .. ti .. "}" is somewhat slower in a cld-mkiv run than "{",ti,"}"
 
 local containseol = patterns.containseol
 
@@ -370,7 +368,7 @@ local function writer(parent,command,first,...) -- already optimized before call
             if typ == "string" or typ == "number" then
                 flush(currentcatcodes,ti)
             else -- node.write
-                report_context("error: invalid use of direct in '%s', only strings and numbers can be flushed directly, not '%s'",command,typ)
+                report_context("error: invalid use of direct in %a, only strings and numbers can be flushed directly, not %a",command,typ)
             end
             direct = false
         elseif ti == nil then
@@ -448,7 +446,7 @@ local function writer(parent,command,first,...) -- already optimized before call
         elseif isnode(ti) then -- slow
             flush(currentcatcodes,"{\\cldn{",_store_n_(ti),"}}")
         else
-            report_context("error: '%s' gets a weird argument '%s'",command,tostring(ti))
+            report_context("error: %a gets a weird argument %a",command,ti)
         end
     end
 end
@@ -530,7 +528,7 @@ local function caller(parent,f,a,...)
         local typ = type(f)
         if typ == "string" then
             if a then
-                flush(contentcatcodes,format(f,a,...)) -- was currentcatcodes
+                flush(contentcatcodes,formatters[f](a,...)) -- was currentcatcodes
             elseif processlines and lpegmatch(containseol,f) then
                 local flushlines = parent.__flushlines or flushlines
                 flushlines(f)
@@ -568,7 +566,7 @@ local function caller(parent,f,a,...)
          -- writenode(f)
             flush(currentcatcodes,"\\cldn{",_store_n_(f),"}")
         else
-            report_context("error: 'context' gets a weird argument '%s'",tostring(f))
+            report_context("error: %a gets a weird argument %a","context",f)
         end
     end
 end
@@ -603,32 +601,6 @@ end
 function context.fprint(catcodes,fmt,first,...)
     if type(catcodes) == "number" then
         if first then
-            flush(catcodes,format(fmt,first,...))
-        else
-            flush(catcodes,fmt)
-        end
-    else
-        if fmt then
-            flush(format(catcodes,fmt,first,...))
-        else
-            flush(catcodes)
-        end
-    end
-end
-
-function tex.fprint(fmt,first,...) -- goodie
-    if first then
-        flush(currentcatcodes,format(fmt,first,...))
-    else
-        flush(currentcatcodes,fmt)
-    end
-end
-
-local formatters = string.formatters
-
-function context.formatted(catcodes,fmt,first,...)
-    if type(catcodes) == "number" then
-        if first then
             flush(catcodes,formatters[fmt](first,...))
         else
             flush(catcodes,fmt)
@@ -639,6 +611,14 @@ function context.formatted(catcodes,fmt,first,...)
         else
             flush(catcodes)
         end
+    end
+end
+
+function tex.fprint(fmt,first,...) -- goodie
+    if first then
+        flush(currentcatcodes,formatters[fmt](first,...))
+    else
+        flush(currentcatcodes,fmt)
     end
 end
 
@@ -694,7 +674,7 @@ local traced = function(normal,one,two,...)
         normal(one,two,...)
         local catcodes = type(one) == "number" and one
         local arguments = catcodes and { two, ... } or { one, two, ... }
-        local collapsed, c = { format("f : %s : ", catcodes or '-') }, 1
+        local collapsed, c = { formatters["f : %s : "](catcodes or '-') }, 1
         for i=1,#arguments do
             local argument = arguments[i]
             local argtype = type(argument)
@@ -704,7 +684,7 @@ local traced = function(normal,one,two,...)
             elseif argtype == "number" then
                 collapsed[c] = argument
             else
-                collapsed[c] = format("<<%s>>",tostring(argument))
+                collapsed[c] = formatters["<<%S>>"](argument)
             end
         end
         currenttrace(concat(collapsed))
@@ -713,11 +693,11 @@ local traced = function(normal,one,two,...)
         normal(one)
         local argtype = type(one)
         if argtype == "string" then
-            currenttrace(format("f : - : %s",lpegmatch(visualizer,one)))
+            currenttrace(formatters["f : - : %s"](lpegmatch(visualizer,one)))
         elseif argtype == "number" then
-            currenttrace(format("f : - : %s",one))
+            currenttrace(formatters["f : - : %s"](one))
         else
-            currenttrace(format("f : - : <<%s>>",tostring(one)))
+            currenttrace(formatters["f : - : <<%S>>"](one))
         end
     end
 end
@@ -803,19 +783,19 @@ function context.runfile(filename)
         local ok = dofile(foundname)
         if type(ok) == "function" then
             if trace_cld then
-                report_context("begin of file '%s' (function call)",foundname)
+                report_context("begin of file %a (function call)",foundname)
             end
             ok()
             if trace_cld then
-                report_context("end of file '%s' (function call)",foundname)
+                report_context("end of file %a (function call)",foundname)
             end
         elseif ok then
-            report_context("file '%s' is processed and returns true",foundname)
+            report_context("file %a is processed and returns true",foundname)
         else
-            report_context("file '%s' is processed and returns nothing",foundname)
+            report_context("file %a is processed and returns nothing",foundname)
         end
     else
-        report_context("unknown file '%s'",filename)
+        report_context("unknown file %a",filename)
     end
 end
 
@@ -848,6 +828,44 @@ local function caller(parent,...) -- todo: nodes
         return context(unpack(a))
     end
 end
+
+-- local function indexer(parent,k)
+--     local f = function(a,...)
+--         if not a then
+--             return function()
+--                 return context[k]()
+--             end
+--         elseif select("#",...) == 0 then
+--             return function()
+--                 return context[k](a)
+--             end
+--         elseif a then
+--             local t = { ... }
+--             return function()
+--                 return context[k](a,unpack(t))
+--             end
+--         end
+--     end
+--     parent[k] = f
+--     return f
+-- end
+--
+-- local function caller(parent,a,...) -- todo: nodes
+--     if not a then
+--         return function()
+--             return context()
+--         end
+--     elseif select("#",...) == 0 then
+--         return function()
+--             return context(a)
+--         end
+--     elseif a then
+--         local t = { ... }
+--         return function()
+--             return context(a,unpack(t))
+--         end
+--     end
+-- end
 
 setmetatable(delayed, { __index = indexer, __call = caller } )
 
@@ -908,6 +926,60 @@ end
 
 setmetatable(verbatim, { __index = indexer, __call = caller } )
 
+-- formatted
+
+local formatted = { }  context.formatted = formatted
+
+-- local function indexer(parent,k)
+--     local command = context[k]
+--     local f = function(fmt,...)
+--         command(formatters[fmt](...))
+--     end
+--     parent[k] = f
+--     return f
+-- end
+
+local function indexer(parent,k)
+    if type(k) == "string" then
+        local c = "\\" .. tostring(generics[k] or k)
+        local f = function(first,second,...)
+            if first == nil then
+                flush(currentcatcodes,c)
+            elseif second then
+                return writer(parent,c,formatters[first](second,...))
+            else
+                return writer(parent,c,first)
+            end
+        end
+        parent[k] = f
+        return f
+    else
+        return context -- catch
+    end
+end
+
+-- local function caller(parent,...)
+--     context.fprint(...)
+-- end
+
+local function caller(parent,catcodes,fmt,first,...)
+    if type(catcodes) == "number" then
+        if first then
+            flush(catcodes,formatters[fmt](first,...))
+        else
+            flush(catcodes,fmt)
+        end
+    else
+        if fmt then
+            flush(formatters[catcodes](fmt,first,...))
+        else
+            flush(catcodes)
+        end
+    end
+end
+
+setmetatable(formatted, { __index = indexer, __call = caller } )
+
 -- metafun (this will move to another file)
 
 local metafun = { } context.metafun = metafun
@@ -921,7 +993,7 @@ local function caller(parent,f,a,...)
         local typ = type(f)
         if typ == "string" then
             if a then
-                flush(currentcatcodes,mpdrawing,"{",format(f,a,...),"}")
+                flush(currentcatcodes,mpdrawing,"{",formatters[f](a,...),"}")
             else
                 flush(currentcatcodes,mpdrawing,"{",f,"}")
             end
@@ -939,10 +1011,10 @@ local function caller(parent,f,a,...)
             if f then
                 flush(currentcatcodes,mpdrawing,"{^^M}")
             else
-                report_context("warning: 'metafun' gets argument 'false' which is currently unsupported")
+                report_context("warning: %a gets argument 'false' which is currently unsupported","metafun")
             end
         else
-            report_context("error: 'metafun' gets a weird argument '%s'",tostring(f))
+            report_context("error: %a gets a weird argument %a","metafun",tostring(f))
         end
     end
 end
@@ -959,7 +1031,7 @@ function metafun.stop()
 end
 
 function metafun.color(name)
-    return format([[\MPcolor{%s}]],name)
+    return formatters[ [[\MPcolor{%s}]] ](name)
 end
 
 -- metafun.delayed

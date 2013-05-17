@@ -12,9 +12,12 @@ if not modules then modules = { } end modules ['data-res'] = {
 -- instance but for practical purposes we now avoid this and use a
 -- instance variable. We always have one instance active (sort of global).
 
+-- I will reimplement this module ... way too fuzzy now and we can work
+-- with some sensible constraints as it is only is used for context.
+
 -- todo: cache:/// home:/// selfautoparent:/// (sometime end 2012)
 
-local format, gsub, find, lower, upper, match, gmatch = string.format, string.gsub, string.find, string.lower, string.upper, string.match, string.gmatch
+local gsub, find, lower, upper, match, gmatch = string.gsub, string.find, string.lower, string.upper, string.match, string.gmatch
 local concat, insert, sortedkeys = table.concat, table.insert, table.sortedkeys
 local next, type, rawget = next, type, rawget
 local os = os
@@ -22,6 +25,7 @@ local os = os
 local P, S, R, C, Cc, Cs, Ct, Carg = lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.Cc, lpeg.Cs, lpeg.Ct, lpeg.Carg
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 
+local formatters        = string.formatters
 local filedirname       = file.dirname
 local filebasename      = file.basename
 local suffixonly        = file.suffixonly
@@ -32,6 +36,7 @@ local allocate          = utilities.storage.allocate
 local settings_to_array = utilities.parsers.settings_to_array
 local setmetatableindex = table.setmetatableindex
 local luasuffixes       = utilities.lua.suffixes
+local getcurrentdir     = lfs.currentdir
 
 local trace_locating   = false  trackers.register("resolvers.locating",   function(v) trace_locating   = v end)
 local trace_detail     = false  trackers.register("resolvers.details",    function(v) trace_detail     = v end)
@@ -63,7 +68,7 @@ resolvers.luacnfstate   = "unknown"
 --
 -- resolvers.luacnfspec = '{$SELFAUTODIR,$SELFAUTOPARENT}{,{/share,}/texmf{-local,}/web2c}'
 --
--- but instead use:
+-- but instead (for instance) use:
 --
 -- resolvers.luacnfspec = 'selfautoparent:{/texmf{-local,}{,/web2c}}'
 --
@@ -73,16 +78,28 @@ resolvers.luacnfstate   = "unknown"
 --
 -- texlive:
 --
+-- selfautoloc:
+-- selfautoloc:/share/texmf-local/web2c
+-- selfautoloc:/share/texmf-dist/web2c
+-- selfautoloc:/share/texmf/web2c
+-- selfautoloc:/texmf-local/web2c
+-- selfautoloc:/texmf-dist/web2c
+-- selfautoloc:/texmf/web2c
 -- selfautodir:
+-- selfautodir:/share/texmf-local/web2c
+-- selfautodir:/share/texmf-dist/web2c
+-- selfautodir:/share/texmf/web2c
+-- selfautodir:/texmf-local/web2c
+-- selfautodir:/texmf-dist/web2c
+-- selfautodir:/texmf/web2c
+-- selfautoparent:/../texmf-local/web2c
 -- selfautoparent:
--- selfautodir:share/texmf-local/web2c
--- selfautodir:share/texmf/web2c
--- selfautodir:texmf-local/web2c
--- selfautodir:texmf/web2c
--- selfautoparent:share/texmf-local/web2c
--- selfautoparent:share/texmf/web2c
--- selfautoparent:texmf-local/web2c
--- selfautoparent:texmf/web2c
+-- selfautoparent:/share/texmf-local/web2c
+-- selfautoparent:/share/texmf-dist/web2c
+-- selfautoparent:/share/texmf/web2c
+-- selfautoparent:/texmf-local/web2c
+-- selfautoparent:/texmf-dist/web2c
+-- selfautoparent:/texmf/web2c
 --
 -- minimals:
 --
@@ -91,33 +108,26 @@ resolvers.luacnfstate   = "unknown"
 -- selfautoparent:texmf-context/web2c
 -- selfautoparent:texmf/web2c
 
+-- This is a real mess: you don't want to know what creepy paths end up in the default
+-- configuration spec, for instance nested texmf- paths. I'd rather get away from it and
+-- specify a proper search sequence but alas ... it is not permitted in texlive and there
+-- is no way to check if we run a minimals as texmf-context is not in that spec. It's a
+-- compiled-in permutation of historics with the selfautoloc, selfautodir, selfautoparent
+-- resulting in weird combinations. So, when we eventually check the 30 something paths
+-- we also report weird ones, with weird being: (1) duplicate /texmf or (2) no /web2c in
+-- the names.
+
 if environment.default_texmfcnf then
-    -- unfortunately we now have quite some overkill in the spec (not so nice on a network)
-    resolvers.luacnfspec = environment.default_texmfcnf
+    resolvers.luacnfspec = "home:texmf/web2c;" .. environment.default_texmfcnf -- texlive + home: for taco etc
 else
- -- resolvers.luacnfspec = "selfautoparent:texmf{-local,-context,}/web2c"
-    resolvers.luacnfspec = "{selfautoloc:,selfautodir:,selfautoparent:}{,/texmf{-local,}/web2c}"
+    resolvers.luacnfspec = concat ( {
+        "home:texmf/web2c",
+        "selfautoparent:/texmf-local/web2c",
+        "selfautoparent:/texmf-context/web2c",
+        "selfautoparent:/texmf-dist/web2c",
+        "selfautoparent:/texmf/web2c",
+    }, ";")
 end
-
-resolvers.luacnfspec = 'home:texmf/web2c;' .. resolvers.luacnfspec
-
--- which (as we want users to use the web2c path) be can be simplified to this:
---
--- if environment and environment.ownpath and string.find(environment.ownpath,"[\\/]texlive[\\/]") then
---     resolvers.luacnfspec = 'selfautodir:/texmf-local/web2c,selfautoparent:/texmf-local/web2c,selfautoparent:/texmf/web2c'
--- else
---     resolvers.luacnfspec = 'selfautoparent:/texmf-local/web2c,selfautoparent:/texmf/web2c'
--- end
-
---~ -- not yet, some reporters expect strings
-
---~ resolvers.luacnfspec    = {
---~     "selfautoparent:/texmf-local",       -- is actually a user mistake
---~     "selfautoparent:/texmf-local/web2c",
---~     "selfautoparent:/texmf",             -- idem
---~     "selfautoparent:/texmf/web2c",
---~     "selfautoparent:",                   -- idem
---~ }
 
 local unset_variable = "unset"
 
@@ -286,11 +296,13 @@ end
 
 local slash = P("/")
 
-local pathexpressionpattern = Cs (
+local pathexpressionpattern = Cs ( -- create lpeg instead (2013/2014)
     Cc("^") * (
         Cc("%") * S(".-")
       + slash^2 * P(-1) / "/.*"
-      + slash^2 / "/.-/"
+   -- + slash^2 / "/.-/"
+   -- + slash^2 / "/[^/]*/*"   -- too general
+      + slash^2 / "/"
       + (1-slash) * P(-1) * Cc("/")
       + P(1)
     )^1 * Cc("$") -- yes or no $
@@ -316,15 +328,11 @@ local function reportcriticalvariables(cnfspec)
         for i=1,#resolvers.criticalvars do
             local k = resolvers.criticalvars[i]
             local v = resolvers.getenv(k) or "unknown" -- this one will not resolve !
-            report_resolving("variable '%s' set to '%s'",k,v)
+            report_resolving("variable %a set to %a",k,v)
         end
         report_resolving()
         if cnfspec then
-            if type(cnfspec) == "table" then
-                report_resolving("using configuration specification '%s'",concat(cnfspec,","))
-            else
-                report_resolving("using configuration specification '%s'",cnfspec)
-            end
+            report_resolving("using configuration specification %a",type(cnfspec) == "table" and concat(cnfspec,",") or cnfspec)
         end
         report_resolving()
     end
@@ -345,15 +353,20 @@ local function identify_configuration_files()
         local cnfpaths = expandedpathfromlist(resolvers.splitpath(cnfspec))
         local luacnfname = resolvers.luacnfname
         for i=1,#cnfpaths do
-            local filename = collapsepath(filejoin(cnfpaths[i],luacnfname))
-            local realname = resolvers.resolve(filename)
+            local filepath = cnfpaths[i]
+            local filename = collapsepath(filejoin(filepath,luacnfname))
+            local realname = resolvers.resolve(filename) -- can still have "//" ... needs checking
+            -- todo: environment.skipweirdcnfpaths directive
+            if trace_locating then
+                local fullpath  = gsub(resolvers.resolve(collapsepath(filepath)),"//","/")
+                local weirdpath = find(fullpath,"/texmf.+/texmf") or not find(fullpath,"/web2c")
+                report_resolving("looking for %a on %s path %a from specification %a",luacnfname,weirdpath and "weird" or "given",fullpath,filepath)
+            end
             if lfs.isfile(realname) then
-                specification[#specification+1] = filename
+                specification[#specification+1] = filename -- unresolved as we use it in matching, relocatable
                 if trace_locating then
-                    report_resolving("found configuration file '%s'",realname)
+                    report_resolving("found configuration file %a",realname)
                 end
-            elseif trace_locating then
-                report_resolving("unknown configuration file '%s'",realname)
             end
         end
         if trace_locating then
@@ -385,7 +398,7 @@ local function load_configuration_files()
                     if blob then
                         local parentdata = blob()
                         if parentdata then
-                            report_resolving("loading configuration file '%s'",filename)
+                            report_resolving("loading configuration file %a",filename)
                             data = table.merged(parentdata,data)
                         end
                     end
@@ -393,7 +406,7 @@ local function load_configuration_files()
                 data = data and data.content
                 if data then
                     if trace_locating then
-                        report_resolving("loading configuration file '%s'",filename)
+                        report_resolving("loading configuration file %a",filename)
                         report_resolving()
                     end
                     local variables = data.variables or { }
@@ -404,7 +417,7 @@ local function load_configuration_files()
                             initializesetter(filename,k,v)
                         elseif variables[k] == nil then
                             if trace_locating and not warning then
-                                report_resolving("variables like '%s' in configuration file '%s' should move to the 'variables' subtable",
+                                report_resolving("variables like %a in configuration file %a should move to the 'variables' subtable",
                                     k,resolvers.resolve(filename))
                                 warning = true
                             end
@@ -436,13 +449,13 @@ local function load_configuration_files()
 
                 else
                     if trace_locating then
-                        report_resolving("skipping configuration file '%s' (no content)",filename)
+                        report_resolving("skipping configuration file %a (no content)",filename)
                     end
                     setups[pathname] = { }
                     instance.loaderror = true
                 end
             elseif trace_locating then
-                report_resolving("skipping configuration file '%s' (no valid format)",filename)
+                report_resolving("skipping configuration file %a (no valid format)",filename)
             end
             instance.order[#instance.order+1] = instance.setups[pathname]
             if instance.loaderror then
@@ -487,9 +500,9 @@ local function locate_file_databases()
                 end
                 if trace_locating then
                     if runtime then
-                        report_resolving("locating list of '%s' (runtime) (%s)",path,stripped)
+                        report_resolving("locating list of %a (runtime) (%s)",path,stripped)
                     else
-                        report_resolving("locating list of '%s' (cached)",path)
+                        report_resolving("locating list of %a (cached)",path)
                     end
                 end
                 methodhandler('locators',stripped)
@@ -522,11 +535,11 @@ local function save_file_databases() -- will become cachers
             local content = instance.files[cachename]
             caches.collapsecontent(content)
             if trace_locating then
-                report_resolving("saving tree '%s'",cachename)
+                report_resolving("saving tree %a",cachename)
             end
             caches.savecontent(cachename,"files",content)
         elseif trace_locating then
-            report_resolving("not saving runtime tree '%s'",cachename)
+            report_resolving("not saving runtime tree %a",cachename)
         end
     end
 end
@@ -536,30 +549,30 @@ function resolvers.renew(hashname)
         local expanded = resolvers.expansion(hashname) or ""
         if expanded ~= "" then
             if trace_locating then
-                report_resolving("identifying tree '%s' from '%s'",expanded,hashname)
+                report_resolving("identifying tree %a from %a",expanded,hashname)
             end
             hashname = expanded
         else
             if trace_locating then
-                report_resolving("identifying tree '%s'",hashname)
+                report_resolving("identifying tree %a",hashname)
             end
         end
         local realpath = resolvers.resolve(hashname)
         if lfs.isdir(realpath) then
             if trace_locating then
-                report_resolving("using path '%s'",realpath)
+                report_resolving("using path %a",realpath)
             end
             methodhandler('generators',hashname)
             -- could be shared
             local content = instance.files[hashname]
             caches.collapsecontent(content)
             if trace_locating then
-                report_resolving("saving tree '%s'",hashname)
+                report_resolving("saving tree %a",hashname)
             end
             caches.savecontent(hashname,"files",content)
             -- till here
         else
-            report_resolving("invalid path '%s'",realpath)
+            report_resolving("invalid path %a",realpath)
         end
     end
 end
@@ -584,7 +597,7 @@ function resolvers.appendhash(type,name,cache)
     -- safeguard ... tricky as it's actually a bug when seen twice
     if not instance.hashed[name] then
         if trace_locating then
-            report_resolving("hash '%s' appended",name)
+            report_resolving("hash %a appended",name)
         end
         insert(instance.hashes, { type = type, name = name, cache = cache } )
         instance.hashed[name] = cache
@@ -595,7 +608,7 @@ function resolvers.prependhash(type,name,cache)
     -- safeguard ... tricky as it's actually a bug when seen twice
     if not instance.hashed[name] then
         if trace_locating then
-            report_resolving("hash '%s' prepended",name)
+            report_resolving("hash %a prepended",name)
         end
         insert(instance.hashes, 1, { type = type, name = name, cache = cache } )
         instance.hashed[name] = cache
@@ -840,9 +853,9 @@ local function isreadable(name)
     local readable = lfs.isfile(name) -- not file.is_readable(name) asit can be a dir
     if trace_detail then
         if readable then
-            report_resolving("file '%s' is readable",name)
+            report_resolving("file %a is readable",name)
         else
-            report_resolving("file '%s' is not readable", name)
+            report_resolving("file %a is not readable", name)
         end
     end
     return readable
@@ -856,14 +869,14 @@ local function collect_files(names)
     for k=1,#names do
         local fname = names[k]
         if trace_detail then
-            report_resolving("checking name '%s'",fname)
+            report_resolving("checking name %a",fname)
         end
         local bname = filebasename(fname)
         local dname = filedirname(fname)
         if dname == "" or find(dname,"^%.") then
             dname = false
         else
-            dname = gsub(dname,"*","%.*")
+            dname = gsub(dname,"%*",".*")
             dname = "/" .. dname .. "$"
         end
         local hashes = instance.hashes
@@ -873,7 +886,7 @@ local function collect_files(names)
             local files = blobpath and instance.files[blobpath]
             if files then
                 if trace_detail then
-                    report_resolving("deep checking '%s' (%s)",blobpath,bname)
+                    report_resolving("deep checking %a, base %a, pattern %a",blobpath,bname,dname)
                 end
                 local blobfile = files[bname]
                 if not blobfile then
@@ -893,7 +906,7 @@ local function collect_files(names)
                             local search  = filejoin(blobroot,blobfile,bname)
                             local result  = methodhandler('concatinators',hash.type,blobroot,blobfile,bname)
                             if trace_detail then
-                                report_resolving("match: variant '%s', search '%s', result '%s'",variant,search,result)
+                                report_resolving("match: variant %a, search %a, result %a",variant,search,result)
                             end
                             noffiles = noffiles + 1
                             filelist[noffiles] = { variant, search, result }
@@ -907,7 +920,7 @@ local function collect_files(names)
                                 local search  = filejoin(blobroot,vv,bname)
                                 local result  = methodhandler('concatinators',hash.type,blobroot,vv,bname)
                                 if trace_detail then
-                                    report_resolving("match: variant '%s', search '%s', result '%s'",variant,search,result)
+                                    report_resolving("match: variant %a, search %a, result %a",variant,search,result)
                                 end
                                 noffiles = noffiles + 1
                                 filelist[noffiles] = { variant, search, result }
@@ -916,7 +929,7 @@ local function collect_files(names)
                     end
                 end
             elseif trace_locating then
-                report_resolving("no match in '%s' (%s)",blobpath,bname)
+                report_resolving("no match in %a (%s)",blobpath,bname)
             end
         end
     end
@@ -978,13 +991,13 @@ local function find_analyze(filename,askedformat,allresults)
                 wantedfiles[#wantedfiles+1] = forcedname
                 filetype = resolvers.formatofsuffix(forcedname)
                 if trace_locating then
-                    report_resolving("forcing filetype '%s'",filetype)
+                    report_resolving("forcing filetype %a",filetype)
                 end
             end
         else
             filetype = resolvers.formatofsuffix(filename)
             if trace_locating then
-                report_resolving("using suffix based filetype '%s'",filetype)
+                report_resolving("using suffix based filetype %a",filetype)
             end
         end
     else
@@ -998,7 +1011,7 @@ local function find_analyze(filename,askedformat,allresults)
         end
         filetype = askedformat
         if trace_locating then
-            report_resolving("using given filetype '%s'",filetype)
+            report_resolving("using given filetype %a",filetype)
         end
     end
     return filetype, wantedfiles
@@ -1007,7 +1020,7 @@ end
 local function find_direct(filename,allresults)
     if not dangerous[askedformat] and isreadable(filename) then
         if trace_detail then
-            report_resolving("file '%s' found directly",filename)
+            report_resolving("file %a found directly",filename)
         end
         return "direct", { filename }
     end
@@ -1016,7 +1029,7 @@ end
 local function find_wildcard(filename,allresults)
     if find(filename,'%*') then
         if trace_locating then
-            report_resolving("checking wildcard '%s'", filename)
+            report_resolving("checking wildcard %a", filename)
         end
         local method, result = resolvers.findwildcardfiles(filename)
         if result then
@@ -1025,21 +1038,21 @@ local function find_wildcard(filename,allresults)
     end
 end
 
-local function find_qualified(filename,allresults) -- this one will be split too
+local function find_qualified(filename,allresults,askedformat,alsostripped) -- this one will be split too
     if not file.is_qualified_path(filename) then
         return
     end
     if trace_locating then
-        report_resolving("checking qualified name '%s'", filename)
+        report_resolving("checking qualified name %a", filename)
     end
     if isreadable(filename) then
         if trace_detail then
-            report_resolving("qualified file '%s' found", filename)
+            report_resolving("qualified file %a found", filename)
         end
         return "qualified", { filename }
     end
     if trace_detail then
-        report_resolving("locating qualified file '%s'", filename)
+        report_resolving("locating qualified file %a", filename)
     end
     local forcedname, suffix = "", suffixonly(filename)
     if suffix == "" then -- why
@@ -1050,14 +1063,14 @@ local function find_qualified(filename,allresults) -- this one will be split too
                 forcedname = filename .. "." .. s
                 if isreadable(forcedname) then
                     if trace_locating then
-                        report_resolving("no suffix, forcing format filetype '%s'", s)
+                        report_resolving("no suffix, forcing format filetype %a", s)
                     end
                     return "qualified", { forcedname }
                 end
             end
         end
     end
-    if suffix and suffix ~= "" then
+    if alsostripped and suffix and suffix ~= "" then
         -- try to find in tree (no suffix manipulation), here we search for the
         -- matching last part of the name
         local basename = filebasename(filename)
@@ -1071,6 +1084,8 @@ local function find_qualified(filename,allresults) -- this one will be split too
         if not format then
             askedformat = "othertextfiles" -- kind of everything, maybe all
         end
+        --
+        -- is this really what we want? basename if we have an explicit path?
         --
         if basename ~= filename then
             local resolved = collect_instance_files(basename,askedformat,allresults)
@@ -1114,7 +1129,7 @@ end
 local function check_subpath(fname)
     if isreadable(fname) then
         if trace_detail then
-            report_resolving("found '%s' by deep scanning",fname)
+            report_resolving("found %a by deep scanning",fname)
         end
         return fname
     end
@@ -1134,9 +1149,13 @@ local function find_intree(filename,filetype,wantedfiles,allresults)
             end
         end
         if trace_detail then
-            report_resolving("checking filename '%s'",filename)
+            report_resolving("checking filename %a",filename)
         end
+        local resolve = resolvers.resolve
         local result = { }
+        -- pathlist : resolved
+        -- dirlist  : unresolved or resolved
+        -- filelist : unresolved
         for k=1,#pathlist do
             local path = pathlist[k]
             local pathname = lpegmatch(inhibitstripper,path)
@@ -1150,28 +1169,29 @@ local function find_intree(filename,filetype,wantedfiles,allresults)
                 -- compare list entries with permitted pattern -- /xx /xx//
                 local expression = makepathexpression(pathname)
                 if trace_detail then
-                    report_resolving("using pattern '%s' for path '%s'",expression,pathname)
+                    report_resolving("using pattern %a for path %a",expression,pathname)
                 end
                 for k=1,#filelist do
                     local fl = filelist[k]
                     local f = fl[2]
                     local d = dirlist[k]
-                    if find(d,expression) then
+                    -- resolve is new:
+                    if find(d,expression) or find(resolve(d),expression) then
                         -- todo, test for readable
-                        result[#result+1] = resolvers.resolve(fl[3]) -- no shortcut
+                        result[#result+1] = resolve(fl[3]) -- no shortcut
                         done = true
                         if allresults then
                             if trace_detail then
-                                report_resolving("match to '%s' in hash for file '%s' and path '%s', continue scanning",expression,f,d)
+                                report_resolving("match to %a in hash for file %a and path %a, continue scanning",expression,f,d)
                             end
                         else
                             if trace_detail then
-                                report_resolving("match to '%s' in hash for file '%s' and path '%s', quit scanning",expression,f,d)
+                                report_resolving("match to %a in hash for file %a and path %a, quit scanning",expression,f,d)
                             end
                             break
                         end
                     elseif trace_detail then
-                        report_resolving("no match to '%s' in hash for file '%s' and path '%s'",expression,f,d)
+                        report_resolving("no match to %a in hash for file %a and path %a",expression,f,d)
                     end
                 end
             end
@@ -1180,7 +1200,7 @@ local function find_intree(filename,filetype,wantedfiles,allresults)
             else
                 method = "filesystem" -- bonus, even when !! is specified
                 pathname = gsub(pathname,"/+$","")
-                pathname = resolvers.resolve(pathname)
+                pathname = resolve(pathname)
                 local scheme = url.hasscheme(pathname)
                 if not scheme or scheme == "file" then
                     local pname = gsub(pathname,"%.%*$",'')
@@ -1256,7 +1276,7 @@ end
 
 local function find_onpath(filename,filetype,wantedfiles,allresults)
     if trace_detail then
-        report_resolving("checking filename '%s', filetype '%s', wanted files '%s'",filename, filetype or '?',concat(wantedfiles," | "))
+        report_resolving("checking filename %a, filetype %a, wanted files %a",filename,filetype,concat(wantedfiles," | "))
     end
     local result = { }
     for k=1,#wantedfiles do
@@ -1287,14 +1307,17 @@ end
 
 collect_instance_files = function(filename,askedformat,allresults) -- uses nested
     askedformat = askedformat or ""
-    filename = collapsepath(filename)
+    filename = collapsepath(filename,".")
+
+    filename = gsub(filename,"^%./",getcurrentdir().."/") -- we will merge dir.expandname and collapse some day
+
     if allresults then
         -- no need for caching, only used for tracing
         local filetype, wantedfiles = find_analyze(filename,askedformat)
         local results = {
             { find_direct   (filename,true) },
             { find_wildcard (filename,true) },
-            { find_qualified(filename,true) },
+            { find_qualified(filename,true,askedformat) }, -- we can add ,true if we want to find dups
             { find_intree   (filename,filetype,wantedfiles,true) },
             { find_onpath   (filename,filetype,wantedfiles,true) },
             { find_otherwise(filename,filetype,wantedfiles,true) },
@@ -1309,7 +1332,7 @@ collect_instance_files = function(filename,askedformat,allresults) -- uses neste
                         result[#result+1] = c
                         done[c] = true
                     end
-                    status[#status+1] = format("%-10s: %s",method,c)
+                    status[#status+1] = formatters["%-10s: %s"](method,c)
                 end
             end
         end
@@ -1320,11 +1343,11 @@ collect_instance_files = function(filename,askedformat,allresults) -- uses neste
     else
         local method, result, stamp, filetype, wantedfiles
         if instance.remember then
-            stamp = format("%s--%s", filename, askedformat)
+            stamp = formatters["%s--%s"](filename,askedformat)
             result = stamp and instance.found[stamp]
             if result then
                 if trace_locating then
-                    report_resolving("remembered file '%s'",filename)
+                    report_resolving("remembered file %a",filename)
                 end
                 return result
             end
@@ -1333,7 +1356,7 @@ collect_instance_files = function(filename,askedformat,allresults) -- uses neste
         if not result then
             method, result = find_wildcard(filename)
             if not result then
-                method, result = find_qualified(filename)
+                method, result = find_qualified(filename,false,askedformat)
                 if not result then
                     filetype, wantedfiles = find_analyze(filename,askedformat)
                     method, result = find_intree(filename,filetype,wantedfiles)
@@ -1355,7 +1378,7 @@ collect_instance_files = function(filename,askedformat,allresults) -- uses neste
         end
         if stamp then
             if trace_locating then
-                report_resolving("remembering file '%s'",filename)
+                report_resolving("remembering file %a",filename)
             end
             instance.found[stamp] = result
         end
@@ -1364,7 +1387,6 @@ collect_instance_files = function(filename,askedformat,allresults) -- uses neste
 end
 
 -- -- -- end of main file search routing -- -- --
-
 
 local function findfiles(filename,filetype,allresults)
     local result, status = collect_instance_files(filename,filetype or "",allresults)
@@ -1411,7 +1433,9 @@ local function findgivenfiles(filename,allresults)
                 if found ~= "" then
                     noffound = noffound + 1
                     result[noffound] = resolvers.resolve(found)
-                    if not allresults then break end
+                    if not allresults then
+                        break
+                    end
                 end
             else
                 for kk=1,#blist do
@@ -1656,13 +1680,11 @@ function resolvers.dowithfilesintree(pattern,handle,before,after) -- will move, 
             local files = instance.files[blobpath]
             local total, checked, done = 0, 0, 0
             if files then
-                for k,v in next, files do
+                for k, v in table.sortedhash(files) do -- next, files do, beware: this is not the resolve order
                     total = total + 1
                     if find(k,"^remap:") then
-                        k = files[k]
-                        v = k -- files[k] -- chained
-                    end
-                    if find(k,pattern) then
+                        -- forget about these
+                    elseif find(k,pattern) then
                         if type(v) == "string" then
                             checked = checked + 1
                             if handle(blobtype,blobpath,v,k) then

@@ -333,6 +333,12 @@ return {
   },
   {
    category = "mkiv",
+   filename = "attr-mkr",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
    comment  = "code might move from here",
    filename = "core-ini",
    loading  = "always",
@@ -1467,6 +1473,12 @@ return {
   },
   {
    category = "mkiv",
+   filename = "typo-lan",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
    comment  = "this is work in progress",
    filename = "lxml-css",
    loading  = "always",
@@ -1800,6 +1812,12 @@ return {
    status   = "okay",
   },
   {
+   category = "mkvi",
+   filename = "math-stc",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
    category = "mkiv",
    comment  = "at least for the moment",
    filename = "math-frc",
@@ -1822,6 +1840,12 @@ return {
    category = "mkiv",
    comment  = "code get replaced (by autodelimiters)",
    filename = "math-del",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "math-fen",
    loading  = "always",
    status   = "okay",
   },
@@ -2533,6 +2557,12 @@ return {
   },
   {
    category = "lua",
+   filename = "attr-mkr",
+   loading  = "attr-mkr",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    comment  = "experimental code, maybe some will move elsewhere",
    filename = "back-exp",
    loading  = "back-exp",
@@ -3087,6 +3117,12 @@ return {
    status   = "okay",
   },
   {
+   category = "mkvi",
+   filename = "font-hsh",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
    category = "lua",
    filename = "font-ini",
    loading  = "font-lib",
@@ -3122,6 +3158,12 @@ return {
    category = "lua",
    filename = "font-mis",
    loading  = "on demand",
+   status   = "okay",
+  },
+  {
+   category = "mkvi",
+   filename = "font-nod",
+   loading  = "always",
    status   = "okay",
   },
   {
@@ -3544,6 +3586,13 @@ return {
   },
   {
    category = "lua",
+   comment  = "will be upgraded when we have Lua 5.2",
+   filename = "util-env",
+   loading  = "luat-lib",
+   status   = "pending",
+  },
+  {
+   category = "lua",
    filename = "luat-iop",
    loading  = "luat-lib",
    status   = "okay",
@@ -3689,6 +3738,12 @@ return {
   },
   {
    category = "lua",
+   filename = "math-frc",
+   loading  = "math-frc",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    comment  = "could be made look nicer, but who cares",
    filename = "math-dim",
    loading  = "math-ini",
@@ -3705,6 +3760,12 @@ return {
    category = "lua",
    filename = "math-fbk",
    loading  = "math-ini",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "math-frc",
+   loading  = "math-frc",
    status   = "okay",
   },
   {
@@ -3970,6 +4031,11 @@ return {
   {
    category = "lua",
    filename = "node-tra",
+   status   = "todo",
+  },
+  {
+   category = "lua",
+   filename = "node-snp",
    status   = "todo",
   },
   {
@@ -4498,6 +4564,18 @@ return {
   },
   {
    category = "lua",
+   filename = "trac-xml",
+   loading  = "mtxrun",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "trac-exp",
+   loading  = "mtxrun",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    comment  = "experimental code, will be redone when lua 5.2",
    filename = "trac-pro",
    loading  = "luat-lib",
@@ -4607,6 +4685,11 @@ return {
   },
   {
    category = "lua",
+   filename = "typo-lan",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    filename = "typo-rep",
    status   = "todo",
   },
@@ -4648,6 +4731,12 @@ return {
   {
    category = "lua",
    filename = "util-lua",
+   loading  = "luat-lib",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "util-lib",
    loading  = "luat-lib",
    status   = "okay",
   },
@@ -5253,6 +5342,11 @@ return {
    category = "mkiv",
    filename = "s-lan-04",
    status   = "todo",
+  },
+  {
+   category = "mkiv",
+   filename = "s-lan-06",
+   status   = "okay",
   },
   {
    category = "tex",

@@ -95,8 +95,8 @@ return {
         "startcomponent", "stopcomponent", "component",
         "startproduct", "stopproduct", "product",
         "startproject", "stopproject", "project",
-        "starttext", "stoptext", "startnotext", "stopnotext","startdocument", "stopdocument", "documentvariable",
-        "startmodule", "stopmodule", "usemodule",
+        "starttext", "stoptext", "startnotext", "stopnotext","startdocument", "stopdocument", "documentvariable", "setupdocument",
+        "startmodule", "stopmodule", "usemodule", "usetexmodule", "useluamodule",
         --
         "startTEXpage", "stopTEXpage",
     --  "startMPpage", "stopMPpage", -- already catched by nested lexer
@@ -174,6 +174,8 @@ return {
         "ruledhglue", "ruledvglue", "normalhglue", "normalvglue",
         "ruledpenalty",
         --
+        "filledhboxb", "filledhboxr", "filledhboxg", "filledhboxc", "filledhboxm", "filledhboxy", "filledhboxk",
+        --
         "scratchcounter", "globalscratchcounter",
         "scratchdimen", "globalscratchdimen",
         "scratchskip", "globalscratchskip",
@@ -198,6 +200,7 @@ return {
         "scratchtoksone", "scratchtokstwo", "scratchtoksthree",
         "scratchboxone", "scratchboxtwo", "scratchboxthree",
         "scratchnx", "scratchny", "scratchmx", "scratchmy",
+        "scratchunicode",
         --
         "scratchleftskip", "scratchrightskip", "scratchtopskip", "scratchbottomskip",
         --
@@ -227,7 +230,7 @@ return {
         --
         "dontleavehmode", "removelastspace", "removeunwantedspaces", "keepunwantedspaces",
         --
-        "wait", "writestatus", "define", "redefine",
+        "wait", "writestatus", "define", "defineexpandable", "redefine",
         --
         "setmeasure", "setemeasure", "setgmeasure", "setxmeasure", "definemeasure", "freezemeasure", "measure",
         --
@@ -237,7 +240,7 @@ return {
         "resetvalue", "undefinevalue", "ignorevalue",
         "setuvalue", "setuevalue", "setugvalue", "setuxvalue",
         --
-        "globallet", "glet", "udef", "ugdef", "uedef", "uxdef",
+        "globallet", "glet", "udef", "ugdef", "uedef", "uxdef", "checked", "unique",
         --
         "getparameters", "geteparameters", "getgparameters", "getxparameters", "forgetparameters", "copyparameters",
         --
@@ -270,6 +273,7 @@ return {
         "dosingleempty", "dodoubleempty", "dotripleempty", "doquadrupleempty", "doquintupleempty", "dosixtupleempty", "doseventupleempty",
         "dosingleargument", "dodoubleargument", "dotripleargument", "doquadrupleargument", "doquintupleargument", "dosixtupleargument", "doseventupleargument",
         "dosinglegroupempty", "dodoublegroupempty", "dotriplegroupempty", "doquadruplegroupempty", "doquintuplegroupempty",
+        "permitspacesbetweengroups", "dontpermitspacesbetweengroups",
         --
         "nopdfcompression", "maximumpdfcompression", "normalpdfcompression",
         --
@@ -316,6 +320,11 @@ return {
         "mathstylehbox", "mathstylevbox", "mathstylevcenter", "mathstylevcenteredhbox", "mathstylevcenteredvbox",
         "mathtext", "setmathsmalltextbox", "setmathtextbox",
         --
+        "triggerdisplaystyle", "triggertextstyle", "triggerscriptstyle", "triggerscriptscriptstyle",
+        "triggeruncrampedstyle", "triggercrampedstyle",
+        "triggersmallstyle", "triggeruncrampedsmallstyle", "triggercrampedsmallstyle",
+        "triggerbigstyle", "triggeruncrampedbigstyle", "triggercrampedbigstyle",
+        --
         "luaexpr", "expdoifelse", "expdoif", "expdoifnot", "expdoifcommonelse", "expdoifinsetelse",
         --
         "ctxdirectlua", "ctxlatelua", "ctxsprint", "ctxwrite", "ctxcommand", "ctxdirectcommand", "ctxlatecommand", "ctxreport",
@@ -327,5 +336,9 @@ return {
         "definenamedlua",
         "obeylualines", "obeyluatokens",
         "startluacode", "stopluacode", "startlua", "stoplua",
+        --
+        "carryoverpar",
+        --
+        "Umathbotaccent",
     }
 }

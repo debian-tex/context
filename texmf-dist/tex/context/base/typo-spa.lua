@@ -15,11 +15,10 @@ local report_spacing = logs.reporter("typesetting","spacing")
 
 local nodes, fonts, node = nodes, fonts, node
 
-local has_attribute      = node.has_attribute
-local unset_attribute    = node.unset_attribute
 local insert_node_before = node.insert_before
 local insert_node_after  = node.insert_after
 local remove_node        = nodes.remove
+local end_of_math        = node.end_of_math
 
 local fonthashes         = fonts.hashes
 local fontdata           = fonthashes.identifiers
@@ -32,6 +31,7 @@ local v_reset            = interfaces.variables.reset
 
 local nodecodes          = nodes.nodecodes
 local glyph_code         = nodecodes.glyph
+local math_code          = nodecodes.math
 
 local somespace          = nodes.somespace
 local somepenalty        = nodes.somepenalty
@@ -72,13 +72,15 @@ local function process(namespace,attribute,head)
     -- head is always begin of par (whatsit), so we have at least two prev nodes
     -- penalty followed by glue
     while start do
-        if start.id == glyph_code then
-            local attr = has_attribute(start,attribute)
+        local id = start.id
+        if id == glyph_code then
+            local attr = start[attribute]
             if attr and attr > 0 then
                 local data = mapping[attr]
                 if data then
-                    local map = data.characters[start.char]
-                    unset_attribute(start,attribute) -- needed?
+                    local char = start.char
+                    local map = data.characters[char]
+                    start[attribute] = unsetvalue -- needed?
                     if map then
                         local left = map.left
                         local right = map.right
@@ -87,31 +89,31 @@ local function process(namespace,attribute,head)
                         local prev = start.prev
                         if left and left ~= 0 and prev then
                             local ok = false
+                            local prevprev = prev.prev
                             if alternative == 1 then
                                 local somespace = somespace(prev,true)
                                 if somespace then
-                                    local prevprev = prev.prev
                                     local somepenalty = somepenalty(prevprev,10000)
                                     if somepenalty then
                                         if trace_spacing then
-                                            report_spacing("removing penalty and space before %s (left)", utfchar(start.char))
+                                            report_spacing("removing penalty and space before %C (left)",char)
                                         end
                                         head = remove_node(head,prev,true)
                                         head = remove_node(head,prevprev,true)
                                     else
                                         if trace_spacing then
-                                            report_spacing("removing space before %s (left)", utfchar(start.char))
+                                            report_spacing("removing space before %C (left)",char)
                                         end
                                         head = remove_node(head,prev,true)
                                     end
                                 end
                                 ok = true
                             else
-                                ok = not (somespace(prev,true) and somepenalty(prev.prev,true)) or somespace(prev,true)
+                                ok = not (somespace(prev,true) and somepenalty(prevprev,true)) or somespace(prev,true)
                             end
                             if ok then
                                 if trace_spacing then
-                                    report_spacing("inserting penalty and space before %s (left)", utfchar(start.char))
+                                    report_spacing("inserting penalty and space before %C (left)",char)
                                 end
                                 insert_node_before(head,start,new_penalty(10000))
                                 insert_node_before(head,start,new_glue(left*quad))
@@ -121,14 +123,14 @@ local function process(namespace,attribute,head)
                         local next = start.next
                         if right and right ~= 0 and next then
                             local ok = false
+                            local nextnext = next.next
                             if alternative == 1 then
                                 local somepenalty = somepenalty(next,10000)
                                 if somepenalty then
-                                    local nextnext = next.next
                                     local somespace = somespace(nextnext,true)
                                     if somespace then
                                         if trace_spacing then
-                                            report_spacing("removing penalty and space after %s (right)", utfchar(start.char))
+                                            report_spacing("removing penalty and space after %C right",char)
                                         end
                                         head = remove_node(head,next,true)
                                         head = remove_node(head,nextnext,true)
@@ -137,18 +139,18 @@ local function process(namespace,attribute,head)
                                     local somespace = somespace(next,true)
                                     if somespace then
                                         if trace_spacing then
-                                            report_spacing("removing space after %s (right)", utfchar(start.char))
+                                            report_spacing("removing space after %C (right)", char)
                                         end
                                         head = remove_node(head,next,true)
                                     end
                                 end
                                 ok = true
                             else
-                                ok = not (somepenalty(next,10000) and somespace(next.next,true)) or somespace(next,true)
+                                ok = not (somepenalty(next,10000) and somespace(nextnext,true)) or somespace(next,true)
                             end
                             if ok then
                                 if trace_spacing then
-                                    report_spacing("inserting penalty and space after %s (right)", utfchar(start.char))
+                                    report_spacing("inserting penalty and space after %C (right)",char)
                                 end
                                 insert_node_after(head,start,new_glue(right*quad))
                                 insert_node_after(head,start,new_penalty(10000))
@@ -158,8 +160,12 @@ local function process(namespace,attribute,head)
                     end
                 end
             end
+        elseif id == math_code then
+            start = end_of_math(start) -- weird, can return nil .. no math end?
         end
-        start = start.next
+        if start then
+            start = start.next
+        end
     end
     return head, done
 end

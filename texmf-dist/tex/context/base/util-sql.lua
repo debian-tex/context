@@ -64,13 +64,14 @@ local rawset, setmetatable, getmetatable, load, type = rawset, setmetatable, get
 local P, S, V, C, Cs, Ct, Cc, Cg, Cf, patterns, lpegmatch = lpeg.P, lpeg.S, lpeg.V, lpeg.C, lpeg.Cs, lpeg.Ct, lpeg.Cc, lpeg.Cg, lpeg.Cf, lpeg.patterns, lpeg.match
 local concat = table.concat
 
-local osuuid          = os.uuid
-local osclock         = os.clock or os.time
-local ostime          = os.time
+local osuuid            = os.uuid
+local osclock           = os.clock or os.time
+local ostime            = os.time
+local setmetatableindex = table.setmetatableindex
 
-local trace_sql       = false  trackers.register("sql.trace",  function(v) trace_sql     = v end)
-local trace_queries   = false  trackers.register("sql.queries",function(v) trace_queries = v end)
-local report_state    = logs.reporter("sql")
+local trace_sql     = false  trackers.register("sql.trace",  function(v) trace_sql     = v end)
+local trace_queries = false  trackers.register("sql.queries",function(v) trace_queries = v end)
+local report_state  = logs.reporter("sql")
 
 -- trace_sql     = true
 -- trace_queries = true
@@ -110,8 +111,10 @@ local defaults     = { __index =
     },
 }
 
-table.setmetatableindex(sql.methods,function(t,k)
+setmetatableindex(sql.methods,function(t,k)
+    report_state("start loading method %a",k)
     require("util-sql-imp-"..k)
+    report_state("loading method %a done",k)
     return rawget(t,k)
 end)
 
@@ -123,32 +126,45 @@ sql.converters   = converters
 local function makeconverter(entries,celltemplate,wraptemplate)
     local shortcuts   = { }
     local assignments = { }
+    local key         = false
     for i=1,#entries do
         local entry = entries[i]
         local name  = entry.name
         local kind  = entry.type or entry.kind
         local value = format(celltemplate,i,i)
         if kind == "boolean" then
-            assignments[i] = format("[%q] = booleanstring(%s),",name,value)
+            assignments[#assignments+1] = format("[%q] = booleanstring(%s),",name,value)
         elseif kind == "number" then
-            assignments[i] = format("[%q] = tonumber(%s),",name,value)
+            assignments[#assignments+1] = format("[%q] = tonumber(%s),",name,value)
         elseif type(kind) == "function" then
             local c = #converters + 1
             converters[c] = kind
             shortcuts[#shortcuts+1] = format("local fun_%s = converters[%s]",c,c)
-            assignments[i] = format("[%q] = fun_%s(%s),",name,c,value)
+            assignments[#assignments+1] = format("[%q] = fun_%s(%s),",name,c,value)
         elseif type(kind) == "table" then
             local c = #converters + 1
             converters[c] = kind
             shortcuts[#shortcuts+1] = format("local tab_%s = converters[%s]",c,c)
-            assignments[i] = format("[%q] = tab_%s[%s],",name,#converters,value)
+            assignments[#assignments+1] = format("[%q] = tab_%s[%s],",name,#converters,value)
         elseif kind == "deserialize" then
-            assignments[i] = format("[%q] = deserialize(%s),",name,value)
+            assignments[#assignments+1] = format("[%q] = deserialize(%s),",name,value)
+        elseif kind == "key" then
+            -- hashed instead of indexed
+            key = value
+        elseif kind == "entry" then
+            -- so we can (efficiently) extend the hashed table
+            local default = entry.default or ""
+            if type(default) == "string" then
+                assignments[#assignments+1] = format("[%q] = %q,",name,default)
+            else
+                assignments[#assignments+1] = format("[%q] = %s,",name,tostring(default))
+            end
         else
-            assignments[i] = format("[%q] = %s,",name,value)
+            assignments[#assignments+1] = format("[%q] = %s,",name,value)
         end
     end
-    local code = format(wraptemplate,concat(shortcuts,"\n"),concat(assignments,"\n            "))
+    local code = format(wraptemplate,concat(shortcuts,"\n"),key and "{ }" or "data",key or "i",concat(assignments,"\n            "))
+ -- print(code)
     local func = load(code)
     return func and func()
 end
@@ -162,7 +178,7 @@ function sql.makeconverter(entries)
     local converter = {
         fields = fields
     }
-    table.setmetatableindex(converter, function(t,k)
+    setmetatableindex(converter, function(t,k)
         local sqlmethod = methods[k]
         local v = makeconverter(entries,sqlmethod.celltemplate,sqlmethod.wraptemplate)
         t[k] = v
@@ -231,9 +247,9 @@ local function validspecification(specification)
     specification.queryfile  = queryfile
     specification.resultfile = resultfile
     if trace_sql then
-        report_state("template file: %q",templatefile or "<none>")
-        report_state("query file: %q",queryfile)
-        report_state("result file: %q",resultfile)
+        report_state("template file: %s",templatefile or "<none>")
+        report_state("query file: %s",queryfile)
+        report_state("result file: %s",resultfile)
     end
     return true
 end
@@ -253,9 +269,9 @@ local function preparetemplate(specification)
     if templatefile then
         local query = loadtemplate(templatefile,specification.variables,'sql')
         if not query then
-            report_state("error in template file %q",templatefile)
+            report_state("error in template file %a",templatefile)
         elseif trace_queries then
-            report_state("query from template file %q: %s",templatefile,query)
+            report_state("query from template file %a: %s",templatefile,query)
         end
         return query
     end
@@ -328,6 +344,8 @@ function sql.usedatabase(presets,datatable)
             deserialize = deserialize,
             unpackdata  = unpackdata,
         }
+    else
+        report_state("missing name in usedatabase specification")
     end
 end
 

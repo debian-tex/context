@@ -3,7 +3,7 @@ if not modules then modules = { } end modules ['node-fnt'] = {
     comment   = "companion to font-ini.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
-    license   = "see context related readme files"
+    license   = "see context related readme files",
 }
 
 if not context then os.exit() end -- generic function in node-dum
@@ -24,7 +24,6 @@ local fontdata          = fonthashes.identifiers
 local otf               = fonts.handlers.otf
 
 local traverse_id       = node.traverse_id
-local has_attribute     = node.has_attribute
 local starttiming       = statistics.starttiming
 local stoptiming        = statistics.stoptiming
 local nodecodes         = nodes.nodecodes
@@ -41,7 +40,7 @@ local setmetatableindex = table.setmetatableindex
 
 -- potential speedup: check for subtype < 256 so that we can remove that test
 -- elsewhere, danger: injected nodes will not be dealt with but that does not
--- happen often; we could consider processing sublists but that might need mor
+-- happen often; we could consider processing sublists but that might need more
 -- checking later on; the current approach also permits variants
 
 local run = 0
@@ -85,9 +84,10 @@ function handlers.characters(head)
         report_fonts()
         local n = head
         while n do
-            if n.id == glyph_code then
+            local id = n.id
+            if id == glyph_code then
                 local font = n.font
-                local attr = has_attribute(n,0) or 0
+                local attr = n[0] or 0
                 report_fonts("font %03i, dynamic %03i, glyph %s",font,attr,utf.char(n.char))
             else
                 report_fonts("[%s]",nodecodes[n.id])
@@ -96,9 +96,9 @@ function handlers.characters(head)
         end
     end
     for n in traverse_id(glyph_code,head) do
--- if n.subtype<256 then
+     -- if n.subtype<256 then -- all are 1
         local font = n.font
-        local attr = has_attribute(n,0) or 0 -- zero attribute is reserved for fonts in context
+        local attr = n[0] or 0 -- zero attribute is reserved for fonts in context
         if font ~= prevfont or attr ~= prevattr then
             if attr > 0 then
                 local used = attrfonts[font]
@@ -133,7 +133,7 @@ function handlers.characters(head)
             prevfont = font
             prevattr = attr
         end
--- end
+    -- end
     end
     if trace_fontrun then
         report_fonts()
@@ -141,8 +141,9 @@ function handlers.characters(head)
         report_fonts("dynamics: %s",(a > 0 and concat(keys(attrfonts)," ")) or "none")
         report_fonts()
     end
-    -- we could combine these and just make the attribute nil
-    if u == 1 then
+    if u == 0 then
+        -- skip
+    elseif u == 1 then
         local font, processors = next(usedfonts)
         local n = #processors
         if n > 0 then
@@ -157,7 +158,7 @@ function handlers.characters(head)
                 end
             end
         end
-    elseif u > 0 then
+    else
         for font, processors in next, usedfonts do
             local n = #processors
             local h, d = processors[1](head,font,0)
@@ -172,7 +173,9 @@ function handlers.characters(head)
             end
         end
     end
-    if a == 1 then
+    if a == 0 then
+        -- skip
+    elseif a == 1 then
         local font, dynamics = next(attrfonts)
         for attribute, processors in next, dynamics do -- attr can switch in between
             local n = #processors
@@ -191,7 +194,7 @@ function handlers.characters(head)
                 end
             end
         end
-    elseif a > 0 then
+    else
         for font, dynamics in next, attrfonts do
             for attribute, processors in next, dynamics do -- attr can switch in between
                 local n = #processors
@@ -218,167 +221,6 @@ function handlers.characters(head)
     end
     return head, true
 end
-
--- function handlers.xcharacters(head)
---     -- either next or not, but definitely no already processed list
---     starttiming(nodes)
---     local usedfonts, attrfonts, done = { }, { }, false
---     local a, u, prevfont, prevattr = 0, 0, nil, nil
---     local ap = 0
---     if trace_fontrun then
---         run = run + 1
---         report_fonts()
---         report_fonts("checking node list, run %s",run)
---         report_fonts()
---         local n = head
---         while n do
---             if n.id == glyph_code then
---                 local font = n.font
---                 local attr = has_attribute(n,0) or 0
---                 report_fonts("font %03i, dynamic %03i, glyph %s",font,attr,utf.char(n.char))
---             else
---                 report_fonts("[%s]",nodecodes[n.id])
---             end
---             n = n.next
---         end
---     end
---     for n in traverse_id(glyph_code,head) do
---     -- if n.subtype<256 then
---         local font = n.font
---         local attr = n.attr
---         if attr ~= prevattr then
---             local an = has_attribute(n,0) or 0
---             if ap ~= an and an > 0 then
---                 local used = attrfonts[font]
---                 if not used then
---                     used = { }
---                     attrfonts[font] = used
---                 end
---                 if not used[an] then
---                     local sd = setfontdynamics[font]
---                     if sd then -- always true ?
---                         local d = sd(font,an) -- can we cache this one?
---                         if d then
---                             used[an] = d
---                             a = a + 1
---                         else
---                             -- can't happen ... otherwise best use nil/false distinction
---                         end
---                     end
---                 end
---             elseif font ~= prevfont then
---                 local used = usedfonts[font]
---                 if not used then
---                     local fp = fontprocesses[font]
---                     if fp then
---                         usedfonts[font] = fp
---                         u = u + 1
---                     else
---                         -- can't happen ... otherwise best use nil/false distinction
---                     end
---                 end
---             end
---             prevfont = font
---             prevattr = attr
---             ap = an
---         elseif font ~= prevfont then
---             local used = usedfonts[font]
---             if not used then
---                 local fp = fontprocesses[font]
---                 if fp then
---                     usedfonts[font] = fp
---                     u = u + 1
---                 else
---                     -- can't happen ... otherwise best use nil/false distinction
---                 end
---             end
---             prevfont = font
---         end
---     -- end
---     end
---     if trace_fontrun then
---         report_fonts()
---         report_fonts("statics : %s",(u > 0 and concat(keys(usedfonts)," ")) or "none")
---         report_fonts("dynamics: %s",(a > 0 and concat(keys(attrfonts)," ")) or "none")
---         report_fonts()
---     end
---     -- we could combine these and just make the attribute nil
---     if u == 1 then
---         local font, processors = next(usedfonts)
---         local n = #processors
---         if n > 0 then
---             local h, d = processors[1](head,font,0)
---             head = h or head
---             done = done or d
---             if n > 1 then
---                 for i=2,n do
---                     local h, d = processors[i](head,font,0)
---                     head = h or head
---                     done = done or d
---                 end
---             end
---         end
---     elseif u > 0 then
---         for font, processors in next, usedfonts do
---             local n = #processors
---             local h, d = processors[1](head,font,0)
---             head = h or head
---             done = done or d
---             if n > 1 then
---                 for i=2,n do
---                     local h, d = processors[i](head,font,0)
---                     head = h or head
---                     done = done or d
---                 end
---             end
---         end
---     end
---     if a == 1 then
---         local font, dynamics = next(attrfonts)
---         for attribute, processors in next, dynamics do -- attr can switch in between
---             local n = #processors
---             if n == 0 then
---                 report_fonts("no processors associated with dynamic %s",attribute)
---             else
---                 local h, d = processors[1](head,font,attribute)
---                 head = h or head
---                 done = done or d
---                 if n > 1 then
---                     for i=2,n do
---                         local h, d = processors[i](head,font,attribute)
---                         head = h or head
---                         done = done or d
---                     end
---                 end
---             end
---         end
---     elseif a > 0 then
---         for font, dynamics in next, attrfonts do
---             for attribute, processors in next, dynamics do -- attr can switch in between
---                 local n = #processors
---                 if n == 0 then
---                     report_fonts("no processors associated with dynamic %s",attribute)
---                 else
---                     local h, d = processors[1](head,font,attribute)
---                     head = h or head
---                     done = done or d
---                     if n > 1 then
---                         for i=2,n do
---                             local h, d = processors[i](head,font,attribute)
---                             head = h or head
---                             done = done or d
---                         end
---                     end
---                 end
---             end
---         end
---     end
---     stoptiming(nodes)
---     if trace_characters then
---         nodes.report(head,done)
---     end
---     return head, true
--- end
 
 handlers.protectglyphs   = node.protect_glyphs
 handlers.unprotectglyphs = node.unprotect_glyphs

@@ -87,9 +87,7 @@ local template =[[
 ]]
 
 function tickets.createdb(presets,datatable)
-
     local db = checkeddb(presets,datatable)
-
     local data, keys = db.execute {
         template  = template,
         variables = {
@@ -97,7 +95,7 @@ function tickets.createdb(presets,datatable)
         },
     }
 
-    report("datatable %q created in %q",db.name,db.base)
+    report("datatable %a created in %a",db.name,db.base)
 
     return db
 
@@ -118,7 +116,7 @@ function tickets.deletedb(presets,datatable)
         },
     }
 
-    report("datatable %q removed in %q",db.name,db.base)
+    report("datatable %a removed in %a",db.name,db.base)
 
 end
 
@@ -231,6 +229,9 @@ function tickets.save(db,ticket)
     local data   = db.serialize(ticket.data or { },"return")
     local status = ticket.status or s_error
 
+-- print("SETTING")
+-- inspect(data)
+
     ticket.status   = status
     ticket.accessed = time
 
@@ -322,7 +323,7 @@ local template_yes =[[
     FROM
         %basename%
     ORDER BY
-        `created` ;
+        `id` ;
 ]]
 
 local template_nop =[[
@@ -334,7 +335,7 @@ local template_nop =[[
     FROM
         %basename%
     ORDER BY
-        `created` ;
+        `id` ;
 ]]
 
 function tickets.collect(db,nodata)
@@ -377,7 +378,7 @@ local template_cleanup_yes =[[
     WHERE
         `accessed` < %time%
     ORDER BY
-        `created` ;
+        `id` ;
 ]] .. template
 
 local template_cleanup_nop =[[
@@ -392,7 +393,7 @@ local template_cleanup_nop =[[
     WHERE
         `accessed` < %time%
     ORDER BY
-        `created` ;
+        `id` ;
 ]] .. template
 
 function tickets.cleanupdb(db,delta,nodata) -- maybe delta in db
@@ -428,7 +429,10 @@ local template =[[
     FROM
         %basename%
     WHERE
-        `token` = '%token%' ;
+        `token` = '%token%'
+    ORDER BY
+        `id`
+    ;
 ]]
 
 function tickets.getstatus(db,token)
@@ -453,7 +457,10 @@ local template =[[
     FROM
         %basename%
     WHERE
-        `status` >= %rubish% OR `accessed` < %time% ;
+        `status` >= %rubish% OR `accessed` < %time%
+    ORDER BY
+        `id`
+    ;
 ]]
 
 function tickets.getobsolete(db,delta)
@@ -687,7 +694,7 @@ local template =[[
     WHERE
         `token` = '%token%'
     ORDER BY
-        `created` ;
+        `id` ;
 ]]
 
 function tickets.getticketsbytoken(db,token)
@@ -714,7 +721,7 @@ local template =[[
     WHERE
         `usertoken` = '%usertoken%' AND `status` < %rubish%
     ORDER BY
-        `created` ;
+        `id` ;
 ]]
 
 function tickets.getusertickets(db,usertoken)
