@@ -1,7 +1,7 @@
 
 tlnet=${1:-/var/www/norbert/tlnet}
 
-basever=2013.01.02
+basever=2013.04.20
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
@@ -34,3 +34,4 @@ unpackone context-gnuplot
 cd ../..
 
 GZIP=-9 tar -czf $orig $pkg
+
