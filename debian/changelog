@@ -3,8 +3,9 @@ context (2013.05.28.20130702-1) unstable; urgency=low
   * update make-orig-tar for new context release
   * Imported Upstream version 2013.05.28.20130702
   * fix fmtutil.cnf definitions
+  * bump standards version to 3.9.4, no changes
 
- -- Norbert Preining <preining@debian.org>  Tue, 02 Jul 2013 11:39:45 +0900
+ -- Norbert Preining <preining@debian.org>  Tue, 02 Jul 2013 11:40:50 +0900
 
 context (2013.04.20.20130517-1) unstable; urgency=low
 
