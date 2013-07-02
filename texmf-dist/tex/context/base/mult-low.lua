@@ -140,6 +140,9 @@ return {
         "newlanguage", "newfamily", "newfam", "newhelp", -- not used
         --
         "then",
+        "begcsname",
+        --
+        "strippedcsname",
         --
         "firstargumentfalse", "firstargumenttrue",
         "secondargumentfalse", "secondargumenttrue",
@@ -232,11 +235,11 @@ return {
         --
         "wait", "writestatus", "define", "defineexpandable", "redefine",
         --
-        "setmeasure", "setemeasure", "setgmeasure", "setxmeasure", "definemeasure", "freezemeasure", "measure",
+        "setmeasure", "setemeasure", "setgmeasure", "setxmeasure", "definemeasure", "freezemeasure", "measure", "measured",
         --
         "installcorenamespace",
         --
-        "getvalue", "setvalue", "setevalue", "setgvalue", "setxvalue", "letvalue", "letgvalue",
+        "getvalue", "getuvalue", "setvalue", "setevalue", "setgvalue", "setxvalue", "letvalue", "letgvalue",
         "resetvalue", "undefinevalue", "ignorevalue",
         "setuvalue", "setuevalue", "setugvalue", "setuxvalue",
         --
@@ -264,7 +267,7 @@ return {
         "gobbleoneargument", "gobbletwoarguments", "gobblethreearguments", "gobblefourarguments", "gobblefivearguments", "gobblesixarguments", "gobblesevenarguments", "gobbleeightarguments", "gobbleninearguments", "gobbletenarguments",
         "gobbleoneoptional", "gobbletwooptionals", "gobblethreeoptionals", "gobblefouroptionals", "gobblefiveoptionals",
         --
-        "dorecurse", "doloop", "exitloop", "dostepwiserecurse", "recurselevel", "recursedepth", "dofastloopcs",
+        "dorecurse", "doloop", "exitloop", "dostepwiserecurse", "recurselevel", "recursedepth", "dofastloopcs", "dowith",
         --
         "newconstant", "setnewconstant", "newconditional", "settrue", "setfalse", "setconstant",
         "newmacro", "setnewmacro", "newfraction",

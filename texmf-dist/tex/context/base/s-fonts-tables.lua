@@ -6,17 +6,16 @@ if not modules then modules = { } end modules ['s-fonts-tables'] = {
     license   = "see context related readme files"
 }
 
+moduledata.fonts        = moduledata.fonts        or { }
+moduledata.fonts.tables = moduledata.fonts.tables or { }
+
 local setmetatableindex = table.setmetatableindex
 local sortedhash        = table.sortedhash
 local sortedkeys        = table.sortedkeys
 local format            = string.format
 local concat            = table.concat
 
-moduledata.fonts                = moduledata.fonts                or { }
-moduledata.fonts.tracers        = moduledata.fonts.tracers        or { }
-moduledata.fonts.tracers.tables = moduledata.fonts.tracers.tables or { }
-
-local tabletracers = moduledata.fonts.tracers.tables
+local tabletracers = moduledata.fonts.tables
 
 local digits = {
     dflt = {
@@ -165,17 +164,17 @@ end
 
 tabletracers.typeset = typeset
 
-function tabletracers.properties(nesting)
+function tabletracers.showproperties(nesting)
     local tfmdata = fonts.hashes.identifiers[font.current()]
     typeset(tfmdata.properties,fonts.constructors.keys.properties,nesting)
 end
 
-function tabletracers.parameters(nesting)
+function tabletracers.showparameters(nesting)
     local tfmdata = fonts.hashes.identifiers[font.current()]
     typeset(tfmdata.parameters,fonts.constructors.keys.parameters,nesting)
 end
 
-function tabletracers.positionalfeatures()
+function tabletracers.showpositionings()
     local tfmdata = fonts.hashes.identifiers[font.current()]
     local resources = tfmdata.resources
     if resources then
@@ -187,11 +186,11 @@ function tabletracers.positionalfeatures()
                 for feature, scripts in sortedhash(gpos) do
                     for script, languages in sortedhash(scripts) do
                         context.NC()
-                            context(feature)
+                        context(feature)
                         context.NC()
-                            context(script)
+                        context(script)
                         context.NC()
-                            context(concat(sortedkeys(languages)," "))
+                        context(concat(sortedkeys(languages)," "))
                         context.NC()
                         context.NR()
                     end
@@ -207,7 +206,7 @@ end
 
 local dynamics = true
 
-function tabletracers.substitutionfeatures()
+function tabletracers.showsubstitutions()
     local tfmdata = fonts.hashes.identifiers[font.current()]
     local resources = tfmdata.resources
     if resources then
@@ -282,34 +281,28 @@ function tabletracers.substitutionfeatures()
     end
 end
 
-function tabletracers.all(settings) -- not interfaced
+function tabletracers.showall(specification) -- not interfaced
 
-    if type(settings) == "string" then
-        settings = utilities.parsers.settings_to_hash(settings)
-    end
+    specification = interfaces.checkedspecification(specification)
 
-    local title = settings and settings.title or ""
-
-    if title == "" then title = false end
-
-    if title then
-        context.starttitle { title = title }
+    if specification.title then
+        context.starttitle { title = specification.title }
     end
 
     context.startsubject { title = "Properties" }
-        tabletracers.properties()
+        tabletracers.showproperties()
     context.stopsubject()
 
     context.startsubject { title = "Parameters" }
-        tabletracers.parameters()
+        tabletracers.showparameters()
     context.stopsubject()
 
-    context.startsubject { title = "Positional features" }
-        tabletracers.positionalfeatures()
+    context.startsubject { title = "Positioning features" }
+        tabletracers.showpositionings()
     context.stopsubject()
 
     context.startsubject { title = "Substitution features" }
-        tabletracers.substitutionfeatures()
+        tabletracers.showsubstitutions()
     context.stopsubject()
 
     if title then

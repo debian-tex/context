@@ -1,6 +1,6 @@
 -- merged file : luatex-fonts-merged.lua
 -- parent file : luatex-fonts.lua
--- merge date  : 04/20/13 01:08:47
+-- merge date  : 05/28/13 00:34:00
 
 do -- begin closure to overcome local limits and interference
 
@@ -1986,7 +1986,7 @@ elseif not lfs.isfile then
   end
 end
 local insert,concat=table.insert,table.concat
-local match,find=string.match,string.find
+local match,find,gmatch=string.match,string.find,string.gmatch
 local lpegmatch=lpeg.match
 local getcurrentdir,attributes=lfs.currentdir,lfs.attributes
 local checkedsplit=string.checkedsplit
@@ -2017,11 +2017,21 @@ local pattern=(noslashes^0*slashes)^0*(noperiod^1*period)^1*C(noperiod^1)*-1
 local function suffixonly(name)
   return name and lpegmatch(pattern,name) or ""
 end
+local pattern=(noslashes^0*slashes)^0*noperiod^1*((period*C(noperiod^1))^1)*-1+Cc("")
+local function suffixesonly(name)
+  if name then
+    return lpegmatch(pattern,name)
+  else
+    return ""
+  end
+end
 file.pathpart=pathpart
 file.basename=basename
 file.nameonly=nameonly
 file.suffixonly=suffixonly
 file.suffix=suffixonly
+file.suffixesonly=suffixesonly
+file.suffixes=suffixesonly
 file.dirname=pathpart  
 file.extname=suffixonly
 local drive=C(R("az","AZ"))*colon
@@ -2046,7 +2056,11 @@ function file.splitname(str,splitdrive)
   end
 end
 function file.splitbase(str)
-  return str and lpegmatch(pattern_d,str) 
+  if str then
+    return lpegmatch(pattern_d,str) 
+  else
+    return "",str 
+  end
 end
 function file.nametotable(str,splitdrive)
   if str then
@@ -2293,6 +2307,13 @@ function file.strip(name,dir)
   if name then
     local b,a=match(name,"^(.-)"..dir.."(.*)$")
     return a~="" and a or name
+  end
+end
+function lfs.mkdirs(path)
+  local full=""
+  for sub in gmatch(path,"(/*[^\\/]+)") do 
+    full=full..sub
+    lfs.mkdir(full)
   end
 end
 
@@ -2896,8 +2917,13 @@ if context then
   texio.write_nl("fatal error: this module is not for context")
   os.exit()
 end
-local dummyfunction=function() end
-local dummyreporter=function(c) return function(...) texio.write_nl(c.." : "..string.formatters(...)) end end
+local dummyfunction=function()
+end
+local dummyreporter=function(c)
+  return function(...)
+    (texio.reporter or texio.write_nl)(c.." : "..string.formatters(...))
+  end
+end
 statistics={
   register=dummyfunction,
   starttiming=dummyfunction,
@@ -2978,25 +3004,34 @@ function resolvers.unresolve(s)
   return s
 end
 caches={}
-local writable,readables=nil,{}
+local writable=nil
+local readables={}
+local usingjit=jit
 if not caches.namespace or caches.namespace=="" or caches.namespace=="context" then
   caches.namespace='generic'
 end
 do
-  local cachepaths=kpse.expand_path('$TEXMFCACHE') or ""
+  local cachepaths=kpse.expand_var('$TEXMFCACHE') or ""
   if cachepaths=="" then
-    cachepaths=kpse.expand_path('$TEXMFVAR')
+    cachepaths=kpse.expand_var('$TEXMFVAR') or ""
   end
   if cachepaths=="" then
-    cachepaths=kpse.expand_path('$VARTEXMF')
+    cachepaths=kpse.expand_var('$VARTEXMF') or ""
   end
   if cachepaths=="" then
     cachepaths="."
   end
   cachepaths=string.split(cachepaths,os.type=="windows" and ";" or ":")
   for i=1,#cachepaths do
-    if file.is_writable(cachepaths[i]) then
-      writable=file.join(cachepaths[i],"luatex-cache")
+    local cachepath=cachepaths[i]
+    if not lfs.isdir(cachepath) then
+      lfs.mkdirs(cachepath) 
+      if lfs.isdir(cachepath) then
+        texio.write(string.format("(created cache path: %s)",cachepath))
+      end
+    end
+    if file.is_writable(cachepath) then
+      writable=file.join(cachepath,"luatex-cache")
       lfs.mkdir(writable)
       writable=file.join(writable,caches.namespace)
       lfs.mkdir(writable)
@@ -3037,8 +3072,7 @@ function caches.getreadablepaths(category,subcategory)
 end
 local function makefullname(path,name)
   if path and path~="" then
-    name="temp-"..name 
-    return file.addsuffix(file.join(path,name),"lua"),file.addsuffix(file.join(path,name),"luc")
+    return file.addsuffix(file.join(path,name),"lua"),file.addsuffix(file.join(path,name),usingjit and "lub" or "luc")
   end
 end
 function caches.is_writable(path,name)
@@ -3085,26 +3119,19 @@ function caches.savedata(path,name,data)
     end
   end
 end
-caches.compilemethod="both"
 function caches.compile(data,luaname,lucname)
-  local done=false
-  if caches.compilemethod=="luac" or caches.compilemethod=="both" then
-    done=os.spawn("texluac -o "..string.quoted(lucname).." -s "..string.quoted(luaname))==0
+  local d=io.loaddata(luaname)
+  if not d or d=="" then
+    d=table.serialize(data,true) 
   end
-  if not done and (caches.compilemethod=="dump" or caches.compilemethod=="both") then
-    local d=io.loaddata(luaname)
-    if not d or d=="" then
-      d=table.serialize(data,true) 
-    end
-    if d and d~="" then
-      local f=io.open(lucname,'w')
-      if f then
-        local s=loadstring(d)
-        if s then
-          f:write(string.dump(s,true))
-        end
-        f:close()
+  if d and d~="" then
+    local f=io.open(lucname,'wb')
+    if f then
+      local s=loadstring(d)
+      if s then
+        f:write(string.dump(s,true))
       end
+      f:close()
     end
   end
 end
@@ -3223,7 +3250,7 @@ function containers.content(container,name)
   return container.storage[name]
 end
 function containers.cleanname(name)
-  return (gsub(lower(name),"[^%w%d]+","-"))
+  return (gsub(lower(name),"[^%w\128-\255]+","-")) 
 end
 
 end -- closure
@@ -4592,7 +4619,7 @@ local floor=math.floor
 local trace_loading=false trackers.register("fonts.loading",function(v) trace_loading=v end)
 local trace_mapping=false trackers.register("fonts.mapping",function(v) trace_unimapping=v end)
 local report_fonts=logs.reporter("fonts","loading") 
-local fonts=fonts
+local fonts=fonts or {}
 local mappings=fonts.mappings or {}
 fonts.mappings=mappings
 local function loadlumtable(filename) 
@@ -4608,7 +4635,7 @@ local function loadlumtable(filename)
 end
 local hex=R("AF","09")
 local hexfour=(hex*hex*hex*hex)/function(s) return tonumber(s,16) end
-local hexsix=(hex^1)/function(s) return tonumber(s,16) end
+local hexsix=(hex*hex*hex*hex*hex*hex)/function(s) return tonumber(s,16) end
 local dec=(R("09")^1)/tonumber
 local period=P(".")
 local unicode=P("uni")*(hexfour*(period+P(-1))*Cc(false)+Ct(hexfour^1)*Cc(true))
@@ -4628,16 +4655,16 @@ local function makenameparser(str)
     return p
   end
 end
-local function tounicode16(unicode)
+local function tounicode16(unicode,name)
   if unicode<0x10000 then
     return format("%04X",unicode)
   elseif unicode<0x1FFFFFFFFF then
     return format("%04X%04X",floor(unicode/1024),unicode%1024+0xDC00)
   else
-    report_fonts("can't convert %a into tounicode",unicode)
+    report_fonts("can't convert %a in %a into tounicode",unicode,name)
   end
 end
-local function tounicode16sequence(unicodes)
+local function tounicode16sequence(unicodes,name)
   local t={}
   for l=1,#unicodes do
     local unicode=unicodes[l]
@@ -4646,7 +4673,7 @@ local function tounicode16sequence(unicodes)
     elseif unicode<0x1FFFFFFFFF then
       t[l]=format("%04X%04X",floor(unicode/1024),unicode%1024+0xDC00)
     else
-      report_fonts ("can't convert %a into tounicode",unicode)
+      report_fonts ("can't convert %a in %a into tounicode",unicode,name)
     end
   end
   return concat(t)
@@ -4656,7 +4683,7 @@ local function fromunicode16(str)
     return tonumber(str,16)
   else
     local l,r=match(str,"(....)(....)")
-    return (tonumber(l,16)- 0xD800)*0x400+tonumber(r,16)-0xDC00
+    return (tonumber(l,16))*0x400+tonumber(r,16)-0xDC00
   end
 end
 mappings.loadlumtable=loadlumtable
@@ -4664,9 +4691,9 @@ mappings.makenameparser=makenameparser
 mappings.tounicode16=tounicode16
 mappings.tounicode16sequence=tounicode16sequence
 mappings.fromunicode16=fromunicode16
-local separator=S("_.")
-local other=C((1-separator)^1)
-local ligsplitter=Ct(other*(separator*other)^0)
+local ligseparator=P("_")
+local varseparator=P(".")
+local namesplitter=Ct(C((1-ligseparator-varseparator)^1)*(ligseparator*C((1-ligseparator-varseparator)^1))^0)
 function mappings.addtounicode(data,filename)
   local resources=data.resources
   local properties=data.properties
@@ -4708,7 +4735,7 @@ function mappings.addtounicode(data,filename)
       local unicode=lumunic and lumunic[name] or unicodevector[name]
       if unicode then
         originals[index]=unicode
-        tounicode[index]=tounicode16(unicode)
+        tounicode[index]=tounicode16(unicode,name)
         ns=ns+1
       end
       if (not unicode) and usedmap then
@@ -4717,7 +4744,7 @@ function mappings.addtounicode(data,filename)
           unicode=cidcodes[foundindex] 
           if unicode then
             originals[index]=unicode
-            tounicode[index]=tounicode16(unicode)
+            tounicode[index]=tounicode16(unicode,name)
             ns=ns+1
           else
             local reference=cidnames[foundindex] 
@@ -4727,11 +4754,11 @@ function mappings.addtounicode(data,filename)
                 unicode=cidcodes[foundindex]
                 if unicode then
                   originals[index]=unicode
-                  tounicode[index]=tounicode16(unicode)
+                  tounicode[index]=tounicode16(unicode,name)
                   ns=ns+1
                 end
               end
-              if not unicode then
+              if not unicode or unicode=="" then
                 local foundcodes,multiple=lpegmatch(uparser,reference)
                 if foundcodes then
                   originals[index]=foundcodes
@@ -4740,7 +4767,7 @@ function mappings.addtounicode(data,filename)
                     nl=nl+1
                     unicode=true
                   else
-                    tounicode[index]=tounicode16(foundcodes)
+                    tounicode[index]=tounicode16(foundcodes,name)
                     ns=ns+1
                     unicode=foundcodes
                   end
@@ -4750,12 +4777,12 @@ function mappings.addtounicode(data,filename)
           end
         end
       end
-      if not unicode then
-        local split=lpegmatch(ligsplitter,name)
-        local nplit=split and #split or 0
-        if nplit>=2 then
+      if not unicode or unicode=="" then
+        local split=lpegmatch(namesplitter,name)
+        local nsplit=split and #split or 0
+        if nsplit>=2 then
           local t,n={},0
-          for l=1,nplit do
+          for l=1,nsplit do
             local base=split[l]
             local u=unicodes[base] or unicodevector[base]
             if not u then
@@ -4771,7 +4798,7 @@ function mappings.addtounicode(data,filename)
           if n==0 then
           elseif n==1 then
             originals[index]=t[1]
-            tounicode[index]=tounicode16(t[1])
+            tounicode[index]=tounicode16(t[1],name)
           else
             originals[index]=t
             tounicode[index]=tounicode16sequence(t)
@@ -4781,17 +4808,17 @@ function mappings.addtounicode(data,filename)
         else
         end
       end
-      if not unicode then
+      if not unicode or unicode=="" then
         local foundcodes,multiple=lpegmatch(uparser,name)
         if foundcodes then
           if multiple then
             originals[index]=foundcodes
-            tounicode[index]=tounicode16sequence(foundcodes)
+            tounicode[index]=tounicode16sequence(foundcodes,name)
             nl=nl+1
             unicode=true
           else
             originals[index]=foundcodes
-            tounicode[index]=tounicode16(foundcodes)
+            tounicode[index]=tounicode16(foundcodes,name)
             ns=ns+1
             unicode=foundcodes
           end
@@ -4834,22 +4861,35 @@ end
 local fonts=fonts
 fonts.names=fonts.names or {}
 fonts.names.version=1.001 
-fonts.names.basename="luatex-fonts-names.lua"
+fonts.names.basename="luatex-fonts-names"
 fonts.names.new_to_old={}
 fonts.names.old_to_new={}
+fonts.names.cache=containers.define("fonts","data",fonts.names.version,true)
 local data,loaded=nil,false
 local fileformats={ "lua","tex","other text files" }
+function fonts.names.reportmissingbase()
+  texio.write("<missing font database, run: mtxrun --script fonts --reload --simple>")
+  fonts.names.reportmissingbase=nil
+end
+function fonts.names.reportmissingname()
+  texio.write("<unknown font in database, run: mtxrun --script fonts --reload --simple>")
+  fonts.names.reportmissingname=nil
+end
 function fonts.names.resolve(name,sub)
   if not loaded then
     local basename=fonts.names.basename
     if basename and basename~="" then
-      for i=1,#fileformats do
-        local format=fileformats[i]
-        local foundname=resolvers.findfile(basename,format) or ""
-        if foundname~="" then
-          data=dofile(foundname)
-          texio.write("<font database loaded: ",foundname,">")
-          break
+      data=containers.read(fonts.names.cache,basename)
+      if not data then
+        basename=file.addsuffix(basename,"lua")
+        for i=1,#fileformats do
+          local format=fileformats[i]
+          local foundname=resolvers.findfile(basename,format) or ""
+          if foundname~="" then
+            data=dofile(foundname)
+            texio.write("<font database loaded: ",foundname,">")
+            break
+          end
         end
       end
     end
@@ -4865,9 +4905,12 @@ function fonts.names.resolve(name,sub)
       else
         return filename,false
       end
-    else
+    elseif fonts.names.reportmissingname then
+      fonts.names.reportmissingname()
       return name,false 
     end
+  elseif fonts.names.reportmissingbase then
+    fonts.names.reportmissingbase()
   end
 end
 fonts.names.resolvespec=fonts.names.resolve 
@@ -5036,7 +5079,7 @@ local report_otf=logs.reporter("fonts","otf loading")
 local fonts=fonts
 local otf=fonts.handlers.otf
 otf.glists={ "gsub","gpos" }
-otf.version=2.742 
+otf.version=2.743 
 otf.cache=containers.define("fonts","otf",otf.version,true)
 local fontdata=fonts.hashes.identifiers
 local chardata=characters and characters.data 
@@ -5055,6 +5098,7 @@ local usemetatables=false
 local packdata=true
 local syncspace=true
 local forcenotdef=false
+local includesubfonts=false
 local wildcard="*"
 local default="dflt"
 local fontloaderfields=fontloader.fields
@@ -5181,8 +5225,8 @@ local ordered_enhancers={
   "check glyphs",
   "check metadata",
   "check extra features",
-  "add duplicates",
   "check encoding",
+  "add duplicates",
   "cleanup tables",
 }
 local actions=allocate()
@@ -5526,7 +5570,7 @@ actions["prepare glyphs"]=function(data,filename,raw)
   local duplicates=resources.duplicates
   local variants=resources.variants
   if rawsubfonts then
-    metadata.subfonts={}
+    metadata.subfonts=includesubfonts and {}
     properties.cidinfo=rawcidinfo
     if rawcidinfo.registry then
       local cidmap=fonts.cid.getmap(rawcidinfo)
@@ -5537,7 +5581,9 @@ actions["prepare glyphs"]=function(data,filename,raw)
         for cidindex=1,#rawsubfonts do
           local subfont=rawsubfonts[cidindex]
           local cidglyphs=subfont.glyphs
-          metadata.subfonts[cidindex]=somecopy(subfont)
+          if includesubfonts then
+            metadata.subfonts[cidindex]=somecopy(subfont)
+          end
           for index=0,subfont.glyphcnt-1 do 
             local glyph=cidglyphs[index]
             if glyph then
@@ -5545,6 +5591,10 @@ actions["prepare glyphs"]=function(data,filename,raw)
               local name=glyph.name or cidnames[index]
               if not unicode or unicode==-1 or unicode>=criterium then
                 unicode=cidunicodes[index]
+              end
+              if unicode and descriptions[unicode] then
+                report_otf("preventing glyph %a at index %H to overload unicode %U",name or "noname",index,unicode)
+                unicode=-1
               end
               if not unicode or unicode==-1 or unicode>=criterium then
                 if not name then
@@ -5649,7 +5699,8 @@ actions["check encoding"]=function(data,filename,raw)
   local resources=data.resources
   local properties=data.properties
   local unicodes=resources.unicodes 
-  local indices=resources.indices
+  local indices=resources.indices 
+  local duplicates=resources.duplicates
   local mapdata=raw.map or {}
   local unicodetoindex=mapdata and mapdata.map or {}
   local encname=lower(data.enc_name or mapdata.enc_name or "")
@@ -5661,10 +5712,35 @@ actions["check encoding"]=function(data,filename,raw)
     for unicode,index in next,unicodetoindex do 
       if unicode<=criterium and not descriptions[unicode] then
         local parent=indices[index] 
-        if parent then
-          report_otf("weird, unicode %U points to %U with index %H",unicode,parent,index)
-        else
+        if not parent then
           report_otf("weird, unicode %U points to nowhere with index %H",unicode,index)
+        else
+          local parentdescription=descriptions[parent]
+          if parentdescription then
+            local altuni=parentdescription.altuni
+            if not altuni then
+              altuni={ { unicode=parent } }
+              parentdescription.altuni=altuni
+              duplicates[parent]={ unicode }
+            else
+              local done=false
+              for i=1,#altuni do
+                if altuni[i].unicode==parent then
+                  done=true
+                  break
+                end
+              end
+              if not done then
+                altuni[#altuni+1]={ unicode=parent }
+                table.insert(duplicates[parent],unicode)
+              end
+            end
+            if trace_loading then
+              report_otf("weird, unicode %U points to nowhere with index %H",unicode,index)
+            end
+          else
+            report_otf("weird, unicode %U points to %U with index %H",unicode,index)
+          end
         end
       end
     end
@@ -6103,6 +6179,14 @@ actions["reorganize lookups"]=function(data,filename,raw)
               local current=coverage.current
               if current then
                 current=t_uncover(splitter,t_u_cache,current)
+                local lookups=rule.lookups
+                if lookups then
+                  for i=1,#current do
+                    if not lookups[i] then
+                      lookups[i]="" 
+                    end
+                  end
+                end
                 rule.current=t_hashed(current,t_h_cache)
               end
               local after=coverage.after
@@ -6749,7 +6833,7 @@ local function checkmathsize(tfmdata,mathsize)
 end
 registerotffeature {
   name="mathsize",
-  description="apply mathsize as specified in the font",
+  description="apply mathsize specified in the font",
   initializers={
     base=checkmathsize,
     node=checkmathsize,
@@ -7354,8 +7438,8 @@ local function featuresinitializer(tfmdata,value)
           end
         end
       end
-      if basepositions then
-        for feature,data in next,basepositions do
+      if basepositionings then
+        for feature,data in next,basepositionings do
           local value=features[feature]
           if value then
             local validlookups,lookuplist=collectlookups(rawdata,feature,script,language)
@@ -7409,6 +7493,7 @@ nodes.injections=nodes.injections or {}
 local injections=nodes.injections
 local nodecodes=nodes.nodecodes
 local glyph_code=nodecodes.glyph
+local kern_code=nodecodes.kern
 local nodepool=nodes.pool
 local newkern=nodepool.kern
 local traverse_id=node.traverse_id
@@ -7502,7 +7587,7 @@ local function trace(head)
       local cb=n[a_cursbase]
       local cc=n[a_curscurs]
       local char=n.char
-      report_injections("font %s, char %U, glyph %c",char,n.font,char)
+      report_injections("font %s, char %U, glyph %c",n.font,char,char)
       if kp then
         local k=kerns[kp]
         if k[3] then
@@ -7538,6 +7623,24 @@ local function trace(head)
     end
   end
   report_injections("end run")
+end
+local function show_result(head)
+  local current=head
+  local skipping=false
+  while current do
+    local id=current.id
+    if id==glyph_code then
+      report_injections("char: %C, width %p, xoffset %p, yoffset %p",current.char,current.width,current.xoffset,current.yoffset)
+      skipping=false
+    elseif id==kern_code then
+      report_injections("kern: %p",current.kern)
+      skipping=false
+    elseif not skipping then
+      report_injections()
+      skipping=true
+    end
+    current=current.next
+  end
 end
 function injections.handler(head,where,keep)
   local has_marks,has_cursives,has_kerns=next(marks),next(cursives),next(kerns)
@@ -7677,17 +7780,26 @@ function injections.handler(head,where,keep)
                 local d=mrks[index]
                 if d then
                   local rlmode=d[3]
-                  if rlmode and rlmode>=0 then
-                    local k=wx[p]
-                    if k then
-                      n.xoffset=p.xoffset-p.width+d[1]-k[2] 
+                  local k=wx[p]
+                  if k then
+                    local x=k[2]
+                    local w=k[4]
+                    if w then
+                      if rlmode and rlmode>=0 then
+                        n.xoffset=p.xoffset-p.width+d[1]-(w-x)
+                      else
+                        n.xoffset=p.xoffset-d[1]-x
+                      end
                     else
-                      n.xoffset=p.xoffset-p.width+d[1] 
+                      if rlmode and rlmode>=0 then
+                        n.xoffset=p.xoffset-p.width+d[1]
+                      else
+                        n.xoffset=p.xoffset-d[1]-x
+                      end
                     end
                   else
-                    local k=wx[p]
-                    if k then
-                      n.xoffset=p.xoffset-d[1]-k[2]
+                    if rlmode and rlmode>=0 then
+                      n.xoffset=p.xoffset-p.width+d[1]
                     else
                       n.xoffset=p.xoffset-d[1]
                     end
@@ -7714,27 +7826,28 @@ function injections.handler(head,where,keep)
       end
       if next(wx) then
         for n,k in next,wx do
-          local x,w=k[2] or 0,k[4]
+          local x=k[2]
+          local w=k[4]
           if w then
             local rl=k[1] 
             local wx=w-x
             if rl<0 then	
               if wx~=0 then
-                insert_node_before(head,n,newkern(wx))
+                insert_node_before(head,n,newkern(wx)) 
               end
               if x~=0 then
-                insert_node_after (head,n,newkern(x))
+                insert_node_after (head,n,newkern(x)) 
               end
             else
               if x~=0 then
-                insert_node_before(head,n,newkern(x))
+                insert_node_before(head,n,newkern(x)) 
               end
               if wx~=0 then
-                insert_node_after(head,n,newkern(wx))
+                insert_node_after (head,n,newkern(wx)) 
               end
             end
           elseif x~=0 then
-            insert_node_before(head,n,newkern(x))
+            insert_node_before(head,n,newkern(x)) 
           end
         end
       end
@@ -7743,9 +7856,9 @@ function injections.handler(head,where,keep)
           if k~=0 then
             local rln=rl[n]
             if rln and rln<0 then
-              insert_node_before(head,n,newkern(-k))
+              insert_node_before(head,n,newkern(-k)) 
             else
-              insert_node_before(head,n,newkern(k))
+              insert_node_before(head,n,newkern(k)) 
             end
           end
         end
@@ -8256,7 +8369,7 @@ local fonthashes=fonts.hashes
 local fontdata=fonthashes.identifiers
 local otffeatures=fonts.constructors.newfeatures("otf")
 local registerotffeature=otffeatures.register
-local onetimemessage=fonts.loggers.onetimemessage
+local onetimemessage=fonts.loggers.onetimemessage or function() end
 otf.defaultnodealternate="none"
 local tfmdata=false
 local characters=false
@@ -8421,16 +8534,18 @@ local function toligature(kind,lookupname,head,start,stop,char,markflag,discfoun
           logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),start[a_ligacomp])
         end
         head,current=insert_node_after(head,current,copy_node(start)) 
+      elseif trace_marks then
+        logwarning("%s: delete mark %s",pref(kind,lookupname),gref(char))
       end
       start=start.next
     end
-    local start=components
-    while start and start.id==glyph_code do 
+    local start=current.next
+    while start and start.id==glyph_code do
       local char=start.char
       if marks[char] then
         start[a_ligacomp]=baseindex+(start[a_ligacomp] or componentindex)
         if trace_marks then
-          logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),start[a_ligacomp])
+          logwarning("%s: set mark %s, gets index %s",pref(kind,lookupname),gref(char),start[a_ligacomp])
         end
       else
         break
@@ -8651,7 +8766,7 @@ function handlers.gpos_mark2base(head,start,kind,lookupname,markanchors,sequence
             logwarning("%s, no matching anchors for mark %s and base %s",pref(kind,lookupname),gref(markchar),gref(basechar))
           end
         end
-      else
+      elseif trace_bugs then
         onetimemessage(currentfont,basechar,"no base anchors",report_fonts)
       end
     elseif trace_bugs then
@@ -8704,6 +8819,10 @@ function handlers.gpos_mark2ligature(head,start,kind,lookupname,markanchors,sequ
                         pref(kind,lookupname),anchor,index,bound,gref(markchar),gref(basechar),index,dx,dy)
                     end
                     return head,start,true
+                  else
+                    if trace_bugs then
+                      logwarning("%s: no matching anchors for mark %s and baselig %s with index %a",pref(kind,lookupname),gref(markchar),gref(basechar),index)
+                    end
                   end
                 end
               end
@@ -8713,7 +8832,7 @@ function handlers.gpos_mark2ligature(head,start,kind,lookupname,markanchors,sequ
             end
           end
         end
-      else
+      elseif trace_bugs then
         onetimemessage(currentfont,basechar,"no base anchors",report_fonts)
       end
     elseif trace_bugs then
@@ -8766,7 +8885,7 @@ function handlers.gpos_mark2mark(head,start,kind,lookupname,markanchors,sequence
             end
           end
         end
-      else
+      elseif trace_bugs then
         onetimemessage(currentfont,basechar,"no base anchors",report_fonts)
       end
     elseif trace_bugs then
@@ -8815,7 +8934,7 @@ function handlers.gpos_cursive(head,start,kind,lookupname,exitanchors,sequence)
                 end
               end
             end
-          else
+          elseif trace_bugs then
             onetimemessage(currentfont,startchar,"no entry anchors",report_fonts)
           end
           break
@@ -9363,7 +9482,7 @@ function chainprocs.gpos_cursive(head,start,stop,kind,chainname,currentcontext,l
                   end
                 end
               end
-            else
+            elseif trace_bugs then
               onetimemessage(currentfont,startchar,"no entry anchors",report_fonts)
             end
             break
@@ -10022,6 +10141,8 @@ for s=1,#datasets do
                           if ok then
                             success=true
                             break
+                          elseif not start then
+                            break
                           end
                         end
                       else
@@ -10308,6 +10429,842 @@ registerotffeature {
   }
 }
 otf.handlers=handlers
+
+end -- closure
+
+do -- begin closure to overcome local limits and interference
+
+if not modules then modules={} end modules ['font-otp']={
+  version=1.001,
+  comment="companion to font-otf.lua (packing)",
+  author="Hans Hagen, PRAGMA-ADE, Hasselt NL",
+  copyright="PRAGMA ADE / ConTeXt Development Team",
+  license="see context related readme files"
+}
+local next,type=next,type
+local sort,concat=table.sort,table.concat
+local sortedhash=table.sortedhash
+local trace_packing=false trackers.register("otf.packing",function(v) trace_packing=v end)
+local trace_loading=false trackers.register("otf.loading",function(v) trace_loading=v end)
+local report_otf=logs.reporter("fonts","otf loading")
+fonts=fonts or {}
+local handlers=fonts.handlers or {}
+fonts.handlers=handlers
+local otf=handlers.otf or {}
+handlers.otf=otf
+local enhancers=otf.enhancers or {}
+otf.enhancers=enhancers
+local glists=otf.glists or { "gsub","gpos" }
+otf.glists=glists
+local criterium=1
+local threshold=0
+local function tabstr_normal(t)
+  local s={}
+  local n=0
+  for k,v in next,t do
+    n=n+1
+    if type(v)=="table" then
+      s[n]=k..">"..tabstr_normal(v)
+    elseif v==true then
+      s[n]=k.."+" 
+    elseif v then
+      s[n]=k.."="..v
+    else
+      s[n]=k.."-" 
+    end
+  end
+  if n==0 then
+    return ""
+  elseif n==1 then
+    return s[1]
+  else
+    sort(s) 
+    return concat(s,",")
+  end
+end
+local function tabstr_flat(t)
+  local s={}
+  local n=0
+  for k,v in next,t do
+    n=n+1
+    s[n]=k.."="..v
+  end
+  if n==0 then
+    return ""
+  elseif n==1 then
+    return s[1]
+  else
+    sort(s) 
+    return concat(s,",")
+  end
+end
+local function tabstr_mixed(t) 
+  local s={}
+  local n=#t
+  if n==0 then
+    return ""
+  elseif n==1 then
+    local k=t[1]
+    if k==true then
+      return "++" 
+    elseif k==false then
+      return "--" 
+    else
+      return tostring(k) 
+    end
+  else
+    for i=1,n do
+      local k=t[i]
+      if k==true then
+        s[i]="++" 
+      elseif k==false then
+        s[i]="--" 
+      else
+        s[i]=k 
+      end
+    end
+    return concat(s,",")
+  end
+end
+local function tabstr_boolean(t)
+  local s={}
+  local n=0
+  for k,v in next,t do
+    n=n+1
+    if v then
+      s[n]=k.."+"
+    else
+      s[n]=k.."-"
+    end
+  end
+  if n==0 then
+    return ""
+  elseif n==1 then
+    return s[1]
+  else
+    sort(s) 
+    return concat(s,",")
+  end
+end
+local function packdata(data)
+  if data then
+    local h,t,c={},{},{}
+    local hh,tt,cc={},{},{}
+    local nt,ntt=0,0
+    local function pack_normal(v)
+      local tag=tabstr_normal(v)
+      local ht=h[tag]
+      if ht then
+        c[ht]=c[ht]+1
+        return ht
+      else
+        nt=nt+1
+        t[nt]=v
+        h[tag]=nt
+        c[nt]=1
+        return nt
+      end
+    end
+    local function pack_flat(v)
+      local tag=tabstr_flat(v)
+      local ht=h[tag]
+      if ht then
+        c[ht]=c[ht]+1
+        return ht
+      else
+        nt=nt+1
+        t[nt]=v
+        h[tag]=nt
+        c[nt]=1
+        return nt
+      end
+    end
+    local function pack_boolean(v)
+      local tag=tabstr_boolean(v)
+      local ht=h[tag]
+      if ht then
+        c[ht]=c[ht]+1
+        return ht
+      else
+        nt=nt+1
+        t[nt]=v
+        h[tag]=nt
+        c[nt]=1
+        return nt
+      end
+    end
+    local function pack_indexed(v)
+      local tag=concat(v," ")
+      local ht=h[tag]
+      if ht then
+        c[ht]=c[ht]+1
+        return ht
+      else
+        nt=nt+1
+        t[nt]=v
+        h[tag]=nt
+        c[nt]=1
+        return nt
+      end
+    end
+    local function pack_mixed(v)
+      local tag=tabstr_mixed(v)
+      local ht=h[tag]
+      if ht then
+        c[ht]=c[ht]+1
+        return ht
+      else
+        nt=nt+1
+        t[nt]=v
+        h[tag]=nt
+        c[nt]=1
+        return nt
+      end
+    end
+    local function pack_final(v)
+      if c[v]<=criterium then
+        return t[v]
+      else
+        local hv=hh[v]
+        if hv then
+          return hv
+        else
+          ntt=ntt+1
+          tt[ntt]=t[v]
+          hh[v]=ntt
+          cc[ntt]=c[v]
+          return ntt
+        end
+      end
+    end
+    local function success(stage,pass)
+      if nt==0 then
+        if trace_loading or trace_packing then
+          report_otf("pack quality: nothing to pack")
+        end
+        return false
+      elseif nt>=threshold then
+        local one,two,rest=0,0,0
+        if pass==1 then
+          for k,v in next,c do
+            if v==1 then
+              one=one+1
+            elseif v==2 then
+              two=two+1
+            else
+              rest=rest+1
+            end
+          end
+        else
+          for k,v in next,cc do
+            if v>20 then
+              rest=rest+1
+            elseif v>10 then
+              two=two+1
+            else
+              one=one+1
+            end
+          end
+          data.tables=tt
+        end
+        if trace_loading or trace_packing then
+          report_otf("pack quality: stage %s, pass %s, %s packed, 1-10:%s, 11-20:%s, rest:%s (criterium: %s)",stage,pass,one+two+rest,one,two,rest,criterium)
+        end
+        return true
+      else
+        if trace_loading or trace_packing then
+          report_otf("pack quality: stage %s, pass %s, %s packed, aborting pack (threshold: %s)",stage,pass,nt,threshold)
+        end
+        return false
+      end
+    end
+    local function packers(pass)
+      if pass==1 then
+        return pack_normal,pack_indexed,pack_flat,pack_boolean,pack_mixed
+      else
+        return pack_final,pack_final,pack_final,pack_final,pack_final
+      end
+    end
+    local resources=data.resources
+    local lookuptypes=resources.lookuptypes
+    for pass=1,2 do
+      if trace_packing then
+        report_otf("start packing: stage 1, pass %s",pass)
+      end
+      local pack_normal,pack_indexed,pack_flat,pack_boolean,pack_mixed=packers(pass)
+      for unicode,description in next,data.descriptions do
+        local boundingbox=description.boundingbox
+        if boundingbox then
+          description.boundingbox=pack_indexed(boundingbox)
+        end
+        local slookups=description.slookups
+        if slookups then
+          for tag,slookup in next,slookups do
+            local what=lookuptypes[tag]
+            if what=="pair" then
+              local t=slookup[2] if t then slookup[2]=pack_indexed(t) end
+              local t=slookup[3] if t then slookup[3]=pack_indexed(t) end
+            elseif what~="substitution" then
+              slookups[tag]=pack_indexed(slookup) 
+            end
+          end
+        end
+        local mlookups=description.mlookups
+        if mlookups then
+          for tag,mlookup in next,mlookups do
+            local what=lookuptypes[tag]
+            if what=="pair" then
+              for i=1,#mlookup do
+                local lookup=mlookup[i]
+                local t=lookup[2] if t then lookup[2]=pack_indexed(t) end
+                local t=lookup[3] if t then lookup[3]=pack_indexed(t) end
+              end
+            elseif what~="substitution" then
+              for i=1,#mlookup do
+                mlookup[i]=pack_indexed(mlookup[i]) 
+              end
+            end
+          end
+        end
+        local kerns=description.kerns
+        if kerns then
+          for tag,kern in next,kerns do
+            kerns[tag]=pack_flat(kern)
+          end
+        end
+        local math=description.math
+        if math then
+          local kerns=math.kerns
+          if kerns then
+            for tag,kern in next,kerns do
+              kerns[tag]=pack_normal(kern)
+            end
+          end
+        end
+        local anchors=description.anchors
+        if anchors then
+          for what,anchor in next,anchors do
+            if what=="baselig" then
+              for _,a in next,anchor do
+                for k=1,#a do
+                  a[k]=pack_indexed(a[k])
+                end
+              end
+            else
+              for k,v in next,anchor do
+                anchor[k]=pack_indexed(v)
+              end
+            end
+          end
+        end
+        local altuni=description.altuni
+        if altuni then
+          for i=1,#altuni do
+            altuni[i]=pack_flat(altuni[i])
+          end
+        end
+      end
+      local lookups=data.lookups
+      if lookups then
+        for _,lookup in next,lookups do
+          local rules=lookup.rules
+          if rules then
+            for i=1,#rules do
+              local rule=rules[i]
+              local r=rule.before    if r then for i=1,#r do r[i]=pack_boolean(r[i]) end end
+              local r=rule.after    if r then for i=1,#r do r[i]=pack_boolean(r[i]) end end
+              local r=rule.current   if r then for i=1,#r do r[i]=pack_boolean(r[i]) end end
+              local r=rule.replacements if r then rule.replacements=pack_flat  (r)  end 
+              local r=rule.lookups   if r then rule.lookups=pack_indexed(r)  end
+            end
+          end
+        end
+      end
+      local anchor_to_lookup=resources.anchor_to_lookup
+      if anchor_to_lookup then
+        for anchor,lookup in next,anchor_to_lookup do
+          anchor_to_lookup[anchor]=pack_normal(lookup)
+        end
+      end
+      local lookup_to_anchor=resources.lookup_to_anchor
+      if lookup_to_anchor then
+        for lookup,anchor in next,lookup_to_anchor do
+          lookup_to_anchor[lookup]=pack_normal(anchor)
+        end
+      end
+      local sequences=resources.sequences
+      if sequences then
+        for feature,sequence in next,sequences do
+          local flags=sequence.flags
+          if flags then
+            sequence.flags=pack_normal(flags)
+          end
+          local subtables=sequence.subtables
+          if subtables then
+            sequence.subtables=pack_normal(subtables)
+          end
+          local features=sequence.features
+          if features then
+            for script,feature in next,features do
+              features[script]=pack_normal(feature)
+            end
+          end
+        end
+      end
+      local lookups=resources.lookups
+      if lookups then
+        for name,lookup in next,lookups do
+          local flags=lookup.flags
+          if flags then
+            lookup.flags=pack_normal(flags)
+          end
+          local subtables=lookup.subtables
+          if subtables then
+            lookup.subtables=pack_normal(subtables)
+          end
+        end
+      end
+      local features=resources.features
+      if features then
+        for _,what in next,glists do
+          local list=features[what]
+          if list then
+            for feature,spec in next,list do
+              list[feature]=pack_normal(spec)
+            end
+          end
+        end
+      end
+      if not success(1,pass) then
+        return
+      end
+    end
+    if nt>0 then
+      for pass=1,2 do
+        if trace_packing then
+          report_otf("start packing: stage 2, pass %s",pass)
+        end
+        local pack_normal,pack_indexed,pack_flat,pack_boolean,pack_mixed=packers(pass)
+        for unicode,description in next,data.descriptions do
+          local kerns=description.kerns
+          if kerns then
+            description.kerns=pack_normal(kerns)
+          end
+          local math=description.math
+          if math then
+            local kerns=math.kerns
+            if kerns then
+              math.kerns=pack_normal(kerns)
+            end
+          end
+          local anchors=description.anchors
+          if anchors then
+            description.anchors=pack_normal(anchors)
+          end
+          local mlookups=description.mlookups
+          if mlookups then
+            for tag,mlookup in next,mlookups do
+              mlookups[tag]=pack_normal(mlookup)
+            end
+          end
+          local altuni=description.altuni
+          if altuni then
+            description.altuni=pack_normal(altuni)
+          end
+        end
+        local lookups=data.lookups
+        if lookups then
+          for _,lookup in next,lookups do
+            local rules=lookup.rules
+            if rules then
+              for i=1,#rules do 
+                local rule=rules[i]
+                local r=rule.before if r then rule.before=pack_normal(r) end
+                local r=rule.after  if r then rule.after=pack_normal(r) end
+                local r=rule.current if r then rule.current=pack_normal(r) end
+              end
+            end
+          end
+        end
+        local sequences=resources.sequences
+        if sequences then
+          for feature,sequence in next,sequences do
+            sequence.features=pack_normal(sequence.features)
+          end
+        end
+        if not success(2,pass) then
+        end
+      end
+      for pass=1,2 do
+        local pack_normal,pack_indexed,pack_flat,pack_boolean,pack_mixed=packers(pass)
+        for unicode,description in next,data.descriptions do
+          local slookups=description.slookups
+          if slookups then
+            description.slookups=pack_normal(slookups)
+          end
+          local mlookups=description.mlookups
+          if mlookups then
+            description.mlookups=pack_normal(mlookups)
+          end
+        end
+      end
+    end
+  end
+end
+local unpacked_mt={
+  __index=function(t,k)
+      t[k]=false
+      return k 
+    end
+}
+local function unpackdata(data)
+  if data then
+    local tables=data.tables
+    if tables then
+      local resources=data.resources
+      local lookuptypes=resources.lookuptypes
+      local unpacked={}
+      setmetatable(unpacked,unpacked_mt)
+      for unicode,description in next,data.descriptions do
+        local tv=tables[description.boundingbox]
+        if tv then
+          description.boundingbox=tv
+        end
+        local slookups=description.slookups
+        if slookups then
+          local tv=tables[slookups]
+          if tv then
+            description.slookups=tv
+            slookups=unpacked[tv]
+          end
+          if slookups then
+            for tag,lookup in next,slookups do
+              local what=lookuptypes[tag]
+              if what=="pair" then
+                local tv=tables[lookup[2]]
+                if tv then
+                  lookup[2]=tv
+                end
+                local tv=tables[lookup[3]]
+                if tv then
+                  lookup[3]=tv
+                end
+              elseif what~="substitution" then
+                local tv=tables[lookup]
+                if tv then
+                  slookups[tag]=tv
+                end
+              end
+            end
+          end
+        end
+        local mlookups=description.mlookups
+        if mlookups then
+          local tv=tables[mlookups]
+          if tv then
+            description.mlookups=tv
+            mlookups=unpacked[tv]
+          end
+          if mlookups then
+            for tag,list in next,mlookups do
+              local tv=tables[list]
+              if tv then
+                mlookups[tag]=tv
+                list=unpacked[tv]
+              end
+              if list then
+                local what=lookuptypes[tag]
+                if what=="pair" then
+                  for i=1,#list do
+                    local lookup=list[i]
+                    local tv=tables[lookup[2]]
+                    if tv then
+                      lookup[2]=tv
+                    end
+                    local tv=tables[lookup[3]]
+                    if tv then
+                      lookup[3]=tv
+                    end
+                  end
+                elseif what~="substitution" then
+                  for i=1,#list do
+                    local tv=tables[list[i]]
+                    if tv then
+                      list[i]=tv
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+        local kerns=description.kerns
+        if kerns then
+          local tm=tables[kerns]
+          if tm then
+            description.kerns=tm
+            kerns=unpacked[tm]
+          end
+          if kerns then
+            for k,kern in next,kerns do
+              local tv=tables[kern]
+              if tv then
+                kerns[k]=tv
+              end
+            end
+          end
+        end
+        local math=description.math
+        if math then
+          local kerns=math.kerns
+          if kerns then
+            local tm=tables[kerns]
+            if tm then
+              math.kerns=tm
+              kerns=unpacked[tm]
+            end
+            if kerns then
+              for k,kern in next,kerns do
+                local tv=tables[kern]
+                if tv then
+                  kerns[k]=tv
+                end
+              end
+            end
+          end
+        end
+        local anchors=description.anchors
+        if anchors then
+          local ta=tables[anchors]
+          if ta then
+            description.anchors=ta
+            anchors=unpacked[ta]
+          end
+          if anchors then
+            for tag,anchor in next,anchors do
+              if tag=="baselig" then
+                for _,list in next,anchor do
+                  for i=1,#list do
+                    local tv=tables[list[i]]
+                    if tv then
+                      list[i]=tv
+                    end
+                  end
+                end
+              else
+                for a,data in next,anchor do
+                  local tv=tables[data]
+                  if tv then
+                    anchor[a]=tv
+                  end
+                end
+              end
+            end
+          end
+        end
+        local altuni=description.altuni
+        if altuni then
+          local altuni=tables[altuni]
+          if altuni then
+            description.altuni=altuni
+            for i=1,#altuni do
+              local tv=tables[altuni[i]]
+              if tv then
+                altuni[i]=tv
+              end
+            end
+          end
+        end
+      end
+      local lookups=data.lookups
+      if lookups then
+        for _,lookup in next,lookups do
+          local rules=lookup.rules
+          if rules then
+            for i=1,#rules do 
+              local rule=rules[i]
+              local before=rule.before
+              if before then
+                local tv=tables[before]
+                if tv then
+                  rule.before=tv
+                  before=unpacked[tv]
+                end
+                if before then
+                  for i=1,#before do
+                    local tv=tables[before[i]]
+                    if tv then
+                      before[i]=tv
+                    end
+                  end
+                end
+              end
+              local after=rule.after
+              if after then
+                local tv=tables[after]
+                if tv then
+                  rule.after=tv
+                  after=unpacked[tv]
+                end
+                if after then
+                  for i=1,#after do
+                    local tv=tables[after[i]]
+                    if tv then
+                      after[i]=tv
+                    end
+                  end
+                end
+              end
+              local current=rule.current
+              if current then
+                local tv=tables[current]
+                if tv then
+                  rule.current=tv
+                  current=unpacked[tv]
+                end
+                if current then
+                  for i=1,#current do
+                    local tv=tables[current[i]]
+                    if tv then
+                      current[i]=tv
+                    end
+                  end
+                end
+              end
+              local replacements=rule.replacements
+              if replacements then
+                local tv=tables[replacements]
+                if tv then
+                  rule.replacements=tv
+                end
+              end
+              local fore=rule.fore
+              if fore then
+                local tv=tables[fore]
+                if tv then
+                  rule.fore=tv
+                end
+              end
+              local back=rule.back
+              if back then
+                local tv=tables[back]
+                if tv then
+                  rule.back=tv
+                end
+              end
+              local names=rule.names
+              if names then
+                local tv=tables[names]
+                if tv then
+                  rule.names=tv
+                end
+              end
+              local lookups=rule.lookups
+              if lookups then
+                local tv=tables[lookups]
+                if tv then
+                  rule.lookups=tv
+                end
+              end
+            end
+          end
+        end
+      end
+      local anchor_to_lookup=resources.anchor_to_lookup
+      if anchor_to_lookup then
+        for anchor,lookup in next,anchor_to_lookup do
+          local tv=tables[lookup]
+          if tv then
+            anchor_to_lookup[anchor]=tv
+          end
+        end
+      end
+      local lookup_to_anchor=resources.lookup_to_anchor
+      if lookup_to_anchor then
+        for lookup,anchor in next,lookup_to_anchor do
+          local tv=tables[anchor]
+          if tv then
+            lookup_to_anchor[lookup]=tv
+          end
+        end
+      end
+      local ls=resources.sequences
+      if ls then
+        for _,feature in next,ls do
+          local flags=feature.flags
+          if flags then
+            local tv=tables[flags]
+            if tv then
+              feature.flags=tv
+            end
+          end
+          local subtables=feature.subtables
+          if subtables then
+            local tv=tables[subtables]
+            if tv then
+              feature.subtables=tv
+            end
+          end
+          local features=feature.features
+          if features then
+            local tv=tables[features]
+            if tv then
+              feature.features=tv
+              features=unpacked[tv]
+            end
+            if features then
+              for script,data in next,features do
+                local tv=tables[data]
+                if tv then
+                  features[script]=tv
+                end
+              end
+            end
+          end
+        end
+      end
+      local lookups=resources.lookups
+      if lookups then
+        for _,lookup in next,lookups do
+          local flags=lookup.flags
+          if flags then
+            local tv=tables[flags]
+            if tv then
+              lookup.flags=tv
+            end
+          end
+          local subtables=lookup.subtables
+          if subtables then
+            local tv=tables[subtables]
+            if tv then
+              lookup.subtables=tv
+            end
+          end
+        end
+      end
+      local features=resources.features
+      if features then
+        for _,what in next,glists do
+          local feature=features[what]
+          if feature then
+            for tag,spec in next,feature do
+              local tv=tables[spec]
+              if tv then
+                feature[tag]=tv
+              end
+            end
+          end
+        end
+      end
+      data.tables=nil
+    end
+  end
+end
+if otf.enhancers.register then
+  otf.enhancers.register("pack",packdata)
+  otf.enhancers.register("unpack",unpackdata)
+end
+otf.enhancers.unpack=unpackdata 
 
 end -- closure
 

@@ -19,30 +19,37 @@ pdfview = pdfview or { }
 
 local opencalls, closecalls, allcalls, runner
 
+-- this might become template based
+
 if os.type == "windows" then
 
     opencalls = {
         ['default']     = "pdfopen --rxi --file",
         ['acrobat']     = "pdfopen --rxi --file",
         ['fullacrobat'] = "pdfopen --axi --file",
-        ['okular']      = 'start "test" "c:/data/system/kde/bin/okular.exe" --unique' -- todo!
+        ['okular']      = 'start "test" "c:/data/system/kde/bin/okular.exe" --unique', -- todo!
+        ['sumatra']     = 'start "test" "c:/data/system/sumatrapdf/sumatrapdf.exe" -reuse-instance',
+        ['okular']      = 'start "test" "okular.exe" --unique',
+        ['sumatra']     = 'start "test" "sumatrapdf.exe" -reuse-instance -bg-color 0xCCCCCC',
     }
     closecalls= {
         ['default'] = "pdfclose --file",
         ['acrobat'] = "pdfclose --file",
         ['okular']  = false,
+        ['sumatra'] = false,
     }
     allcalls = {
         ['default'] = "pdfclose --all",
         ['acrobat'] = "pdfclose --all",
         ['okular']  = false,
+        ['sumatra'] = false,
     }
 
-    pdfview.method = "acrobat"
+    pdfview.method = "acrobat" -- no longer usefull due to green pop up line and clasing reader/full
+    pdfview.method = "sumatra"
 
-    runner = function(...)
---         os.spawn(...)
-        os.execute(...)
+    runner = function(cmd)
+        os.execute(cmd) -- .. " > /null"
     end
 
 else
@@ -62,8 +69,8 @@ else
 
     pdfview.method = "okular"
 
-    runner = function(...)
-        os.spawn(...)
+    runner = function(cmd)
+        os.execute(cmd .. " 1>/dev/null 2>/dev/null &")
     end
 
 end

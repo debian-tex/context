@@ -470,6 +470,8 @@
 \def\setugvalue   #1{\normalprotected\expandafter\gdef\csname#1\endcsname}
 \def\setuxvalue   #1{\normalprotected\expandafter\xdef\csname#1\endcsname}
 
+\unexpanded\def\getuvalue#1{\csname#1\endcsname}
+
 %D \macros
 %D   {globallet,glet}
 %D
@@ -3494,6 +3496,19 @@
    \global\advance\outerrecurse \minusone }
 
 %D \macros
+%D   {dowith}
+%D
+%D Here's a loop over whatever is in a list:
+%D
+%D \starttyping
+%D \dowith{a,b,c}{[#1]}
+%D \stoptyping
+
+\unexpanded\def\dowith#1#2%
+  {\def\syst_helpers_with##1{#2}%
+   \normalexpanded{\processcommalist[#1]}\syst_helpers_with}
+
+%D \macros
 %D   {doloop,exitloop}
 %D
 %D Sometimes loops are not determined by counters, but by
@@ -6284,7 +6299,7 @@
 \unexpanded\def\freezemeasure
   {\dodoubleargument\syst_helpers_freeze_measure}
 
-\def\syst_helpers_freede_measure[#1][#2]%
+\def\syst_helpers_freeze_measure[#1][#2]%
   {\expandafter\edef\csname\??measure#1\endcsname{\the\dimexpr#2}}
 
 \unexpanded\def\setmeasure #1#2{\expandafter\def \csname\??measure#1\endcsname{#2}}             % quick way
@@ -6292,8 +6307,11 @@
 \unexpanded\def\setemeasure#1#2{\expandafter\edef\csname\??measure#1\endcsname{\the\dimexpr#2}} % quick way
 \unexpanded\def\setxmeasure#1#2{\expandafter\xdef\csname\??measure#1\endcsname{\the\dimexpr#2}} % quick way
 
-\def\measure#1% maybe \dimexpr ... \relax
-  {\ifcsname\??measure#1\endcsname\csname\??measure#1\endcsname\else\zeropoint\fi}
+\def\measure
+  {\the\measured}
+
+\def\measured#1%
+  {\dimexpr\ifcsname\??measure#1\endcsname\csname\??measure#1\endcsname\else\zeropoint\fi\relax}
 
 % #2 could be omitted, but we want to support spaces
 %

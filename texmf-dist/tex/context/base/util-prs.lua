@@ -93,7 +93,9 @@ patterns.settings_to_hash_b = pattern_b_s
 patterns.settings_to_hash_c = pattern_c_s
 
 function parsers.make_settings_to_hash_pattern(set,how)
-    if how == "strict" then
+    if type(str) == "table" then
+        return set
+    elseif how == "strict" then
         return (pattern_c/set)^1
     elseif how == "tolerant" then
         return (pattern_b/set)^1
@@ -103,7 +105,16 @@ function parsers.make_settings_to_hash_pattern(set,how)
 end
 
 function parsers.settings_to_hash(str,existing)
-    if str and str ~= "" then
+    if type(str) == "table" then
+        if existing then
+            for k, v in next, str do
+                existing[k] = v
+            end
+            return exiting
+        else
+            return str
+        end
+    elseif str and str ~= "" then
         hash = existing or { }
         lpegmatch(pattern_a_s,str)
         return hash
@@ -113,7 +124,16 @@ function parsers.settings_to_hash(str,existing)
 end
 
 function parsers.settings_to_hash_tolerant(str,existing)
-    if str and str ~= "" then
+    if type(str) == "table" then
+        if existing then
+            for k, v in next, str do
+                existing[k] = v
+            end
+            return exiting
+        else
+            return str
+        end
+    elseif str and str ~= "" then
         hash = existing or { }
         lpegmatch(pattern_b_s,str)
         return hash
@@ -123,7 +143,16 @@ function parsers.settings_to_hash_tolerant(str,existing)
 end
 
 function parsers.settings_to_hash_strict(str,existing)
-    if str and str ~= "" then
+    if type(str) == "table" then
+        if existing then
+            for k, v in next, str do
+                existing[k] = v
+            end
+            return exiting
+        else
+            return str
+        end
+    elseif str and str ~= "" then
         hash = existing or { }
         lpegmatch(pattern_c_s,str)
         return next(hash) and hash
@@ -144,7 +173,9 @@ patterns.settings_to_array = pattern
 -- we could use a weak table as cache
 
 function parsers.settings_to_array(str,strict)
-    if not str or str == "" then
+    if type(str) == "table" then
+        return str
+    elseif not str or str == "" then
         return { }
     elseif strict then
         if find(str,"{") then
@@ -341,9 +372,8 @@ local separator = S(' ,')
 local key       = C((1-equal)^1)
 local value     = dquote * C((1-dquote-escape*dquote)^0) * dquote
 
-local pattern   = Cf(Ct("") * Cg(key * equal * value) * separator^0,rawset)^0 * P(-1)
-
-patterns.keq_to_hash_c = pattern
+----- pattern   = Cf(Ct("") * Cg(key * equal * value) * separator^0,rawset)^0 * P(-1) -- was wrong
+local pattern   = Cf(Ct("") * (Cg(key * equal * value) * separator^0)^1,rawset)^0 * P(-1)
 
 function parsers.keq_to_hash(str)
     if str and str ~= "" then
@@ -353,7 +383,7 @@ function parsers.keq_to_hash(str)
     end
 end
 
--- inspect(lpeg.match(pattern,[[key="value"]]))
+-- inspect(lpeg.match(pattern,[[key="value" foo="bar"]]))
 
 local defaultspecification = { separator = ",", quote = '"' }
 
@@ -361,7 +391,7 @@ local defaultspecification = { separator = ",", quote = '"' }
 -- database module
 
 function parsers.csvsplitter(specification)
-    specification     = specification and table.setmetatableindex(specification,defaultspecification) or defaultspecification
+    specification   = specification and table.setmetatableindex(specification,defaultspecification) or defaultspecification
     local separator = specification.separator
     local quotechar = specification.quote
     local separator = S(separator ~= "" and separator or ",")
@@ -388,14 +418,14 @@ end
 -- and this is a slightly patched version of a version posted by Philipp Gesang
 
 -- local mycsvsplitter = utilities.parsers.rfc4180splitter()
---
+
 -- local crap = [[
 -- first,second,third,fourth
 -- "1","2","3","4"
 -- "a","b","c","d"
 -- "foo","bar""baz","boogie","xyzzy"
 -- ]]
---
+
 -- local list, names = mycsvsplitter(crap,true)   inspect(list) inspect(names)
 -- local list, names = mycsvsplitter(crap)        inspect(list) inspect(names)
 

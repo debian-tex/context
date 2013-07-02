@@ -27,6 +27,8 @@ local helpinfo = [[
     <flag name="path"><short>source path where hyph-foo.tex files are stored</short></flag>
     <flag name="destination"><short>destination path</short></flag>
     <flag name="specification"><short>additional patterns: e.g.: =cy,hyph-cy,welsh</short></flag>
+    <flag name="compress"><short>compress data</short></flag>
+    <flag name="words"><short>update words in given file</short></flag>
    </subcategory>
   </category>
  </flags>
@@ -148,10 +150,11 @@ scripts.patterns.list = {
     { "sv",  "hyph-sv",            "swedish" },
  -- { "ta",  "hyph-ta",            "tamil" },
  -- { "te",  "hyph-te",            "telugu" },
+    { "th",  "hyph-th",            "thai" },
     { "tk",  "hyph-tk",            "turkmen" },
     { "tr",  "hyph-tr",            "turkish" },
     { "uk",  "hyph-uk",            "ukrainian" },
-    { "zh",  "hyph-zh-latn",       "zh-latn, chinese pinyin" },
+    { "zh",  "hyph-zh-latn-pinyin","zh-latn, chinese pinyin" },
 }
 
 -- stripped down from lpeg example:
@@ -166,6 +169,7 @@ end
 -- *.hyp.txt *.pat.txt *.lic.txt *.chr.txt
 
 function scripts.patterns.load(path,name,mnemonic,ignored)
+    local basename = name
     local fullname = file.join(path,name)
     local texfile = addsuffix(fullname,"tex")
     local hypfile = addsuffix(fullname,"hyp.txt")
@@ -190,7 +194,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
                 local subfull = file.join(file.dirname(texfile),subname)
                 local subdata = io.loaddata(subfull) or ""
                 if subdata == "" then
-                    report("no subfile %s",subname)
+                    report("%s: no subfile %s",basename,subname)
                 end
                 return previous .. subdata
             end)
@@ -219,7 +223,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
                     local line = splitdata[i]
                     if find(line,"%%") then
                         splitdata[i] = gsub(line,"%%.*$","")
-                        report("removing comment: %s",line)
+                        report("%s: removing comment: %s",basename,line)
                     end
                 end
             end
@@ -235,7 +239,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
                     local line = splitdata[i]
                     if find(line,"\\") then
                         splitdata[i] = ""
-                        report("removing line with command: %s",line)
+                        report("%s: removing line with command: %s",basename,line)
                     end
                 end
             end
@@ -251,7 +255,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
                 local ok = lpegmatch(validutf8,line)
                 if not ok then
                     splitdata[i] = ""
-                    report("removing line with invalid utf: %s",line)
+                    report("%s: removing line with invalid utf: %s",basename,line)
                 end
             end
             -- check for commands being used in comments
@@ -275,15 +279,15 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
                     else
                         local cdb = cd[b]
                         if not cdb then
-                            report("no entry in chardata for character %s (0x%04X)",char(b),b)
+                            report("%s: no entry in chardata for character %C",basename,b)
                         else
                             local ct = cdb.category
-                            if ct == "lu" or ct == "ll" then
+                            if ct == "lu" or ct == "ll" or ct == "lo" or ct == "mn" then -- hm, really mn ?
                                 used[char(b)] = true
                             elseif ct == "nd" then
                                 -- number
                             else
-                                report("removing line with suspected utf character %s (0x%04X), category %s: %s",char(b),b,ct,line)
+                                report("%s: removing line with suspected utf character %C, category %s: %s",basename,b,ct,line)
                                 splitdata[i] = ""
                                 break
                             end
@@ -296,7 +300,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
         usedpatterncharactersnew = check(splitpatternsnew,byte("."))
         usedhyphenationcharactersnew = check(splithyphenationsnew,byte("-"))
         for k, v in next, stripped do
-            report("entries that contain character %s (0x%04X) have been omitted",char(k),k)
+            report("%s: entries that contain character %C have been omitted",basename,k)
         end
     end
     if okay then
@@ -327,11 +331,11 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
             for i=1,#what do
                 local line = what[i]
                 if p and lpegmatch(p,line) then
-                    report("discarding conflicting pattern: %s",line)
+                    report("%s: discarding conflicting pattern: %s",basename,line)
                 else -- we can speed this up by testing for replacements in the string
                     local l = lpegmatch(r,line)
                     if l ~= line then
-                        report("sanitizing pattern: %s -> %s (for old patterns)",line,l)
+                        report("%s: sanitizing pattern: %s -> %s (for old patterns)",basename,line,l)
                     end
                     result[#result+1] = l
                 end
@@ -353,7 +357,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored)
                     -- discard
                 elseif used[line] then
                     -- discard
-                    report("discarding duplicate pattern: %s",line)
+                    report("%s: discarding duplicate pattern: %s",basename,line)
                 else
                     used[line] = true
                     collected[#collected+1] = line
@@ -411,6 +415,8 @@ function scripts.patterns.save(destination,mnemonic,name,patternsnew,hyphenation
         if not comment or comment == "" then comment = "% no comment" end
         if not type(destination) == "string" then destination = "." end
 
+        local compression = environment.arguments.compress and "zlib" or nil
+
         local lines = string.splitlines(comment)
         for i=1,#lines do
             if not find(lines[i],"^%%") then
@@ -427,9 +433,12 @@ function scripts.patterns.save(destination,mnemonic,name,patternsnew,hyphenation
 
         local patterndata, hyphenationdata
         if nofpatternsnew > 0 then
+            local data = concat(patternsnew," ")
             patterndata = {
                 n            = nofpatternsnew,
-                data         = concat(patternsnew," ") or nil,
+                compression  = compression,
+                length       = #data,
+                data         = compression and zlib.compress(data,9) or data,
                 characters   = concat(table.sortedkeys(pusednew),""),
                 minhyphenmin = 1, -- determined by pattern author
                 minhyphenmax = 1, -- determined by pattern author
@@ -440,10 +449,13 @@ function scripts.patterns.save(destination,mnemonic,name,patternsnew,hyphenation
             }
         end
         if nofhyphenationsnew > 0 then
+            local data = concat(hyphenationsnew," ")
             hyphenationdata = {
-                n          = nofhyphenationsnew,
-                data       = concat(hyphenationsnew," "),
-                characters = concat(table.sortedkeys(husednew),""),
+                n           = nofhyphenationsnew,
+                compression = compression,
+                length      = #data,
+                data        = compression and zlib.compress(data,9) or data,
+                characters  = concat(table.sortedkeys(husednew),""),
             }
         else
             hyphenationdata = {
@@ -541,12 +553,83 @@ function scripts.patterns.convert()
     end
 end
 
+local function valid(filename)
+    local specification = table.load(filename)
+    if not specification then
+        return false
+    end
+    local lists = specification.lists
+    if not lists then
+        return false
+    end
+    return specification, lists
+end
+
+function scripts.patterns.words()
+    if environment.arguments.update then
+        local compress = environment.arguments.compress
+        for i=1,#environment.files do
+            local filename = environment.files[i]
+            local fullname = resolvers.findfile(filename)
+            if fullname and fullname ~= "" then
+                report("checking file %a",fullname)
+                local specification, lists = valid(fullname)
+                if specification and #lists> 0 then
+                    report("updating %a of language %a",filename,specification.language)
+                    for i=1,#lists do
+                        local entry = lists[i]
+                        local filename = entry.filename
+                        if filename then
+                            local fullname = resolvers.findfile(filename)
+                            if fullname then
+                                report("adding words from %a",fullname)
+                                local data = io.loaddata(fullname) or ""
+                                data = string.strip(data)
+                                data = string.gsub(data,"%s+"," ")
+                                if compress then
+                                    entry.data        = zlib.compress(data,9)
+                                    entry.compression = "zlib"
+                                    entry.length      = #data
+                                else
+                                    entry.data        = data
+                                    entry.compression = nil
+                                    entry.length      = #data
+                                end
+                            else
+                                entry.data        = ""
+                                entry.compression = nil
+                                entry.length      = 0
+                            end
+                        else
+                            entry.data        = ""
+                            entry.compression = nil
+                            entry.length      = 0
+                        end
+                    end
+                    specification.version   = "1.00"
+                    specification.timestamp =  os.localtime()
+                    report("updated file %a is saved",filename)
+                    table.save(filename,specification)
+                else
+                    report("no file %a",filename)
+                end
+            else
+                report("nothing done")
+            end
+        end
+    else
+        report("provide --update")
+    end
+end
+
 if environment.argument("check") then
     scripts.patterns.prepare()
     scripts.patterns.check()
 elseif environment.argument("convert") then
     scripts.patterns.prepare()
     scripts.patterns.convert()
+elseif environment.argument("words") then
+    scripts.patterns.words() -- for the moment here
 elseif environment.argument("exporthelp") then
     application.export(environment.argument("exporthelp"),environment.files[1])
 else
@@ -557,3 +640,15 @@ end
 -- mtxrun --script pattern --check          --path=c:/data/develop/svn-hyphen/trunk/hyph-utf8/tex/generic/hyph-utf8/patterns
 -- mtxrun --script pattern --convert        --path=c:/data/develop/svn-hyphen/trunk/hyph-utf8/tex/generic/hyph-utf8/patterns/tex --destination=e:/tmp/patterns
 -- mtxrun --script pattern --convert        --path=c:/data/develop/svn-hyphen/trunk/hyph-utf8/tex/generic/hyph-utf8/patterns/txt --destination=e:/tmp/patterns
+
+-- copy /Y *.hyp e:\tex-context\tex\texmf-context\tex\context\patterns
+-- copy /Y *.pat e:\tex-context\tex\texmf-context\tex\context\patterns
+-- copy /Y *.rme e:\tex-context\tex\texmf-context\tex\context\patterns
+-- copy /Y *.lua e:\tex-context\tex\texmf-context\tex\context\patterns
+
+-- move /Y *.hyp e:\tex-context\tex\texmf-mine\tex\context\patterns
+-- move /Y *.pat e:\tex-context\tex\texmf-mine\tex\context\patterns
+-- move /Y *.rme e:\tex-context\tex\texmf-mine\tex\context\patterns
+-- move /Y *.lua e:\tex-context\tex\texmf-mine\tex\context\patterns
+
+-- mtxrun --script pattern --words --update word-th.lua --compress

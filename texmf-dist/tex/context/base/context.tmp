@@ -25,7 +25,7 @@
 %D up and the dependencies are more consistent.
 
 \edef\contextformat {\jobname}
-\edef\contextversion{2013.04.20 01:08}
+\edef\contextversion{2013.05.28 00:34}
 \edef\contextkind   {beta}
 
 %D For those who want to use this:
@@ -198,7 +198,6 @@
 \loadmarkfile{lang-mis}
 \loadmarkfile{lang-url}
 \loadmarkfile{lang-def}
-\loadmarkfile{lang-wrd} % can be optional
 
 \loadmkvifile{file-job} % why so late?
 
@@ -391,6 +390,9 @@
 \loadmarkfile{type-set}
 
 \loadmarkfile{scrp-ini}
+
+\loadmarkfile{lang-wrd} % can be optional (discussion with mm sideeffect)
+%loadmarkfile{lang-rep} % can be optional (bt 2013 side effect)
 
 \loadmarkfile{prop-ini} % only for downward compatibility
 

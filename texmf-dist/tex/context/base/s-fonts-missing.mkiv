@@ -11,59 +11,32 @@
 %C therefore copyrighted by \PRAGMA. See mreadme.pdf for
 %C details.
 
-\startluacode
+\startmodule[s-fonts-missing]
 
-    moduledata.fonts                 = moduledata.fonts                 or { }
-    moduledata.fonts.tracers         = moduledata.fonts.tracers         or { }
-    moduledata.fonts.tracers.missing = moduledata.fonts.tracers.missing or { }
+\registerctxluafile{s-fonts-missing}{}
 
-    function moduledata.fonts.tracers.missing.legend()
-        local c = fonts.hashes.identifiers[font.current()]
-        local p = c.properties.privates
-        if p then
-            context.starttabulate { "|Tl|c|c|" }
-            context.NC()
-            context.bold("name")
-            context.NC()
-            context.bold("character")
-            context.NC()
-            context.bold("node")
-            context.NC()
-            context.NR()
-            for k, v in table.sortedhash(p) do
-                context.NC()
-                context(k)
-                context.NC()
-                context.dontleavehmode()
-                context.char(v)
-                context.NC()
-                context.dontleavehmode()
-                commands.getprivatechar(k)
-                context.NC()
-                context.NR()
-            end
-            context.stoptabulate()
-        end
-    end
+\installmodulecommandluasingle \showmissingcharacterslegend {moduledata.fonts.missing.showlegend}
+\installmodulecommandluasingle \showmissingcharacters       {moduledata.fonts.missing.showcharacters}
 
-\stopluacode
-
-\def\ModuleFontsTracersMissingLegend
-  {\ctxlua{moduledata.fonts.tracers.missing.legend()}}
+\stopmodule
 
 \continueifinputfile{s-fonts-missing.mkiv}
 
-\enabletrackers[fonts.missing=replace] % the sooner, the more efficient
+% the sooner, the more efficient, see log for details
 
-% \usemodule[art-01]
+\enabletrackers[fonts.missing=replace]
 
 % \definefontfeature[default][default][missing=yes] % automatically when enabled
 
 \starttext
 
-    \ModuleFontsTracersMissingLegend
+    \page legend: \blank
 
-    ½ ⅓ ¼ ⅕ ⅙ ⅛
+    \showmissingcharacterslegend
+
+    \page sample: \blank
+
+    ½ ⅓ ¼ ⅕ ⅙ ⅛ {\bf ½ ⅓ ¼ ⅕ ⅙ ⅛} \blank
 
     \startluacode
         for i=1,1000 do
@@ -74,6 +47,10 @@
             end
         end
     \stopluacode
+
+    \page characters: \blank
+
+    \showmissingcharacters
 
 \stoptext
 

@@ -204,7 +204,8 @@
             userdata = \!!bs\detokenize{#3}\!!es % will be converted to table at the lua end
         }
     }}%
-   \xdef\currentstructurelistnumber{\ctxcommand{addtolist(structures.sections.current())}}%
+   % \xdef\currentstructurelistnumber{\ctxcommand{addtolist(structures.sections.current())}}%
+   \xdef\currentstructurelistnumber{\ctxcommand{currentsectiontolist()}}%
    % \currentstructuresynchronize has to be called someplace, since it introduces a node
    \setstructuresynchronization\currentstructurelistnumber
    \endgroup}
@@ -721,7 +722,6 @@
 
 \unexpanded\def\placeheadtext  {\dosingleempty\strc_sectioning_place_head_text  } % use with care
 \unexpanded\def\placeheadnumber{\dosingleempty\strc_sectioning_place_head_number} % use with care
-
 
 \unexpanded\def\strc_sectioning_report{\ctxlua{structures.sections.reportstructure()}}
 
