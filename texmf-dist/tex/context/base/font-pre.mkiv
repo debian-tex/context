@@ -87,8 +87,9 @@
 \definefontfeature % might move
   [simplearabic]
   [mode=node,language=dflt,script=arab,
-   init=yes,medi=yes,fina=yes,calt=yes,
-   rlig=yes,curs=yes,mark=yes,mkmk=yes]
+   init=yes,medi=yes,fina=yes,
+   rlig=yes,calt=yes,
+   mark=yes,mkmk=yes,curs=yes]
 
 \definefontfeature
   [simplehebrew]
@@ -189,6 +190,10 @@
 % \definefontfeature[mathtext]         [math-text]
 % \definefontfeature[mathscript]       [math-script]
 % \definefontfeature[mathscriptscript] [math-scriptscript]
+
+\definefontfeature
+  [missing]
+  [missing=yes]
 
 %D We define some colors that are used in tracing (for instance \OPENTYPE\
 %D features). We cannot yet inherit because no colors are predefined.
@@ -501,8 +506,11 @@
 \definefontfeature[f:smallcaps][smcp=yes]
 \definefontfeature[f:oldstyle] [onum=yes]
 
-\definealternativestyle [\v!smallcaps] [\doaddfeature{f:smallcaps}] [\doaddfeature{f:smallcaps}]
-\definealternativestyle [\v!oldstyle]  [\doaddfeature{f:oldstyle}]  [\doaddfeature{f:oldstyle}]
+\definealternativestyle [\v!smallcaps] [\setsmallcaps] [\setsmallcaps]
+\definealternativestyle [\v!oldstyle]  [\setoldstyle ] [\setoldstyle ]
+
+\unexpanded\def\setsmallcaps{\doaddfeature{f:smallcaps}}
+\unexpanded\def\setoldstyle {\doaddfeature{f:oldstyle}}
 
 %D \macros
 %D   {tinyfont}

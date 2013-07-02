@@ -354,6 +354,12 @@ local function packdata(data)
                         end
                     end
                 end
+                local altuni = description.altuni
+                if altuni then
+                    for i=1,#altuni do
+                        altuni[i] = pack_flat(altuni[i])
+                    end
+                end
             end
             local lookups = data.lookups
             if lookups then
@@ -366,8 +372,8 @@ local function packdata(data)
                             local r = rule.after        if r then for i=1,#r do r[i] = pack_boolean(r[i]) end end
                             local r = rule.current      if r then for i=1,#r do r[i] = pack_boolean(r[i]) end end
                             local r = rule.replacements if r then rule.replacements  = pack_flat   (r)    end -- can have holes
-                         -- local r = rule.lookups      if r then rule.lookups       = pack_mixed  (r)    end -- can have false
                             local r = rule.lookups      if r then rule.lookups       = pack_indexed(r)    end -- can have ""
+                         -- local r = rule.lookups      if r then rule.lookups       = pack_flat(r)       end -- can have holes (already taken care of some cases)
                         end
                     end
                 end
@@ -458,6 +464,10 @@ local function packdata(data)
                         for tag, mlookup in next, mlookups do
                             mlookups[tag] = pack_normal(mlookup)
                         end
+                    end
+                    local altuni = description.altuni
+                    if altuni then
+                        description.altuni = pack_normal(altuni)
                     end
                 end
                 local lookups = data.lookups
@@ -652,6 +662,19 @@ local function unpackdata(data)
                                         anchor[a] = tv
                                     end
                                 end
+                            end
+                        end
+                    end
+                end
+                local altuni = description.altuni
+                if altuni then
+                    local altuni = tables[altuni]
+                    if altuni then
+                        description.altuni = altuni
+                        for i=1,#altuni do
+                            local tv = tables[altuni[i]]
+                            if tv then
+                                altuni[i] = tv
                             end
                         end
                     end

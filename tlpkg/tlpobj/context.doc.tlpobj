@@ -1,8 +1,8 @@
 name context.doc
 category Package
-revision 30044
+revision 30865
 shortdesc doc files of context
-docfiles size=302
+docfiles size=308
  texmf-dist/doc/context/document/general/manuals/mreadme.pdf
  texmf-dist/doc/context/document/general/manuals/tiptrick.pdf
  texmf-dist/doc/context/manuals/allkind/mcommon.tex
@@ -105,6 +105,9 @@ docfiles size=302
  texmf-dist/doc/context/scripts/mkiv/mtx-pdf.html
  texmf-dist/doc/context/scripts/mkiv/mtx-pdf.man
  texmf-dist/doc/context/scripts/mkiv/mtx-pdf.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-plain.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-plain.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-plain.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-profile.html
  texmf-dist/doc/context/scripts/mkiv/mtx-profile.man
  texmf-dist/doc/context/scripts/mkiv/mtx-profile.xml
@@ -182,6 +185,8 @@ docfiles size=302
  texmf-dist/doc/man/man1/mtx-patterns.man1.pdf
  texmf-dist/doc/man/man1/mtx-pdf.1
  texmf-dist/doc/man/man1/mtx-pdf.man1.pdf
+ texmf-dist/doc/man/man1/mtx-plain.1
+ texmf-dist/doc/man/man1/mtx-plain.man1.pdf
  texmf-dist/doc/man/man1/mtx-profile.1
  texmf-dist/doc/man/man1/mtx-profile.man1.pdf
  texmf-dist/doc/man/man1/mtx-rsync.1

@@ -48,7 +48,7 @@ local otf                = fonts.handlers.otf
 
 otf.glists               = { "gsub", "gpos" }
 
-otf.version              = 2.742 -- beware: also sync font-mis.lua
+otf.version              = 2.743 -- beware: also sync font-mis.lua
 otf.cache                = containers.define("fonts", "otf", otf.version, true)
 
 local fontdata           = fonts.hashes.identifiers
@@ -72,6 +72,7 @@ local usemetatables      = false -- .4 slower on mk but 30 M less mem so we migh
 local packdata           = true
 local syncspace          = true
 local forcenotdef        = false
+local includesubfonts    = false
 
 local wildcard           = "*"
 local default            = "dflt"
@@ -207,6 +208,7 @@ local valid_fields = table.tohash {
 
 local ordered_enhancers = {
     "prepare tables",
+
     "prepare glyphs",
     "prepare lookups",
 
@@ -232,8 +234,8 @@ local ordered_enhancers = {
     "check metadata",
     "check extra features", -- after metadata
 
+    "check encoding", -- moved
     "add duplicates",
-    "check encoding",
 
     "cleanup tables",
 }
@@ -603,8 +605,7 @@ local function somecopy(old) -- fast one
     end
 end
 
--- not setting hasitalics and class (when nil) during
--- table cronstruction can save some mem
+-- not setting hasitalics and class (when nil) during table cronstruction can save some mem
 
 actions["prepare glyphs"] = function(data,filename,raw)
     local rawglyphs    = raw.glyphs
@@ -623,7 +624,7 @@ actions["prepare glyphs"] = function(data,filename,raw)
 
     if rawsubfonts then
 
-        metadata.subfonts  = { }
+        metadata.subfonts  = includesubfonts and { }
         properties.cidinfo = rawcidinfo
 
         if rawcidinfo.registry then
@@ -635,7 +636,9 @@ actions["prepare glyphs"] = function(data,filename,raw)
                 for cidindex=1,#rawsubfonts do
                     local subfont   = rawsubfonts[cidindex]
                     local cidglyphs = subfont.glyphs
-                    metadata.subfonts[cidindex] = somecopy(subfont)
+                    if includesubfonts then
+                        metadata.subfonts[cidindex] = somecopy(subfont)
+                    end
                     for index=0,subfont.glyphcnt-1 do -- we could take the previous glyphcnt instead of 0
                         local glyph = cidglyphs[index]
                         if glyph then
@@ -643,6 +646,10 @@ actions["prepare glyphs"] = function(data,filename,raw)
                             local name    = glyph.name or cidnames[index]
                             if not unicode or unicode == -1 or unicode >= criterium then
                                 unicode = cidunicodes[index]
+                            end
+                            if unicode and descriptions[unicode] then
+                                report_otf("preventing glyph %a at index %H to overload unicode %U",name or "noname",index,unicode)
+                                unicode = -1
                             end
                             if not unicode or unicode == -1 or unicode >= criterium then
                                 if not name then
@@ -725,6 +732,8 @@ actions["prepare glyphs"] = function(data,filename,raw)
                         local u = a.unicode
                         local v = a.variant
                         if v then
+                            -- tricky: no addition to d? needs checking but in practice such dups are either very simple
+                            -- shapes or e.g cjk with not that many features
                             local vv = variants[v]
                             if vv then
                                 vv[u] = unicode
@@ -762,6 +771,7 @@ actions["check encoding"] = function(data,filename,raw)
     local properties   = data.properties
     local unicodes     = resources.unicodes -- name to unicode
     local indices      = resources.indices  -- index to unicodes
+    local duplicates   = resources.duplicates
 
     -- begin of messy (not needed when cidmap)
 
@@ -780,10 +790,36 @@ actions["check encoding"] = function(data,filename,raw)
         for unicode, index in next, unicodetoindex do -- altuni already covers this
             if unicode <= criterium and not descriptions[unicode] then
                 local parent = indices[index] -- why nil?
-                if parent then
-                    report_otf("weird, unicode %U points to %U with index %H",unicode,parent,index)
-                else
+                if not parent then
                     report_otf("weird, unicode %U points to nowhere with index %H",unicode,index)
+                else
+                    local parentdescription = descriptions[parent]
+                    if parentdescription then
+                        local altuni = parentdescription.altuni
+                        if not altuni then
+                            altuni = { { unicode = parent } }
+                            parentdescription.altuni = altuni
+                            duplicates[parent] = { unicode }
+                        else
+                            local done = false
+                            for i=1,#altuni do
+                                if altuni[i].unicode == parent then
+                                    done = true
+                                    break
+                                end
+                            end
+                            if not done then
+                                -- let's assume simple cjk reuse
+                                altuni[#altuni+1] = { unicode = parent }
+                                table.insert(duplicates[parent],unicode)
+                            end
+                        end
+                        if trace_loading then
+                            report_otf("weird, unicode %U points to nowhere with index %H",unicode,index)
+                        end
+                    else
+                        report_otf("weird, unicode %U points to %U with index %H",unicode,index)
+                    end
                 end
             end
         end
@@ -798,7 +834,7 @@ actions["check encoding"] = function(data,filename,raw)
     end
 end
 
--- for the moment we assume that a fotn with lookups will not use
+-- for the moment we assume that a font with lookups will not use
 -- altuni so we stick to kerns only
 
 actions["add duplicates"] = function(data,filename,raw)
@@ -1251,9 +1287,11 @@ actions["reorganize lookups"] = function(data,filename,raw) -- we could check fo
                         if current then
                             for i=1,#current do
                                 current[i] = current_class[current[i]] or { }
+                                -- let's not be sparse
                                 if lookups and not lookups[i] then
                                     lookups[i] = "" -- (was: false) e.g. we can have two lookups and one replacement
                                 end
+                                -- end of fix
                             end
                             rule.current = t_hashed(current,t_h_cache)
                         end
@@ -1283,6 +1321,16 @@ actions["reorganize lookups"] = function(data,filename,raw) -- we could check fo
                             local current = coverage.current
                             if current then
                                 current = t_uncover(splitter,t_u_cache,current)
+                                -- let's not be sparse
+                                local lookups = rule.lookups
+                                if lookups then
+                                    for i=1,#current do
+                                        if not lookups[i] then
+                                            lookups[i] = "" -- fix sparse array
+                                        end
+                                    end
+                                end
+                                --
                                 rule.current = t_hashed(current,t_h_cache)
                             end
                             local after = coverage.after
@@ -2017,7 +2065,7 @@ end
 
 registerotffeature {
     name         = "mathsize",
-    description  = "apply mathsize as specified in the font",
+    description  = "apply mathsize specified in the font",
     initializers = {
         base = checkmathsize,
         node = checkmathsize,

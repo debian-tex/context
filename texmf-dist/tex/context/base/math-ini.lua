@@ -10,11 +10,15 @@ if not modules then modules = { } end modules ['math-ini'] = {
 -- the "8000 hackery influences direct characters (utf) as indirect \char's
 --
 -- isn't characters.data loaded already ... shortcut it here
+--
+-- replace code 7 by 0 as we don't use it anyway (chars with code 7 will adapt to
+-- to the fam when set ... we use other means .. ok, we could use it for spacing but
+-- then we also have to set the other characters (only a subset done now)
 
-local formatters = string.formatters
+local formatters, find = string.formatters, string.find
 local utfchar, utfbyte = utf.char, utf.byte
 local setmathcode, setdelcode = tex.setmathcode, tex.setdelcode
-local texattribute = tex.attribute
+local settexattribute = tex.setattribute
 local floor = math.floor
 
 local context = context
@@ -22,24 +26,26 @@ local context = context
 local contextsprint = context.sprint
 local contextfprint = context.fprint -- a bit inefficient
 
-local allocate = utilities.storage.allocate
-
 local trace_defining = false  trackers.register("math.defining", function(v) trace_defining = v end)
 
 local report_math = logs.reporter("mathematics","initializing")
 
-mathematics       = mathematics or { }
-local mathematics = mathematics
+mathematics             = mathematics or { }
+local mathematics       = mathematics
 
 mathematics.extrabase   = 0xFE000 -- here we push some virtuals
 mathematics.privatebase = 0xFF000 -- here we push the ex
 
-local chardata = characters.data
+local unsetvalue        = attributes.unsetvalue
+local allocate          = utilities.storage.allocate
+local chardata          = characters.data
 
 local families = allocate {
     mr = 0,
     mb = 1,
 }
+
+--- to be checked  .. afew defaults in char-def that should be alpha
 
 local classes = allocate {
     ord         =  0, -- mathordcomm     mathord
@@ -197,10 +203,10 @@ local setmathsymbol = function(name,class,family,slot) -- hex is nicer for traci
     elseif class == classes.under then
         contextsprint(formatters[ [[\ugdef\%s{\Udelimiterunder "%X "%X }]] ](name,family,slot))
     elseif class == open_class or class == close_class or class == middle_class then
-        setdelcode(slot,{family,slot,0,0})
+        setdelcode("global",slot,{family,slot,0,0})
         contextsprint(formatters[ [[\ugdef\%s{\Udelimiter "%X "%X "%X }]] ](name,class,family,slot))
     elseif class == classes.delimiter then
-        setdelcode(slot,{family,slot,0,0})
+        setdelcode("global",slot,{family,slot,0,0})
         contextsprint(formatters[ [[\ugdef\%s{\Udelimiter 0 "%X "%X }]] ](name,family,slot))
     elseif class == classes.radical then
         contextsprint(formatters[ [[\ugdef\%s{\Uradical "%X "%X }]] ](name,family,slot))
@@ -485,10 +491,10 @@ end
 --
 -- function commands.taggedmathfunction(tag,label)
 --     if label then
---         texattribute[a_mathcategory] = registercategory(1,tag,tag)
+--         settexattribute(a_mathcategory,registercategory(1,tag,tag))
 --         context.mathlabeltext(tag)
 --     else
---         texattribute[a_mathcategory] = 1
+--         settexattribute(a_mathcategory,1)
 --         context(tag)
 --     end
 -- end
@@ -511,13 +517,31 @@ function commands.taggedmathfunction(tag,label,apply)
             noffunctions = noffunctions + 1
             functions[noffunctions] = tag
             functions[tag] = noffunctions
-            texattribute[a_mathcategory] = noffunctions + delta
+            settexattribute(a_mathcategory,noffunctions + delta)
         else
-            texattribute[a_mathcategory] = n + delta
+            settexattribute(a_mathcategory,n + delta)
         end
         context.mathlabeltext(tag)
     else
-        texattribute[a_mathcategory] = 1000 + delta
+        settexattribute(a_mathcategory,1000 + delta)
         context(tag)
+    end
+end
+
+--
+
+local list
+
+function commands.resetmathattributes()
+    if not list then
+        list = { }
+        for k, v in next, attributes.numbers do
+            if find(k,"^math") then
+                list[#list+1] = v
+            end
+        end
+    end
+    for i=1,#list do
+        settexattribute(list[i],unsetvalue)
     end
 end

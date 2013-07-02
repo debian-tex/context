@@ -50,16 +50,18 @@ local function lualibfile(name)
     return lpegmatch(pattern,name) or name
 end
 
+local offset = luarocks and 1 or 0 -- todo: also check other extras
+
 local helpers = package.helpers or {
     cleanpath  = cleanpath,
     lualibfile = lualibfile,
     trace      = false,
     report     = function(...) print(format(...)) end,
     builtin    = {
-        ["preload table"]       = searchers[1], -- special case, built-in libs
-        ["path specification"]  = searchers[2],
-        ["cpath specification"] = searchers[3],
-        ["all in one fallback"] = searchers[4], -- special case, combined libs
+        ["preload table"]       = searchers[1+offset], -- special case, built-in libs
+        ["path specification"]  = searchers[2+offset],
+        ["cpath specification"] = searchers[3+offset],
+        ["all in one fallback"] = searchers[4+offset], -- special case, combined libs
     },
     methods    = {
     },
@@ -279,6 +281,9 @@ methods["not loaded"] = function(name)
 end
 
 local level = 0
+local used  = { }
+
+helpers.traceused = false
 
 function helpers.loaded(name)
     local sequence = helpers.sequence
@@ -293,6 +298,9 @@ function helpers.loaded(name)
             if helpers.trace then
                 helpers.report("%s, level '%s', method '%s', name '%s'","found",level,method,name)
             end
+            if helpers.traceused then
+                used[#used+1] = { level = level, name = name }
+            end
             level = level - 1
             return result, rest
         end
@@ -300,6 +308,19 @@ function helpers.loaded(name)
     -- safeguard, we never come here
     level = level - 1
     return nil
+end
+
+function helpers.showused()
+    local n = #used
+    if n > 0 then
+        helpers.report("%s libraries loaded:",n)
+        helpers.report()
+        for i=1,n do
+            local u = used[i]
+            helpers.report("%i %a",u.level,u.name)
+        end
+        helpers.report()
+     end
 end
 
 function helpers.unload(name)

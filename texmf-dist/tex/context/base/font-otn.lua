@@ -233,7 +233,7 @@ local fontdata           = fonthashes.identifiers
 local otffeatures        = fonts.constructors.newfeatures("otf")
 local registerotffeature = otffeatures.register
 
-local onetimemessage     = fonts.loggers.onetimemessage
+local onetimemessage     = fonts.loggers.onetimemessage or function() end
 
 otf.defaultnodealternate = "none" -- first last
 
@@ -271,9 +271,9 @@ local function logwarning(...)
     report_direct(...)
 end
 
-local f_unicode  = formatters["%U"]
-local f_uniname  = formatters["%U (%s)"]
-local f_unilist  = formatters["% t (% t)"]
+local f_unicode = formatters["%U"]
+local f_uniname = formatters["%U (%s)"]
+local f_unilist = formatters["% t (% t)"]
 
 local function gref(n) -- currently the same as in font-otb
     if type(n) == "number" then
@@ -393,6 +393,8 @@ local function getcomponentindex(start)
     end
 end
 
+-- eventually we will do positioning in an other way (needs addional w/h/d fields)
+
 local function toligature(kind,lookupname,head,start,stop,char,markflag,discfound) -- brr head
     if start == stop and start.char == char then
         start.char = char
@@ -424,6 +426,7 @@ local function toligature(kind,lookupname,head,start,stop,char,markflag,discfoun
         local componentindex = 0
         local head = base
         local current = base
+        -- first we loop over the glyphs in start .. stop
         while start do
             local char = start.char
             if not marks[char] then
@@ -435,16 +438,20 @@ local function toligature(kind,lookupname,head,start,stop,char,markflag,discfoun
                     logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),start[a_ligacomp])
                 end
                 head, current = insert_node_after(head,current,copy_node(start)) -- unlikely that mark has components
+            elseif trace_marks then
+                logwarning("%s: delete mark %s",pref(kind,lookupname),gref(char))
             end
             start = start.next
         end
-        local start = components
-        while start and start.id == glyph_code do -- hm, is id test needed ?
+        -- we can have one accent as part of a lookup and another following
+     -- local start = components -- was wrong (component scanning was introduced when more complex ligs in devanagari was added)
+        local start = current.next
+        while start and start.id == glyph_code do
             local char = start.char
             if marks[char] then
                 start[a_ligacomp] = baseindex + (start[a_ligacomp] or componentindex)
                 if trace_marks then
-                    logwarning("%s: keep mark %s, gets index %s",pref(kind,lookupname),gref(char),start[a_ligacomp])
+                    logwarning("%s: set mark %s, gets index %s",pref(kind,lookupname),gref(char),start[a_ligacomp])
                 end
             else
                 break
@@ -613,10 +620,10 @@ function handlers.gsub_ligature(head,start,kind,lookupname,ligature,sequence)
             if lig then
                 if trace_ligatures then
                     local stopchar = stop.char
-                    head, start = toligature(kind,lookupname,head, start,stop,lig,skipmark,discfound)
+                    head, start = toligature(kind,lookupname,head,start,stop,lig,skipmark,discfound)
                     logprocess("%s: replacing %s upto %s by ligature %s case 2",pref(kind,lookupname),gref(startchar),gref(stopchar),gref(start.char))
                 else
-                    head, start = toligature(kind,lookupname,head, start,stop,lig,skipmark,discfound)
+                    head, start = toligature(kind,lookupname,head,start,stop,lig,skipmark,discfound)
                 end
                 return head, start, true
             else
@@ -679,7 +686,7 @@ function handlers.gpos_mark2base(head,start,kind,lookupname,markanchors,sequence
                         logwarning("%s, no matching anchors for mark %s and base %s",pref(kind,lookupname),gref(markchar),gref(basechar))
                     end
                 end
-            else -- if trace_bugs then
+            elseif trace_bugs then
             --  logwarning("%s: char %s is missing in font",pref(kind,lookupname),gref(basechar))
                 onetimemessage(currentfont,basechar,"no base anchors",report_fonts)
             end
@@ -723,7 +730,7 @@ function handlers.gpos_mark2ligature(head,start,kind,lookupname,markanchors,sequ
                    local baseanchors = baseanchors['baselig']
                    if baseanchors then
                         local al = anchorlookups[lookupname]
-                        for anchor,ba in next, baseanchors do
+                        for anchor, ba in next, baseanchors do
                             if al[anchor] then
                                 local ma = markanchors[anchor]
                                 if ma then
@@ -735,6 +742,10 @@ function handlers.gpos_mark2ligature(head,start,kind,lookupname,markanchors,sequ
                                                 pref(kind,lookupname),anchor,index,bound,gref(markchar),gref(basechar),index,dx,dy)
                                         end
                                         return head, start, true
+                                    else
+                                        if trace_bugs then
+                                            logwarning("%s: no matching anchors for mark %s and baselig %s with index %a",pref(kind,lookupname),gref(markchar),gref(basechar),index)
+                                        end
                                     end
                                 end
                             end
@@ -744,7 +755,7 @@ function handlers.gpos_mark2ligature(head,start,kind,lookupname,markanchors,sequ
                         end
                     end
                 end
-            else -- if trace_bugs then
+            elseif trace_bugs then
             --  logwarning("%s: char %s is missing in font",pref(kind,lookupname),gref(basechar))
                 onetimemessage(currentfont,basechar,"no base anchors",report_fonts)
             end
@@ -799,7 +810,7 @@ function handlers.gpos_mark2mark(head,start,kind,lookupname,markanchors,sequence
                         end
                     end
                 end
-            else -- if trace_bugs then
+            elseif trace_bugs then
             --  logwarning("%s: char %s is missing in font",pref(kind,lookupname),gref(basechar))
                 onetimemessage(currentfont,basechar,"no base anchors",report_fonts)
             end
@@ -851,7 +862,7 @@ function handlers.gpos_cursive(head,start,kind,lookupname,exitanchors,sequence) 
                                 end
                             end
                         end
-                    else -- if trace_bugs then
+                    elseif trace_bugs then
                     --  logwarning("%s: char %s is missing in font",pref(kind,lookupname),gref(startchar))
                         onetimemessage(currentfont,startchar,"no entry anchors",report_fonts)
                     end
@@ -1394,8 +1405,8 @@ end
 function chainprocs.gpos_mark2mark(head,start,stop,kind,chainname,currentcontext,lookuphash,currentlookup,chainlookupname)
     local markchar = start.char
     if marks[markchar] then
---~         local alreadydone = markonce and start[a_markmark]
---~         if not alreadydone then
+     -- local alreadydone = markonce and start[a_markmark]
+     -- if not alreadydone then
         --  local markanchors = descriptions[markchar].anchors markanchors = markanchors and markanchors.mark
             local subtables = currentlookup.subtables
             local lookupname = subtables[1]
@@ -1447,9 +1458,9 @@ function chainprocs.gpos_mark2mark(head,start,stop,kind,chainname,currentcontext
             elseif trace_bugs then
                 logwarning("%s: mark %s has no anchors",cref(kind,chainname,chainlookupname,lookupname),gref(markchar))
             end
---~         elseif trace_marks and trace_details then
---~             logprocess("%s, mark %s is already bound (n=%s), ignoring mark2mark",pref(kind,lookupname),gref(markchar),alreadydone)
---~         end
+     -- elseif trace_marks and trace_details then
+     --     logprocess("%s, mark %s is already bound (n=%s), ignoring mark2mark",pref(kind,lookupname),gref(markchar),alreadydone)
+     -- end
     elseif trace_bugs then
         logwarning("%s: mark %s is no mark",cref(kind,chainname,chainlookupname),gref(markchar))
     end
@@ -1502,7 +1513,7 @@ function chainprocs.gpos_cursive(head,start,stop,kind,chainname,currentcontext,l
                                     end
                                 end
                             end
-                        else -- if trace_bugs then
+                        elseif trace_bugs then
                         --  logwarning("%s: char %s is missing in font",pref(kind,lookupname),gref(startchar))
                             onetimemessage(currentfont,startchar,"no entry anchors",report_fonts)
                         end
@@ -1896,7 +1907,6 @@ local function normal_handle_contextchain(head,start,kind,chainname,contexts,seq
                             end
                         else
                          -- is valid
-                         -- logprocess("%s: multiple subchains for %s are not yet supported",cref(kind,chainname,chainlookupname),chainlookup and chainlookup.type or "?")
                             i = i + 1
                         end
                         if start then
@@ -2276,6 +2286,9 @@ for s=1,#datasets do
                                                     head, start, ok = handler(head,start,dataset[4],lookupname,lookupmatch,sequence,lookuphash,i)
                                                     if ok then
                                                         success = true
+                                                        break
+                                                    elseif not start then
+                                                        -- don't ask why ... shouldn't happen
                                                         break
                                                     end
                                                 end

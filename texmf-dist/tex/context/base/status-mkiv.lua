@@ -3255,6 +3255,12 @@ return {
   },
   {
    category = "lua",
+   filename = "font-trt",
+   loading  = "font-lib",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    filename = "font-vf",
    loading  = "font-lib",
    status   = "pending",
@@ -4261,13 +4267,103 @@ return {
   },
   {
    category = "lua",
+   filename = "s-fonts-coverage",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-fonts-features",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-fonts-missing",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-fonts-shapes",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-fonts-system",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    filename = "s-fonts-tables",
-   status   = "todo",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-fonts-vectors",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-counters",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-frequencies",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-hyphenation",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-sorting",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-system",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-math-characters",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-math-coverage",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-math-extensibles",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-fonts-goodies",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-math-parameters",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-physics-units",
+   status   = "okay",
   },
   {
    category = "lua",
    filename = "s-pre-71",
    status   = "todo",
+  },
+  {
+   category = "lua",
+   filename = "s-sql-tables",
+   status   = "okay",
   },
   {
    category = "lua",
@@ -5250,11 +5346,6 @@ return {
   },
   {
    category = "mkiv",
-   filename = "s-fnt-11",
-   status   = "todo",
-  },
-  {
-   category = "mkiv",
    filename = "s-fnt-20",
    status   = "todo",
   },
@@ -5265,27 +5356,7 @@ return {
   },
   {
    category = "mkiv",
-   filename = "s-fnt-23",
-   status   = "todo",
-  },
-  {
-   category = "mkiv",
    filename = "s-fnt-24",
-   status   = "todo",
-  },
-  {
-   category = "mkiv",
-   filename = "s-fnt-26",
-   status   = "todo",
-  },
-  {
-   category = "mkiv",
-   filename = "s-fnt-28",
-   status   = "todo",
-  },
-  {
-   category = "mkiv",
-   filename = "s-fnt-29",
    status   = "todo",
   },
   {
@@ -5295,23 +5366,51 @@ return {
   },
   {
    category = "mkiv",
-   filename = "s-fnt-31",
-   status   = "todo",
+   filename = "s-fonts-coverage",
+   loading  = "s-fonts-coverage",
+   status   = "okay",
   },
   {
    category = "mkiv",
-   filename = "s-fnt-32",
-   status   = "todo",
+   filename = "s-fonts-features",
+   loading  = "s-fonts-features",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-fonts-goodies",
+   loading  = "s-fonts-goodies",
+   status   = "okay",
   },
   {
    category = "mkiv",
    filename = "s-fonts-missing",
-   status   = "todo",
+   loading  = "s-fonts-missing",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-fonts-shapes",
+   loading  = "s-fonts-shapes",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-fonts-system",
+   loading  = "s-fonts-system",
+   status   = "okay",
   },
   {
    category = "mkiv",
    filename = "s-fonts-tables",
-   status   = "todo",
+   loading  = "s-fonts-tables",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-fonts-vectors",
+   loading  = "s-fonts-vectors",
+   status   = "okay",
   },
   {
    category = "mkvi",
@@ -5332,6 +5431,36 @@ return {
    category = "mkiv",
    filename = "s-inf-04",
    status   = "todo",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-counters",
+   loading  = "s-languages-counters",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-frequencies",
+   loading  = "s-languages-frequencies",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "s-languages-hyphenation",
+   loading  = "s-languages-hyphenation",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-languages-sorting",
+   loading  = "s-languages-sorting",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-languages-system",
+   loading  = "s-languages-system",
+   status   = "okay",
   },
   {
    category = "mkiv",
@@ -5360,23 +5489,33 @@ return {
   },
   {
    category = "mkiv",
-   filename = "s-mat-10",
-   status   = "todo",
-  },
-  {
-   category = "mkiv",
-   filename = "s-mat-20",
+   filename = "s-math-characters",
+   loading  = "s-math-characters",
    status   = "okay",
   },
   {
    category = "mkiv",
-   filename = "s-mat-11",
-   status   = "todo",
+   filename = "s-math-coverage",
+   loading  = "s-math-coverage",
+   status   = "okay",
   },
   {
    category = "mkiv",
-   filename = "s-mat-12",
-   status   = "todo",
+   filename = "s-math-extensibles",
+   loading  = "s-math-extensibles",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-math-parameters",
+   loading  = "s-math-parameters",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-math-repertoire",
+   loading  = "s-math-repertoire",
+   status   = "okay",
   },
   {
    category = "mkiv",
@@ -5395,8 +5534,14 @@ return {
   },
   {
    category = "mkiv",
-   filename = "s-phy-01",
-   status   = "todo",
+   filename = "s-pages-statistics",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "s-physics-units",
+   loading  = "s-physics-units",
+   status   = "okay",
   },
   {
    category = "tex",
@@ -5524,6 +5669,11 @@ return {
    status   = "todo",
   },
   {
+   category = "mkiv",
+   filename = "s-present-tiles",
+   status   = "okay",
+  },
+  {
    category = "tex",
    filename = "s-pre-50",
    status   = "todo",
@@ -5612,6 +5762,12 @@ return {
    category = "tex",
    filename = "s-syn-01",
    status   = "todo",
+  },
+  {
+   category = "mkiv",
+   filename = "s-sql-tables",
+   loading  = "s-sql-tables",
+   status   = "okay",
   },
   {
    category = "mkiv",
