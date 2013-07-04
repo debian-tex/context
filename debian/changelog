@@ -1,3 +1,10 @@
+context (2013.05.28.20130704-1) unstable; urgency=low
+
+  * Imported Upstream version 2013.05.28.20130704
+    fix bug in mp-to-pdf conversion in some cases
+
+ -- Norbert Preining <preining@debian.org>  Thu, 04 Jul 2013 14:44:57 +0900
+
 context (2013.05.28.20130702-1) unstable; urgency=low
 
   * update make-orig-tar for new context release
