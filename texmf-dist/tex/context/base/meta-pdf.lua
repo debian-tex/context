@@ -84,7 +84,7 @@ end
 
 local function flushconcat()
     if m_stack_concat then
-        mpscode(f_concatm(unpack(m_stack_concat)))
+        mpscode(f_concat(unpack(m_stack_concat)))
         m_stack_concat = nil
     end
 end
