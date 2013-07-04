@@ -1,6 +1,6 @@
 name context
 category Package
-revision 30865
+revision 31080
 shortdesc The ConTeXt macro package.
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
