@@ -1,3 +1,9 @@
+context (2013.05.28.20130704-2) UNRELEASED; urgency=low
+
+  * (hopefully) fixing the missing docfiles bug (Closes: #716892)
+
+ -- Norbert Preining <preining@debian.org>  Wed, 17 Jul 2013 13:41:11 +0900
+
 context (2013.05.28.20130704-1) unstable; urgency=low
 
   * Imported Upstream version 2013.05.28.20130704
