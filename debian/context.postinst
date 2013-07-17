@@ -47,9 +47,28 @@ case "$1" in
       	if [ -f "$misplacedf" ] ; then
 	  mkdir -p `dirname "$f"`
 	  mv "$misplacedf" "$f"
-	  rmdir --ignore-fail-on-non-empty `dirname "$misplacedf"`
 	fi
       done
+      # try to remove all the directories that have been there
+      for i in /usr/share/doc/texmf/context/scripts/mkiv/ \
+      	       /usr/share/doc/texmf/context/scripts/mkii/ \
+      	       /usr/share/doc/texmf/context/scripts/ \
+	       /usr/share/doc/texmf/context/third/gnuplot/ \
+	       /usr/share/doc/texmf/context/third/ \
+	       /usr/share/doc/texmf/context/document/general/manuals/ \
+	       /usr/share/doc/texmf/context/document/general/ \
+	       /usr/share/doc/texmf/context/document/ \
+	       /usr/share/doc/texmf/context/manuals/allkind/ \
+	       /usr/share/doc/texmf/context/manuals/ \
+	       /usr/share/doc/texmf/context/ \
+	       /usr/share/doc/texmf/man/man1/ \
+	       /usr/share/doc/texmf/man/ \
+	       /usr/share/doc/texmf/ ; do
+        if [ -d $i ] ; then
+          rmdir --ignore-fail-on-non-empty $i
+	fi
+      done
+      rm /var/lib/tex-common/context-inverse-update-stamp
     fi
     #
     if dhit_libkpathsea_configured; then
