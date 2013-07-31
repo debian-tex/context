@@ -1,3 +1,9 @@
+context (2013.05.28.20130704-3) unstable; urgency=low
+
+  * drop alternate recommends on transitional font packages (Closes: #717987)
+
+ -- Norbert Preining <preining@debian.org>  Wed, 31 Jul 2013 11:01:51 +0900
+
 context (2013.05.28.20130704-2) unstable; urgency=low
 
   * fix the missing docfiles bug on upgrade from wheezy (Closes: #716892)
