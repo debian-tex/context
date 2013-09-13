@@ -1,3 +1,9 @@
+context (2013.05.28.20130704-4) UNRELEASED; urgency=low
+
+  * add alternative dep on ruby-interpreter (Closes: #722556)
+
+ -- Norbert Preining <preining@debian.org>  Fri, 13 Sep 2013 10:28:57 +0900
+
 context (2013.05.28.20130704-3) unstable; urgency=low
 
   * drop alternate recommends on transitional font packages (Closes: #717987)
