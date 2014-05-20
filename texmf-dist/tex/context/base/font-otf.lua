@@ -18,9 +18,9 @@ local utfbyte = utf.byte
 local format, gmatch, gsub, find, match, lower, strip = string.format, string.gmatch, string.gsub, string.find, string.match, string.lower, string.strip
 local type, next, tonumber, tostring = type, next, tonumber, tostring
 local abs = math.abs
-local getn = table.getn
+local insert = table.insert
 local lpegmatch = lpeg.match
-local reversed, concat, remove = table.reversed, table.concat, table.remove
+local reversed, concat, remove, sortedkeys = table.reversed, table.concat, table.remove, table.sortedkeys
 local ioflush = io.flush
 local fastcopy, tohash, derivetable = table.fastcopy, table.tohash, table.derive
 local formatters = string.formatters
@@ -48,7 +48,7 @@ local otf                = fonts.handlers.otf
 
 otf.glists               = { "gsub", "gpos" }
 
-otf.version              = 2.743 -- beware: also sync font-mis.lua
+otf.version              = 2.755 -- beware: also sync font-mis.lua
 otf.cache                = containers.define("fonts", "otf", otf.version, true)
 
 local fontdata           = fonts.hashes.identifiers
@@ -73,6 +73,9 @@ local packdata           = true
 local syncspace          = true
 local forcenotdef        = false
 local includesubfonts    = false
+local overloadkerns      = false -- experiment
+
+local applyruntimefixes  = fonts.treatments and fonts.treatments.applyfixes
 
 local wildcard           = "*"
 local default            = "dflt"
@@ -81,12 +84,50 @@ local fontloaderfields   = fontloader.fields
 local mainfields         = nil
 local glyphfields        = nil -- not used yet
 
+local formats            = fonts.formats
+
+formats.otf              = "opentype"
+formats.ttf              = "truetype"
+formats.ttc              = "truetype"
+formats.dfont            = "truetype"
+
 registerdirective("fonts.otf.loader.cleanup",       function(v) cleanup       = tonumber(v) or (v and 1) or 0 end)
 registerdirective("fonts.otf.loader.force",         function(v) forceload     = v end)
 registerdirective("fonts.otf.loader.usemetatables", function(v) usemetatables = v end)
 registerdirective("fonts.otf.loader.pack",          function(v) packdata      = v end)
 registerdirective("fonts.otf.loader.syncspace",     function(v) syncspace     = v end)
 registerdirective("fonts.otf.loader.forcenotdef",   function(v) forcenotdef   = v end)
+registerdirective("fonts.otf.loader.overloadkerns", function(v) overloadkerns = v end)
+
+function otf.fileformat(filename)
+    local leader = lower(io.loadchunk(filename,4))
+    local suffix = lower(file.suffix(filename))
+    if leader == "otto" then
+        return formats.otf, suffix == "otf"
+    elseif leader == "ttcf" then
+        return formats.ttc, suffix == "ttc"
+ -- elseif leader == "true" then
+ --     return formats.ttf, suffix == "ttf"
+    elseif suffix == "ttc" then
+        return formats.ttc, true
+    elseif suffix == "dfont" then
+        return formats.dfont, true
+    else
+        return formats.ttf, suffix == "ttf"
+    end
+end
+
+-- local function otf_format(filename)
+--  -- return formats[lower(file.suffix(filename))]
+-- end
+
+local function otf_format(filename)
+    local format, okay = otf.fileformat(filename)
+    if not okay then
+        report_otf("font %a is actually an %a file",filename,format)
+    end
+    return format
+end
 
 local function load_featurefile(raw,featurefile)
     if featurefile and featurefile ~= "" then
@@ -198,7 +239,7 @@ local valid_fields = table.tohash {
     "upos",
     "use_typo_metrics",
     "uwidth",
- -- "validation_state",
+    "validation_state",
     "version",
     "vert_base",
     "weight",
@@ -321,7 +362,7 @@ function enhancers.register(what,action) -- only already registered can be overl
     actions[what] = action
 end
 
-function otf.load(filename,format,sub,featurefile)
+function otf.load(filename,sub,featurefile) -- second argument (format) is gone !
     local base = file.basename(file.removesuffix(filename))
     local name = file.removesuffix(base)
     local attr = lfs.attributes(filename)
@@ -420,7 +461,7 @@ function otf.load(filename,format,sub,featurefile)
             data = {
                 size        = size,
                 time        = time,
-                format      = format,
+                format      = otf_format(filename),
                 featuredata = featurefiles,
                 resources   = {
                     filename = resolvers.unresolve(filename), -- no shortcut
@@ -449,7 +490,7 @@ function otf.load(filename,format,sub,featurefile)
                 },
                 goodies = {
                 },
-                helpers = {
+                helpers = { -- might go away
                     tounicodelist  = splitter,
                     tounicodetable = lpeg.Ct(splitter),
                 },
@@ -494,6 +535,9 @@ function otf.load(filename,format,sub,featurefile)
             report_otf("loading from cache using hash %a",hash)
         end
         enhance("unpack",data,filename,nil,false)
+        if applyruntimefixes then
+            applyruntimefixes(filename,data)
+        end
         enhance("add dimensions",data,filename,nil,false)
         if trace_sequences then
             showfeatureorder(data,filename)
@@ -643,15 +687,22 @@ actions["prepare glyphs"] = function(data,filename,raw)
                         local glyph = cidglyphs[index]
                         if glyph then
                             local unicode = glyph.unicode
+if     unicode >= 0x00E000 and unicode <= 0x00F8FF then
+                                unicode = -1
+elseif unicode >= 0x0F0000 and unicode <= 0x0FFFFD then
+                                unicode = -1
+elseif unicode >= 0x100000 and unicode <= 0x10FFFD then
+                                unicode = -1
+end
                             local name    = glyph.name or cidnames[index]
-                            if not unicode or unicode == -1 or unicode >= criterium then
+                            if not unicode or unicode == -1 then -- or unicode >= criterium then
                                 unicode = cidunicodes[index]
                             end
                             if unicode and descriptions[unicode] then
                                 report_otf("preventing glyph %a at index %H to overload unicode %U",name or "noname",index,unicode)
                                 unicode = -1
                             end
-                            if not unicode or unicode == -1 or unicode >= criterium then
+                            if not unicode or unicode == -1 then -- or unicode >= criterium then
                                 if not name then
                                     name = format("u%06X",private)
                                 end
@@ -703,7 +754,7 @@ actions["prepare glyphs"] = function(data,filename,raw)
             if glyph then
                 local unicode = glyph.unicode
                 local name    = glyph.name
-                if not unicode or unicode == -1 or unicode >= criterium then
+                if not unicode or unicode == -1 then -- or unicode >= criterium then
                     unicode = private
                     unicodes[name] = private
                     if trace_private then
@@ -726,7 +777,7 @@ actions["prepare glyphs"] = function(data,filename,raw)
                 }
                 local altuni = glyph.altuni
                 if altuni then
-                    local d
+                 -- local d
                     for i=1,#altuni do
                         local a = altuni[i]
                         local u = a.unicode
@@ -741,15 +792,15 @@ actions["prepare glyphs"] = function(data,filename,raw)
                                 vv = { [u] = unicode }
                                 variants[v] = vv
                             end
-                        elseif d then
-                            d[#d+1] = u
-                        else
-                            d = { u }
+                     -- elseif d then
+                     --     d[#d+1] = u
+                     -- else
+                     --     d = { u }
                         end
                     end
-                    if d then
-                        duplicates[unicode] = d
-                    end
+                 -- if d then
+                 --     duplicates[unicode] = d -- is this needed ?
+                 -- end
                 end
             else
                 report_otf("potential problem: glyph %U is used but empty",index)
@@ -765,6 +816,10 @@ end
 -- the next one is still messy but will get better when we have
 -- flattened map/enc tables in the font loader
 
+-- the next one is not using a valid base for unicode privates
+--
+-- PsuedoEncodeUnencoded(EncMap *map,struct ttfinfo *info)
+
 actions["check encoding"] = function(data,filename,raw)
     local descriptions = data.descriptions
     local resources    = data.resources
@@ -777,9 +832,11 @@ actions["check encoding"] = function(data,filename,raw)
 
     local mapdata        = raw.map or { }
     local unicodetoindex = mapdata and mapdata.map or { }
+    local indextounicode = mapdata and mapdata.backmap or { }
  -- local encname        = lower(data.enc_name or raw.enc_name or mapdata.enc_name or "")
     local encname        = lower(data.enc_name or mapdata.enc_name or "")
     local criterium      = 0xFFFF -- for instance cambria has a lot of mess up there
+    local privateoffset  = constructors.privateoffset
 
     -- end of messy
 
@@ -787,40 +844,42 @@ actions["check encoding"] = function(data,filename,raw)
         if trace_loading then
             report_otf("checking embedded unicode map %a",encname)
         end
-        for unicode, index in next, unicodetoindex do -- altuni already covers this
-            if unicode <= criterium and not descriptions[unicode] then
-                local parent = indices[index] -- why nil?
-                if not parent then
-                    report_otf("weird, unicode %U points to nowhere with index %H",unicode,index)
+        local reported = { }
+        -- we loop over the original unicode->index mapping but we
+        -- need to keep in mind that that one can have weird entries
+        -- so we need some extra checking
+        for maybeunicode, index in next, unicodetoindex do
+            if descriptions[maybeunicode] then
+                -- we ignore invalid unicodes (unicode = -1) (ff can map wrong to non private)
+            else
+                local unicode = indices[index]
+                if not unicode then
+                    -- weird (cjk or so?)
+                elseif maybeunicode == unicode then
+                    -- no need to add
+                elseif unicode > privateoffset then
+                    -- we have a non-unicode
                 else
-                    local parentdescription = descriptions[parent]
-                    if parentdescription then
-                        local altuni = parentdescription.altuni
-                        if not altuni then
-                            altuni = { { unicode = parent } }
-                            parentdescription.altuni = altuni
-                            duplicates[parent] = { unicode }
+                    local d = descriptions[unicode]
+                    if d then
+                        local c = d.copies
+                        if c then
+                            c[maybeunicode] = true
                         else
-                            local done = false
-                            for i=1,#altuni do
-                                if altuni[i].unicode == parent then
-                                    done = true
-                                    break
-                                end
-                            end
-                            if not done then
-                                -- let's assume simple cjk reuse
-                                altuni[#altuni+1] = { unicode = parent }
-                                table.insert(duplicates[parent],unicode)
-                            end
+                            d.copies = { [maybeunicode] = true }
                         end
-                        if trace_loading then
-                            report_otf("weird, unicode %U points to nowhere with index %H",unicode,index)
-                        end
-                    else
-                        report_otf("weird, unicode %U points to %U with index %H",unicode,index)
+                    elseif index and not reported[index] then
+                        report_otf("missing index %i",index)
+                        reported[index] = true
                     end
                 end
+            end
+        end
+        for unicode, data in next, descriptions do
+            local d = data.copies
+            if d then
+                duplicates[unicode] = sortedkeys(d)
+                data.copies = nil
             end
         end
     elseif properties.cidinfo then
@@ -830,12 +889,15 @@ actions["check encoding"] = function(data,filename,raw)
     end
 
     if mapdata then
-        mapdata.map = { } -- clear some memory
+        mapdata.map     = { } -- clear some memory
+        mapdata.backmap = { } -- clear some memory
     end
 end
 
 -- for the moment we assume that a font with lookups will not use
--- altuni so we stick to kerns only
+-- altuni so we stick to kerns only .. alternatively we can always
+-- do an indirect lookup uni_to_uni . but then we need that in
+-- all lookups
 
 actions["add duplicates"] = function(data,filename,raw)
     local descriptions = data.descriptions
@@ -846,31 +908,43 @@ actions["add duplicates"] = function(data,filename,raw)
     local duplicates   = resources.duplicates
 
     for unicode, d in next, duplicates do
-        for i=1,#d do
-            local u = d[i]
-            if not descriptions[u] then
-                local description = descriptions[unicode]
-                local duplicate = table.copy(description) -- else packing problem
-                duplicate.comment = format("copy of U+%05X", unicode)
-                descriptions[u] = duplicate
-                local n = 0
-                for _, description in next, descriptions do
-                    if kerns then
-                        local kerns = description.kerns
-                        for _, k in next, kerns do
-                            local ku = k[unicode]
-                            if ku then
-                                k[u] = ku
-                                n = n + 1
+        local nofduplicates = #d
+        if nofduplicates > 4 then
+            if trace_loading then
+                report_otf("ignoring excessive duplicates of %U (n=%s)",unicode,nofduplicates)
+            end
+        else
+         -- local validduplicates = { }
+            for i=1,nofduplicates do
+                local u = d[i]
+                if not descriptions[u] then
+                    local description = descriptions[unicode]
+                    local n = 0
+                    for _, description in next, descriptions do
+                        if kerns then
+                            local kerns = description.kerns
+                            for _, k in next, kerns do
+                                local ku = k[unicode]
+                                if ku then
+                                    k[u] = ku
+                                    n = n + 1
+                                end
                             end
                         end
+                        -- todo: lookups etc
                     end
-                    -- todo: lookups etc
-                end
-                if trace_loading then
-                    report_otf("duplicating %U to %U with index %H (%s kerns)",unicode,u,description.index,n)
+                    if u > 0 then -- and
+                        local duplicate = table.copy(description) -- else packing problem
+                        duplicate.comment = format("copy of U+%05X", unicode)
+                        descriptions[u] = duplicate
+                     -- validduplicates[#validduplicates+1] = u
+                        if trace_loading then
+                            report_otf("duplicating %U to %U with index %H (%s kerns)",unicode,u,description.index,n)
+                        end
+                    end
                 end
             end
+         -- duplicates[unicode] = #validduplicates > 0 and validduplicates or nil
         end
     end
 end
@@ -1038,20 +1112,21 @@ local g_directions = {
     gsub_reversecontextchain = -1,
     gpos_reversecontextchain = -1,
 }
-
--- Research by Khaled Hosny has demonstrated that the font loader merges
--- regular and AAT features and that these can interfere (especially because
--- we dropped checking for valid features elsewhere. So, we just check for
--- the special flag and drop the feature if such a tag is found.
-
-local function supported(features)
-    for i=1,#features do
-        if features[i].ismac then
-            return false
-        end
-    end
-    return true
-end
+-- The following is no longer needed as AAT is ignored per end October 2013.
+--
+-- -- Research by Khaled Hosny has demonstrated that the font loader merges
+-- -- regular and AAT features and that these can interfere (especially because
+-- -- we dropped checking for valid features elsewhere. So, we just check for
+-- -- the special flag and drop the feature if such a tag is found.
+--
+-- local function supported(features)
+--     for i=1,#features do
+--         if features[i].ismac then
+--             return false
+--         end
+--     end
+--     return true
+-- end
 
 actions["reorganize subtables"] = function(data,filename,raw)
     local resources       = data.resources
@@ -1066,8 +1141,7 @@ actions["reorganize subtables"] = function(data,filename,raw)
             for k=1,#dw do
                 local gk = dw[k]
                 local features = gk.features
---              if features and supported(features) then
-                if not features or supported(features) then -- not always features !
+             -- if not features or supported(features) then -- not always features !
                     local typ = gk.type
                     local chain = g_directions[typ] or 0
                     local subtables = gk.subtables
@@ -1101,10 +1175,16 @@ actions["reorganize subtables"] = function(data,filename,raw)
                     elseif features then
                         -- scripts, tag, ismac
                         local f = { }
+                        local o = { }
                         for i=1,#features do
                             local df = features[i]
                             local tag = strip(lower(df.tag))
-                            local ft = f[tag] if not ft then ft = {} f[tag] = ft end
+                            local ft = f[tag]
+                            if not ft then
+                                ft = { }
+                                f[tag] = ft
+                                o[#o+1] = tag
+                            end
                             local dscripts = df.scripts
                             for i=1,#dscripts do
                                 local d = dscripts[i]
@@ -1124,6 +1204,7 @@ actions["reorganize subtables"] = function(data,filename,raw)
                             subtables = subtables,
                             markclass = markclass,
                             features  = f,
+                            order     = o,
                         }
                     else
                         lookups[name] = {
@@ -1134,7 +1215,7 @@ actions["reorganize subtables"] = function(data,filename,raw)
                             markclass = markclass,
                         }
                     end
-                end
+             -- end
             end
         end
     end
@@ -1541,80 +1622,97 @@ actions["merge kern classes"] = function(data,filename,raw)
         local resources    = data.resources
         local unicodes     = resources.unicodes
         local splitter     = data.helpers.tounicodetable
+        local ignored      = 0
+        local blocked      = 0
         for gp=1,#gposlist do
             local gpos = gposlist[gp]
             local subtables = gpos.subtables
             if subtables then
+                local first_done = { } -- could become an option so that we can deal with buggy fonts that don't get fixed
+                local split = { } -- saves time .. although probably not that much any more in the fixed luatex kernclass table
                 for s=1,#subtables do
                     local subtable = subtables[s]
                     local kernclass = subtable.kernclass -- name is inconsistent with anchor_classes
+                    local lookup = subtable.lookup or subtable.name
                     if kernclass then -- the next one is quite slow
-                        local split = { } -- saves time
-                        for k=1,#kernclass do
-                            local kcl = kernclass[k]
-                            local firsts  = kcl.firsts
-                            local seconds = kcl.seconds
-                            local offsets = kcl.offsets
-                            local lookups = kcl.lookup  -- singular
-                            if type(lookups) ~= "table" then
-                                lookups = { lookups }
+                        if #kernclass > 0 then
+                            kernclass = kernclass[1]
+                            lookup    = type(kernclass.lookup) == "string" and kernclass.lookup or lookup
+                            report_otf("fixing kernclass table of lookup %a",lookup)
+                        end
+                        local firsts  = kernclass.firsts
+                        local seconds = kernclass.seconds
+                        local offsets = kernclass.offsets
+                     -- if offsets[1] == nil then
+                     --     offsets[1] = "" -- defaults ?
+                     -- end
+                        for n, s in next, firsts do
+                            split[s] = split[s] or lpegmatch(splitter,s)
+                        end
+                        local maxseconds = 0
+                        for n, s in next, seconds do
+                            if n > maxseconds then
+                                maxseconds = n
                             end
-                         -- if offsets[1] == nil then
-                         --     offsets[1] = ""
-                         -- end
-                            -- we can check the max in the loop
-                         -- local maxseconds = getn(seconds)
-                            for n, s in next, firsts do
-                                split[s] = split[s] or lpegmatch(splitter,s)
-                            end
-                            local maxseconds = 0
-                            for n, s in next, seconds do
-                                if n > maxseconds then
-                                    maxseconds = n
-                                end
-                                split[s] = split[s] or lpegmatch(splitter,s)
-                            end
-                            for l=1,#lookups do
-                                local lookup = lookups[l]
-                                for fk=1,#firsts do -- maxfirsts ?
-                                    local fv = firsts[fk]
-                                    local splt = split[fv]
-                                    if splt then
-                                        local extrakerns = { }
-                                        local baseoffset = (fk-1) * maxseconds
-                                        for sk=2,maxseconds do -- will become 1 based in future luatex
-                                            local sv = seconds[sk]
-                                     -- for sk, sv in next, seconds do
-                                            local splt = split[sv]
-                                            if splt then -- redundant test
-                                                local offset = offsets[baseoffset + sk]
-                                                if offset then
-                                                    for i=1,#splt do
-                                                        extrakerns[splt[i]] = offset
-                                                    end
-                                                end
+                            split[s] = split[s] or lpegmatch(splitter,s)
+                        end
+                        for fk=1,#firsts do -- maxfirsts ?
+                            local fv = firsts[fk]
+                            local splt = split[fv]
+                            if splt then
+                                local extrakerns = { }
+                                local baseoffset = (fk-1) * maxseconds
+                                for sk=2,maxseconds do -- will become 1 based in future luatex
+                                    local sv = seconds[sk]
+                             -- for sk, sv in next, seconds do
+                                    local splt = split[sv]
+                                    if splt then -- redundant test
+                                        local offset = offsets[baseoffset + sk]
+                                        if offset then
+                                            for i=1,#splt do
+                                                extrakerns[splt[i]] = offset
                                             end
                                         end
-                                        for i=1,#splt do
-                                            local first_unicode = splt[i]
-                                            local description = descriptions[first_unicode]
-                                            if description then
-                                                local kerns = description.kerns
-                                                if not kerns then
-                                                    kerns = { } -- unicode indexed !
-                                                    description.kerns = kerns
-                                                end
-                                                local lookupkerns = kerns[lookup]
-                                                if not lookupkerns then
-                                                    lookupkerns = { }
-                                                    kerns[lookup] = lookupkerns
-                                                end
+                                    end
+                                end
+                                for i=1,#splt do
+                                    local first_unicode = splt[i]
+                                    if first_done[first_unicode] then
+                                        report_otf("lookup %a: ignoring further kerns of %C",lookup,first_unicode)
+                                        blocked = blocked + 1
+                                    else
+                                        first_done[first_unicode] = true
+                                        local description = descriptions[first_unicode]
+                                        if description then
+                                            local kerns = description.kerns
+                                            if not kerns then
+                                                kerns = { } -- unicode indexed !
+                                                description.kerns = kerns
+                                            end
+                                            local lookupkerns = kerns[lookup]
+                                            if not lookupkerns then
+                                                lookupkerns = { }
+                                                kerns[lookup] = lookupkerns
+                                            end
+                                            if overloadkerns then
                                                 for second_unicode, kern in next, extrakerns do
                                                     lookupkerns[second_unicode] = kern
                                                 end
-                                            elseif trace_loading then
-                                                report_otf("no glyph data for %U", first_unicode)
+                                            else
+                                                for second_unicode, kern in next, extrakerns do
+                                                    local k = lookupkerns[second_unicode]
+                                                    if not k then
+                                                        lookupkerns[second_unicode] = kern
+                                                    elseif k ~= kern then
+                                                        if trace_loading then
+                                                            report_otf("lookup %a: ignoring overload of kern between %C and %C, rejecting %a, keeping %a",lookup,first_unicode,second_unicode,k,kern)
+                                                        end
+                                                        ignored = ignored + 1
+                                                    end
+                                                end
                                             end
+                                        elseif trace_loading then
+                                            report_otf("no glyph data for %U", first_unicode)
                                         end
                                     end
                                 end
@@ -1624,6 +1722,12 @@ actions["merge kern classes"] = function(data,filename,raw)
                     end
                 end
             end
+        end
+        if ignored > 0 then
+            report_otf("%s kern overloads ignored",ignored)
+        end
+        if blocked > 0 then
+            report_otf("%s succesive kerns blocked",blocked)
         end
     end
 end
@@ -1653,6 +1757,13 @@ actions["check metadata"] = function(data,filename,raw)
             ttftables[i].data = "deleted"
         end
     end
+    --
+    if metadata.validation_state and table.contains(metadata.validation_state,"bad_ps_fontname") then
+        local name = file.nameonly(filename)
+        metadata.fontname = "bad-fontname-" .. name
+        metadata.fullname = "bad-fullname-" .. name
+    end
+    --
 end
 
 actions["cleanup tables"] = function(data,filename,raw)
@@ -1894,10 +2005,24 @@ local function copytotfm(data,cache_id)
             end
         end
         -- end math
+        -- we need a runtime lookup because of running from cdrom or zip, brrr (shouldn't we use the basename then?)
+        local filename = constructors.checkedfilename(resources)
+        local fontname = metadata.fontname
+        local fullname = metadata.fullname or fontname
+        local units    = metadata.units_per_em or 1000
+        --
+        if units == 0 then -- catch bugs in fonts
+            units = 1000 -- maybe 2000 when ttf
+            metadata.units_per_em = 1000
+            report_otf("changing %a units to %a",0,units)
+        end
+        --
         local monospaced  = metadata.isfixedpitch or (pfminfo.panose and pfminfo.panose.proportion == "Monospaced")
         local charwidth   = pfminfo.avgwidth -- or unset
-        local italicangle = metadata.italicangle
         local charxheight = pfminfo.os2_xheight and pfminfo.os2_xheight > 0 and pfminfo.os2_xheight
+-- charwidth = charwidth * units/1000
+-- charxheight = charxheight * units/1000
+        local italicangle = metadata.italicangle
         properties.monospaced  = monospaced
         parameters.italicangle = italicangle
         parameters.charwidth   = charwidth
@@ -1927,16 +2052,6 @@ local function copytotfm(data,cache_id)
             end
         end
         spaceunits = tonumber(spaceunits) or 500 -- brrr
-        -- we need a runtime lookup because of running from cdrom or zip, brrr (shouldn't we use the basename then?)
-        local filename = constructors.checkedfilename(resources)
-        local fontname = metadata.fontname
-        local fullname = metadata.fullname or fontname
-        local units    = metadata.units_per_em or 1000
-        --
-        if units == 0 then -- catch bugs in fonts
-            units = 1000
-            metadata.units_per_em = 1000
-        end
         --
         parameters.slant         = 0
         parameters.space         = spaceunits          -- 3.333 (cmr10)
@@ -1947,10 +2062,10 @@ local function copytotfm(data,cache_id)
         if spaceunits < 2*units/5 then
             -- todo: warning
         end
-        if italicangle then
+        if italicangle and italicangle ~= 0 then
             parameters.italicangle  = italicangle
             parameters.italicfactor = math.cos(math.rad(90+italicangle))
-            parameters.slant        = - math.round(math.tan(italicangle*math.pi/180))
+            parameters.slant        = - math.tan(italicangle*math.pi/180)
         end
         if monospaced then
             parameters.space_stretch = 0
@@ -1979,7 +2094,10 @@ local function copytotfm(data,cache_id)
         --
         properties.space         = spacer
         properties.encodingbytes = 2
-        properties.format        = data.format or fonts.formats[filename] or "opentype"
+        properties.format        = data.format or otf_format(filename) or formats.otf
+-- if units ~= 1000 and format ~= "truetype" then
+--     properties.format = "truetype"
+-- end
         properties.noglyphnames  = true
         properties.filename      = filename
         properties.fontname      = fontname
@@ -2008,10 +2126,28 @@ local function otftotfm(specification)
         local name     = specification.name
         local sub      = specification.sub
         local filename = specification.filename
-        local format   = specification.format
+     -- local format   = specification.format
         local features = specification.features.normal
-        local rawdata  = otf.load(filename,format,sub,features and features.featurefile)
+        local rawdata  = otf.load(filename,sub,features and features.featurefile)
         if rawdata and next(rawdata) then
+            local descriptions = rawdata.descriptions
+            local duplicates = rawdata.resources.duplicates
+            if duplicates then
+                local nofduplicates, nofduplicated = 0, 0
+                for parent, list in next, duplicates do
+                    for i=1,#list do
+                        local unicode = list[i]
+                        if not descriptions[unicode] then
+                            descriptions[unicode] = descriptions[parent] -- or copy
+                            nofduplicated = nofduplicated + 1
+                        end
+                    end
+                    nofduplicates = nofduplicates + #list
+                end
+                if trace_otf and nofduplicated ~= nofduplicates then
+                    report_otf("%i extra duplicates copied out of %i",nofduplicated,nofduplicates)
+                end
+            end
             rawdata.lookuphash = { }
             tfmdata = copytotfm(rawdata,cache_id)
             if tfmdata and next(tfmdata) then
@@ -2104,48 +2240,38 @@ function otf.collectlookups(rawdata,kind,script,language)
     return nil, nil
 end
 
--- readers
+-- readers (a bit messy, this forced so I might redo that bit: foo.ttf FOO.ttf foo.TTF FOO.TTF)
 
-local function check_otf(forced,specification,suffix,what)
+local function check_otf(forced,specification,suffix)
     local name = specification.name
     if forced then
-        name = file.addsuffix(name,suffix,true)
+        name = specification.forcedname -- messy
     end
     local fullname = findbinfile(name,suffix) or ""
     if fullname == "" then
         fullname = fonts.names.getfilename(name,suffix) or ""
     end
-    if fullname ~= "" then
+    if fullname ~= "" and not fonts.names.ignoredfile(fullname) then
         specification.filename = fullname
-        specification.format   = what
         return read_from_otf(specification)
     end
 end
 
-local function opentypereader(specification,suffix,what)
+local function opentypereader(specification,suffix)
     local forced = specification.forced or ""
-    if forced == "otf" then
-        return check_otf(true,specification,forced,"opentype")
-    elseif forced == "ttf" or forced == "ttc" or forced == "dfont" then
-        return check_otf(true,specification,forced,"truetype")
+    if formats[forced] then
+        return check_otf(true,specification,forced)
     else
-        return check_otf(false,specification,suffix,what)
+        return check_otf(false,specification,suffix)
     end
 end
 
-readers.opentype = opentypereader
+readers.opentype = opentypereader -- kind of useless and obsolete
 
-local formats = fonts.formats
-
-formats.otf   = "opentype"
-formats.ttf   = "truetype"
-formats.ttc   = "truetype"
-formats.dfont = "truetype"
-
-function readers.otf  (specification) return opentypereader(specification,"otf",formats.otf  ) end
-function readers.ttf  (specification) return opentypereader(specification,"ttf",formats.ttf  ) end
-function readers.ttc  (specification) return opentypereader(specification,"ttf",formats.ttc  ) end
-function readers.dfont(specification) return opentypereader(specification,"ttf",formats.dfont) end
+function readers.otf  (specification) return opentypereader(specification,"otf") end
+function readers.ttf  (specification) return opentypereader(specification,"ttf") end
+function readers.ttc  (specification) return opentypereader(specification,"ttf") end
+function readers.dfont(specification) return opentypereader(specification,"ttf") end
 
 -- this will be overloaded
 

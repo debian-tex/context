@@ -27,6 +27,7 @@ local catcodenumbers = catcodes.numbers
 local ctxcatcodes    = catcodenumbers.ctxcatcodes -- todo: use different method
 local notcatcodes    = catcodenumbers.notcatcodes -- todo: use different method
 
+local commands       = commands
 local context        = context
 local contextsprint  = context.sprint             -- with catcodes (here we use fast variants, but with option for tracing)
 
@@ -35,10 +36,13 @@ local xmlwithelements = xml.withelements
 local xmlserialize, xmlcollect, xmltext, xmltostring = xml.serialize, xml.collect, xml.text, xml.tostring
 local xmlapplylpath = xml.applylpath
 local xmlunprivatized, xmlprivatetoken, xmlprivatecodes = xml.unprivatized, xml.privatetoken, xml.privatecodes
+local xmlstripelement = xml.stripelement
 
-local variables = (interfaces and interfaces.variables) or { }
+local variables = interfaces and interfaces.variables or { }
 
-local insertbeforevalue, insertaftervalue = utilities.tables.insertbeforevalue, utilities.tables.insertaftervalue
+local settings_to_hash  = utilities.parsers.settings_to_hash
+local insertbeforevalue = utilities.tables.insertbeforevalue
+local insertaftervalue  = utilities.tables.insertaftervalue
 
 local starttiming, stoptiming = statistics.starttiming, statistics.stoptiming
 
@@ -350,7 +354,7 @@ end
 
 function lxml.checkindex(name)
     local root = getid(name)
-    return (root and root.index) or 0
+    return root and root.index or 0
 end
 
 function lxml.withindex(name,n,command) -- will change as name is always there now
@@ -432,16 +436,74 @@ function lxml.register(id,xmltable,filename)
     return xmltable
 end
 
-function lxml.include(id,pattern,attribute,recurse)
+-- function lxml.include(id,pattern,attribute,recurse,resolve)
+--     starttiming(xml)
+--     local root = getid(id)
+--     xml.include(root,pattern,attribute,recurse,function(filename)
+--         if filename then
+--             -- preprocessing
+--             filename = commands.preparedfile(filename)
+--             -- some protection
+--             if file.dirname(filename) == "" and root.filename then
+--                 local dn = file.dirname(root.filename)
+--                 if dn ~= "" then
+--                     filename = file.join(dn,filename)
+--                 end
+--             end
+--             if trace_loading then
+--                 report_lxml("including file %a",filename)
+--             end
+--             -- handy if we have a flattened structure
+--             if resolve then
+--                 filename = resolvers.resolve(filename) or filename
+--             end
+--             -- todo: check variants and provide
+--             noffiles, nofconverted = noffiles + 1, nofconverted + 1
+--             return resolvers.loadtexfile(filename) or ""
+--         else
+--             return ""
+--         end
+--     end)
+--     stoptiming(xml)
+-- end
+
+-- recurse prepare rootpath resolve basename
+
+local options_true = { "recurse", "prepare", "rootpath" }
+local options_nil  = { "prepare", "rootpath" }
+
+function lxml.include(id,pattern,attribute,options)
     starttiming(xml)
     local root = getid(id)
-    xml.include(root,pattern,attribute,recurse,function(filename)
+    if options == true then
+        -- downward compatible
+        options = options_true
+    elseif not options then
+        -- downward compatible
+        options = options_nil
+    else
+        options = settings_to_hash(options) or { }
+    end
+    xml.include(root,pattern,attribute,options.recurse,function(filename)
         if filename then
-            filename = commands.preparedfile(filename)
-            if file.dirname(filename) == "" and root.filename then
-                local dn = file.dirname(root.filename)
-                if dn ~= "" then
-                    filename = file.join(dn,filename)
+            -- preprocessing
+            if options.prepare then
+                filename = commands.preparedfile(filename)
+            end
+            -- handy if we have a flattened structure
+            if options.basename then
+                filename = file.basename(filename)
+            end
+            if options.resolve then
+                filename = resolvers.resolve(filename) or filename
+            end
+            -- some protection
+            if options.rootpath then
+                if file.dirname(filename) == "" and root.filename then
+                    local dn = file.dirname(root.filename)
+                    if dn ~= "" then
+                        filename = file.join(dn,filename)
+                    end
                 end
             end
             if trace_loading then
@@ -454,6 +516,10 @@ function lxml.include(id,pattern,attribute,recurse)
         end
     end)
     stoptiming(xml)
+end
+
+function lxml.save(id,name)
+    xml.save(getid(id),name)
 end
 
 function xml.getbuffer(name,compress,entities) -- we need to make sure that commands are processed
@@ -914,16 +980,18 @@ function lxml.setsetup(id,pattern,setup)
                             end
                         end
                     end
+                elseif setup == "-" then
+                    for c=1,nc do
+                        collected[c].command = false
+                    end
+                elseif setup == "+" then
+                    for c=1,nc do
+                        collected[c].command = true
+                    end
                 else
                     for c=1,nc do
                         local e = collected[c]
-                        if setup == "-" then
-                            e.command = false
-                        elseif setup == "+" then
-                            e.command = true
-                        else
-                            e.command = e.tg
-                        end
+                        e.command = e.tg
                     end
                 end
             elseif trace_setups then
@@ -966,16 +1034,18 @@ function lxml.setsetup(id,pattern,setup)
                                 end
                             end
                         end
+                    elseif b == "-" then
+                        for c=1,nc do
+                            collected[c].command = false
+                        end
+                    elseif b == "+" then
+                        for c=1,nc do
+                            collected[c].command = true
+                        end
                     else
                         for c=1,nc do
                             local e = collected[c]
-                            if b == "-" then
-                                e.command = false
-                            elseif b == "+" then
-                                e.command = true
-                            else
-                                e.command = a .. e.tg
-                            end
+                            e.command = a .. e.tg
                         end
                     end
                 elseif trace_setups then
@@ -1115,7 +1185,9 @@ local function command(collected,cmd,otherwise)
                 lxml.addindex(name,false,true)
                 ix = e.ix
             end
-            if wildcard then
+            if not ix then
+                report_lxml("no valid node index for element %a in command %s",name,cmd)
+            elseif wildcard then
                 contextsprint(ctxcatcodes,"\\xmlw{",(gsub(cmd,"%*",e.tg)),"}{",name,"::",ix,"}")
             else
                 contextsprint(ctxcatcodes,"\\xmlw{",cmd,"}{",name,"::",ix,"}")
@@ -1185,7 +1257,7 @@ local function stripped(collected) -- tricky as we strip in place
         local nc = #collected
         if nc > 0 then
             for c=1,nc do
-                cprint(xml.stripelement(collected[c]))
+                cprint(xmlstripelement(collected[c]))
             end
         end
     end
@@ -1310,10 +1382,11 @@ function texfinalizers.name(collected,n)
                 c = collected[nc-n+1]
             end
             if c then
-                if c.ns == "" then
+                local ns = c.ns
+                if not ns or ns == "" then
                     contextsprint(ctxcatcodes,c.tg)
                 else
-                    contextsprint(ctxcatcodes,c.ns,":",c.tg)
+                    contextsprint(ctxcatcodes,ns,":",c.tg)
                 end
             end
         end
@@ -1326,11 +1399,11 @@ function texfinalizers.tags(collected,nonamespace)
         if nc > 0 then
             for c=1,nc do
                 local e = collected[c]
-                local ns, tg = e.ns, e.tg
-                if nonamespace or ns == "" then
-                    contextsprint(ctxcatcodes,tg)
+                local ns = e.ns
+                if nonamespace or (not ns or ns == "") then
+                    contextsprint(ctxcatcodes,e.tg)
                 else
-                    contextsprint(ctxcatcodes,ns,":",tg)
+                    contextsprint(ctxcatcodes,ns,":",e.tg)
                 end
             end
         end
@@ -1340,11 +1413,10 @@ end
 --
 
 local function verbatim(id,before,after)
-    local root = getid(id)
-    if root then
-        if before then contextsprint(ctxcatcodes,before,"[",root.tg or "?","]") end
-        lxml.toverbatim(xmltostring(root.dt))
---~         lxml.toverbatim(xml.totext(root.dt))
+    local e = getid(id)
+    if e then
+        if before then contextsprint(ctxcatcodes,before,"[",e.tg or "?","]") end
+        lxml.toverbatim(xmltostring(e.dt)) -- lxml.toverbatim(xml.totext(e.dt))
         if after then contextsprint(ctxcatcodes,after) end
     end
 end
@@ -1450,66 +1522,112 @@ end
 lxml.index = lxml.position
 
 function lxml.pos(id)
-    local root = getid(id)
-    contextsprint(ctxcatcodes,(root and root.ni) or 0)
+    local e = getid(id)
+    contextsprint(ctxcatcodes,e and e.ni or 0)
 end
 
+-- function lxml.att(id,a,default)
+--     local root = getid(id)
+--     if root then
+--         local at = root.at
+--         local str = (at and at[a]) or default
+--         if str and str ~= "" then
+--             contextsprint(notcatcodes,str)
+--         end
+--     elseif default then
+--         contextsprint(notcatcodes,default)
+--     end
+-- end
+--
+-- no need for an assignment so:
+
 function lxml.att(id,a,default)
-    local root = getid(id)
-    if root then
-        local at = root.at
-        local str = (at and at[a]) or default
-        if str and str ~= "" then
-            contextsprint(notcatcodes,str)
+    local e = getid(id)
+    if e then
+        local at = e.at
+        if at then
+            -- normally always true
+            local str = at[a]
+            if not str then
+                if default and default ~= "" then
+                    contextsprint(notcatcodes,default)
+                end
+            elseif str ~= "" then
+                contextsprint(notcatcodes,str)
+            end
+        elseif default and default ~= "" then
+            contextsprint(notcatcodes,default)
         end
-    elseif default then
+    elseif default and default ~= "" then
         contextsprint(notcatcodes,default)
     end
 end
 
 function lxml.name(id) -- or remapped name? -> lxml.info, combine
-    local r = getid(id)
-    local ns = r.rn or r.ns or ""
-    if ns ~= "" then
-        contextsprint(ctxcatcodes,ns,":",r.tg)
-    else
-        contextsprint(ctxcatcodes,r.tg)
+    local e = getid(id)
+    if e then
+        local ns = e.rn or e.ns
+        if ns and ns ~= "" then
+            contextsprint(ctxcatcodes,ns,":",e.tg)
+        else
+            contextsprint(ctxcatcodes,e.tg)
+        end
     end
 end
 
 function lxml.match(id) -- or remapped name? -> lxml.info, combine
-    contextsprint(ctxcatcodes,getid(id).mi or 0)
+    local e = getid(id)
+    contextsprint(ctxcatcodes,e and e.mi or 0)
 end
 
 function lxml.tag(id) -- tag vs name -> also in l-xml tag->name
-    contextsprint(ctxcatcodes,getid(id).tg or "")
+    local e = getid(id)
+    if e then
+        local tg = e.tg
+        if tg and tg ~= "" then
+            contextsprint(ctxcatcodes,tg)
+        end
+    end
 end
 
 function lxml.namespace(id) -- or remapped name?
-    local root = getid(id)
-    contextsprint(ctxcatcodes,root.rn or root.ns or "")
+    local e = getid(id)
+    if e then
+        local ns = e.rn or e.ns
+        if ns and ns ~= "" then
+            contextsprint(ctxcatcodes,ns)
+        end
+    end
 end
 
 function lxml.flush(id)
-    id = getid(id)
-    local dt = id and id.dt
-    if dt then
-        xmlsprint(dt)
+    local e = getid(id)
+    if e then
+        local dt = e.dt
+        if dt then
+            xmlsprint(dt)
+        end
     end
 end
 
 function lxml.snippet(id,i)
     local e = getid(id)
     if e then
-        local edt = e.dt
-        if edt then
-            xmlsprint(edt[i])
+        local dt = e.dt
+        if dt then
+            local dti = dt[i]
+            if dti then
+                xmlsprint(dti)
+            end
         end
     end
 end
 
 function lxml.direct(id)
-    xmlsprint(getid(id))
+    local e = getid(id)
+    if e then
+        xmlsprint(e)
+    end
 end
 
 function lxml.command(id,pattern,cmd)
@@ -1574,12 +1692,17 @@ statistics.register("xml load time", function()
 end)
 
 statistics.register("lxml preparation time", function()
-    local calls, cached = xml.lpathcalls(), xml.lpathcached()
-    if calls > 0 or cached > 0 then
-        return format("%s seconds, %s nodes, %s lpath calls, %s cached calls",
-            statistics.elapsedtime(lxml), nofindices, calls, cached)
+    if noffiles > 0 or nofconverted > 0 then
+        local calls  = xml.lpathcalls()
+        local cached = xml.lpathcached()
+        if calls > 0 or cached > 0 then
+            return format("%s seconds, %s nodes, %s lpath calls, %s cached calls",
+                statistics.elapsedtime(lxml), nofindices, calls, cached)
+        else
+            return nil
+        end
     else
-        return nil
+        -- pretty close to zero so not worth mentioning
     end
 end)
 

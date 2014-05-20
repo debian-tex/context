@@ -20,6 +20,13 @@
 %D merged into one and caching has been added, which makes switching
 %D twice as fast.
 
+% Todo: find a way to force last lines to have some distance from the right
+% edge (problem: keywords or presets), maybe a plugin
+%
+% \setupalign[...,myoption] % last
+%
+% but that also means myoption gets frozen due to caching.
+
 \registerctxluafile{spac-ali}{1.001}
 
 \definesystemattribute[realign]   [public] % might be combined with the next one
@@ -148,6 +155,17 @@
    display:\ifconditional\displaylefttoright l2r\else r2l\fi\space
    inline:\ifconditional \inlinelefttoright  l2r\else r2l\fi\space
    ]\endgroup}
+
+\unexpanded\def\righttolefthbox#1#{\normalhbox dir TRT #1\bgroup\righttoleft\let\next} \let\rtlhbox\righttolefthbox
+\unexpanded\def\lefttorighthbox#1#{\normalhbox dir TLT #1\bgroup\lefttoright\let\next} \let\ltrhbox\lefttorighthbox
+\unexpanded\def\righttoleftvbox#1#{\normalvbox dir TRT #1\bgroup\righttoleft\let\next} \let\rtlvbox\righttoleftvbox
+\unexpanded\def\lefttorightvbox#1#{\normalvbox dir TLT #1\bgroup\lefttoright\let\next} \let\ltrvbox\lefttorightvbox
+\unexpanded\def\righttoleftvtop#1#{\normalvtop dir TRT #1\bgroup\righttoleft\let\next} \let\rtlvtop\righttoleftvtop
+\unexpanded\def\lefttorightvtop#1#{\normalvtop dir TLT #1\bgroup\lefttoright\let\next} \let\ltrvtop\lefttorightvtop
+
+\unexpanded\def\autodirhbox#1#{\hbox#1\bgroup\synchronizeinlinedirection\let\next}
+\unexpanded\def\autodirvbox#1#{\vbox#1\bgroup\synchronizeinlinedirection\let\next} % maybe also pardir or maybe just a \vbox
+\unexpanded\def\autodirvtop#1#{\vtop#1\bgroup\synchronizeinlinedirection\let\next} % maybe also pardir or maybe just a \vtop
 
 % Tolerance and hyphenation
 
@@ -553,12 +571,49 @@
    \fi
    \raggedcommand}
 
-% The keywords:
+% experiment
+
+\unexpanded\def\spac_align_use_later#1%
+  {\begingroup
+   \edef\m_spac_align_asked{#1}%
+   \expandafter\let\expandafter\raggedcommand\csname\??alignmentnormalcache\m_spac_align_asked\endcsname
+   \ifx\raggedcommand\relax
+     \spac_align_add_to_cache
+   \fi
+   \endgroup}
+
+\unexpanded\def\spac_align_use_now#1%
+  {\csname\??alignmentnormalcache#1\endcsname}
+
+% Maybe we need something different in columns.
 
 \unexpanded\def\installalign#1#2% beware: commands must be unexpandable!
   {\ifcsname\??aligncommand#1\endcsname \else
      \setvalue{\??aligncommand#1}{\t_spac_align_collected\expandafter{\the\t_spac_align_collected#2}}%
    \fi}
+
+% beware, toks stuff and states are set at a differt time, so installalign is
+% only for special options
+%
+% \setvalue{\??aligncommand whatever}%
+%   {\c_spac_align_state_horizontal\plushundred
+%    \t_spac_align_collected\expandafter{\the\t_spac_align_collected .....}}
+%
+% this one could deal with both
+%
+% \unexpanded\def\installalignoption#1#2%
+%   {\ifcsname\??aligncommand#1\endcsname \else
+%      \setvalue{\??aligncommand#1}%
+%        {\spac_align_set_horizontal_none
+%         \c_spac_align_state_horizontal\plushundred % don't set
+%         \t_spac_align_collected\expandafter{\the\t_spac_align_collected#2}}%
+%    \fi}
+%
+% \installalignoption
+%   {whatever}
+%   {}
+
+% The keywords:
 
 \letvalue{\??aligncommand\empty            }\empty
 \setvalue{\??aligncommand\v!broad          }{\c_spac_align_state_broad     \plusone  }
@@ -959,18 +1014,58 @@
 %
 % \wordright[\rightskip]{whatever}
 
+% Trick posted by WS on mailing list, generalized a bit. The bottom text only shows
+% op when there is one line space available. We could add some extra space if needed.
+
+% \unexpanded\def\bottomword
+%   {\par
+%    \dowithnextbox
+%      {\leaders\box\nextbox\vfil\page}
+%      \vbox to \lineheight}
+%
+% \unexpanded\def\bottomword
+%   {\par
+%    \groupedcommand
+%      {\leaders
+%       \vbox to \lineheight\bgroup}
+%      {\egroup
+%       \vfil
+%       \page}}
+
 % \simplealignedbox{2cm}{right}{x}
 
 \installcorenamespace{alignsimple}
+\installcorenamespace{alignsimplereverse}
 
-\setvalue{\??alignsimple\v!right     }#1{{#1\hss}}
-\setvalue{\??alignsimple\v!left      }#1{{\hss#1}}
-\setvalue{\??alignsimple\v!flushright}#1{{\hss#1}}
-\setvalue{\??alignsimple\v!flushleft }#1{{#1\hss}}
-\setvalue{\??alignsimple\v!middle    }#1{{\hss#1\hss}}
+% todo: also handle \bgroup ... \egroup
+
+\unexpanded\def\spac_align_simple_left  #1{{#1\hss}}
+\unexpanded\def\spac_align_simple_right #1{{\hss#1}}
+\unexpanded\def\spac_align_simple_middle#1{{\hss#1\hss}}
+
+\letvalue{\??alignsimple       \v!right     }\spac_align_simple_left
+\letvalue{\??alignsimple       \v!outer     }\spac_align_simple_left   % not managed! see linenumbers
+\letvalue{\??alignsimple       \v!flushleft }\spac_align_simple_left
+\letvalue{\??alignsimple       \v!left      }\spac_align_simple_right
+\letvalue{\??alignsimple       \v!inner     }\spac_align_simple_right  % not managed! see linenumbers
+\letvalue{\??alignsimple       \v!flushright}\spac_align_simple_right
+\letvalue{\??alignsimple       \v!middle    }\spac_align_simple_middle
+
+\letvalue{\??alignsimplereverse\v!right     }\spac_align_simple_right
+\letvalue{\??alignsimplereverse\v!outer     }\spac_align_simple_right % not managed! see linenumbers
+\letvalue{\??alignsimplereverse\v!flushleft }\spac_align_simple_right
+\letvalue{\??alignsimplereverse\v!left      }\spac_align_simple_left
+\letvalue{\??alignsimplereverse\v!inner     }\spac_align_simple_left  % not managed! see linenumbers
+\letvalue{\??alignsimplereverse\v!flushright}\spac_align_simple_left
+\letvalue{\??alignsimplereverse\v!middle    }\spac_align_simple_middle
 
 \unexpanded\def\simplealignedbox#1#2%
   {\hbox to #1\csname\??alignsimple\ifcsname\??alignsimple#2\endcsname#2\else\v!right\fi\endcsname}
+
+\newconditional\alignsimplelefttoright \settrue\alignsimplelefttoright
+
+\unexpanded\def\simplereversealignedbox#1#2%
+  {\hbox to #1\csname\??alignsimplereverse\ifcsname\??alignsimplereverse#2\endcsname#2\else\v!left\fi\endcsname}
 
 % \installnamespace{alignsets}
 %

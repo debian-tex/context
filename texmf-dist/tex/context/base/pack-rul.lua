@@ -10,16 +10,37 @@ if not modules then modules = { } end modules ['pack-rul'] = {
 <p>An explanation is given in the history document <t>mk</t>.</p>
 --ldx]]--
 
-local texsetdimen, texsetcount, texbox = tex.setdimen, tex.setcount, tex.box
-local hpack, free, copy, traverse_id = node.hpack, node.free, node.copy_list, node.traverse_id
-local texdimen, texcount = tex.dimen, tex.count
+-- we need to be careful with display math as it uses shifts
+-- challenge: adapt glue_set
+-- setfield(h,"glue_set", getfield(h,"glue_set") * getfield(h,"width")/maxwidth -- interesting ... doesn't matter much
+
+local type = type
 
 local hlist_code      = nodes.nodecodes.hlist
+local vlist_code      = nodes.nodecodes.vlist
 local box_code        = nodes.listcodes.box
-local node_dimensions = node.dimensions
+local line_code       = nodes.listcodes.line
+
+local texsetdimen     = tex.setdimen
+local texsetcount     = tex.setcount
+
+local nuts            = nodes.nuts
+
+local getfield        = nuts.getfield
+local setfield        = nuts.setfield
+local getnext         = nuts.getnext
+local getprev         = nuts.getprev
+local getlist         = nuts.getlist
+local getid           = nuts.getid
+local getsubtype      = nuts.getsubtype
+local getbox          = nuts.getbox
+
+local hpack           = nuts.hpack
+local traverse_id     = nuts.traverse_id
+local node_dimensions = nuts.dimensions
 
 function commands.doreshapeframedbox(n)
-    local box            = texbox[n]
+    local box            = getbox(n)
     local noflines       = 0
     local firstheight    = nil
     local lastdepth      = nil
@@ -27,21 +48,28 @@ function commands.doreshapeframedbox(n)
     local minwidth       = 0
     local maxwidth       = 0
     local totalwidth     = 0
-    if box.width ~= 0 then
-        local list = box.list
+    local averagewidth   = 0
+    local boxwidth       = getfield(box,"width")
+    if boxwidth ~= 0 then -- and h.subtype == vlist_code
+        local list = getlist(box)
         if list then
-            for h in traverse_id(hlist_code,list) do -- no dir etc needed
+            local function check(n,repack)
                 if not firstheight then
-                    firstheight = h.height
+                    firstheight = getfield(n,"height")
                 end
-                lastdepth = h.depth
+                lastdepth = getfield(n,"depth")
                 noflines = noflines + 1
-                local l = h.list
+                local l = getlist(n)
                 if l then
-                    if h.subtype == box_code then -- maybe more
-                        lastlinelength = h.width
+                    if repack then
+                        local subtype = getsubtype(n)
+                        if subtype == box_code or subtype == line_code then
+                            lastlinelength = node_dimensions(l,getfield(n,"dir")) -- used to be: hpack(copy(l)).width
+                        else
+                            lastlinelength = getfield(n,"width")
+                        end
                     else
-                        lastlinelength = node_dimensions(l) -- used to be: hpack(copy(l)).width
+                        lastlinelength = getfield(n,"width")
                     end
                     if lastlinelength > maxwidth then
                         maxwidth = lastlinelength
@@ -52,58 +80,119 @@ function commands.doreshapeframedbox(n)
                     totalwidth = totalwidth + lastlinelength
                 end
             end
-            if firstheight then
-                if maxwidth ~= 0 then
+            local hdone = false
+            for h in traverse_id(hlist_code,list) do -- no dir etc needed
+                check(h,true)
+                hdone = true
+            end
+         -- local vdone = false
+            for v in traverse_id(vlist_code,list) do -- no dir etc needed
+                check(v,false)
+             -- vdone = true
+            end
+            if not firstheight then
+                -- done
+            elseif maxwidth ~= 0 then
+                if hdone then
                     for h in traverse_id(hlist_code,list) do
-                        local l = h.list
+                        local l = getlist(h)
                         if l then
-                            if h.subtype == box_code then
-                                -- explicit box, no 'line'
-                            else
-                             -- if h.width ~= maxwidth then -- else no display math handling (uses shift)
-                                -- challenge: adapt glue_set
-                                -- h.glue_set = h.glue_set * h.width/maxwidth -- interesting ... doesn't matter much
-                                -- h.width = maxwidth
-                                    h.list = hpack(l,maxwidth,'exactly',h.dir)
-                                    h.shift = 0 -- needed for display math
-                                    h.width = maxwidth
-                             -- end
+                            local subtype = getsubtype(h)
+                            if subtype == box_code or subtype == line_code then
+                                l = hpack(l,maxwidth,'exactly',getfield(h,"dir")) -- multiple return values
+                                setfield(h,"list",l)
+                                setfield(h,"shift",0) -- needed for display math, so no width check possible
                             end
+                            setfield(h,"width",maxwidth)
                         end
                     end
                 end
-                box.width = maxwidth
+             -- if vdone then
+             --     for v in traverse_id(vlist_code,list) do
+             --         local width = getfield(n,"width")
+             --         if width > maxwidth then
+             --             setfield(v,"width",maxwidth)
+             --         end
+             --     end
+             -- end
+                setfield(box,"width",maxwidth)
+                averagewidth = noflines > 0 and totalwidth/noflines or 0
             end
         end
     end
- -- print("reshape", noflines, firstheight or 0, lastdepth or 0)
-    texsetcount("global","framednoflines",     noflines)
-    texsetdimen("global","framedfirstheight",  firstheight or 0)
-    texsetdimen("global","framedlastdepth",    lastdepth or 0)
-    texsetdimen("global","framedminwidth",     minwidth)
-    texsetdimen("global","framedmaxwidth",     maxwidth)
-    texsetdimen("global","framedaveragewidth", noflines > 0 and totalwidth/noflines or 0)
+    texsetcount("global","framednoflines",noflines)
+    texsetdimen("global","framedfirstheight",firstheight or 0) -- also signal
+    texsetdimen("global","framedlastdepth",lastdepth or 0)
+    texsetdimen("global","framedminwidth",minwidth)
+    texsetdimen("global","framedmaxwidth",maxwidth)
+    texsetdimen("global","framedaveragewidth",averagewidth)
 end
 
 function commands.doanalyzeframedbox(n)
-    local box         = texbox[n]
+    local box         = getbox(n)
     local noflines    = 0
     local firstheight = nil
     local lastdepth   = nil
-    if box.width ~= 0 then
-        local list = box.list
+    if getfield(box,"width") ~= 0 then
+        local list = getlist(box)
         if list then
-            for h in traverse_id(hlist_code,list) do
+            local function check(n)
                 if not firstheight then
-                    firstheight = h.height
+                    firstheight = getfield(n,"height")
                 end
-                lastdepth = h.depth
+                lastdepth = getfield(n,"depth")
                 noflines = noflines + 1
+            end
+            for h in traverse_id(hlist_code,list) do
+                check(h)
+            end
+            for v in traverse_id(vlist_code,list) do
+                check(v)
             end
         end
     end
- -- print("analyze", noflines, firstheight or 0, lastdepth or 0)
-    texsetcount("global","framednoflines",    noflines)
-    texsetdimen("global","framedfirstheight", firstheight or 0)
-    texsetdimen("global","framedlastdepth",   lastdepth or 0)
+    texsetcount("global","framednoflines",noflines)
+    texsetdimen("global","framedfirstheight",firstheight or 0)
+    texsetdimen("global","framedlastdepth",lastdepth or 0)
+end
+
+
+function nodes.maxboxwidth(box)
+    local boxwidth = getfield(box,"width")
+    if boxwidth == 0 then
+        return 0
+    end
+    local list = getlist(box)
+    if not list then
+        return 0
+    end
+    if getid(box) == hlist_code then
+        return boxwidth
+    end
+    local lastlinelength = 0
+    local maxwidth       = 0
+    local function check(n,repack)
+        local l = getlist(n)
+        if l then
+            if repack then
+                local subtype = getsubtype(n)
+                if subtype == box_code or subtype == line_code then
+                    lastlinelength = node_dimensions(l,getfield(n,"dir"))
+                else
+                    lastlinelength = getfield(n,"width")
+                end
+            else
+                lastlinelength = getfield(n,"width")
+            end
+            if lastlinelength > maxwidth then
+                maxwidth = lastlinelength
+            end
+        end
+    end
+    for h in traverse_id(hlist_code,list) do -- no dir etc needed
+        check(h,true)
+    end
+    for v in traverse_id(vlist_code,list) do -- no dir etc needed
+        check(v,false)
+    end
 end

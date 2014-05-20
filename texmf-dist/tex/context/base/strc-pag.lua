@@ -6,8 +6,6 @@ if not modules then modules = { } end modules ['strc-pag'] = {
     license   = "see context related readme files"
 }
 
-local texcount = tex.count
-
 local allocate, mark = utilities.storage.allocate, utilities.storage.mark
 
 local trace_pages         = false  trackers.register("structures.pages", function(v) trace_pages = v end)
@@ -26,11 +24,17 @@ local counterdata         = counters.data
 
 local variables           = interfaces.variables
 local context             = context
+local commands            = commands
 
 local processors          = typesetters.processors
 local applyprocessor      = processors.apply
 local startapplyprocessor = processors.startapply
 local stopapplyprocessor  = processors.stopapply
+
+local texsetcount         = tex.setcount
+local texgetcount         = tex.getcount
+
+local ctx_convertnumber   = context.convertnumber
 
 -- storage
 
@@ -38,27 +42,32 @@ local collected, tobesaved = allocate(), allocate()
 
 pages.collected = collected
 pages.tobesaved = tobesaved
+pages.nofpages  = 0
 
 local function initializer()
     collected = pages.collected
     tobesaved = pages.tobesaved
+    pages.nofpages = #collected
 end
 
 job.register('structures.pages.collected', tobesaved, initializer)
 
 local specification = { } -- to be checked
 
-function pages.save(prefixdata,numberdata)
-    local realpage, userpage = texcount.realpageno, texcount.userpageno
+function pages.save(prefixdata,numberdata,extradata)
+    local realpage = texgetcount("realpageno")
+    local userpage = texgetcount("userpageno")
     if realpage > 0 then
         if trace_pages then
             report_pages("saving page %s.%s",realpage,userpage)
         end
         local data = {
-            number     = userpage,
-            block      = sections.currentblock(),
-            prefixdata = prefixdata and helpers.simplify(prefixdata),
-            numberdata = numberdata and helpers.simplify(numberdata),
+            number       = userpage,
+            viewerprefix = extradata.viewerprefix,
+            state        = extradata.state,
+            block        = sections.currentblock(),
+            prefixdata   = prefixdata and helpers.simplify(prefixdata),
+            numberdata   = numberdata and helpers.simplify(numberdata),
         }
         tobesaved[realpage] = data
         if not collected[realpage] then
@@ -73,32 +82,32 @@ end
 -- builder we have to make sure it starts at least at 1.
 
 function counters.specials.userpage()
-    local r = texcount.realpageno
+    local r = texgetcount("realpageno")
     if r > 0 then
         local t = tobesaved[r]
         if t then
-            t.number = texcount.userpageno
+            t.number = texgetcount("userpageno")
             if trace_pages then
                 report_pages("forcing pagenumber of realpage %s to %s",r,t.number)
             end
             return
         end
     end
-    local u = texcount.userpageno
+    local u = texgetcount("userpageno")
     if u == 0 then
         if trace_pages then
             report_pages("forcing pagenumber of realpage %s to %s (probably a bug)",r,1)
         end
         counters.setvalue("userpage",1)
-        texcount.userpageno = 1
+        texsetcount("userpageno",1) -- not global ?
     end
 end
 
-local f_convert = string.formatters["\\convertnumber{%s}{%s}"]
-
-local function convertnumber(str,n)
-    return f_convert(str or "numbers",n)
-end
+-- local f_convert = string.formatters["\\convertnumber{%s}{%s}"]
+--
+-- local function convertnumber(str,n)
+--     return f_convert(str or "numbers",n)
+-- end
 
 function pages.number(realdata,pagespec)
     local userpage, block = realdata.number, realdata.block or "" -- sections.currentblock()
@@ -111,12 +120,12 @@ function pages.number(realdata,pagespec)
         applyprocessor(starter)
     end
     if conversion ~= "" then
-        context.convertnumber(conversion,userpage)
+        ctx_convertnumber(conversion,userpage)
     else
         if conversionset == "" then conversionset = "default" end
         local theconversion = sets.get("structure:conversions",block,conversionset,1,"numbers") -- to be checked: 1
         local data = startapplyprocessor(theconversion)
-        context.convertnumber(data or "number",userpage)
+        ctx_convertnumber(data or "number",userpage)
         stopapplyprocessor()
     end
     if stopper ~= "" then
@@ -252,8 +261,8 @@ function helpers.prefix(data,prefixspec)
 end
 
 function pages.is_odd(n)
-    n = n or texcount.realpageno
-    if texcount.pagenoshift % 2 == 0 then
+    n = n or texgetcount("realpageno")
+    if texgetcount("pagenoshift") % 2 == 0 then
         return n % 2 == 0
     else
         return n % 2 ~= 0
@@ -311,3 +320,8 @@ function sections.prefixedconverted(name,prefixspec,numberspec)
         counters.converted(name,numberspec)
     end
 end
+
+--
+
+commands.savepagedata      = pages.save
+commands.prefixedconverted = sections.prefixedconverted -- weird place

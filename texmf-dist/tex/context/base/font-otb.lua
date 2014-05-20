@@ -47,13 +47,14 @@ local function gref(descriptions,n)
             return f_unicode(n)
         end
     elseif n then
-        local num, nam = { }, { }
-        for i=2,#n do
+        local num, nam, j = { }, { }, 0
+        for i=1,#n do
             local ni = n[i]
             if tonumber(ni) then -- first is likely a key
+                j = j + 1
                 local di = descriptions[ni]
-                num[i] = f_unicode(ni)
-                nam[i] = di and di.name or "-"
+                num[j] = f_unicode(ni)
+                nam[j] = di and di.name or "-"
             end
         end
         return f_unilist(num,nam)
@@ -169,7 +170,8 @@ end
 -- pseudo names like hyphen_hyphen to endash so in practice we end
 -- up with a bit too many definitions but the overhead is neglectable.
 --
--- Todo: if changed[first] or changed[second] then ... end
+-- We can have changed[first] or changed[second] but it quickly becomes
+-- messy if we need to take that into account.
 
 local trace = false
 
@@ -188,8 +190,8 @@ local function finalize_ligatures(tfmdata,ligatures)
                 local ligature = ligatures[i]
                 if ligature then
                     local unicode, lookupdata = ligature[1], ligature[2]
-                    if trace then
-                        trace_ligatures_detail("building % a into %a",lookupdata,unicode)
+                    if trace_ligatures_detail then
+                        report_prepare("building % a into %a",lookupdata,unicode)
                     end
                     local size = #lookupdata
                     local firstcode = lookupdata[1] -- [2]
@@ -201,8 +203,8 @@ local function finalize_ligatures(tfmdata,ligatures)
                             local firstdata = characters[firstcode]
                             if not firstdata then
                                 firstcode = private
-                                if trace then
-                                    trace_ligatures_detail("defining %a as %a",firstname,firstcode)
+                                if trace_ligatures_detail then
+                                    report_prepare("defining %a as %a",firstname,firstcode)
                                 end
                                 unicodes[firstname] = firstcode
                                 firstdata = { intermediate = true, ligatures = { } }
@@ -225,8 +227,8 @@ local function finalize_ligatures(tfmdata,ligatures)
                                     break
                                 end
                             end
-                            if trace then
-                                trace_ligatures_detail("codes (%a,%a) + (%a,%a) -> %a",firstname,firstcode,secondname,secondcode,target)
+                            if trace_ligatures_detail then
+                                report_prepare("codes (%a,%a) + (%a,%a) -> %a",firstname,firstcode,secondname,secondcode,target)
                             end
                             local firstligs = firstdata.ligatures
                             if firstligs then
@@ -237,6 +239,8 @@ local function finalize_ligatures(tfmdata,ligatures)
                             firstcode = target
                             firstname = secondname
                         end
+                    elseif trace_ligatures_detail then
+                        report_prepare("no glyph (%a,%a) for building %a",firstname,firstcode,target)
                     end
                     if okay then
                         ligatures[i] = false
@@ -246,12 +250,14 @@ local function finalize_ligatures(tfmdata,ligatures)
             end
             alldone = done == 0
         end
-        if trace then
-            for k, v in next, characters do
-                if v.ligatures then table.print(v,k) end
+        if trace_ligatures_detail then
+            for k, v in table.sortedhash(characters) do
+                if v.ligatures then
+                    table.print(v,k)
+                end
             end
         end
-        tfmdata.resources.private = private
+        resources.private = private
     end
 end
 
@@ -487,7 +493,7 @@ local function preparesubstitutions(tfmdata,feature,value,validlookups,lookuplis
                 end
                 changed[unicode] = data
             elseif lookuptype == "alternate" then
-                local replacement = data[alternate]
+                 local replacement = data[alternate]
                 if replacement then
                     changed[unicode] = replacement
                     if trace_alternatives then
@@ -594,8 +600,9 @@ basemethod = "independent"
 
 local function featuresinitializer(tfmdata,value)
     if true then -- value then
-        local t = trace_preparing and os.clock()
-        local features = tfmdata.shared.features
+        local starttime = trace_preparing and os.clock()
+        local features  = tfmdata.shared.features
+        local fullname  = trace_preparing and tfmdata.properties.fullname
         if features then
             applybasemethod("initializehashes",tfmdata)
             local collectlookups    = otf.collectlookups
@@ -605,34 +612,70 @@ local function featuresinitializer(tfmdata,value)
             local language          = properties.language
             local basesubstitutions = rawdata.resources.features.gsub
             local basepositionings  = rawdata.resources.features.gpos
-            if basesubstitutions then
-                for feature, data in next, basesubstitutions do
-                    local value = features[feature]
-                    if value then
-                        local validlookups, lookuplist = collectlookups(rawdata,feature,script,language)
-                        if validlookups then
-                            applybasemethod("preparesubstitutions",tfmdata,feature,value,validlookups,lookuplist)
-                            registerbasefeature(feature,value)
+            --
+         -- if basesubstitutions then
+         --     for feature, data in next, basesubstitutions do
+         --         local value = features[feature]
+         --         if value then
+         --             local validlookups, lookuplist = collectlookups(rawdata,feature,script,language)
+         --             if validlookups then
+         --                 applybasemethod("preparesubstitutions",tfmdata,feature,value,validlookups,lookuplist)
+         --                 registerbasefeature(feature,value)
+         --             end
+         --         end
+         --     end
+         -- end
+         -- if basepositionings then
+         --     for feature, data in next, basepositionings do
+         --         local value = features[feature]
+         --         if value then
+         --             local validlookups, lookuplist = collectlookups(rawdata,feature,script,language)
+         --             if validlookups then
+         --                 applybasemethod("preparepositionings",tfmdata,feature,features[feature],validlookups,lookuplist)
+         --                 registerbasefeature(feature,value)
+         --             end
+         --         end
+         --     end
+         -- end
+            --
+            if basesubstitutions or basepositionings then
+                local sequences = tfmdata.resources.sequences
+                for s=1,#sequences do
+                    local sequence = sequences[s]
+                    local sfeatures = sequence.features
+                    if sfeatures then
+                        local order = sequence.order
+                        if order then
+                            for i=1,#order do --
+                                local feature = order[i]
+                                if features[feature] then
+                                    local validlookups, lookuplist = collectlookups(rawdata,feature,script,language)
+                                    if not validlookups then
+                                        -- skip
+                                    elseif basesubstitutions and basesubstitutions[feature] then
+                                        if trace_preparing then
+                                            report_prepare("filtering base feature %a for %a",feature,fullname)
+                                        end
+                                        applybasemethod("preparesubstitutions",tfmdata,feature,value,validlookups,lookuplist)
+                                        registerbasefeature(feature,value)
+                                    elseif basepositionings and basepositionings[feature] then
+                                        if trace_preparing then
+                                            report_prepare("filtering base feature %a for %a",feature,fullname)
+                                        end
+                                        applybasemethod("preparepositionings",tfmdata,feature,features[feature],validlookups,lookuplist)
+                                        registerbasefeature(feature,value)
+                                    end
+                                end
+                            end
                         end
                     end
                 end
             end
-            if basepositionings then
-                for feature, data in next, basepositionings do
-                    local value = features[feature]
-                    if value then
-                        local validlookups, lookuplist = collectlookups(rawdata,feature,script,language)
-                        if validlookups then
-                            applybasemethod("preparepositionings",tfmdata,feature,features[feature],validlookups,lookuplist)
-                            registerbasefeature(feature,value)
-                        end
-                    end
-                end
-            end
+            --
             registerbasehash(tfmdata)
         end
         if trace_preparing then
-            report_prepare("preparation time is %0.3f seconds for %a",os.clock()-t,tfmdata.properties.fullname)
+            report_prepare("preparation time is %0.3f seconds for %a",os.clock()-starttime,fullname)
         end
     end
 end

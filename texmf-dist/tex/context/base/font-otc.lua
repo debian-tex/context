@@ -70,6 +70,7 @@ local function addfeature(data,feature,specifications)
                 local subtables     = specification.subtables or { specification.data } or { }
                 local featuretype   = types[specification.type or "substitution"]
                 local featureflags  = specification.flags or noflags
+                local featureorder  = specification.order or { feature }
                 local added         = false
                 local featurename   = format("ctx_%s_%s",feature,s)
                 local st = { }
@@ -133,14 +134,20 @@ local function addfeature(data,feature,specifications)
                             askedfeatures[k] = table.tohash(v)
                         end
                     end
-                    sequences[#sequences+1] = {
+                    local sequence = {
                         chain     = 0,
                         features  = { [feature] = askedfeatures },
                         flags     = featureflags,
                         name      = featurename,
+                        order     = featureorder,
                         subtables = st,
                         type      = featuretype,
                     }
+                    if specification.prepend then
+                        insert(sequences,1,sequence)
+                    else
+                        insert(sequences,sequence)
+                    end
                     -- register in metadata (merge as there can be a few)
                     if not gsubfeatures then
                         gsubfeatures  = { }
@@ -188,9 +195,11 @@ otf.enhancers.register("check extra features",enhance)
 
 -- tlig --
 
-local tlig = {
-    endash        = "hyphen hyphen",
-    emdash        = "hyphen hyphen hyphen",
+local tlig = { -- we need numbers for some fonts so ...
+ -- endash        = "hyphen hyphen",
+ -- emdash        = "hyphen hyphen hyphen",
+    [0x2013]      = { 0x002D, 0x002D },
+    [0x2014]      = { 0x002D, 0x002D, 0x002D },
  -- quotedblleft  = "quoteleft quoteleft",
  -- quotedblright = "quoteright quoteright",
  -- quotedblleft  = "grave grave",
@@ -202,7 +211,9 @@ local tlig_specification = {
     type     = "ligature",
     features = everywhere,
     data     = tlig,
+    order    = { "tlig" },
     flags    = noflags,
+    prepend  = true,
 }
 
 otf.addfeature("tlig",tlig_specification)
@@ -224,7 +235,9 @@ local trep_specification = {
     type      = "substitution",
     features  = everywhere,
     data      = trep,
+    order     = { "trep" },
     flags     = noflags,
+    prepend   = true,
 }
 
 otf.addfeature("trep",trep_specification)
@@ -254,6 +267,7 @@ if characters.combined then
         type       = "ligature",
         features   = everywhere,
         data       = tcom,
+        order     = { "tcom" },
         flags      = noflags,
         initialize = initialize,
     }
@@ -312,6 +326,7 @@ local anum_specification = {
     {
         type     = "substitution",
         features = { arab = { urd = true, dflt = true } },
+        order    = { "anum" },
         data     = anum_arabic,
         flags    = noflags, -- { },
         valid    = valid,
@@ -319,6 +334,7 @@ local anum_specification = {
     {
         type     = "substitution",
         features = { arab = { urd = true } },
+        order    = { "anum" },
         data     = anum_persian,
         flags    = noflags, -- { },
         valid    = valid,

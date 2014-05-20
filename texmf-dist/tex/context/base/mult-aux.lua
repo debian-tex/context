@@ -12,6 +12,8 @@ interfaces.namespaces = interfaces.namespaces or { }
 local namespaces      = interfaces.namespaces
 local variables       = interfaces.variables
 
+local context         = context
+
 local trace_namespaces = false  trackers.register("interfaces.namespaces", function(v) trace_namespaces = v end)
 
 local report_namespaces = logs.reporter("interface","namespaces")
@@ -52,7 +54,7 @@ function namespaces.define(namespace,settings)
         if trace_namespaces then
             report_namespaces("namespace %a for %a uses parent %a",namespace,name,parent)
         end
-        if not find(parent,"\\") then
+        if not find(parent,"\\",1,true) then
             parent = "\\" .. prefix .. parent
             -- todo: check if defined
         end

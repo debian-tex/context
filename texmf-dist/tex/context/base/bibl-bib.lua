@@ -105,7 +105,7 @@ local spacing    = space^0
 local equal      = P("=")
 local collapsed  = (space^1)/ " "
 
-local function add(a,b) if b then return a..b else return a end end
+----- function add(a,b) if b then return a..b else return a end end
 
 local keyword    = C((R("az","AZ","09") + S("@_:-"))^1)  -- C((1-space)^1)
 local s_quoted   = ((escape*single) + collapsed + (1-single))^0
@@ -140,6 +140,7 @@ function bibtex.convert(session,content)
 end
 
 function bibtex.load(session,filename)
+    statistics.starttiming(bibtex)
     local filename = resolvers.findfile(filename,"bib")
     if filename ~= "" then
         local data = io.loaddata(filename) or ""
@@ -150,6 +151,7 @@ function bibtex.load(session,filename)
         end
         bibtex.convert(session,data)
     end
+    statistics.stoptiming(bibtex)
 end
 
 function bibtex.new()
@@ -246,7 +248,7 @@ end
 statistics.register("bibtex load time", function()
     local nofbytes = bibtexstats.nofbytes
     if nofbytes > 0 then
-        return format("%s seconds (%s bytes, %s definitions, %s shortcuts)",
+        return format("%s seconds, %s bytes, %s definitions, %s shortcuts",
             statistics.elapsedtime(bibtex),nofbytes,bibtexstats.nofdefinitions,bibtexstats.nofshortcuts)
     else
         return nil

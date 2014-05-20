@@ -983,6 +983,8 @@
      {\let\extrafloatlocation#rightpagelocation}%
      {\let\extrafloatlocation#leftpagelocation}}
 
+\let\extrafloatlocation\empty
+
 \installcorenamespace{extrafloataction}
 
 \setvalue{\??extrafloataction      \v!inner}#1{\strc_floats_set_extra_action\v!left       \v!right}
@@ -1007,6 +1009,7 @@
       \processcommacommand[\floatlocation]\strc_floats_check_extra_actions_step
       \ifx\extrafloatlocation\empty \else
         \edef\floatlocation{\extrafloatlocation,\floatlocation}%
+        \setfloatmethodvariables\floatlocation
       \fi}}
 
 \def\strc_floats_check_extra_actions_step#step%
@@ -2191,7 +2194,7 @@
       \else
         \directlocalfloatsparameter\c!inbetween
       \fi
-      \dontleavehmode\hbox{\foundbox\??localfloatstack\recurselevel}%
+      \dontleavehmode\hbox{\foundbox\??localfloatstack\recurselevel}% \restorebox...
       \ifnum\recurselevel=\c_strc_localfloats_n\relax
         \directlocalfloatsparameter\c!after
       \fi}}
@@ -2200,8 +2203,11 @@
   {\getlocalfloats
    \resetlocalfloats}
 
+% \unexpanded\def\getlocalfloat#1%
+%   {\normalexpanded{\foundbox{\??localfloatstack}{\number#1}}}% \vbox{\restorebox...}
+
 \unexpanded\def\getlocalfloat#1%
-  {\normalexpanded{\foundbox{\??localfloatstack}{\number#1}}}
+  {\foundbox\??localfloatstack{\number#1}} % \vbox{\restorebox...}
 
 \unexpanded\def\forcelocalfloats
   {\let\forcedfloatmethod\v!local}

@@ -15,19 +15,37 @@ local report_spacing = logs.reporter("typesetting","spacing")
 
 local nodes, fonts, node = nodes, fonts, node
 
-local insert_node_before = node.insert_before
-local insert_node_after  = node.insert_after
-local remove_node        = nodes.remove
-local end_of_math        = node.end_of_math
+local tasks              = nodes.tasks
 
 local fonthashes         = fonts.hashes
 local fontdata           = fonthashes.identifiers
 local quaddata           = fonthashes.quads
 
-local texattribute       = tex.attribute
+local texsetattribute    = tex.setattribute
 local unsetvalue         = attributes.unsetvalue
 
 local v_reset            = interfaces.variables.reset
+
+local nuts               = nodes.nuts
+local tonut              = nuts.tonut
+local tonode             = nuts.tonode
+
+local getnext            = nuts.getnext
+local getprev            = nuts.getprev
+local getchar            = nuts.getchar
+local getid              = nuts.getid
+local getfont            = nuts.getfont
+local getattr            = nuts.getattr
+local setattr            = nuts.setattr
+
+local insert_node_before = nuts.insert_before
+local insert_node_after  = nuts.insert_after
+local remove_node        = nuts.remove
+local end_of_math        = nuts.end_of_math
+
+local nodepool           = nuts.pool
+local new_penalty        = nodepool.penalty
+local new_glue           = nodepool.glue
 
 local nodecodes          = nodes.nodecodes
 local glyph_code         = nodecodes.glyph
@@ -35,12 +53,6 @@ local math_code          = nodecodes.math
 
 local somespace          = nodes.somespace
 local somepenalty        = nodes.somepenalty
-
-local nodepool           = nodes.pool
-local tasks              = nodes.tasks
-
-local new_penalty        = nodepool.penalty
-local new_glue           = nodepool.glue
 
 typesetters              = typesetters or { }
 local typesetters        = typesetters
@@ -52,7 +64,6 @@ spacings.mapping         = spacings.mapping or { }
 spacings.numbers         = spacings.numbers or { }
 
 local a_spacings         = attributes.private("spacing")
-spacings.attribute       = a_spacings
 
 storage.register("typesetters/spacings/mapping", spacings.mapping, "typesetters.spacings.mapping")
 
@@ -66,30 +77,31 @@ end
 
 -- todo cache lastattr
 
-local function process(namespace,attribute,head)
+function spacings.handler(head)
+    head = tonut(head)
     local done = false
     local start = head
     -- head is always begin of par (whatsit), so we have at least two prev nodes
     -- penalty followed by glue
     while start do
-        local id = start.id
+        local id = getid(start)
         if id == glyph_code then
-            local attr = start[attribute]
+            local attr = getattr(start,a_spacings)
             if attr and attr > 0 then
                 local data = mapping[attr]
                 if data then
-                    local char = start.char
+                    local char = getchar(start)
                     local map = data.characters[char]
-                    start[attribute] = unsetvalue -- needed?
+                    setattr(start,a_spacings,unsetvalue) -- needed?
                     if map then
                         local left = map.left
                         local right = map.right
                         local alternative = map.alternative
-                        local quad = quaddata[start.font]
-                        local prev = start.prev
+                        local quad = quaddata[getfont(start)]
+                        local prev = getprev(start)
                         if left and left ~= 0 and prev then
                             local ok = false
-                            local prevprev = prev.prev
+                            local prevprev = getprev(prev)
                             if alternative == 1 then
                                 local somespace = somespace(prev,true)
                                 if somespace then
@@ -120,10 +132,10 @@ local function process(namespace,attribute,head)
                                 done = true
                             end
                         end
-                        local next = start.next
+                        local next = getnext(start)
                         if right and right ~= 0 and next then
                             local ok = false
-                            local nextnext = next.next
+                            local nextnext = getnext(next)
                             if alternative == 1 then
                                 local somepenalty = somepenalty(next,10000)
                                 if somepenalty then
@@ -164,10 +176,10 @@ local function process(namespace,attribute,head)
             start = end_of_math(start) -- weird, can return nil .. no math end?
         end
         if start then
-            start = start.next
+            start = getnext(start)
         end
     end
-    return head, done
+    return tonode(head), done
 end
 
 local enabled = false
@@ -209,18 +221,12 @@ function spacings.set(name)
             n = data.number or unsetvalue
         end
     end
-    texattribute[a_spacings] = n
+    texsetattribute(a_spacings,n)
 end
 
 function spacings.reset()
-    texattribute[a_spacings] = unsetvalue
+    texsetattribute(a_spacings,unsetvalue)
 end
-
-spacings.handler = nodes.installattributehandler {
-    name      = "spacing",
-    namespace = spacings,
-    processor = process,
-}
 
 -- interface
 

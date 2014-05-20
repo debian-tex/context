@@ -6,24 +6,30 @@ if not modules then modules = { } end modules ['buff-ini'] = {
     license   = "see context related readme files"
 }
 
-local trace_run       = false  trackers.register("buffers.run",       function(v) trace_run       = v end)
-local trace_grab      = false  trackers.register("buffers.grab",      function(v) trace_grab      = v end)
-local trace_visualize = false  trackers.register("buffers.visualize", function(v) trace_visualize = v end)
-
-local report_buffers  = logs.reporter("buffers","usage")
-local report_grabbing = logs.reporter("buffers","grabbing")
-
-local context, commands = context, commands
-
 local concat = table.concat
 local type, next, load = type, next, load
 local sub, format = string.sub, string.format
 local splitlines, validstring = string.splitlines, string.valid
 local P, Cs, patterns, lpegmatch = lpeg.P, lpeg.Cs, lpeg.patterns, lpeg.match
 
+local trace_run         = false  trackers.register("buffers.run",       function(v) trace_run       = v end)
+local trace_grab        = false  trackers.register("buffers.grab",      function(v) trace_grab      = v end)
+local trace_visualize   = false  trackers.register("buffers.visualize", function(v) trace_visualize = v end)
+
+local report_buffers    = logs.reporter("buffers","usage")
+local report_typeset    = logs.reporter("buffers","typeset")
+local report_grabbing   = logs.reporter("buffers","grabbing")
+
+local context           = context
+local commands          = commands
+
 local variables         = interfaces.variables
 local settings_to_array = utilities.parsers.settings_to_array
 local formatters        = string.formatters
+local addsuffix         = file.addsuffix
+local replacesuffix     = file.replacesuffix
+
+local registertempfile  = luatex.registertempfile
 
 local v_yes             = variables.yes
 
@@ -42,16 +48,32 @@ local function erase(name)
 end
 
 local function assign(name,str,catcodes)
-    cache[name] = { data = str, catcodes = catcodes }
+    cache[name] = {
+        data     = str,
+        catcodes = catcodes,
+        typeset  = false,
+    }
+end
+
+local function combine(name,str,prepend)
+    local buffer = cache[name]
+    if buffer then
+        buffer.data    = prepend and (str .. buffer.data) or (buffer.data .. str)
+        buffer.typeset = false
+    else
+        cache[name] = {
+            data     = str,
+            typeset  = false,
+        }
+    end
+end
+
+local function prepend(name,str)
+    combine(name,str,true)
 end
 
 local function append(name,str)
-    local buffer = cache[name]
-    if buffer then
-        buffer.data = buffer.data .. str
-    else
-        cache[name] = { data = str }
-    end
+    combine(name,str)
 end
 
 local function exists(name)
@@ -68,10 +90,40 @@ local function getlines(name)
     return buffer and splitlines(buffer.data)
 end
 
-local function collectcontent(names,separator) -- no print
-    if type(names) == "string" then
-        names = settings_to_array(names)
+local function getnames(name)
+    if type(name) == "string" then
+        return settings_to_array(name)
+    else
+        return name
     end
+end
+
+local function istypeset(name)
+    local names = getnames(name)
+    if #names == 0 then
+        return false
+    end
+    for i=1,#names do
+        local c = cache[names[i]]
+        if c and not c.typeset then
+            return false
+        end
+    end
+    return true
+end
+
+local function markastypeset(name)
+    local names  = getnames(name)
+    for i=1,#names do
+        local c = cache[names[i]]
+        if c then
+            c.typeset = true
+        end
+    end
+end
+
+local function collectcontent(name,separator) -- no print
+    local names  = getnames(name)
     local nnames = #names
     if nnames == 0 then
         return getcontent("") -- default buffer
@@ -90,47 +142,20 @@ local function collectcontent(names,separator) -- no print
     end
 end
 
-local function loadcontent(names) -- no print
-    if type(names) == "string" then
-        names = settings_to_array(names)
-    end
-    local nnames = #names
-    local ok = false
-    if nnames == 0 then
-        ok = load(getcontent("")) -- default buffer
-    elseif nnames == 1 then
-        ok = load(getcontent(names[1]))
-    else
-        -- lua 5.2 chunked load
-        local i = 0
-        ok = load(function()
-            while true do
-                i = i + 1
-                if i > nnames then
-                    return nil
-                end
-                local c = getcontent(names[i])
-                if c == "" then
-                    -- would trigger end of load
-                else
-                    return c
-                end
-            end
-        end)
-    end
+local function loadcontent(name) -- no print
+    local content = collectcontent(name,"\n")
+    local ok, err = load(content)
     if ok then
         return ok()
-    elseif nnames == 0 then
-        report_buffers("invalid lua code in default buffer")
     else
-        report_buffers("invalid lua code in buffer %a",concat(names,","))
+        report_buffers("invalid lua code in buffer %a: %s",name,err or "unknown error")
     end
 end
-
 
 buffers.raw            = getcontent
 buffers.erase          = erase
 buffers.assign         = assign
+buffers.prepend        = prepend
 buffers.append         = append
 buffers.exists         = exists
 buffers.getcontent     = getcontent
@@ -169,7 +194,7 @@ local continue   = false
 -- An \n is unlikely to show up as \r is the endlinechar but \n is more generic
 -- for us.
 
--- This fits the way we fetch verbatim: the indentatio before the sentinel
+-- This fits the way we fetch verbatim: the indentation before the sentinel
 -- determines the stripping.
 
 -- str = [[
@@ -213,7 +238,7 @@ local whatever  = (P(1)-eol)^0 * eol^1
 
 local strippers = { }
 
-local function undent(str) -- new version, needs testing
+local function undent(str) -- new version, needs testing: todo: not always needed, like in xtables
     local margin = lpegmatch(getmargin,str)
     if type(margin) ~= "string" then
         return str
@@ -230,10 +255,10 @@ local function undent(str) -- new version, needs testing
     return lpegmatch(stripper,str) or str
 end
 
-function commands.grabbuffer(name,begintag,endtag,bufferdata,catcodes) -- maybe move \\ to call
+function commands.grabbuffer(name,begintag,endtag,bufferdata,catcodes,doundent) -- maybe move \\ to call
     local dn = getcontent(name)
     if dn == "" then
-        nesting = 0
+        nesting  = 0
         continue = false
     end
     if trace_grab then
@@ -251,8 +276,8 @@ function commands.grabbuffer(name,begintag,endtag,bufferdata,catcodes) -- maybe 
     nesting = nesting + lpegmatch(counter,bufferdata)
     local more = nesting > 0
     if more then
-        dn = dn .. sub(bufferdata,2,-1) .. endtag
-        nesting = nesting - 1
+        dn       = dn .. sub(bufferdata,2,-1) .. endtag
+        nesting  = nesting - 1
         continue = true
     else
         if continue then
@@ -266,18 +291,15 @@ function commands.grabbuffer(name,begintag,endtag,bufferdata,catcodes) -- maybe 
         if last == "\n" or last == "\r" then -- \n is unlikely as \r is the endlinechar
             dn = sub(dn,1,-2)
         end
-        if autoundent then
-            dn =  undent(dn)
+        if doundent or (autoundent and doundent == nil) then
+            dn = undent(dn)
         end
     end
     assign(name,dn,catcodes)
     commands.doifelse(more)
 end
 
--- The optional prefix hack is there for the typesetbuffer feature and
--- in mkii we needed that (this hidden feature is used in a manual).
-
-local function prepared(name,list,prefix) -- list is optional
+function commands.savebuffer(list,name,prefix) -- name is optional
     if not list or list == "" then
         list = name
     end
@@ -288,42 +310,105 @@ local function prepared(name,list,prefix) -- list is optional
     if content == "" then
         content = "empty buffer"
     end
-    if prefix then
-        local name = file.addsuffix(name,"tmp")
-        return tex.jobname .. "-" .. name, content
-    else
-        return name, content
+    if prefix == v_yes then
+        name = addsuffix(tex.jobname .. "-" .. name,"tmp")
     end
-end
-
-local capsule = "\\starttext\n%s\n\\stoptext\n"
-local command = "context %s"
-
-function commands.runbuffer(name,list,encapsulate)
-    local name, content = prepared(name,list)
-    if encapsulate then
-        content = format(capsule,content)
-    end
-    local data = io.loaddata(name)
-    if data ~= content then
-        if trace_run then
-            report_buffers("changes in %a, processing forced",name)
-        end
-        io.savedata(name,content)
-        os.execute(format(command,name))
-    elseif trace_run then
-        report_buffers("no changes in %a, not processed",name)
-    end
-end
-
-function commands.savebuffer(list,name,prefix) -- name is optional
-    local name, content = prepared(name,list,prefix==v_yes)
     io.savedata(name,content)
+end
+
+-- local files = { }
+-- local last  = 0
+--
+-- function commands.runbuffer(name,encapsulate) -- we used to compare the saved file with content
+--     local names    = getnames(name)
+--     local filename = files[name]
+--     local tobedone = not istypeset(names)
+--     if tobedone or not filename then
+--         last        = last + 1
+--         filename    = formatters["%s-typeset-buffer-%03i"](tex.jobname,last)
+--         files[name] = filename
+--     end
+--     if tobedone then
+--         if trace_run then
+--             report_typeset("changes in %a, processing forced",name)
+--         end
+--         local filename = addsuffix(filename,"tmp")
+--         local content = collectcontent(names,nil) or ""
+--         if content == "" then
+--             content = "empty buffer"
+--         end
+--         if encapsulate then
+--             content = formatters["\\starttext\n%s\n\\stoptext\n"](content)
+--         end
+--         io.savedata(filename,content)
+--         local command = formatters["context %s %s"](jit and "--jit" or "",filename)
+--         report_typeset("running: %s\n",command)
+--         os.execute(command)
+--         markastypeset(names)
+--     elseif trace_run then
+--         report_typeset("no changes in %a, not processed",name)
+--     end
+--     context(replacesuffix(filename,"pdf"))
+-- end
+
+-- we can consider adding a size to avoid unlikely clashes
+
+local oldhashes = nil
+local newhashes = nil
+
+function commands.runbuffer(name,encapsulate)
+    if not oldhashes then
+        oldhashes = job.datasets.getdata("typeset buffers","hashes") or { }
+        for hash, n in next, oldhashes do
+            local tag  = formatters["%s-t-b-%s"](tex.jobname,hash)
+            registertempfile(addsuffix(tag,"tmp")) -- to be sure
+            registertempfile(addsuffix(tag,"pdf"))
+        end
+        newhashes = { }
+        job.datasets.setdata {
+            name = "typeset buffers",
+            tag  = "hashes",
+            data = newhashes,
+        }
+    end
+    local names   = getnames(name)
+    local content = collectcontent(names,nil) or ""
+    if content == "" then
+        content = "empty buffer"
+    end
+    if encapsulate then
+        content = formatters["\\starttext\n%s\n\\stoptext\n"](content)
+    end
+    --
+    local hash = md5.hex(content)
+    local tag  = formatters["%s-t-b-%s"](tex.jobname,hash)
+    --
+    local filename   = addsuffix(tag,"tmp")
+    local resultname = addsuffix(tag,"pdf")
+    --
+    if newhashes[hash] then
+        -- done
+    elseif not oldhashes[hash] or not lfs.isfile(resultname) then
+        if trace_run then
+            report_typeset("changes in %a, processing forced",name)
+        end
+        io.savedata(filename,content)
+        local command = formatters["context --purgeall %s %s"](jit and "--jit" or "",filename)
+        report_typeset("running: %s\n",command)
+        os.execute(command)
+    end
+    newhashes[hash] = (newhashes[hash] or 0) + 1
+    report_typeset("no changes in %a, processing skipped",name)
+    registertempfile(filename)
+    registertempfile(resultname,nil,true)
+    --
+    context(resultname)
 end
 
 function commands.getbuffer(name)
     local str = getcontent(name)
     if str ~= "" then
+     -- characters.showstring(str)
         context.viafile(str,formatters["buffer.%s"](validstring(name,"noname")))
     end
 end

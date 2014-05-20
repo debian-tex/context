@@ -8,7 +8,6 @@ if not modules then modules = { } end modules ['back-ini'] = {
 
 local next, type = next, type
 local format = string.format
-local sind, cosd = math.sind, math.cosd
 
 backends       = backends or { }
 local backends = backends
@@ -97,10 +96,16 @@ tables.vfspecials = allocate {
     stopslant  = comment,
 }
 
--- experimental code --
+-- we'd better have this return something (defaults)
 
-function commands.pdfrotation(a) -- somewhat weird here
-    local s, c = sind(a), cosd(a)
-    context("%0.6f %0.6f %0.6f %0.6f",c,s,-s,c)
+function codeinjections.getpos   () return 0, 0 end
+function codeinjections.gethpos  () return 0 end
+function codeinjections.getvpos  () return 0 end
+function codeinjections.hasmatrix() return false end
+function codeinjections.getmatrix() return 1, 0, 0, 1, 0, 0 end
+
+-- can best be here
+
+function commands.setrealspaces(v)
+    nodes.tasks.setaction("shipouts","nodes.handlers.accessibility",v == interfaces.variables.yes)
 end
-

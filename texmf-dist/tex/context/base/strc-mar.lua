@@ -12,19 +12,34 @@ if not modules then modules = { } end modules ['strc-mar'] = {
 local insert, concat = table.insert, table.concat
 local tostring, next, rawget = tostring, next, rawget
 local lpegmatch = lpeg.match
-local match = string.match
+
+local context            = context
+local commands           = commands
 
 local allocate           = utilities.storage.allocate
 local setmetatableindex  = table.setmetatableindex
+
+local nuts               = nodes.nuts
+local tonut              = nuts.tonut
+
+local getfield           = nuts.getfield
+local setfield           = nuts.setfield
+local getnext            = nuts.getnext
+local getprev            = nuts.getprev
+local getid              = nuts.getid
+local getlist            = nuts.getlist
+local getattr            = nuts.getattr
+local setattr            = nuts.setattr
+local getbox             = nuts.getbox
+
+local traversenodes      = nuts.traverse
 
 local nodecodes          = nodes.nodecodes
 local glyph_code         = nodecodes.glyph
 local hlist_code         = nodecodes.hlist
 local vlist_code         = nodecodes.vlist
 
-local traversenodes      = node.traverse
 local texsetattribute    = tex.setattribute
-local texbox             = tex.box
 
 local a_marks            = attributes.private("structure","marks")
 
@@ -63,6 +78,10 @@ local lists              = structures.lists
 
 local settings_to_array  = utilities.parsers.settings_to_array
 
+local boxes_too          = false -- at some point we can also tag boxes or use a zero char
+
+directives.register("marks.boxestoo", function(v) boxes_too = v end)
+
 marks.data               = marks.data or allocate()
 
 storage.register("structures/marks/data", marks.data, "structures.marks.data")
@@ -100,9 +119,9 @@ end
 
 local function sweep(head,first,last)
     for n in traversenodes(head) do
-        local id = n.id
+        local id = getid(n)
         if id == glyph_code then
-            local a = n[a_marks]
+            local a = getattr(n,a_marks)
             if not a then
                 -- next
             elseif first == 0 then
@@ -111,17 +130,19 @@ local function sweep(head,first,last)
                 last = a
             end
         elseif id == hlist_code or id == vlist_code then
-            local a = n[a_marks]
-            if not a then
-                -- next
-            elseif first == 0 then
-                first, last = a, a
-            elseif a > last then
-                last = a
+            if boxes_too then
+                local a = getattr(n,a_marks)
+                if not a then
+                    -- next
+                elseif first == 0 then
+                    first, last = a, a
+                elseif a > last then
+                    last = a
+                end
             end
-            local list = n.list
+            local list = getlist(n)
             if list then
-                first, last = sweep(list, first, last)
+                first, last = sweep(list,first,last)
             end
         end
     end
@@ -135,9 +156,9 @@ setmetatableindex(classes, function(t,k) local s = settings_to_array(k) t[k] = s
 local lasts = { }
 
 function marks.synchronize(class,n,option)
-    local box = texbox[n]
+    local box = getbox(n)
     if box then
-        local first, last = sweep(box.list,0,0)
+        local first, last = sweep(getlist(box),0,0)
         if option == v_keep and first == 0 and last == 0 then
             if trace_marks_get or trace_marks_set then
                 report_marks("action %a, class %a, box %a","retain at synchronize",class,n)
@@ -151,11 +172,16 @@ function marks.synchronize(class,n,option)
             for i=1,#classlist do
                 local class = classlist[i]
                 local range = ranges[class]
-                if not range then
-                    range = { }
+                if range then
+                    range.first = first
+                    range.last  = last
+                else
+                    range = {
+                        first = first,
+                        last  = last,
+                    }
                     ranges[class] = range
                 end
-                range.first, range.last = first, last
                 if trace_marks_get or trace_marks_set then
                     report_marks("action %a, class %a, first %a, last %a","synchronize",class,range.first,range.last)
                 end
@@ -520,20 +546,22 @@ local function do_first(name,range,check)
         report_marks("action %a, name %a, range %a","resolving first",name,range)
     end
     local f_value, f_index, f_found = doresolve(name,range,false,0,0,check)
-    if trace_marks_get then
-        report_marks("action %a, name %a, range %a","resolving last",name,range)
-    end
-    local l_value, l_index, l_found = doresolve(name,range,true ,0,0,check)
-    if f_found and l_found and l_index > f_index then
-        local name = parentname(name)
-        for i=f_index,l_index,1 do
-            local si = stack[i]
-            local sn = si[name]
-            if sn and sn ~= false and sn ~= true and sn ~= "" and sn ~= f_value then
-                if trace_marks_get then
-                    report_marks("action %a, name %a, range %a, index %a, value %a","resolving",name,range,i,sn)
+    if f_found then
+        if trace_marks_get then
+            report_marks("action %a, name %a, range %a","resolving last",name,range)
+        end
+        local l_value, l_index, l_found = doresolve(name,range,true ,0,0,check)
+        if l_found and l_index > f_index then
+            local name = parentname(name)
+            for i=f_index,l_index,1 do
+                local si = stack[i]
+                local sn = si[name]
+                if sn and sn ~= false and sn ~= true and sn ~= "" and sn ~= f_value then
+                    if trace_marks_get then
+                        report_marks("action %a, name %a, range %a, index %a, value %a","resolving",name,range,i,sn)
+                    end
+                    return sn, i, si
                 end
-                return sn, i, si
             end
         end
     end
@@ -545,23 +573,25 @@ end
 
 local function do_last(name,range,check)
     if trace_marks_get then
-        report_marks("action %a, name %a, range %a","resolving first",name,range)
-    end
-    local f_value, f_index, f_found = doresolve(name,range,false,0,0,check)
-    if trace_marks_get then
         report_marks("action %a, name %a, range %a","resolving last",name,range)
     end
     local l_value, l_index, l_found = doresolve(name,range,true ,0,0,check)
-    if f_found and l_found and l_index > f_index then
-        local name = parentname(name)
-        for i=l_index,f_index,-1 do
-            local si = stack[i]
-            local sn = si[name]
-            if sn and sn ~= false and sn ~= true and sn ~= "" and sn ~= l_value then
-                if trace_marks_get then
-                    report_marks("action %a, name %a, range %a, index %a, value %a","resolving",name,range,i,sn)
+    if l_found then
+        if trace_marks_get then
+            report_marks("action %a, name %a, range %a","resolving first",name,range)
+        end
+        local f_value, f_index, f_found = doresolve(name,range,false,0,0,check)
+        if f_found and l_index > f_index then
+            local name = parentname(name)
+            for i=l_index,f_index,-1 do
+                local si = stack[i]
+                local sn = si[name]
+                if sn and sn ~= false and sn ~= true and sn ~= "" and sn ~= l_value then
+                    if trace_marks_get then
+                        report_marks("action %a, name %a, range %a, index %a, value %a","resolving",name,range,i,sn)
+                    end
+                    return sn, i, si
                 end
-                return sn, i, si
             end
         end
     end
@@ -659,8 +689,10 @@ function marks.fetchallmarks(name,range)        fetchallmarks(name,range       )
 
 -- here we have a few helpers .. will become commands.*
 
+local pattern = lpeg.afterprefix("li::")
+
 function marks.title(tag,n)
-    local listindex = match(n,"^li::(.-)$")
+    local listindex = lpegmatch(pattern,n)
     if listindex then
         commands.savedlisttitle(tag,listindex,"marking")
     else
@@ -669,7 +701,7 @@ function marks.title(tag,n)
 end
 
 function marks.number(tag,n) -- no spec
-    local listindex = match(n,"^li::(.-)$")
+    local listindex = lpegmatch(pattern,n)
     if listindex then
         commands.savedlistnumber(tag,listindex)
     else
@@ -679,6 +711,9 @@ function marks.number(tag,n) -- no spec
 end
 
 -- interface
+
+commands.markingtitle       = marks.title
+commands.markingnumber      = marks.number
 
 commands.definemarking      = marks.define
 commands.relatemarking      = marks.relate

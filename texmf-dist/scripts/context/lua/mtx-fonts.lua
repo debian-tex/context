@@ -85,8 +85,8 @@ local report = application.report
 if not fontloader then fontloader = fontforge end
 
 dofile(resolvers.findfile("font-otp.lua","tex")) -- we need to unpack the font for analysis
-dofile(resolvers.findfile("font-trt.lua","tex"))
 dofile(resolvers.findfile("font-syn.lua","tex"))
+dofile(resolvers.findfile("font-trt.lua","tex"))
 dofile(resolvers.findfile("font-mis.lua","tex"))
 
 scripts       = scripts       or { }
@@ -132,9 +132,9 @@ function fonts.names.statistics()
 
 end
 
-function fonts.names.simple()
+function fonts.names.simple(alsotypeone)
     local simpleversion = 1.001
-    local simplelist = { "ttf", "otf", "ttc", "dfont" }
+    local simplelist = { "ttf", "otf", "ttc", "dfont", alsotypeone and "afm" or nil }
     local name = "luatex-fonts-names.lua"
     local path = file.collapsepath(caches.getwritablepath("..","..","generic","fonts","data"))
     fonts.names.filters.list = simplelist
@@ -182,7 +182,7 @@ end
 
 function scripts.fonts.reload()
     if getargument("simple") then
-        fonts.names.simple()
+        fonts.names.simple(getargument("typeone"))
     else
         fonts.names.load(true,getargument("force"))
     end
@@ -385,6 +385,7 @@ function scripts.fonts.justload()
         local result = fontloader.open(fullname)
         if type(result) == "table" then
             report("loading %s: %s","succeeded",fullname)
+            fontloader.close(result)
         end
     end
     report("loading %s: %s","failed",fullname)
@@ -412,8 +413,12 @@ function scripts.fonts.save()
     local sub  = givenfiles[2] or ""
     local function save(savename,fontblob)
         if fontblob then
+            if fontblob.validation_state and table.contains(fontblob.validation_state,"bad_ps_fontname") then
+                report("ignoring bad fontname for %a",name)
+                savename = file.nameonly(name) .. "-bad-ps-name"
+            end
             savename = file.addsuffix(string.lower(savename),"lua")
-            report("fontsave, saving data in %s",savename)
+            report("fontsave, saving data in %a",savename)
             table.tofile(savename,fontloader.to_table(fontblob),"return")
             fontloader.close(fontblob)
         end
@@ -425,8 +430,8 @@ function scripts.fonts.save()
             if suffix == 'ttf' or suffix == 'otf' or suffix == 'ttc' or suffix == "dfont" then
                 local fontinfo = fontloader.info(filename)
                 if fontinfo then
-                    report("font: %s located as %s",name,filename)
-                    if fontinfo[1] then
+                    report("font: %a located as %a",name,filename)
+                    if #fontinfo > 0 then
                         for k=1,#fontinfo do
                             local v = fontinfo[k]
                             save(v.fontname,fontloader.open(filename,v.fullname))
@@ -435,13 +440,13 @@ function scripts.fonts.save()
                         save(fontinfo.fullname,fontloader.open(filename))
                     end
                 else
-                    report("font: %s cannot be read",filename)
+                    report("font: %a cannot be read",filename)
                 end
             else
-                report("font: %s not saved",filename)
+                report("font: %a not saved",filename)
             end
         else
-            report("font: %s not found",name)
+            report("font: %a not found",name)
         end
     else
         report("font: no name given")

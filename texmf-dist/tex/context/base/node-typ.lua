@@ -6,44 +6,62 @@ if not modules then modules = { } end modules ['node-typ'] = {
     license   = "see context related readme files"
 }
 
-local utfvalues      = utf.values
+-- code has been moved to blob-ini.lua
 
-local currentfont    = font.current
-local fontparameters = fonts.hashes.parameters
+local typesetters     = nodes.typesetters or { }
+nodes.typesetters     = typesetters
 
-local hpack          = node.hpack
-local vpack          = node.vpack
-local fast_hpack     = nodes.fasthpack
+local nuts            = nodes.nuts
+local tonode          = nuts.tonode
+local tonut           = nuts.tonut
 
-local nodepool       = nodes.pool
+local setfield        = nuts.setfield
+local getfont         = nuts.getfont
 
-local newglyph       = nodepool.glyph
-local newglue        = nodepool.glue
+local hpack_node_list = nuts.hpack
+local vpack_node_list = nuts.vpack
+local fast_hpack_list = nuts.fasthpack
+local copy_node       = nuts.copy
 
-typesetters = typesetters or { }
+local nodepool        = nuts.pool
+local new_glyph       = nodepool.glyph
+local new_glue        = nodepool.glue
 
-local function tonodes(str,fontid,spacing) -- quick and dirty
+local utfvalues       = utf.values
+
+local currentfont     = font.current
+local fontparameters  = fonts.hashes.parameters
+
+local function tonodes(str,fontid,spacing,templateglyph) -- quick and dirty
     local head, prev = nil, nil
     if not fontid then
-        fontid = currentfont()
+        if templateglyph then
+            fontid = getfont(templateglyph)
+        else
+            fontid = currentfont()
+        end
     end
     local fp = fontparameters[fontid]
     local s, p, m
     if spacing then
         s, p, m = spacing, 0, 0
     else
-        s, p, m = fp.space, fp.space_stretch, fp,space_shrink
+        s, p, m = fp.space, fp.space_stretch, fp.space_shrink
     end
     local spacedone = false
     for c in utfvalues(str) do
         local next
         if c == 32 then
             if not spacedone then
-                next = newglue(s,p,m)
+                next = new_glue(s,p,m)
                 spacedone = true
             end
+        elseif templateglyph then
+            next = copy_glyph(templateglyph)
+            setfield(next,"char",c)
+            spacedone = false
         else
-            next = newglyph(fontid or 1,c)
+            next = new_glyph(fontid or 1,c)
             spacedone = false
         end
         if not next then
@@ -51,29 +69,54 @@ local function tonodes(str,fontid,spacing) -- quick and dirty
         elseif not head then
             head = next
         else
-            prev.next = next
-            next.prev = prev
+            setfield(prev,"next",next)
+            setfield(next,"prev",prev)
         end
         prev = next
     end
     return head
 end
 
-typesetters.tonodes = tonodes
-
-function typesetters.hpack(str,fontid,spacing)
-    return hpack(tonodes(str,fontid,spacing),"exactly")
+local function tohpack(str,fontid,spacing)
+    return hpack_node_list(tonodes(str,fontid,spacing),"exactly")
 end
 
-function typesetters.fast_hpack(str,fontid,spacing)
-    return fast_hpack(tonodes(str,fontid,spacing),"exactly")
+local function tohpackfast(str,fontid,spacing)
+    return fast_hpack_list(tonodes(str,fontid,spacing),"exactly")
 end
 
-function typesetters.vpack(str,fontid,spacing)
+local function tovpack(str,fontid,spacing)
     -- vpack is just a hack, and a proper implentation is on the agenda
     -- as it needs more info etc than currently available
-    return vpack(tonodes(str,fontid,spacing))
+    return vpack_node_list(tonodes(str,fontid,spacing))
 end
 
---~ node.write(typesetters.hpack("Hello World!"))
---~ node.write(typesetters.hpack("Hello World!",1,100*1024*10))
+local tovpackfast = tovpack
+
+local tnuts       = { }
+nuts.typesetters  = tnuts
+
+tnuts.tonodes     = tonodes
+tnuts.tohpack     = tohpack
+tnuts.tohpackfast = tohpackfast
+tnuts.tovpack     = tovpack
+tnuts.tovpackfast = tovpackfast
+
+tnuts.hpack       = tohpack     -- obsolete
+tnuts.fast_hpack  = tohpackfast -- obsolete
+tnuts.vpack       = tovpack     -- obsolete
+
+typesetters.tonodes     = function(...) local h, b = tonodes    (...) return tonode(h), b end
+typesetters.tohpack     = function(...) local h, b = tohpack    (...) return tonode(h), b end
+typesetters.tohpackfast = function(...) local h, b = tohpackfast(...) return tonode(h), b end
+typesetters.tovpack     = function(...) local h, b = tovpack    (...) return tonode(h), b end
+typesetters.tovpackfast = function(...) local h, b = tovpackfast(...) return tonode(h), b end
+
+typesetters.hpack       = typesetters.tohpack     -- obsolete
+typesetters.fast_hpack  = typesetters.tofasthpack -- obsolete
+typesetters.vpack       = typesetters.tovpack     -- obsolete
+
+-- node.write(nodes.typestters.hpack("Hello World!"))
+-- node.write(nodes.typestters.hpack("Hello World!",1,100*1024*10))
+
+string.tonodes = function(...) return tonode(tonodes(...)) end  -- quite convenient

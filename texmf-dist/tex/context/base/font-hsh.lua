@@ -6,6 +6,8 @@ if not modules then modules = { } end modules ['font-hsh'] = {
     license   = "see context related readme files"
 }
 
+local rawget = rawget
+
 local setmetatableindex = table.setmetatableindex
 local currentfont       = font.current
 local allocate          = utilities.storage.allocate
@@ -27,10 +29,12 @@ local spaces        = hashes.spaces       or allocate()
 local quads         = hashes.quads        or allocate() -- maybe also spacedata
 local xheights      = hashes.xheights     or allocate()
 local csnames       = hashes.csnames      or allocate() -- namedata
+local features      = hashes.features     or allocate()
 local marks         = hashes.marks        or allocate()
 local italics       = hashes.italics      or allocate()
 local lastmathids   = hashes.lastmathids  or allocate()
 local dynamics      = hashes.dynamics     or allocate()
+local unicodes      = hashes.unicodes     or allocate()
 
 hashes.characters   = characters
 hashes.descriptions = descriptions
@@ -42,10 +46,15 @@ hashes.spaces       = spaces
 hashes.quads        = quads                 hashes.emwidths  = quads
 hashes.xheights     = xheights              hashes.exheights = xheights
 hashes.csnames      = csnames
+hashes.features     = features
 hashes.marks        = marks
 hashes.italics      = italics
 hashes.lastmathids  = lastmathids
 hashes.dynamics     = dynamics
+hashes.unicodes     = unicodes
+
+local nodepool      = nodes.pool
+local dummyglyph    = nodepool.register(nodepool.glyph())
 
 local nulldata = allocate {
     name         = "nullfont",
@@ -133,14 +142,14 @@ setmetatableindex(resources, function(t,k)
     end
 end)
 
-setmetatableindex(quads, function(t,k)
+setmetatableindex(features, function(t,k)
     if k == true then
-        return quads[currentfont()]
+        return features[currentfont()]
     else
-        local parameters = parameters[k]
-        local quad = parameters and parameters.quad or 0
-        t[k] = quad
-        return quad
+        local shared = identifiers[k].shared
+        local features = shared and shared.features or { }
+        t[k] = features
+        return features
     end
 end)
 
@@ -183,12 +192,43 @@ setmetatableindex(marks, function(t,k)
     end
 end)
 
+setmetatableindex(quads, function(t,k)
+    if k == true then
+        return quads[currentfont()]
+    else
+        local parameters = rawget(parameters,k)
+        local quad
+        if parameters then
+            quad = parameters.quad
+        else
+            dummyglyph.font = k
+            dummyglyph.char = 0x2014  -- emdash
+            quad            = dummyglyph.width -- dirty trick
+        end
+        if not quad or quad == 0 then
+            quad = 655360 -- lm 10pt
+        end
+        t[k] = quad
+        return quad
+    end
+end)
+
 setmetatableindex(xheights, function(t,k)
     if k == true then
         return xheights[currentfont()]
     else
-        local parameters = parameters[k]
-        local xheight = parameters and parameters.xheight or 0
+        local parameters = rawget(parameters,k)
+        local xheight
+        if parameters then
+            xheight = parameters.xheight
+        else
+            dummyglyph.font = k
+            dummyglyph.char = 0x78     -- x
+            xheight         = dummyglyph.height -- dirty trick
+        end
+        if not xheight or xheight == 0 then
+            xheight = 282460 -- lm 10pt
+        end
         t[k] = xheight
         return xheight
     end
@@ -218,6 +258,24 @@ setmetatableindex(dynamics, function(t,k)
         local dynamics = shared and shared.dynamics or false
         t[k] = dynamics
         return dynamics
+    end
+end)
+
+setmetatableindex(unicodes, function(t,k)
+    if k == true then
+        return originals[currentfont()]
+    else
+        local resources  = resources[k]
+        local originals  = resources and resources.originals or { }
+        local characters = characters[k]
+        local unicodes   = { }
+        setmetatableindex(unicodes,function(t,k)
+            local v = originals[characters[k].index] or k
+            t[k] = v
+            return v
+        end)
+        t[k] = unicodes
+        return unicodes
     end
 end)
 

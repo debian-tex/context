@@ -278,6 +278,43 @@ function constructors.aftercopyingcharacters(target,original)
     -- can be used for additional tweaking
 end
 
+-- It's probably ok to hash just the indices because there is not that much
+-- chance that one will shift slots and leave the others unset then. Anyway,
+-- there is of course some overhead here, but it might as well get compensated
+-- by less time spent on including the font resource twice. For the moment
+-- we default to false, so a macro package has to enable it explicitly. In
+-- LuaTeX the fullname is used to identify a font as being unique.
+
+constructors.sharefonts     = false
+constructors.nofsharedfonts = 0
+local sharednames           = { }
+
+function constructors.trytosharefont(target,tfmdata)
+    if constructors.sharefonts then -- not robust !
+        local characters = target.characters
+        local n = 1
+        local t = { target.psname }
+        local u = sortedkeys(characters)
+        for i=1,#u do
+            local k = u[i]
+            n = n + 1 ; t[n] = k
+            n = n + 1 ; t[n] = characters[k].index or k
+        end
+        local h = md5.HEX(concat(t," "))
+        local s = sharednames[h]
+        if s then
+            if trace_defining then
+                report_defining("font %a uses backend resources of font %a",target.fullname,s)
+            end
+            target.fullname = s
+            constructors.nofsharedfonts = constructors.nofsharedfonts + 1
+            target.properties.sharedwith = s
+        else
+            sharednames[h] = target.fullname
+        end
+    end
+end
+
 function constructors.enhanceparameters(parameters)
     local xheight = parameters.x_height
     local quad    = parameters.quad
@@ -307,6 +344,7 @@ function constructors.scale(tfmdata,specification)
     if tonumber(specification) then
         specification    = { size = specification }
     end
+    target.specification = specification
     --
     local scaledpoints   = specification.size
     local relativeid     = specification.relativeid
@@ -379,13 +417,13 @@ function constructors.scale(tfmdata,specification)
     targetproperties.mode     = properties.mode     or "base" -- inherited
     --
     local askedscaledpoints   = scaledpoints
-    local scaledpoints, delta = constructors.calculatescale(tfmdata,scaledpoints) -- no shortcut, dan be redefined
+    local scaledpoints, delta = constructors.calculatescale(tfmdata,scaledpoints,nil,specification) -- no shortcut, dan be redefined
     --
     local hdelta         = delta
     local vdelta         = delta
     --
-    target.designsize    = parameters.designsize -- not really needed so it muight become obsolete
-    target.units_per_em  = units                 -- just a trigger for the backend (does luatex use this? if not it will go)
+    target.designsize    = parameters.designsize -- not really needed so it might become obsolete
+    target.units_per_em  = units                 -- just a trigger for the backend
     --
     local direction      = properties.direction or tfmdata.direction or 0 -- pointless, as we don't use omf fonts at all
     target.direction     = direction
@@ -414,8 +452,6 @@ function constructors.scale(tfmdata,specification)
     target.filename = filename
     target.psname   = psname
     target.name     = name
-    --
- -- inspect(properties)
     --
     properties.fontname = fontname
     properties.fullname = fullname
@@ -474,13 +510,13 @@ function constructors.scale(tfmdata,specification)
     --
     target.postprocessors = tfmdata.postprocessors
     --
-    local targetslant         = (parameters.slant         or parameters[1] or 0)
-    local targetspace         = (parameters.space         or parameters[2] or 0)*hdelta
-    local targetspace_stretch = (parameters.space_stretch or parameters[3] or 0)*hdelta
-    local targetspace_shrink  = (parameters.space_shrink  or parameters[4] or 0)*hdelta
-    local targetx_height      = (parameters.x_height      or parameters[5] or 0)*vdelta
-    local targetquad          = (parameters.quad          or parameters[6] or 0)*hdelta
-    local targetextra_space   = (parameters.extra_space   or parameters[7] or 0)*hdelta
+    local targetslant         = (parameters.slant         or parameters[1] or 0) * factors.pt -- per point
+    local targetspace         = (parameters.space         or parameters[2] or 0) * hdelta
+    local targetspace_stretch = (parameters.space_stretch or parameters[3] or 0) * hdelta
+    local targetspace_shrink  = (parameters.space_shrink  or parameters[4] or 0) * hdelta
+    local targetx_height      = (parameters.x_height      or parameters[5] or 0) * vdelta
+    local targetquad          = (parameters.quad          or parameters[6] or 0) * hdelta
+    local targetextra_space   = (parameters.extra_space   or parameters[7] or 0) * hdelta
     --
     targetparameters.slant         = targetslant -- slantperpoint
     targetparameters.space         = targetspace
@@ -563,6 +599,7 @@ function constructors.scale(tfmdata,specification)
             -- basemode hack (we try to catch missing tounicodes, e.g. needed for ssty in math cambria)
             local c = changed[unicode]
             if c then
+                local ligatures = character.ligatures -- the original ligatures (as we cannot rely on remapping)
                 description = descriptions[c] or descriptions[unicode] or character
                 character = characters[c] or character
                 index = description.index or c
@@ -573,6 +610,9 @@ function constructors.scale(tfmdata,specification)
                         local i = d.index or unicode
                         touni = tounicode[i] -- nb: index!
                     end
+                end
+                if ligatures and not character.ligatures then
+                    character.ligatures = ligatures -- the original targets (for now at least.. see libertine smallcaps)
                 end
             else
                 description = descriptions[unicode] or character
@@ -744,7 +784,7 @@ function constructors.scale(tfmdata,specification)
                     chr.ligatures = vl -- shared
                 else
                     local tt = { }
-                    for i,l in next, vl do
+                    for i, l in next, vl do
                         tt[i] = l
                     end
                     chr.ligatures = tt
@@ -791,6 +831,8 @@ function constructors.scale(tfmdata,specification)
     end
     --
     constructors.aftercopyingcharacters(target,tfmdata)
+    --
+    constructors.trytosharefont(target,tfmdata)
     --
     return target
 end
@@ -841,7 +883,7 @@ function constructors.finalize(tfmdata)
     end
     --
     if not parameters.designsize then
-        parameters.designsize = tfmdata.designsize or 655360
+        parameters.designsize = tfmdata.designsize or (factors.pt * 10)
     end
     --
     if not parameters.units then
@@ -999,21 +1041,11 @@ function constructors.hashinstance(specification,force)
         size = math.round(constructors.scaled(size,designsizes[hash]))
         specification.size = size
     end
- -- local mathsize = specification.mathsize or 0
- -- if mathsize > 0 then
- --     local textsize = specification.textsize
- --     if fallbacks then
- --         return hash .. ' @ ' .. tostring(size) .. ' [ ' .. tostring(mathsize) .. ' : ' .. tostring(textsize) .. ' ] @ ' .. fallbacks
- --     else
- --         return hash .. ' @ ' .. tostring(size) .. ' [ ' .. tostring(mathsize) .. ' : ' .. tostring(textsize) .. ' ]'
- --     end
- -- else
-        if fallbacks then
-            return hash .. ' @ ' .. tostring(size) .. ' @ ' .. fallbacks
-        else
-            return hash .. ' @ ' .. tostring(size)
-        end
- -- end
+    if fallbacks then
+        return hash .. ' @ ' .. tostring(size) .. ' @ ' .. fallbacks
+    else
+        return hash .. ' @ ' .. tostring(size)
+    end
 end
 
 function constructors.setname(tfmdata,specification) -- todo: get specification from tfmdata
@@ -1278,7 +1310,8 @@ function constructors.collectprocessors(what,tfmdata,features,trace,report)
         local whathandler    = handlers[what]
         local whatfeatures   = whathandler.features
         local whatprocessors = whatfeatures.processors
-        local processors     = whatprocessors[properties.mode]
+        local mode           = properties.mode
+        local processors     = whatprocessors[mode]
         if processors then
             for i=1,#processors do
                 local step = processors[i]
@@ -1295,7 +1328,7 @@ function constructors.collectprocessors(what,tfmdata,features,trace,report)
                 end
             end
         elseif trace then
-            report("no feature processors for mode %a for font %a",mode,tfmdata.properties.fullname)
+            report("no feature processors for mode %a for font %a",mode,properties.fullname)
         end
     end
     return processes
@@ -1309,7 +1342,8 @@ function constructors.applymanipulators(what,tfmdata,features,trace,report)
         local whathandler      = handlers[what]
         local whatfeatures     = whathandler.features
         local whatmanipulators = whatfeatures.manipulators
-        local manipulators     = whatmanipulators[properties.mode]
+        local mode             = properties.mode
+        local manipulators     = whatmanipulators[mode]
         if manipulators then
             for i=1,#manipulators do
                 local step = manipulators[i]
@@ -1318,7 +1352,7 @@ function constructors.applymanipulators(what,tfmdata,features,trace,report)
                 if value then
                     local action = step.action
                     if trace then
-                        report("applying feature manipulator %a for mode %a for font %a",feature,mode,tfmdata.properties.fullname)
+                        report("applying feature manipulator %a for mode %a for font %a",feature,mode,properties.fullname)
                     end
                     if action then
                         action(tfmdata,feature,value)

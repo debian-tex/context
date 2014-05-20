@@ -9,8 +9,11 @@ if not modules then modules = { } end modules ['font-chk'] = {
 -- possible optimization: delayed initialization of vectors
 -- move to the nodes namespace
 
-local format             = string.format
+local next = next
+
+local formatters         = string.formatters
 local bpfactor           = number.dimenfactors.bp
+local fastcopy           = table.fastcopy
 
 local report_fonts       = logs.reporter("fonts","checking")
 
@@ -23,12 +26,16 @@ local fonthashes         = fonts.hashes
 local fontdata           = fonthashes.identifiers
 local fontcharacters     = fonthashes.characters
 
-local addprivate         = fonts.helpers.addprivate
-local hasprivate         = fonts.helpers.hasprivate
-local getprivatenode     = fonts.helpers.getprivatenode
+local helpers            = fonts.helpers
+
+local addprivate         = helpers.addprivate
+local hasprivate         = helpers.hasprivate
+local getprivatenode     = helpers.getprivatenode
 
 local otffeatures        = fonts.constructors.newfeatures("otf")
 local registerotffeature = otffeatures.register
+local afmfeatures        = fonts.constructors.newfeatures("afm")
+local registerafmfeature = afmfeatures.register
 
 local is_character       = characters.is_character
 local chardata           = characters.data
@@ -38,9 +45,18 @@ local enableaction       = tasks.enableaction
 local disableaction      = tasks.disableaction
 
 local glyph_code         = nodes.nodecodes.glyph
-local traverse_id        = node.traverse_id
-local remove_node        = nodes.remove
-local insert_node_after  = node.insert_after
+
+local nuts               = nodes.nuts
+local tonut              = nuts.tonut
+local tonode             = nuts.tonode
+
+local getfont            = nuts.getfont
+local getchar            = nuts.getchar
+local setfield           = nuts.setfield
+
+local traverse_id        = nuts.traverse_id
+local remove_node        = nuts.remove
+local insert_node_after  = nuts.insert_after
 
 -- maybe in fonts namespace
 -- deletion can be option
@@ -65,7 +81,7 @@ local function onetimemessage(font,char,message) -- char == false returns table
     if char == false then
         return table.sortedkeys(category)
     elseif not category[char] then
-        report_fonts("char %U in font %a with id %a: %s",char,tfmdata.properties.fullname,font,message)
+        report_fonts("char %C in font %a with id %a: %s",char,tfmdata.properties.fullname,font,message)
         category[char] = true
     end
 end
@@ -147,7 +163,7 @@ local variants = {
     { tag = "yellow",  r = .6, g = .6, b =  0 },
 }
 
-local package = "q %0.6f 0 0 %0.6f 0 0 cm %s %s %s rg %s %s %s RG 10 M 1 j 1 J 0.05 w %s Q"
+local pdf_blob = "pdf: q %0.6F 0 0 %0.6F 0 0 cm %s %s %s rg %s %s %s RG 10 M 1 j 1 J 0.05 w %s Q"
 
 local cache = { } -- saves some tables but not that impressive
 
@@ -162,9 +178,9 @@ local function addmissingsymbols(tfmdata) -- we can have an alternative with rul
         for i =1, #fakes do
             local fake = fakes[i]
             local name = fake.name
-            local privatename = format("placeholder %s %s",name,tag)
+            local privatename = formatters["placeholder %s %s"](name,tag)
             if not hasprivate(tfmdata,privatename) then
-                local hash = format("%s_%s_%s_%s_%s_%s",name,tag,r,g,b,size)
+                local hash = formatters["%s_%s_%s_%s_%s_%s"](name,tag,r,g,b,size)
                 local char = cache[hash]
                 if not char then
                     char = {
@@ -172,7 +188,7 @@ local function addmissingsymbols(tfmdata) -- we can have an alternative with rul
                         height   = size*fake.height,
                         depth    = size*fake.depth,
                         -- bah .. low level pdf ... should be a rule or plugged in
-                        commands = { { "special", "pdf: " .. format(package,scale,scale,r,g,b,r,g,b,fake.code) } }
+                        commands = { { "special", formatters[pdf_blob](scale,scale,r,g,b,r,g,b,fake.code) } }
                     }
                     cache[hash] = char
                 end
@@ -197,16 +213,18 @@ fonts.loggers.category_to_placeholder = mapping
 function commands.getplaceholderchar(name)
     local id = font.current()
     addmissingsymbols(fontdata[id])
-    context(fonts.helpers.getprivatenode(fontdata[id],name))
+    context(helpers.getprivatenode(fontdata[id],name))
 end
 
 function checkers.missing(head)
     local lastfont, characters, found = nil, nil, nil
+    head = tonut(head)
     for n in traverse_id(glyph_code,head) do -- faster than while loop so we delay removal
-        local font = n.font
-        local char = n.char
+        local font = getfont(n)
+        local char = getchar(n)
         if font ~= lastfont then
             characters = fontcharacters[font]
+            lastfont = font
         end
         if not characters[char] and is_character[chardata[char].category] then
             if action == "remove" then
@@ -232,8 +250,8 @@ function checkers.missing(head)
     elseif action == "replace" then
         for i=1,#found do
             local n = found[i]
-            local font = n.font
-            local char = n.char
+            local font = getfont(n)
+            local char = getchar(n)
             local tfmdata = fontdata[font]
             local properties = tfmdata.properties
             local privates = properties.privates
@@ -251,13 +269,13 @@ function checkers.missing(head)
                 head = remove_node(head,n,true)
             else
                 -- good, we have \definefontfeature[default][default][missing=yes]
-                n.char = p
+                setfield(n,"char",p)
             end
         end
     else
         -- maye write a report to the log
     end
-    return head, false
+    return tonode(head), false
 end
 
 local relevant = { "missing (will be deleted)", "missing (will be flagged)", "missing" }
@@ -357,3 +375,78 @@ luatex.registerstopactions(function()
         end
     end
 end)
+
+-- for the moment here
+
+local function expandglyph(characters,index,done)
+    done = done or { }
+    if not done[index] then
+        local data = characters[index]
+        if data then
+            done[index] = true
+            local d = fastcopy(data)
+            local n = d.next
+            if n then
+                d.next = expandglyph(characters,n,done)
+            end
+            local h = d.horiz_variants
+            if h then
+                for i=1,#h do
+                    h[i].glyph = expandglyph(characters,h[i].glyph,done)
+                end
+            end
+            local v = d.vert_variants
+            if v then
+                for i=1,#v do
+                    v[i].glyph = expandglyph(characters,v[i].glyph,done)
+                end
+            end
+            return d
+        end
+    end
+end
+
+helpers.expandglyph = expandglyph
+
+-- should not be needed as we add .notdef in the engine
+
+local dummyzero = {
+ -- width    = 0,
+ -- height   = 0,
+ -- depth    = 0,
+    commands = { { "special", "" } },
+}
+
+local function adddummysymbols(tfmdata,...)
+    local characters = tfmdata.characters
+    if not characters[0] then
+        characters[0] = dummyzero
+    end
+ -- if not characters[1] then
+ --     characters[1] = dummyzero -- test only
+ -- end
+end
+
+registerotffeature {
+    name        = "dummies",
+    description = "dummy symbols",
+    default     = true,
+    manipulators = {
+        base = adddummysymbols,
+        node = adddummysymbols,
+    }
+}
+
+registerafmfeature {
+    name        = "dummies",
+    description = "dummy symbols",
+    default     = true,
+    manipulators = {
+        base = adddummysymbols,
+        node = adddummysymbols,
+    }
+}
+
+-- callback.register("char_exists",function(f,c) -- to slow anyway as called often so we should flag in tfmdata
+--     return true
+-- end)

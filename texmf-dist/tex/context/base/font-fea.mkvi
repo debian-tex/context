@@ -143,11 +143,11 @@
 
 % hashing at this end is slower
 
-\unexpanded\def\addfeature        {\doifnextoptionalelse\font_feature_add_yes      \font_feature_add_nop      }
-\unexpanded\def\subtractfeature   {\doifnextoptionalelse\font_feature_subtract_yes \font_feature_subtract_nop }
-\unexpanded\def\replacefeature    {\doifnextoptionalelse\font_feature_replace_yes  \font_feature_replace_nop  }
-\unexpanded\def\resetandaddfeature{\doifnextoptionalelse\font_feature_reset_add_yes\font_feature_reset_add_nop}
-\unexpanded\def\feature           {\doifnextoptionalelse\font_feature_yes          \font_feature_nop          }
+\unexpanded\def\addfeature        {\doifnextoptionalcselse\font_feature_add_yes      \font_feature_add_nop      }
+\unexpanded\def\subtractfeature   {\doifnextoptionalcselse\font_feature_subtract_yes \font_feature_subtract_nop }
+\unexpanded\def\replacefeature    {\doifnextoptionalcselse\font_feature_replace_yes  \font_feature_replace_nop  }
+\unexpanded\def\resetandaddfeature{\doifnextoptionalcselse\font_feature_reset_add_yes\font_feature_reset_add_nop}
+\unexpanded\def\feature           {\doifnextoptionalcselse\font_feature_yes          \font_feature_nop          }
 
 \unexpanded\def\font_feature_add_yes      [#feature]{\edef\m_font_feature_asked{#feature}\font_feature_add}
 \unexpanded\def\font_feature_add_nop        #feature{\edef\m_font_feature_asked{#feature}\font_feature_add}
@@ -164,7 +164,7 @@
 \let\doaddfeature        \font_feature_add_nop       % low level faster ones
 \let\dosubtractfeature   \font_feature_subtract_nop
 \let\doreplacefeature    \font_feature_replace_nop
-\let\doreserandaddfeature\font_feature_reset_add_nop
+\let\doresetandaddfeature\font_feature_reset_add_nop
 
 \unexpanded\def\font_feature_add
   {\ifnum\c_font_feature_state=\plusone
@@ -286,7 +286,7 @@
 \unexpanded\def\featureattribute#feature%
   {\ctxcommand{featureattribute("#feature")}}
 
-\unexpanded\def\setfontfeature  #feature%
+\unexpanded\def\setfontfeature#feature%
   {\edef\currentfeature{#feature}%
    \let\m_font_feature_list\currentfeature
    \ctxcommand{setfontfeature("\currentfeature")}}
@@ -329,5 +329,13 @@
 % new:
 
 \ctxcommand{registerlanguagefeatures()}
+
+% also new
+
+\unexpanded\def\useaddfontfeatureparameter#1% faster local variant
+  {\edef\m_font_feature_asked{#1\c!features}%
+   \ifx\m_font_feature_asked\empty\else
+     \font_feature_add
+   \fi}
 
 \protect \endinput

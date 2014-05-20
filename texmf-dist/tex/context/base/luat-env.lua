@@ -20,6 +20,8 @@ local report_lua = logs.reporter("resolvers","lua")
 local luautilities = utilities.lua
 local luasuffixes  = luautilities.suffixes
 
+local texgettoks   = tex and tex.gettoks
+
 environment        = environment or { }
 local environment  = environment
 
@@ -28,7 +30,7 @@ local environment  = environment
 local mt = {
     __index = function(_,k)
         if k == "version" then
-            local version = tex.toks and tex.toks.contextversiontoks
+            local version = texgettoks and texgettoks("contextversiontoks")
             if version and version ~= "" then
                 rawset(environment,"version",version)
                 return version
@@ -36,7 +38,7 @@ local mt = {
                 return "unknown"
             end
         elseif k == "kind" then
-            local kind = tex.toks and tex.toks.contextkindtoks
+            local kind = texgettoks and texgettoks("contextkindtoks")
             if kind and kind ~= "" then
                 rawset(environment,"kind",kind)
                 return kind
@@ -100,14 +102,20 @@ function environment.luafilechunk(filename,silent) -- used for loading lua bytec
     local fullname = environment.luafile(filename)
     if fullname and fullname ~= "" then
         local data = luautilities.loadedluacode(fullname,strippable,filename) -- can be overloaded
-        if trace_locating then
+--         if trace_locating then
+--             report_lua("loading file %a %s",fullname,not data and "failed" or "succeeded")
+--         elseif not silent then
+--             texio.write("<",data and "+ " or "- ",fullname,">")
+--         end
+        if not silent then
             report_lua("loading file %a %s",fullname,not data and "failed" or "succeeded")
-        elseif not silent then
-            texio.write("<",data and "+ " or "- ",fullname,">")
         end
         return data
     else
-        if trace_locating then
+--         if trace_locating then
+--             report_lua("unknown file %a",filename)
+--         end
+        if not silent then
             report_lua("unknown file %a",filename)
         end
         return nil

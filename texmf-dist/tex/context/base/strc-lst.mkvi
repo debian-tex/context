@@ -126,7 +126,7 @@
   {\endgroup}
 
 \def\strc_lists_inject_yes[#settings][#userdata]%
-  {\setupcurrentlist[\c!type=userdata,\c!location=\v!none,#settings]% grouped
+  {\setupcurrentlist[\c!type=userdata,\c!location=\v!none,#settings]% grouped (use \let...
    \edef\p_location{\listparameter\c!location}%
    \setnextinternalreference
    \edef\currentlistnumber{\ctxcommand{addtolist{
@@ -147,8 +147,8 @@
    \ifx\p_location\v!here
      % this branch injects nodes !
      \expanded{\ctxlatecommand{enhancelist(\currentlistnumber)}}%
-     \ctxlua{structures.references.setinternalreference(nil,nil,\nextinternalreference)}% will change
-     \xdef\currentstructurelistattribute{\number\lastdestinationattribute}%
+     \ctxcommand{setinternalreference(nil,nil,\nextinternalreference)}% will change
+     \xdef\currentstructurelistattribute{\the\lastdestinationattribute}%
      \dontleavehmode\hbox attr \destinationattribute \lastdestinationattribute{}% todo
    \else
      % and this one doesn't
@@ -889,6 +889,7 @@
 
 \startsetups[\??listrenderings:abc]
     \endgraf % are we grouped?
+% \advance % yes or no ... \rightskip is also honored
     \leftskip\listparameter\c!margin % after \endgraf !
     \listparameter\c!before
     \endgraf
@@ -1049,7 +1050,7 @@
             \listparameter\c!numbercommand\currentlistsymbol
             \listparameter\c!right
             \endgroup
-            \kern.5em
+            \kern.5\emwidth\relax
             \nobreak
         \fi
     \fi
@@ -1068,7 +1069,7 @@
     \ifconditional\c_lists_has_page
         \ifconditional\c_lists_show_page
             \nobreak
-            \hskip.75em\relax
+            \hskip.75\emwidth\relax
             \nobreak
             \strc_lists_set_reference_attribute\v!pagenumber
             \strc_lists_set_style_color\c!pagestyle\c!pagecolor\v!pagenumber
@@ -1261,6 +1262,8 @@
  %   \resetinteractionparameter\c!color
  %   \resetinteractionparameter\c!contrastcolor
    \fi}
+
+\let\strc_lists_set_style_color\strc_lists_set_style_color_normal
 
 %D A helper:
 

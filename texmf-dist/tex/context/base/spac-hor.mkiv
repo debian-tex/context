@@ -32,7 +32,7 @@
   {\doifoutervmode{\ifconditional\c_spac_indentation_indent_first\else\spac_indentation_variant_no\fi}}
 
 \unexpanded\def\setupindenting
-  {\doifnextoptionalelse\spac_indentation_setup_options\spac_indentation_setup_size}
+  {\doifnextoptionalcselse\spac_indentation_setup_options\spac_indentation_setup_size}
 
 \unexpanded\def\spac_indentation_setup_size
   {\assigndimension\v_spac_indentation_current\d_spac_indentation_par{1\emwidth}{1.5\emwidth}{2\emwidth}}
@@ -64,24 +64,65 @@
 \def\spac_indentation_set_everypar
   {\everypar{\checkindentation}}
 
+% \def\spac_indentation_apply_step_one#1%
+%   {\ifcsname\??indentingmethod#1\endcsname
+%      % case two
+%    \else
+%      \edef\v_spac_indentation_current{#1}% single entry in list
+%      \let\normalindentation\v_spac_indentation_current
+%      \spac_indentation_setup_size
+%    \fi}
+%
+% \def\spac_indentation_apply_step_two#1%
+%   {\ifcsname\??indentingmethod#1\endcsname
+%      \csname\??indentingmethod#1\endcsname
+%    \else
+%      % case one
+%    \fi}
+
+% \defineindenting[whatever][yes,2cm]
+% %defineindenting[whatever][yes,-2cm]
+%
+% \setupindenting[yes,-2em] \input ward \par
+% \setupindenting[yes,2em]  \input ward \par
+% \setupindenting[whatever] \input ward \par
+
+\installcorenamespace {indentingpreset}
+
+\unexpanded\def\defineindenting
+  {\dodoubleargument\spac_indenting_define}
+
+\def\spac_indenting_define[#1][#2]% todo: mixes
+  {\setevalue{\??indentingpreset#1}{#2}}
+
+\def\spac_indentation_apply_step_one_nested#1%
+  {\expandafter\processcommacommand\expandafter[\csname\??indentingpreset#1\endcsname]\spac_indentation_apply_step_one}
+
+\def\spac_indentation_apply_step_two_nested#1%
+  {\expandafter\processcommacommand\expandafter[\csname\??indentingpreset#1\endcsname]\spac_indentation_apply_step_two}
+
 \def\spac_indentation_apply_step_one#1%
-  {\ifcsname\??indentingmethod#1\endcsname
+  {\ifcsname\??indentingpreset#1\endcsname
+     \spac_indentation_apply_step_one_nested{#1}%
+   \else\ifcsname\??indentingmethod#1\endcsname
      % case two
    \else
      \edef\v_spac_indentation_current{#1}% single entry in list
      \let\normalindentation\v_spac_indentation_current
      \spac_indentation_setup_size
-   \fi}
+   \fi\fi}
 
 \def\spac_indentation_apply_step_two#1%
-  {\ifcsname\??indentingmethod#1\endcsname
+  {\ifcsname\??indentingpreset#1\endcsname
+     \spac_indentation_apply_step_two_nested{#1}%
+   \else\ifcsname\??indentingmethod#1\endcsname
      \csname\??indentingmethod#1\endcsname
    \else
      % case one
-   \fi}
+   \fi\fi}
 
 \unexpanded\def\indenting % kind of obsolete
-  {\doifnextoptionalelse\spac_indentation_setup_options\relax}
+  {\doifnextoptionalcselse\spac_indentation_setup_options\relax}
 
 % use \noindentation to suppress next indentation
 
@@ -339,7 +380,7 @@
 \installspacingmethod \v!broad  {\nonfrenchspacing} % more depending on what punctuation
 
 \unexpanded\def\setupspacing
-  {\doifnextoptionalelse\spac_spacecodes_setup_yes\spac_spacecodes_setup_nop}
+  {\doifnextoptionalcselse\spac_spacecodes_setup_yes\spac_spacecodes_setup_nop}
 
 \def\spac_spacecodes_setup_yes[#1]%
   {\csname\??spacecodemethod#1\endcsname
@@ -429,7 +470,8 @@
    \hskip\wd\scratchbox\relax}
 
 \unexpanded\def\fixedspaces
-  {\letcatcodecommand \ctxcatcodes \tildeasciicode \fixedspace}
+  {\letcatcodecommand \ctxcatcodes \tildeasciicode\fixedspace
+   \let~\fixedspace} % we need to renew it
 
 \appendtoks
     \let~\space
@@ -486,17 +528,17 @@
 
 \ifdefined\thinspace \else
 
-    \def\thinspace   {\kern .16667\emwidth}
-    \def\negthinspace{\kern-.16667\emwidth}
-    \def\enspace     {\kern     .5\emwidth}
+    \unexpanded\def\thinspace   {\kern .16667\emwidth}
+    \unexpanded\def\negthinspace{\kern-.16667\emwidth}
+    \unexpanded\def\enspace     {\kern     .5\emwidth}
 
 \fi
 
 \ifdefined\quad \else
 
-    \def\enskip{\hskip.5\emwidth}
-    \def\quad  {\hskip  \emwidth}
-    \def\qquad {\hskip 2\emwidth}
+    \unexpanded\def\enskip{\hskip.5\emwidth}
+    \unexpanded\def\quad  {\hskip  \emwidth}
+    \unexpanded\def\qquad {\hskip 2\emwidth}
 
 \fi
 
@@ -613,13 +655,50 @@
   {\begingroup
    \dodoubleempty\spac_narrower_start_named}
 
-\def\spac_narrower_start_named[#1][#2]%
-  {\edef\currentnarrower{#1}%
-   \ifsecondargument
-     \spac_narrower_start_apply{#2}%
+% \def\spac_narrower_start_named[#1][#2]%
+%   {\edef\currentnarrower{#1}%
+%    \ifsecondargument
+%      \spac_narrower_start_apply{#2}%
+%    \else
+%      \spac_narrower_start_apply{\narrowerparameter\v!default}%
+%    \fi}
+
+\def\spac_narrower_start_named
+  {\ifsecondargument
+      \expandafter\spac_narrower_start_named_two
    \else
-     \spac_narrower_start_apply{\narrowerparameter\v!default}%
+      \expandafter\spac_narrower_start_named_one
    \fi}
+
+\def\spac_narrower_start_named_one[#1]%
+  {\doifassignmentelse{#1}\spac_narrower_start_named_one_yes\spac_narrower_start_named_one_nop[#1]}
+
+\def\spac_narrower_start_named_one_yes[#1][#2]% [settings] []
+  {\setupcurrentnarrower[#1]%
+   \spac_narrower_start_apply{\narrowerparameter\v!default}}
+
+\def\spac_narrower_start_named_one_nop[#1][#2]% [tag] []
+  {\edef\currentnarrower{#1}%
+   \spac_narrower_start_apply{\narrowerparameter\v!default}}
+
+\def\spac_narrower_start_named_two[#1]%
+  {\doifassignmentelse{#1}\spac_narrower_start_named_settings_how\spac_narrower_start_named_tag_unknown[#1]}
+
+\def\spac_narrower_start_named_settings_how[#1][#2]% [settings] [how]
+  {\setupcurrentnarrower[#1]%
+   \spac_narrower_start_apply{#2}}
+
+\def\spac_narrower_start_named_tag_unknown[#1][#2]% [tag] [...]
+  {\doifassignmentelse{#2}\spac_narrower_start_named_tag_settings\spac_narrower_start_named_tag_how[#1][#2]}
+
+\def\spac_narrower_start_named_tag_settings[#1][#2]% [tag] [settings]
+  {\edef\currentnarrower{#1}%
+   \setupcurrentnarrower[#2]%
+   \spac_narrower_start_apply{\narrowerparameter\v!default}}
+
+\def\spac_narrower_start_named_tag_how[#1][#2]% [tag] [how]
+  {\edef\currentnarrower{#1}%
+   \spac_narrower_start_apply{#2}}
 
 \let\stopnarrow\spac_narrower_stop
 
@@ -1021,7 +1100,7 @@
 %D A rather unknown one:
 
 \unexpanded\def\widened % moved from cont-new
-  {\doifnextoptionalelse\spac_widened_yes\spac_widened_nop}
+  {\doifnextoptionalcselse\spac_widened_yes\spac_widened_nop}
 
 \def\spac_widened_yes[#1]#2{\hbox \s!spread       #1{\hss#2\hss}}
 \def\spac_widened_nop    #1{\hbox \s!spread \emwidth{\hss#1\hss}}

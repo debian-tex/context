@@ -10,6 +10,9 @@ local format, gmatch, match = string.format, string.gmatch, string.match
 local lpegmatch = lpeg.match
 local serialize = table.serialize
 
+local context             = context
+local commands            = commands
+
 local allocate            = utilities.storage.allocate
 local mark                = utilities.storage.mark
 local prtcatcodes         = catcodes.numbers.prtcatcodes
@@ -262,9 +265,15 @@ function interfaces.cachesetup(t)
     end
 end
 
-function interfaces.is_command(str)
-    return (str and str ~= "" and token.csname_name(token.create(str)) ~= "") or false -- there will be a proper function for this
-end
+-- if token.lookup then
+--     interfaces.is_command = token.lookup
+-- else
+
+    function interfaces.is_command(str)
+        return (str and str ~= "" and token.csname_name(token.create(str)) ~= "") or false -- there will be a proper function for this
+    end
+
+-- end
 
 function interfaces.interfacedcommand(name)
     local command = complete.commands[name]
@@ -296,12 +305,12 @@ function commands.getmessage(category,tag,default)
     context(interfaces.getmessage(category,tag,default))
 end
 
-function commands.showassignerror(namespace,key,value,line)
-    local ns, instance = match(namespace,"^(%d+)[^%a]+(%a+)")
+function commands.showassignerror(namespace,key,line)
+    local ns, instance = match(namespace,"^(%d+)[^%a]+(%a*)")
     if ns then
         namespace = corenamespaces[tonumber(ns)] or ns
     end
-    if instance then
+    if instance and instance ~= "" then
         context.writestatus("setup",formatters["error in line %a, namespace %a, instance %a, key %a"](line,namespace,instance,key))
     else
         context.writestatus("setup",formatters["error in line %a, namespace %a, key %a"](line,namespace,key))

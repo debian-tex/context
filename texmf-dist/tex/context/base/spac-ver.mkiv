@@ -152,10 +152,14 @@
 \unexpanded\def\setupinterlinespace
   {\dodoubleempty\spac_linespacing_setup}
 
+\ifdefined\setupinterlinespace_double \else
+    \let\setupinterlinespace_double\setup_interlinespace % for a while
+\fi
+
 \def\spac_linespacing_setup[#1][#2]%
   {\settrue\interlinespaceisset % reset has to be done when needed
    \ifsecondargument
-     \setup_interlinespace[#1][#2]%
+     \setupinterlinespace_double[#1][#2]%
    \else\iffirstargument
      \ifcsname\namedinterlinespacehash{#1}\s!parent\endcsname
         \edef\currentinterlinespace{#1}%
@@ -330,7 +334,7 @@
 \let\v_spac_whitespace_current\v!none
 
 \unexpanded\def\setupwhitespace
-  {\doifnextoptionalelse\spac_whitespace_setup_yes\spac_whitespace_setup_nop}
+  {\doifnextoptionalcselse\spac_whitespace_setup_yes\spac_whitespace_setup_nop}
 
 \def\spac_whitespace_setup_nop
   {\ifx\v_spac_whitespace_current\v!none\else
@@ -542,6 +546,8 @@
    \ignorespaces
    \let\spac_lines_stop_correction\spac_lines_stop_correction_yes}
 
+% still not ok ... will move to the lua end ... needs a final solution
+
 \unexpanded\def\spac_lines_stop_correction_yes
   {\removeunwantedspaces
    \egroup
@@ -549,6 +555,11 @@
      \blank[\v!white]%
      \snaptogrid\hbox{\box\scratchbox}%
    \else
+\blank[\v!nowhite]%
+\ifdim\parskip>\zeropoint
+     % too fuzzy otherwise
+\else
+     % doesn't like whitespace
      \ifdim\d_spac_prevdepth<\maxdimen
        \unless\ifdim\d_spac_prevdepth<\zeropoint
          \ifdim\d_spac_prevdepth<\strutdp \relax
@@ -562,6 +573,7 @@
          \fi
        \fi
      \fi
+\fi
      \ifdim\pagegoal<\maxdimen
        \blank[\v!white,\the\d_spac_lines_correction_before]% \blank[\v!white]\dotopbaselinecorrection
      \fi
@@ -714,6 +726,10 @@
 
 \unexpanded\def\setmaxdepth
   {\maxdepth\systemmaxdepthfactor\globalbodyfontsize}
+
+\let\normalbaselineskip \relax \newskip \normalbaselineskip  % these got lost in the transition to mkiv due
+\let\normallineskip     \relax \newskip \normallineskip      % to auto-\normal* definitions and registers
+\let\normallineskiplimit\relax \newdimen\normallineskiplimit % being protected
 
 \unexpanded\def\normalbaselines
   {\baselineskip \normalbaselineskip
@@ -913,7 +929,7 @@
         \s!depth \strutdp}}
 
 \def\spac_struts_set_vide
-  {\setbox\strutbox\hbox
+  {\setbox\strutbox\hbox  % at some time this extra wrapping was needed
      {\spac_struts_vide_hbox to \zeropoint
         {% \hss % new, will be option
          \vrule
@@ -939,8 +955,8 @@
 
 \unexpanded\def\strut % still callbacks for \hbox{\strut}
   {\relax
-  \dontleavehmode
-  \copy\strutbox}
+   \dontleavehmode
+   \copy\strutbox}
 
 \let\normalstrut\strut
 
@@ -984,7 +1000,7 @@
      \setcharstrut\m_strut
    \fi}
 
-\unexpanded\def\showstruts
+\unexpanded\def\showstruts % adapts .. is wrong
   {\setteststrut
    \settestcrlf}
 
@@ -1149,6 +1165,10 @@
   {\prevdepth-\thousandpoint}
 
 \let\normaloffinterlineskip\offinterlineskip % knuth's original
+
+\appendtoks
+    \ifvmode\ctxcommand{resetprevdepth()}\fi % a nasty hack (tested for a while now)
+\to \everyafteroutput
 
 %D My own one:
 
@@ -1321,7 +1341,7 @@
 \unexpanded\def\installsnapvalues#1#2% todo: a proper define
   {\edef\currentsnapper{#1:#2}%
    \ifcsname\??gridsnapperattributes\currentsnapper\endcsname \else
-     \setevalue{\??gridsnapperattributes\currentsnapper}{\ctxlua{builders.vspacing.definesnapmethod("#1","#2")}}%
+     \setevalue{\??gridsnapperattributes\currentsnapper}{\ctxcommand{definesnapmethod("#1","#2")}}%
    \fi
    \setevalue{\??gridsnappers#1}{\attribute\snapmethodattribute\csname\??gridsnapperattributes\currentsnapper\endcsname\space}}
 
@@ -1747,7 +1767,7 @@
 % The main spacer:
 
 \unexpanded\def\vspacing
-  {\doifnextoptionalelse\spac_vspacing_yes\spac_vspacing_nop}
+  {\doifnextoptionalcselse\spac_vspacing_yes\spac_vspacing_nop}
 
 \def\spac_vspacing_yes
   {\ifinpagebody % somewhat weird
@@ -1803,7 +1823,7 @@
 % these depend on bigskipamount cum suis so we'd better sync them
 
 \unexpanded\def\setupvspacing
-  {\doifnextoptionalelse\setupvspacing_yes\setupvspacing_nop}
+  {\doifnextoptionalcselse\setupvspacing_yes\setupvspacing_nop}
 
 \let\currentvspacing\s!default % hm, default, standard ...
 
@@ -1856,6 +1876,14 @@
      \fi\fi
    \relax}
 
+% \strut \hfill first line \blank[overlay] second line \hfill \strut
+%
+% \ruledvbox {
+%     \strut \hfill line 1 \blank[overlay]
+%     line 2 \hfill \strut \blank[overlay]
+%     \strut \hfill line 3 \hfill \strut
+% }
+
 \definevspacing[\v!preference][penalty:-500]  % goodbreak
 \definevspacing[\v!samepage]  [penalty:10000] % nobreak
 \definevspacing[\v!max]       [category:1]
@@ -1863,14 +1891,22 @@
 \definevspacing[\v!disable]   [category:5]
 \definevspacing[\v!nowhite]   [category:6]
 \definevspacing[\v!back]      [category:7]
+%               together      [category:8]
+\definevspacing[\v!overlay]   [category:9]
 \definevspacing[\v!always]    [category:0]
 \definevspacing[\v!weak]      [order:0]
 \definevspacing[\v!strong]    [order:100]
 
 \definevspacing[\s!default]   [\v!white] % was big for a while
 
-\dorecurse{10} % todo: other values < 4000
-  {\normalexpanded{\definevspacing[\v!samepage-\recurselevel][penalty:\the\numexpr4000+250*\recurselevel\relax]}}
+% \dorecurse{10} % todo: other values < 4000
+%   {\normalexpanded{\definevspacing[\v!samepage-\recurselevel][penalty:\the\numexpr4000+250*\recurselevel\relax]}}
+
+\newcount\c_spac_vspacing_special_base \c_spac_vspacing_special_base = 32250 % 4000
+\newcount\c_spac_vspacing_special_step \c_spac_vspacing_special_step =    10 %  250
+
+\dorecurse{10}
+  {\normalexpanded{\definevspacing[\v!samepage-\recurselevel][penalty:\the\numexpr\c_spac_vspacing_special_base+\c_spac_vspacing_special_step*\recurselevel\relax]}}
 
 \definevspacing[\v!default]  [\v!big]      % todo: needs to adapt to \setupblank
 \definevspacing[\v!before]   [\v!default]  % but we need to avoid circular references
@@ -2072,5 +2108,43 @@
 % %D Forgotten already:
 %
 % \def\shapefill{\vskip\zeropoint\s!plus\lineheight\s!minus\lineheight\relax}
+
+%D Nasty:
+
+% \writestatus{1}{\the\prevdepth} \blank[force,5*big] { \writestatus{1}{\the\prevdepth} \baselineskip1cm xxxxxxxxx \par } \page
+% \writestatus{2}{\the\prevdepth} \blank[force,5*big] { \writestatus{2}{\the\prevdepth} \baselineskip1cm xxxxxxxxx \par } \page
+% \writestatus{3}{\the\prevdepth} \blank[force,5*big] { \writestatus{3}{\the\prevdepth} \baselineskip5cm xxxxxxxxx \par } \page
+% \writestatus{4}{\the\prevdepth} \input tufte                                                                            \page
+% \writestatus{5}{\the\prevdepth} \input tufte                                                                            \page
+% \writestatus{6}{\the\prevdepth} \blank[force,5*big] { \writestatus{6}{\the\prevdepth} \baselineskip1cm xxxxxxxxx \par } \page
+
+% \writestatus{1}{\the\prevdepth} \null\vskip4cm      { \writestatus{1}{\the\prevdepth} \baselineskip1cm xxxxxxxxx \par } \page
+% \writestatus{2}{\the\prevdepth} \null\vskip4cm      { \writestatus{2}{\the\prevdepth} \baselineskip1cm xxxxxxxxx \par } \page
+% \writestatus{3}{\the\prevdepth} \null\vskip4cm      { \writestatus{3}{\the\prevdepth} \baselineskip5cm xxxxxxxxx \par } \page
+% \writestatus{4}{\the\prevdepth} \input tufte                                                                            \page
+% \writestatus{5}{\the\prevdepth} \input tufte                                                                            \page
+% \writestatus{6}{\the\prevdepth} \null\vskip4cm      { \writestatus{6}{\the\prevdepth} \baselineskip1cm xxxxxxxxx \par } \page
+
+\appendtoks
+    \ifvmode\prevdepth\zeropoint\fi % consistent, else first page -1000pt .. needed for fixed,3*big first/successive pages consistency
+\to \everystarttext
+
+\prevdepth\zeropoint
+
+% not ok, so we need to figure out another way to fix this messy prevdepth-across-page issue
+% as encountered in forced blank skips (see lua code)
+%
+% \appendtoks
+%     \ifvmode\ctxcommand{resetprevdepth()}\fi
+% \to \everyafteroutput
+%
+% this should only happen when there is nothing left over (how to detemine that) .. testcase:
+%
+% \dorecurse{41}{line\par}
+% \starttyping
+% line 1
+% line 2
+% line 3
+% \stoptyping
 
 \protect \endinput

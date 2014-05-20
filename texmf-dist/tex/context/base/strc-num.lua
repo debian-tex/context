@@ -9,7 +9,7 @@ if not modules then modules = { } end modules ['strc-num'] = {
 local format = string.format
 local next, type = next, type
 local min, max = math.min, math.max
-local texcount, texsetcount = tex.count, tex.setcount
+local texsetcount = tex.setcount
 
 -- Counters are managed here. They can have multiple levels which makes it easier to synchronize
 -- them. Synchronization is sort of special anyway, as it relates to document structuring.
@@ -147,9 +147,9 @@ local function dummyconstructor(t,name,i)
 end
 
 setmetatableindex(constructor,function(t,k)
-    if trace_counters then
-        report_counters("unknown constructor %a",k)
-    end
+ -- if trace_counters then
+ --     report_counters("unknown constructor %a",k)
+ -- end
     return dummyconstructor
 end)
 
@@ -404,7 +404,7 @@ function counters.restart(name,n,newstart,noreset)
         if newstart then
             local d = allocate(name,n)
             d.start = newstart
-            if not noreset then
+            if not noreset then  -- why / when needed ?
                 reset(name,n) -- hm
             end
         end
@@ -589,8 +589,13 @@ function commands.doifnotcounter (name) commands.doifnot (counterdata[name]) end
 
 function commands.incrementedcounter(...) context(counters.add(...)) end
 
+-- the noreset is somewhat messy ... always false messes up e.g. itemize but true the pagenumbers
+--
+-- if this fails i'll clean up this still somewhat experimental mechanism (but i need use cases)
+
 function commands.checkcountersetup(name,level,start,state)
-    counters.restart(name,1,start,true) -- no reset
+    local noreset = true -- level > 0 -- was true
+    counters.restart(name,1,start,noreset) -- was true
     counters.setstate(name,state)
     counters.setlevel(name,level)
     sections.setchecker(name,level,counters.reset)

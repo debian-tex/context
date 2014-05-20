@@ -39,6 +39,7 @@ if not modules then modules = { } end modules ['phys-dim'] = {
 --  RevPerSec                   = [[RPS]],
 --  RevPerMin                   = [[RPM]],
 
+local rawset, next = rawset, next
 local V, P, S, R, C, Cc, Cs, matchlpeg = lpeg.V, lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.Cc, lpeg.Cs, lpeg.match
 local format, lower = string.format, string.lower
 local appendlpeg = lpeg.append
@@ -52,6 +53,9 @@ physics.units      = physics.units or { }
 local variables    = interfaces.variables
 local v_reverse    = variables.reverse
 local allocate     = utilities.storage.allocate
+
+local context      = context
+local commands     = commands
 
 local trace_units  = false
 local report_units = logs.reporter("units")
@@ -381,13 +385,15 @@ local long_operators = {
 
 local long_suffixes = {
 
-    Linear  = "linear",
-    Square  = "square",
-    Cubic   = "cubic",
-    Inverse = "inverse",
-    ILinear = "ilinear",
-    ISquare = "isquare",
-    ICubic  = "icubic",
+    Linear     = "linear",
+    Square     = "square",
+    Cubic      = "cubic",
+    Quadratic  = "quadratic",
+    Inverse    = "inverse",
+    ILinear    = "ilinear",
+    ISquare    = "isquare",
+    ICubic     = "icubic",
+    IQuadratic = "iquadratic",
 
 }
 
@@ -454,23 +460,29 @@ local short_suffixes = { -- maybe just raw digit match
     ["1"]   = "linear",
     ["2"]   = "square",
     ["3"]   = "cubic",
+    ["4"]   = "quadratic",
     ["+1"]  = "linear",
     ["+2"]  = "square",
     ["+3"]  = "cubic",
+    ["+4"]  = "quadratic",
     ["-1"]  = "inverse",
     ["-1"]  = "ilinear",
     ["-2"]  = "isquare",
     ["-3"]  = "icubic",
+    ["-4"]  = "iquadratic",
     ["^1"]  = "linear",
     ["^2"]  = "square",
     ["^3"]  = "cubic",
+    ["^4"]  = "quadratic",
     ["^+1"] = "linear",
     ["^+2"] = "square",
     ["^+3"] = "cubic",
+    ["^+4"] = "quadratic",
     ["^-1"] = "inverse",
     ["^-1"] = "ilinear",
     ["^-2"] = "isquare",
     ["^-3"] = "icubic",
+    ["^-4"] = "iquadratic",
 }
 
 local symbol_units = {
@@ -495,20 +507,20 @@ local packaged_units = {
 
 -- rendering:
 
-local unitsPUS    = context.unitsPUS
-local unitsPU     = context.unitsPU
-local unitsPS     = context.unitsPS
-local unitsP      = context.unitsP
-local unitsUS     = context.unitsUS
-local unitsU      = context.unitsU
-local unitsS      = context.unitsS
-local unitsO      = context.unitsO
-local unitsN      = context.unitsN
-local unitsC      = context.unitsC
-local unitsQ      = context.unitsQ
-local unitsNstart = context.unitsNstart
-local unitsNstop  = context.unitsNstop
-local unitsNspace = context.unitsNspace
+local ctx_unitsPUS    = context.unitsPUS
+local ctx_unitsPU     = context.unitsPU
+local ctx_unitsPS     = context.unitsPS
+local ctx_unitsP      = context.unitsP
+local ctx_unitsUS     = context.unitsUS
+local ctx_unitsU      = context.unitsU
+local ctx_unitsS      = context.unitsS
+local ctx_unitsO      = context.unitsO
+local ctx_unitsN      = context.unitsN
+local ctx_unitsC      = context.unitsC
+local ctx_unitsQ      = context.unitsQ
+local ctx_unitsNstart = context.unitsNstart
+local ctx_unitsNstop  = context.unitsNstop
+local ctx_unitsNspace = context.unitsNspace
 
 local labels = languages.data.labels
 
@@ -575,7 +587,7 @@ labels.units = allocate {
     lumen                       = { labels = { en = [[lm]]                       } },
     lux                         = { labels = { en = [[lx]]                       } },
     bequerel                    = { labels = { en = [[Bq]]                       } },
-    gray                        = { labels = { en = [[Gr]]                       } },
+    gray                        = { labels = { en = [[Gy]]                       } },
     sievert                     = { labels = { en = [[Sv]]                       } },
     katal                       = { labels = { en = [[kat]]                      } },
     minute                      = { labels = { en = [[min]]                      } },
@@ -635,13 +647,15 @@ labels.operators = allocate {
 }
 
 labels.suffixes = allocate {
-    linear  = { labels = { en = [[1]]  } },
-    square  = { labels = { en = [[2]]  } },
-    cubic   = { labels = { en = [[3]]  } },
-    inverse = { labels = { en = [[-1]] } },
-    ilinear = { labels = { en = [[-1]] } },
-    isquare = { labels = { en = [[-2]] } },
-    icubic  = { labels = { en = [[-3]] } },
+    linear     = { labels = { en = [[1]]  } },
+    square     = { labels = { en = [[2]]  } },
+    cubic      = { labels = { en = [[3]]  } },
+    quadratic  = { labels = { en = [[4]]  } },
+    inverse    = { labels = { en = [[-1]] } },
+    ilinear    = { labels = { en = [[-1]] } },
+    isquare    = { labels = { en = [[-2]] } },
+    icubic     = { labels = { en = [[-3]] } },
+    iquadratic = { labels = { en = [[-4]]  } },
 }
 
 local function dimpus(p,u,s)
@@ -651,28 +665,28 @@ local function dimpus(p,u,s)
     if p ~= "" then
         if u ~= ""  then
             if s ~= ""  then
-                unitsPUS(p,u,s)
+                ctx_unitsPUS(p,u,s)
             else
-                unitsPU(p,u)
+                ctx_unitsPU(p,u)
             end
         elseif s ~= ""  then
-            unitsPS(p,s)
+            ctx_unitsPS(p,s)
         else
-            unitsP(p)
+            ctx_unitsP(p)
         end
     else
         if u ~= ""  then
             if s ~= ""  then
-                unitsUS(u,s)
+                ctx_unitsUS(u,s)
          -- elseif c then
-         --     unitsC(u)
+         --     ctx_unitsC(u)
             else
-                unitsU(u)
+                ctx_unitsU(u)
             end
         elseif s ~= ""  then
-            unitsS(s)
+            ctx_unitsS(s)
         else
-            unitsP(p)
+            ctx_unitsP(p)
         end
     end
 end
@@ -686,7 +700,7 @@ local function dimop(o)
         report_units("operator %a",o)
     end
     if o then
-        unitsO(o)
+        ctx_unitsO(o)
     end
 end
 
@@ -696,7 +710,7 @@ local function dimsym(s)
     end
     s = symbol_units[s] or s
     if s then
-        unitsC(s)
+        ctx_unitsC(s)
     end
 end
 
@@ -706,7 +720,7 @@ local function dimpre(p)
     end
     p = packaged_units[p] or p
     if p then
-        unitsU(p)
+        ctx_unitsU(p)
     end
 end
 
@@ -776,7 +790,7 @@ local function update_parsers() -- todo: don't remap utf sequences
                       * (V("packaged") / dimpre)
                       * V("somespace"),
      -- someunknown   = V("somespace")
-     --               * (V("nospace")/unitsU)
+     --               * (V("nospace")/ctx_unitsU)
      --               * V("somespace"),
         --
         combination   = V("longprefix")  * V("longunit")   -- centi meter
@@ -791,7 +805,7 @@ local function update_parsers() -- todo: don't remap utf sequences
                           + (V("longsuffix") * V("combination")) / dimspu
                           + (V("combination") * (V("shortsuffix") + V("nothing"))) / dimpus
                         )
-                      * (V("qualifier") / unitsQ)^-1
+                      * (V("qualifier") / ctx_unitsQ)^-1
                       * V("somespace"),
         operator      = V("somespace")
                       * ((V("longoperator") + V("shortoperator")) / dimop)
@@ -811,13 +825,13 @@ local function update_parsers() -- todo: don't remap utf sequences
     local number = Cs( P("$")     * (1-P("$"))^1 * P("$")
                      + P([[\m{]]) * (1-P("}"))^1 * P("}")
                      + (1-R("az","AZ")-P(" "))^1 -- todo: catch { } -- not ok
-                   ) / unitsN
+                   ) / ctx_unitsN
 
-    local start  = Cc(nil) / unitsNstart
-    local stop   = Cc(nil) / unitsNstop
-    local space  = Cc(nil) / unitsNspace
+    local start  = Cc(nil) / ctx_unitsNstart
+    local stop   = Cc(nil) / ctx_unitsNstop
+    local space  = Cc(nil) / ctx_unitsNspace
 
-    -- todo: avoid \unitsNstart\unitsNstop (weird that it can happen .. now catched at tex end)
+    -- todo: avoid \ctx_unitsNstart\ctx_unitsNstop (weird that it can happen .. now catched at tex end)
 
     local p_c_combinedparser  = P { "start",
         number = start * dleader * (p_c_dparser + number) * stop,

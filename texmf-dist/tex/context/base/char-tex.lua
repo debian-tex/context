@@ -9,7 +9,7 @@ if not modules then modules = { } end modules ['char-tex'] = {
 local lpeg = lpeg
 
 local find = string.find
-local P, C, R, S, Cs, Cc = lpeg.P, lpeg.C, lpeg.R, lpeg.S, lpeg.Cs, lpeg.Cc
+local P, C, R, S, V, Cs, Cc = lpeg.P, lpeg.C, lpeg.R, lpeg.S, lpeg.V, lpeg.Cs, lpeg.Cc
 local U, lpegmatch = lpeg.patterns.utf8, lpeg.match
 
 local allocate, mark = utilities.storage.allocate, utilities.storage.mark
@@ -22,7 +22,7 @@ local accentmapping = allocate {
     ['"'] = { [""] = "¨",
         A = "Ä", a = "ä",
         E = "Ë", e = "ë",
-        I = "Ï", i = "ï", ["ı"] = "ï",
+        I = "Ï", i = "ï", ["ı"] = "ï", ["\\i"] = "ï",
         O = "Ö", o = "ö",
         U = "Ü", u = "ü",
         Y = "Ÿ", y = "ÿ",
@@ -31,7 +31,7 @@ local accentmapping = allocate {
         A = "Á", a = "á",
         C = "Ć", c = "ć",
         E = "É", e = "é",
-        I = "Í", i = "í", ["ı"] = "í",
+        I = "Í", i = "í", ["ı"] = "í", ["\\i"] = "í",
         L = "Ĺ", l = "ĺ",
         N = "Ń", n = "ń",
         O = "Ó", o = "ó",
@@ -45,13 +45,13 @@ local accentmapping = allocate {
         C = "Ċ", c = "ċ",
         E = "Ė", e = "ė",
         G = "Ġ", g = "ġ",
-        I = "İ", i = "i", ["ı"] = "i",
+        I = "İ", i = "i", ["ı"] = "i", ["\\i"] = "i",
         Z = "Ż", z = "ż",
     },
     ["="] = { [""] = "¯",
         A = "Ā", a = "ā",
         E = "Ē", e = "ē",
-        I = "Ī", i = "ī", ["ı"] = "ī",
+        I = "Ī", i = "ī", ["ı"] = "ī", ["\\i"] = "ī",
         O = "Ō", o = "ō",
         U = "Ū", u = "ū",
     },
@@ -65,7 +65,7 @@ local accentmapping = allocate {
         E = "Ê", e = "ê",
         G = "Ĝ", g = "ĝ",
         H = "Ĥ", h = "ĥ",
-        I = "Î", i = "î", ["ı"] = "î",
+        I = "Î", i = "î", ["ı"] = "î", ["\\i"] = "î",
         J = "Ĵ", j = "ĵ",
         O = "Ô", o = "ô",
         S = "Ŝ", s = "ŝ",
@@ -76,7 +76,7 @@ local accentmapping = allocate {
     ["`"] = { [""] = "`",
         A = "À", a = "à",
         E = "È", e = "è",
-        I = "Ì", i = "ì", ["ı"] = "ì",
+        I = "Ì", i = "ì", ["ı"] = "ì", ["\\i"] = "ì",
         O = "Ò", o = "ò",
         U = "Ù", u = "ù",
         Y = "Ỳ", y = "ỳ",
@@ -104,7 +104,7 @@ local accentmapping = allocate {
         A = "Ă", a = "ă",
         E = "Ĕ", e = "ĕ",
         G = "Ğ", g = "ğ",
-        I = "Ĭ", i = "ĭ", ["ı"] = "ĭ",
+        I = "Ĭ", i = "ĭ", ["ı"] = "ĭ", ["\\i"] = "ĭ",
         O = "Ŏ", o = "ŏ",
         U = "Ŭ", u = "ŭ",
         },
@@ -121,7 +121,7 @@ local accentmapping = allocate {
         },
     ["~"] = { [""] = "˜",
         A = "Ã", a = "ã",
-        I = "Ĩ", i = "ĩ", ["ı"] = "ĩ",
+        I = "Ĩ", i = "ĩ", ["ı"] = "ĩ", ["\\i"] = "ĩ",
         N = "Ñ", n = "ñ",
         O = "Õ", o = "õ",
         U = "Ũ", u = "ũ",
@@ -150,56 +150,101 @@ local accent_map = allocate { -- incomplete
     --  ̰ Ḛ
 }
 
-local accents = table.concat(table.keys(accent_map))
+-- local accents = table.concat(table.keys(accentmapping)) -- was _map
 
-local function remap_accents(a,c,braced)
-    local m = accent_map[a]
+local function remap_accent(a,c,braced)
+    local m = accentmapping[a]
     if m then
-        return c .. m
-    elseif braced then
+        local n = m[c]
+        if n then
+            return n
+        end
+    end
+--     local m = accent_map[a]
+--     if m then
+--         return c .. m
+--     elseif braced then -- or #c > 0
+    if braced then -- or #c > 0
         return "\\" .. a .. "{" .. c .. "}"
     else
-        return "\\" .. a .. c
+        return "\\" .. a .. " " .. c
     end
 end
 
 local command_map = allocate {
-    ["i"] = "ı"
+    ["i"]  = "ı",
+    ["l"]  = "ł",
+    ["ss"] = "ß",
+    ["ae"] = "æ",
+    ["AE"] = "Æ",
+    ["oe"] = "œ",
+    ["OE"] = "Œ",
+    ["o"]  = "ø",
+    ["O"]  = "Ø",
+    ["aa"] = "å",
+    ["AA"] = "Å",
 }
 
-local function remap_commands(c)
-    local m = command_map[c]
-    if m then
-        return m
-    else
-        return "\\" .. c
-    end
-end
+-- no need for U here
 
-local accents  = (P('\\') * C(S(accents)) * (P("{") * C(U) * P("}" * Cc(true)) + C(U) * Cc(false))) / remap_accents
-local commands = (P('\\') * C(R("az","AZ")^1)) / remap_commands
+local achar    = R("az","AZ") + P("ı") + P("\\i")
 
-local convert_accents  = Cs((accents  + P(1))^0)
-local convert_commands = Cs((commands + P(1))^0)
+local spaces   = P(" ")^0
+local no_l     = P("{") / ""
+local no_r     = P("}") / ""
+local no_b     = P('\\') / ""
 
-local no_l = P("{") / ""
-local no_r = P("}") / ""
+local lUr      = P("{") * C(achar) * P("}")
 
-local convert_accents_strip  = Cs((no_l * accents  * no_r + accents  + P(1))^0)
-local convert_commands_strip = Cs((no_l * commands * no_r + commands + P(1))^0)
+local accents_1 = [["'.=^`~]]
+local accents_2 = [[Hckruv]]
+
+local accent   = P('\\') * (
+    C(S(accents_1)) * (lUr * Cc(true) + C(achar) * Cc(false)) + -- we need achar for ı etc, could be sped up
+    C(S(accents_2)) *  lUr * Cc(true)
+) / remap_accent
+
+local csname  = P('\\') * C(R("az","AZ")^1)
+
+local command  = (
+    csname +
+    P("{") * csname * spaces * P("}")
+) / command_map -- remap_commands
+
+local both_1 = Cs { "run",
+    accent  = accent,
+    command = command,
+    run     = (V("accent") + no_l * V("accent") * no_r + V("command") + P(1))^0,
+}
+
+local both_2 = Cs { "run",
+    accent  = accent,
+    command = command,
+    run     = (V("accent") + V("command") + no_l * ( V("accent") + V("command") ) * no_r + P(1))^0,
+}
 
 function characters.tex.toutf(str,strip)
-    if not find(str,"\\") then -- we can start at the found position
+    if not find(str,"\\") then
         return str
     elseif strip then
-        return lpegmatch(convert_accents_strip,lpegmatch(convert_commands_strip,str))
+        return lpegmatch(both_1,str)
     else
-        return lpegmatch(convert_accents,      lpegmatch(convert_commands,      str))
+        return lpegmatch(both_2,str)
     end
 end
 
---~ print(characters.tex.toutf([[\"{e}]]),true)
---~ print(characters.tex.toutf([[{\"{e}}]],true))
+-- print(characters.tex.toutf([[\~{Z}]],true))
+-- print(characters.tex.toutf([[\'\i]],true))
+-- print(characters.tex.toutf([[\'{\i}]],true))
+-- print(characters.tex.toutf([[\"{e}]],true))
+-- print(characters.tex.toutf([[\" {e}]],true))
+-- print(characters.tex.toutf([[{\"{e}}]],true))
+-- print(characters.tex.toutf([[{\" {e}}]],true))
+-- print(characters.tex.toutf([[{\l}]],true))
+-- print(characters.tex.toutf([[{\l }]],true))
+-- print(characters.tex.toutf([[\v{r}]],true))
+-- print(characters.tex.toutf([[fo{\"o}{\ss}ar]],true))
+-- print(characters.tex.toutf([[H{\'a}n Th\^e\llap{\raise 0.5ex\hbox{\'{\relax}}} Th{\'a}nh]],true))
 
 function characters.tex.defineaccents()
     for accent, group in next, accentmapping do

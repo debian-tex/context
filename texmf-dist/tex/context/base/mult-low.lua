@@ -47,7 +47,7 @@ return {
         "inicatcodes",
         "ctxcatcodes", "texcatcodes", "notcatcodes", "txtcatcodes", "vrbcatcodes",
         "prtcatcodes", "nilcatcodes", "luacatcodes", "tpacatcodes", "tpbcatcodes",
-        "xmlcatcodes",
+        "xmlcatcodes", "ctdcatcodes",
         --
         "escapecatcode", "begingroupcatcode", "endgroupcatcode", "mathshiftcatcode", "alignmentcatcode",
         "endoflinecatcode", "parametercatcode", "superscriptcatcode", "subscriptcatcode", "ignorecatcode",
@@ -90,13 +90,15 @@ return {
         --
         "startmode", "stopmode", "startnotmode", "stopnotmode", "startmodeset", "stopmodeset",
         "doifmode", "doifmodeelse", "doifnotmode",
+        "startmodeset","stopmodeset",
         "startallmodes", "stopallmodes", "startnotallmodes", "stopnotallmodes", "doifallmodes", "doifallmodeselse", "doifnotallmodes",
         "startenvironment", "stopenvironment", "environment",
         "startcomponent", "stopcomponent", "component",
         "startproduct", "stopproduct", "product",
         "startproject", "stopproject", "project",
         "starttext", "stoptext", "startnotext", "stopnotext","startdocument", "stopdocument", "documentvariable", "setupdocument",
-        "startmodule", "stopmodule", "usemodule", "usetexmodule", "useluamodule",
+        "startmodule", "stopmodule", "usemodule", "usetexmodule", "useluamodule","setupmodule","currentmoduleparameter","moduleparameter",
+        "everystarttext",
         --
         "startTEXpage", "stopTEXpage",
     --  "startMPpage", "stopMPpage", -- already catched by nested lexer
@@ -116,6 +118,15 @@ return {
         "continueifinputfile",
         --
         "luastringsep", "!!bs", "!!es",
+        --
+        "lefttorightmark", "righttoleftmark",
+        --
+        "breakablethinspace", "nobreakspace", "narrownobreakspace", "zerowidthnobreakspace",
+        "ideographicspace", "ideographichalffillspace",
+        "twoperemspace", "threeperemspace", "fourperemspace", "fiveperemspace", "sixperemspace",
+        "figurespace", "punctuationspace", "hairspace",
+        "zerowidthspace", "zerowidthnonjoiner", "zerowidthjoiner", "zwnj", "zwj",
+        "optionalspace",
     },
     ["helpers"] = {
         --
@@ -128,6 +139,7 @@ return {
         "starttexdefinition", "stoptexdefinition",
         "starttexcode", "stoptexcode",
         "startcontextcode", "stopcontextcode",
+        "startcontextdefinitioncode", "stopcontextdefinitioncode",
         --
         "doifsetupselse", "doifsetups", "doifnotsetups", "setup", "setups", "texsetup", "xmlsetup", "luasetup", "directsetup",
         "doifelsecommandhandler","doifnotcommandhandler","doifcommandhandler",
@@ -172,7 +184,7 @@ return {
         --
         "ruledhss", "ruledhfil", "ruledhfill", "ruledhfilneg", "ruledhfillneg", "normalhfillneg",
         "ruledvss", "ruledvfil", "ruledvfill", "ruledvfilneg", "ruledvfillneg", "normalvfillneg",
-        "ruledhbox", "ruledvbox", "ruledvtop", "ruledvcenter",
+        "ruledhbox", "ruledvbox", "ruledvtop", "ruledvcenter", "ruledmbox",
         "ruledhskip", "ruledvskip", "ruledkern", "ruledmskip", "ruledmkern",
         "ruledhglue", "ruledvglue", "normalhglue", "normalvglue",
         "ruledpenalty",
@@ -185,6 +197,8 @@ return {
         "scratchmuskip", "globalscratchmuskip",
         "scratchtoks", "globalscratchtoks",
         "scratchbox", "globalscratchbox",
+        --
+        "normalbaselineskip", "normallineskip", "normallineskiplimit",
         --
         "availablehsize", "localhsize", "setlocalhsize",
         --
@@ -209,7 +223,9 @@ return {
         --
         "doif", "doifnot", "doifelse",
         "doifinset", "doifnotinset", "doifinsetelse",
-        "doifnextcharelse", "doifnextoptionalelse", "doifnextbgroupelse", "doifnextparenthesiselse", "doiffastoptionalcheckelse",
+        "doifnextcharelse", "doifnextoptionalelse", "doifnextoptionalcselse", "doiffastoptionalcheckelse",
+        "doifnextbgroupelse", "doifnextbgroupcselse",
+        "doifnextparenthesiselse",
         "doifundefinedelse", "doifdefinedelse", "doifundefined", "doifdefined",
         "doifelsevalue", "doifvalue", "doifnotvalue",
         "doifnothing", "doifsomething", "doifelsenothing", "doifsomethingelse",
@@ -269,7 +285,9 @@ return {
         --
         "dorecurse", "doloop", "exitloop", "dostepwiserecurse", "recurselevel", "recursedepth", "dofastloopcs", "dowith",
         --
-        "newconstant", "setnewconstant", "newconditional", "settrue", "setfalse", "setconstant",
+        "newconstant", "setnewconstant", "setconstant", "setconstantvalue",
+        "newconditional", "settrue", "setfalse", "settruevalue", "setfalsevalue",
+        --
         "newmacro", "setnewmacro", "newfraction",
         "newsignal",
         --
@@ -287,6 +305,10 @@ return {
         "startnointerference", "stopnointerference",
         --
         "twodigits","threedigits",
+        --
+        "leftorright",
+        --
+        "offinterlineskip", "oninterlineskip", "nointerlineskip",
         --
         "strut", "setstrut", "strutbox", "strutht", "strutdp", "strutwd", "struthtdp", "begstrut", "endstrut", "lineheight",
         --
@@ -339,9 +361,23 @@ return {
         "definenamedlua",
         "obeylualines", "obeyluatokens",
         "startluacode", "stopluacode", "startlua", "stoplua",
+        "startctxfunction","stopctxfunction","ctxfunction",
+        "startctxfunctiondefinition","stopctxfunctiondefinition",
         --
         "carryoverpar",
         --
+        "assumelongusagecs",
+        --
         "Umathbotaccent",
+        --
+        "righttolefthbox", "lefttorighthbox", "righttoleftvbox", "lefttorightvbox", "righttoleftvtop", "lefttorightvtop",
+        "rtlhbox", "ltrhbox", "rtlvbox", "ltrvbox", "rtlvtop", "ltrvtop",
+        "autodirhbox", "autodirvbox", "autodirvtop",
+        "lefttoright", "righttoleft","synchronizelayoutdirection","synchronizedisplaydirection","synchronizeinlinedirection",
+        --
+        "lesshyphens", "morehyphens", "nohyphens", "dohyphens",
+        --
+        "Ucheckedstartdisplaymath", "Ucheckedstopdisplaymath",
+        --
     }
 }

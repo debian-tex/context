@@ -26,6 +26,8 @@ local lpegmatch, lpegpatterns, replacer = lpeg.match, lpeg.patterns, lpeg.replac
 --    |   ___________|____________                              |
 --   / \ /                        \                             |
 --   urn:example:animal:ferret:nose               interpretable as extension
+--
+-- also nice: http://url.spec.whatwg.org/ (maybe some day ...)
 
 url       = url or { }
 local url = url
@@ -43,7 +45,7 @@ local hexdigit    = R("09","AF","af")
 local plus        = P("+")
 local nothing     = Cc("")
 local escapedchar = (percent * C(hexdigit * hexdigit)) / tochar
-local escaped     = (plus / " ") + escapedchar
+local escaped     = (plus / " ") + escapedchar -- so no loc://foo++.tex
 
 local noslash     = P("/") / ""
 
@@ -79,12 +81,18 @@ setmetatable(escapes, { __index = function(t,k)
     return v
 end })
 
-local escaper   = Cs((R("09","AZ","az")^1 + P(" ")/"%%20" + S("-./_")^1 + P(1) / escapes)^0) -- space happens most
-local unescaper = Cs((escapedchar + 1)^0)
+local escaper    = Cs((R("09","AZ","az")^1 + P(" ")/"%%20" + S("-./_")^1 + P(1) / escapes)^0) -- space happens most
+local unescaper  = Cs((escapedchar + 1)^0)
+local getcleaner = Cs((P("+++") / "%%2B" + P("+") / "%%20" + P(1))^1)
 
-lpegpatterns.urlunescaped = escapedchar
-lpegpatterns.urlescaper   = escaper
-lpegpatterns.urlunescaper = unescaper
+lpegpatterns.urlunescaped  = escapedchar
+lpegpatterns.urlescaper    = escaper
+lpegpatterns.urlunescaper  = unescaper
+lpegpatterns.urlgetcleaner = getcleaner
+
+function url.unescapeget(str)
+    return lpegmatch(getcleaner,str)
+end
 
 -- todo: reconsider Ct as we can as well have five return values (saves a table)
 -- so we can have two parsers, one with and one without
@@ -183,7 +191,11 @@ local function hashed(str) -- not yet ok (/test?test)
     return s
 end
 
--- inspect(hashed("template://test"))
+-- inspect(hashed("template:///test"))
+-- inspect(hashed("template:///test++.whatever"))
+-- inspect(hashed("template:///test%2B%2B.whatever"))
+-- inspect(hashed("template:///test%x.whatever"))
+-- inspect(hashed("tem%2Bplate:///test%x.whatever"))
 
 -- Here we assume:
 --

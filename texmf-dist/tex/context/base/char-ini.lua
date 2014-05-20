@@ -10,7 +10,7 @@ if not modules then modules = { } end modules ['char-ini'] = {
 
 -- we can remove the tag range starting at 0xE0000 (special applications)
 
-local utfchar, utfbyte, utfvalues, ustring = utf.char, utf.byte, utf.values, utf.ustring
+local utfchar, utfbyte, utfvalues, ustring, utotable = utf.char, utf.byte, utf.values, utf.ustring, utf.totable
 local concat, unpack, tohash = table.concat, table.unpack, table.tohash
 local next, tonumber, type, rawget, rawset = next, tonumber, type, rawget, rawset
 local format, lower, gsub, match, gmatch = string.format, string.lower, string.gsub, string.match, string.match, string.gmatch
@@ -167,7 +167,7 @@ local blocks = allocate {
     ["cjkradicalssupplement"]                      = { first = 0x02E80, last = 0x02EFF, otf="hang", description = "CJK Radicals Supplement" },
     ["cjkstrokes"]                                 = { first = 0x031C0, last = 0x031EF, otf="hang", description = "CJK Strokes" },
     ["cjksymbolsandpunctuation"]                   = { first = 0x03000, last = 0x0303F, otf="hang", description = "CJK Symbols and Punctuation" },
-    ["cjkunifiedideographs"]                       = { first = 0x04E00, last = 0x09FFF, otf="hang", description = "CJK Unified Ideographs" },
+    ["cjkunifiedideographs"]                       = { first = 0x04E00, last = 0x09FFF, otf="hang", description = "CJK Unified Ideographs", catcode = "letter" },
     ["cjkunifiedideographsextensiona"]             = { first = 0x03400, last = 0x04DBF, otf="hang", description = "CJK Unified Ideographs Extension A" },
     ["cjkunifiedideographsextensionb"]             = { first = 0x20000, last = 0x2A6DF, otf="hang", description = "CJK Unified Ideographs Extension B" },
     ["combiningdiacriticalmarks"]                  = { first = 0x00300, last = 0x0036F,             description = "Combining Diacritical Marks" },
@@ -382,7 +382,7 @@ end)
 function characters.getrange(name) -- used in font fallback definitions (name or range)
     local range = blocks[name]
     if range then
-        return range.first, range.last, range.description
+        return range.first, range.last, range.description, range.gaps
     end
     name = gsub(name,'"',"0x") -- goodie: tex hex notation
     local start, stop = match(name,"^(.-)[%-%:](.-)$")
@@ -459,29 +459,35 @@ local is_mark = allocate ( tohash {
     "mn", "ms",
 } )
 
+local is_punctuation = allocate ( tohash {
+    "pc","pd","ps","pe","pi","pf","po",
+} )
+
 -- to be redone: store checked characters
 
-characters.is_character = is_character
-characters.is_letter    = is_letter
-characters.is_command   = is_command
-characters.is_spacing   = is_spacing
-characters.is_mark      = is_mark
+characters.is_character   = is_character
+characters.is_letter      = is_letter
+characters.is_command     = is_command
+characters.is_spacing     = is_spacing
+characters.is_mark        = is_mark
+characters.is_punctuation = is_punctuation
 
-local mt = { -- yes or no ?
-    __index = function(t,k)
-        if type(k) == "number" then
-            local c = data[k].category
-            return c and rawget(t,c)
-        else
-            -- avoid auto conversion in data.characters lookups
-        end
+local mti = function(t,k)
+    if type(k) == "number" then
+        local c = data[k].category
+        return c and rawget(t,c)
+    else
+        -- avoid auto conversion in data.characters lookups
     end
-}
+end
 
-setmetatableindex(characters.is_character, mt)
-setmetatableindex(characters.is_letter,    mt)
-setmetatableindex(characters.is_command,   mt)
-setmetatableindex(characters.is_spacing,   mt)
+setmetatableindex(characters.is_character,  mti)
+setmetatableindex(characters.is_letter,     mti)
+setmetatableindex(characters.is_command,    mti)
+setmetatableindex(characters.is_spacing,    mti)
+setmetatableindex(characters.is_punctuation,mti)
+
+-- todo: also define callers for the above
 
 -- linebreak: todo: hash
 --
@@ -554,6 +560,36 @@ setmetatableindex(characters.directions,function(t,k)
         end
     end
     t[k] = false -- maybe 'l'
+    return v
+end)
+
+characters.mirrors  = { }
+
+setmetatableindex(characters.mirrors,function(t,k)
+    local d = data[k]
+    if d then
+        local v = d.mirror
+        if v then
+            t[k] = v
+            return v
+        end
+    end
+    t[k] = false
+    return v
+end)
+
+characters.textclasses  = { }
+
+setmetatableindex(characters.textclasses,function(t,k)
+    local d = data[k]
+    if d then
+        local v = d.textclass
+        if v then
+            t[k] = v
+            return v
+        end
+    end
+    t[k] = false
     return v
 end)
 
@@ -744,6 +780,17 @@ function characters.lower (str) return lpegmatch(tolower,str) end
 function characters.upper (str) return lpegmatch(toupper,str) end
 function characters.shaped(str) return lpegmatch(toshape,str) end
 
+-- maybe: (twice as fast when much ascii)
+--
+-- local tolower  = lpeg.patterns.tolower
+-- local lower    = string.lower
+--
+-- local allascii = R("\000\127")^1 * P(-1)
+--
+-- function characters.checkedlower(str)
+--     return lpegmatch(allascii,str) and lower(str) or lpegmatch(tolower,str) or str
+-- end
+
 function characters.lettered(str,spacing)
     local new, n = { }, 0
     if spacing then
@@ -888,13 +935,13 @@ if not characters.superscripts then
             if what == "super" then
                 if #specials == 2 then
                     superscripts[k] = specials[2]
-                else
+                elseif trace_defining then
                     report_defining("ignoring %s %a, char %c, description %a","superscript",ustring(k),k,v.description)
                 end
             elseif what == "sub" then
                 if #specials == 2 then
                     subscripts[k] = specials[2]
-                else
+                elseif trace_defining then
                     report_defining("ignoring %s %a, char %c, description %a","subscript",ustring(k),k,v.description)
                 end
             end
@@ -916,7 +963,18 @@ end
 local tracedchars = utilities.strings.tracers
 
 tracedchars[0x00] = "[signal]"
+tracedchars[0x0A] = "[linefeed]"
+tracedchars[0x0B] = "[tab]"
+tracedchars[0x0C] = "[formfeed]"
+tracedchars[0x0D] = "[return]"
 tracedchars[0x20] = "[space]"
+
+function characters.showstring(str)
+    local list = utotable(str)
+    for i=1,#list do
+        report_defining("split % 3i : %C",i,list[i])
+    end
+end
 
 -- the following code will move to char-tex.lua
 
@@ -1022,13 +1080,20 @@ function characters.define(tobelettered, tobeactivated) -- catcodetables
                 end
                 local range = chr.range
                 if range then
-                    for i=1,range.first,range.last do
+                    for i=1,range.first,range.last do -- tricky as not all are letters
                         texsetcatcode(i,11)
                     end
                 end
             end
             texsetcatcode(0x200C,11) -- non-joiner
             texsetcatcode(0x200D,11) -- joiner
+            for k, v in next, blocks do
+                if v.catcode == "letter" then
+                    for i=v.first,v.last do
+                        texsetcatcode(i,11)
+                    end
+                end
+            end
         end
         tex.catcodetable = saved
     end
@@ -1130,6 +1195,15 @@ directives.register("characters.spaceafteruppercase",function(v)
     end
 end)
 
+-- tex
+
+function commands.chardescription(slot)
+    local d = data[slot]
+    if d then
+        context(d.description)
+    end
+end
+
 -- xml
 
 characters.activeoffset = 0x10000 -- there will be remapped in that byte range
@@ -1156,3 +1230,5 @@ end
 --     entities.gt  = utfchar(characters.activeoffset + utfbyte(">"))
 -- end
 
+commands.definecatcodetable = characters.define
+commands.setcharactercodes  = characters.setcodes

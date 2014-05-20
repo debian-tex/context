@@ -62,6 +62,7 @@ local o_replacements = { -- in main table
     ["{"]              = "\\mmlleftdelimiter \\lbrace",
     ["}"]              = "\\mmlrightdelimiter\\rbrace",
     ["|"]              = "\\mmlleftorrightdelimiter\\vert",
+    ["/"]              = "\\mmlleftorrightdelimiter\\solidus",
     [doublebar]        = "\\mmlleftorrightdelimiter\\Vert",
     ["("]              = "\\mmlleftdelimiter(",
     [")"]              = "\\mmlrightdelimiter)",
@@ -81,8 +82,9 @@ local o_replacements = { -- in main table
 
  -- [utfchar(0xF103C)] = "\\mmlleftdelimiter<",
     [utfchar(0xF1026)] = "\\mmlchar{38}",
+    [utfchar(0x02061)]  = "", -- function applicator sometimes shows up in font
  -- [utfchar(0xF103E)] = "\\mmlleftdelimiter>",
-
+ -- [utfchar(0x000AF)] = '\\mmlchar{"203E}', -- 0x203E
 }
 
 local simpleoperatorremapper = utf.remapper(o_replacements)
@@ -90,62 +92,62 @@ local simpleoperatorremapper = utf.remapper(o_replacements)
 --~ languages.data.labels.functions
 
 local i_replacements = {
-    ["sin"]         = "\\mathopnolimits{sin}",
-    ["cos"]         = "\\mathopnolimits{cos}",
-    ["abs"]         = "\\mathopnolimits{abs}",
-    ["arg"]         = "\\mathopnolimits{arg}",
-    ["codomain"]    = "\\mathopnolimits{codomain}",
-    ["curl"]        = "\\mathopnolimits{curl}",
-    ["determinant"] = "\\mathopnolimits{det}",
-    ["divergence"]  = "\\mathopnolimits{div}",
-    ["domain"]      = "\\mathopnolimits{domain}",
-    ["gcd"]         = "\\mathopnolimits{gcd}",
-    ["grad"]        = "\\mathopnolimits{grad}",
-    ["identity"]    = "\\mathopnolimits{id}",
-    ["image"]       = "\\mathopnolimits{image}",
-    ["lcm"]         = "\\mathopnolimits{lcm}",
-    ["lim"]         = "\\mathopnolimits{lim}",
-    ["max"]         = "\\mathopnolimits{max}",
-    ["median"]      = "\\mathopnolimits{median}",
-    ["min"]         = "\\mathopnolimits{min}",
-    ["mode"]        = "\\mathopnolimits{mode}",
-    ["mod"]         = "\\mathopnolimits{mod}",
-    ["polar"]       = "\\mathopnolimits{Polar}",
-    ["exp"]         = "\\mathopnolimits{exp}",
-    ["ln"]          = "\\mathopnolimits{ln}",
-    ["log"]         = "\\mathopnolimits{log}",
-    ["sin"]         = "\\mathopnolimits{sin}",
-    ["arcsin"]      = "\\mathopnolimits{arcsin}",
-    ["sinh"]        = "\\mathopnolimits{sinh}",
-    ["arcsinh"]     = "\\mathopnolimits{arcsinh}",
-    ["cos"]         = "\\mathopnolimits{cos}",
-    ["arccos"]      = "\\mathopnolimits{arccos}",
-    ["cosh"]        = "\\mathopnolimits{cosh}",
-    ["arccosh"]     = "\\mathopnolimits{arccosh}",
-    ["tan"]         = "\\mathopnolimits{tan}",
-    ["arctan"]      = "\\mathopnolimits{arctan}",
-    ["tanh"]        = "\\mathopnolimits{tanh}",
-    ["arctanh"]     = "\\mathopnolimits{arctanh}",
-    ["cot"]         = "\\mathopnolimits{cot}",
-    ["arccot"]      = "\\mathopnolimits{arccot}",
-    ["coth"]        = "\\mathopnolimits{coth}",
-    ["arccoth"]     = "\\mathopnolimits{arccoth}",
-    ["csc"]         = "\\mathopnolimits{csc}",
-    ["arccsc"]      = "\\mathopnolimits{arccsc}",
-    ["csch"]        = "\\mathopnolimits{csch}",
-    ["arccsch"]     = "\\mathopnolimits{arccsch}",
-    ["sec"]         = "\\mathopnolimits{sec}",
-    ["arcsec"]      = "\\mathopnolimits{arcsec}",
-    ["sech"]        = "\\mathopnolimits{sech}",
-    ["arcsech"]     = "\\mathopnolimits{arcsech}",
+    ["sin"]         = "\\sin",
+    ["cos"]         = "\\cos",
+    ["abs"]         = "\\abs",
+    ["arg"]         = "\\arg",
+    ["codomain"]    = "\\codomain",
+    ["curl"]        = "\\curl",
+    ["determinant"] = "\\det",
+    ["divergence"]  = "\\div",
+    ["domain"]      = "\\domain",
+    ["gcd"]         = "\\gcd",
+    ["grad"]        = "\\grad",
+    ["identity"]    = "\\id",
+    ["image"]       = "\\image",
+    ["lcm"]         = "\\lcm",
+    ["lim"]         = "\\lim",
+    ["max"]         = "\\max",
+    ["median"]      = "\\median",
+    ["min"]         = "\\min",
+    ["mode"]        = "\\mode",
+    ["mod"]         = "\\mod",
+    ["polar"]       = "\\Polar",
+    ["exp"]         = "\\exp",
+    ["ln"]          = "\\ln",
+    ["log"]         = "\\log",
+    ["sin"]         = "\\sin",
+    ["arcsin"]      = "\\arcsin",
+    ["sinh"]        = "\\sinh",
+    ["arcsinh"]     = "\\arcsinh",
+    ["cos"]         = "\\cos",
+    ["arccos"]      = "\\arccos",
+    ["cosh"]        = "\\cosh",
+    ["arccosh"]     = "\\arccosh",
+    ["tan"]         = "\\tan",
+    ["arctan"]      = "\\arctan",
+    ["tanh"]        = "\\tanh",
+    ["arctanh"]     = "\\arctanh",
+    ["cot"]         = "\\cot",
+    ["arccot"]      = "\\arccot",
+    ["coth"]        = "\\coth",
+    ["arccoth"]     = "\\arccoth",
+    ["csc"]         = "\\csc",
+    ["arccsc"]      = "\\arccsc",
+    ["csch"]        = "\\csch",
+    ["arccsch"]     = "\\arccsch",
+    ["sec"]         = "\\sec",
+    ["arcsec"]      = "\\arcsec",
+    ["sech"]        = "\\sech",
+    ["arcsech"]     = "\\arcsech",
     [" "]           = "",
 
-    ["false"]       = "{\\mr false}",
-    ["notanumber"]  = "{\\mr NaN}",
-    ["otherwise"]   = "{\\mr otherwise}",
-    ["true"]        = "{\\mr true}",
-    ["declare"]     = "{\\mr declare}",
-    ["as"]          = "{\\mr as}",
+    ["false"]       = "{\\mathrm false}",
+    ["notanumber"]  = "{\\mathrm NaN}",
+    ["otherwise"]   = "{\\mathrm otherwise}",
+    ["true"]        = "{\\mathrm true}",
+    ["declare"]     = "{\\mathrm declare}",
+    ["as"]          = "{\\mathrm as}",
 }
 
 -- we could use a metatable or when accessing fallback on the
@@ -478,25 +480,30 @@ end
 function mathml.mo(id)
     local str = xmlcontent(getid(id)) or ""
     local rep = gsub(str,"&.-;","") -- todo
-    context(simpleoperatorremapper(rep))
+    context(simpleoperatorremapper(rep) or rep)
 end
 
 function mathml.mi(id)
     -- we need to strip comments etc .. todo when reading in tree
     local e = getid(id)
     local str = e.dt
-    if type(str) == "string" then
+    if type(str) == "table" then
         local n = #str
         if n == 0 then
             -- nothing to do
         elseif n == 1 then
-            local str = gsub(str[1],"&.-;","") -- bah
-            local rep = i_replacements[str]
-            if not rep then
-                rep = gsub(str,".",i_replacements)
+            local first = str[1]
+            if type(first) == "string" then
+                local str = gsub(first,"&.-;","") -- bah
+                local rep = i_replacements[str]
+                if not rep then
+                    rep = gsub(str,".",i_replacements)
+                end
+                context(rep)
+             -- context.mi(rep)
+            else
+                context.xmlflush(id) -- xmlsprint or so
             end
-            context(rep)
-         -- context.mi(rep)
         else
             context.xmlflush(id) -- xmlsprint or so
         end
@@ -751,7 +758,7 @@ function mathml.mtable(root)
     local framespacing = at.framespacing or "0pt"
     local framespacing = at.framespacing or "-\\ruledlinewidth" -- make this an option
 
-    context.bTABLE { frame = frametypes[frame or "none"] or "off", offset = framespacing }
+    context.bTABLE { frame = frametypes[frame or "none"] or "off", offset = framespacing, background = "" } -- todo: use xtables and definextable
     for e in lxml.collected(root,"/(mml:mtr|mml:mlabeledtr)") do
         context.bTR()
         local at = e.at
@@ -826,4 +833,14 @@ function mathml.cpolar_a(root)
         end
     end
     context.right(false,")")
+end
+
+-- crap .. maybe in char-def a mathml overload
+
+local mathmleq = {
+    [utfchar(0x00AF)] = utfchar(0x203E),
+}
+
+function mathml.extensible(chr)
+    context(mathmleq[chr] or chr)
 end

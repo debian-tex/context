@@ -24,6 +24,7 @@ local helpinfo = [[
   <category name="basic">
    <subcategory>
     <flag name="make"><short>create format file</short></flag>
+    <flag name="fonts"><short>create plain font database</short></flag>
     <flag name="run"><short>process file</short></flag>
     <flag name="format" value="string"><short>format name (default: luatex-plain)</short></flag>
     <flag name="engine" value="string"><short>engine to use (default: luatex)</short></flag>
@@ -102,14 +103,22 @@ function scripts.plain.make(texengine,texformat)
 end
 
 function scripts.plain.run(texengine,texformat,filename)
-    execute('%s --fmt=%s "%s"',texengine,file.removesuffix(texformat),filename)
+    local t = { }
+    for k, v in next, environment.arguments do
+        t[#t+1] = string.format("--mtx:%s=%s",k,v)
+    end
+    execute('%s --fmt=%s %s "%s"',texengine,file.removesuffix(texformat),table.concat(t," "),filename)
+end
+
+function scripts.plain.fonts()
+    execute('mtxrun --script fonts --reload --simple --typeone')
 end
 
 local texformat = environment.arguments.texformat or environment.arguments.format
 local texengine = environment.arguments.texengine or environment.arguments.engine
 
 if type(texengine) ~= "string" or texengine == "" then
-    texengine = environment.arguments.jit and "luajittex" or"luatex"
+    texengine = (jit or environment.arguments.jit) and "luajittex" or "luatex"
 end
 
 if type(texformat) ~= "string" or texformat == "" then
@@ -122,6 +131,8 @@ if environment.arguments.exporthelp then
     application.export(environment.arguments.exporthelp,filename)
 elseif environment.arguments.make then
     scripts.plain.make(texengine,texformat)
+elseif environment.arguments.fonts then
+    scripts.plain.fonts()
 elseif filename then
     scripts.plain.run(texengine,texformat,filename)
 else
