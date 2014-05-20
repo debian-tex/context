@@ -5,7 +5,7 @@ Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <preining@debian.org>
 Build-Depends: debhelper (>= 7.0.50~)
 Build-Depends-Indep: tex-common (>= 4.01)
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Vcs-Git: git://anonscm.debian.org/debian-tex/context.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=debian-tex/context.git
 

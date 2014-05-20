@@ -4,8 +4,9 @@ context (2014.05.18.20140520-1) experimental; urgency=low
   * update make-orig-tar: tlpretest, use only core context
   * Imported Upstream version 2014.05.18.20140520
   * debian adaptions (copyright, control)
+  * bump standards version to 3.9.5, no changes necessary
 
- -- Norbert Preining <preining@debian.org>  Tue, 20 May 2014 09:34:53 +0900
+ -- Norbert Preining <preining@debian.org>  Tue, 20 May 2014 09:49:49 +0900
 
 context (2013.05.28.20130704-3) unstable; urgency=low
 
