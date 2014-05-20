@@ -1,0 +1,7 @@
+context (2014.05.18.20140520-1) experimental; urgency=low
+
+  * the context module "gnuplot" is not shipped in the main context
+    package anymore, but in context-modules. If needed, please install
+    the (recommended) context-modules package.
+
+ -- Norbert Preining <preining@debian.org>  Tue, 20 May 2014 09:46:35 +0900
