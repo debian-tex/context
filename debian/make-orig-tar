@@ -1,7 +1,7 @@
 
-tlnet=${1:-/var/www/norbert/tlnet}
+tlnet=${1:-/var/www/norbert/tlpretest}
 
-basever=2013.05.28
+basever=2014.05.18
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
@@ -28,10 +28,7 @@ echo "installing from $tlnet"
 mkdir $pkg
 cd $pkg
 unpackone context
-cd texmf-dist
-unpackone lmextra
-unpackone context-gnuplot
-cd ../..
+cd ..
 
 GZIP=-9 tar -czf $orig $pkg
 
