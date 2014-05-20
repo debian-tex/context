@@ -1,12 +1,15 @@
 name context.doc
 category Package
-revision 31080
+revision 34112
 shortdesc doc files of context
-docfiles size=308
+docfiles size=331
  texmf-dist/doc/context/document/general/manuals/mreadme.pdf
  texmf-dist/doc/context/document/general/manuals/tiptrick.pdf
  texmf-dist/doc/context/manuals/allkind/mcommon.tex
+ texmf-dist/doc/context/manuals/allkind/mkiv-publications.bib
+ texmf-dist/doc/context/manuals/allkind/mkiv-publications.tex
  texmf-dist/doc/context/manuals/allkind/mreadme.tex
+ texmf-dist/doc/context/manuals/allkind/publications-en.xml
  texmf-dist/doc/context/scripts/mkii/ctxtools.html
  texmf-dist/doc/context/scripts/mkii/ctxtools.man
  texmf-dist/doc/context/scripts/mkii/ctxtools.xml
@@ -54,6 +57,9 @@ docfiles size=308
  texmf-dist/doc/context/scripts/mkiv/mtx-base.html
  texmf-dist/doc/context/scripts/mkiv/mtx-base.man
  texmf-dist/doc/context/scripts/mkiv/mtx-base.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-cache.html
  texmf-dist/doc/context/scripts/mkiv/mtx-cache.man
  texmf-dist/doc/context/scripts/mkiv/mtx-cache.xml
@@ -138,19 +144,22 @@ docfiles size=308
  texmf-dist/doc/context/scripts/mkiv/mtx-watch.html
  texmf-dist/doc/context/scripts/mkiv/mtx-watch.man
  texmf-dist/doc/context/scripts/mkiv/mtx-watch.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-youless.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-youless.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-youless.xml
  texmf-dist/doc/context/scripts/mkiv/mtxrun.html
  texmf-dist/doc/context/scripts/mkiv/mtxrun.man
  texmf-dist/doc/context/scripts/mkiv/mtxrun.xml
  texmf-dist/doc/man/man1/context.1
  texmf-dist/doc/man/man1/context.man1.pdf
- texmf-dist/doc/man/man1/ctxtools.1
- texmf-dist/doc/man/man1/ctxtools.man1.pdf
  texmf-dist/doc/man/man1/luatools.1
  texmf-dist/doc/man/man1/luatools.man1.pdf
  texmf-dist/doc/man/man1/mtx-babel.1
  texmf-dist/doc/man/man1/mtx-babel.man1.pdf
  texmf-dist/doc/man/man1/mtx-base.1
  texmf-dist/doc/man/man1/mtx-base.man1.pdf
+ texmf-dist/doc/man/man1/mtx-bibtex.1
+ texmf-dist/doc/man/man1/mtx-bibtex.man1.pdf
  texmf-dist/doc/man/man1/mtx-cache.1
  texmf-dist/doc/man/man1/mtx-cache.man1.pdf
  texmf-dist/doc/man/man1/mtx-chars.1
@@ -207,10 +216,10 @@ docfiles size=308
  texmf-dist/doc/man/man1/mtx-update.man1.pdf
  texmf-dist/doc/man/man1/mtx-watch.1
  texmf-dist/doc/man/man1/mtx-watch.man1.pdf
+ texmf-dist/doc/man/man1/mtx-youless.1
+ texmf-dist/doc/man/man1/mtx-youless.man1.pdf
  texmf-dist/doc/man/man1/mtxrun.1
  texmf-dist/doc/man/man1/mtxrun.man1.pdf
- texmf-dist/doc/man/man1/pstopdf.1
- texmf-dist/doc/man/man1/pstopdf.man1.pdf
  texmf-dist/doc/man/man1/texexec.1
  texmf-dist/doc/man/man1/texexec.man1.pdf
  texmf-dist/doc/man/man1/texmfstart.1

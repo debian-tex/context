@@ -10,13 +10,16 @@ if not modules then modules = { } end modules ['mlib-pdf'] = {
 
 local format, concat, gsub = string.format, table.concat, string.gsub
 local abs, sqrt, round = math.abs, math.sqrt, math.round
-local setmetatable = setmetatable
-local Cf, C, Cg, Ct, P, S, lpegmatch = lpeg.Cf, lpeg.C, lpeg.Cg, lpeg.Ct, lpeg.P, lpeg.S, lpeg.match
+local setmetatable, rawset, tostring, tonumber, type = setmetatable, rawset, tostring, tonumber, type
+local P, S, C, Ct, Cc, Cg, Cf, Carg = lpeg.P, lpeg.S, lpeg.C, lpeg.Ct, lpeg.Cc, lpeg.Cg, lpeg.Cf, lpeg.Carg
+local lpegmatch = lpeg.match
 local formatters = string.formatters
 
 local report_metapost = logs.reporter("metapost")
 
-local mplib, context = mplib, context
+local trace_variables = false  trackers.register("metapost.variables",function(v) trace_variables = v end)
+
+local mplib, context  = mplib, context
 
 local allocate        = utilities.storage.allocate
 
@@ -30,14 +33,25 @@ metapost.flushers     = metapost.flushers or { }
 local pdfflusher      = { }
 metapost.flushers.pdf = pdfflusher
 
-metapost.multipass    = false
+metapost.multipass    = false -- to be stacked
 metapost.n            = 0
-metapost.optimize     = true -- false
+metapost.optimize     = true  -- false
 
 local experiment      = true -- uses context(node) that already does delayed nodes
-
-local savedliterals   = nil -- needs checking
+local savedliterals   = nil  -- needs checking
 local mpsliteral      = nodes.pool.register(node.new("whatsit",nodes.whatsitcodes.pdfliteral)) -- pdfliteral.mode  = 1
+
+local f_f  = formatters["%F"]
+
+local f_m  = formatters["%F %F m"]
+local f_c  = formatters["%F %F %F %F %F %F c"]
+local f_l  = formatters["%F %F l"]
+local f_cm = formatters["%F %F %F %F %F %F cm"]
+local f_M  = formatters["%F M"]
+local f_j  = formatters["%i j"]
+local f_J  = formatters["%i J"]
+local f_d  = formatters["[%s] %F d"]
+local f_w  = formatters["%F w"]
 
 local pdfliteral = function(s)
     local literal = copy_node(mpsliteral)
@@ -117,7 +131,7 @@ end
 function pdfflusher.startfigure(n,llx,lly,urx,ury,message)
     savedliterals = nil
     metapost.n = metapost.n + 1
-    context.startMPLIBtoPDF(llx,lly,urx,ury)
+    context.startMPLIBtoPDF(f_f(llx),f_f(lly),f_f(urx),f_f(ury))
     if message then pdfflusher.comment(message) end
 end
 
@@ -190,11 +204,11 @@ local function flushnormalpath(path, t, open)
         nt = nt + 1
         pth = path[i]
         if not ith then
-            t[nt] = formatters["%f %f m"](pth.x_coord,pth.y_coord)
+            t[nt] = f_m(pth.x_coord,pth.y_coord)
         elseif curved(ith,pth) then
-            t[nt] = formatters["%f %f %f %f %f %f c"](ith.right_x,ith.right_y,pth.left_x,pth.left_y,pth.x_coord,pth.y_coord)
+            t[nt] = f_c(ith.right_x,ith.right_y,pth.left_x,pth.left_y,pth.x_coord,pth.y_coord)
         else
-            t[nt] = formatters["%f %f l"](pth.x_coord,pth.y_coord)
+            t[nt] = f_l(pth.x_coord,pth.y_coord)
         end
         ith = pth
     end
@@ -202,15 +216,15 @@ local function flushnormalpath(path, t, open)
         nt = nt + 1
         local one = path[1]
         if curved(pth,one) then
-            t[nt] = formatters["%f %f %f %f %f %f c"](pth.right_x,pth.right_y,one.left_x,one.left_y,one.x_coord,one.y_coord )
+            t[nt] = f_c(pth.right_x,pth.right_y,one.left_x,one.left_y,one.x_coord,one.y_coord )
         else
-            t[nt] = formatters["%f %f l"](one.x_coord,one.y_coord)
+            t[nt] = f_l(one.x_coord,one.y_coord)
         end
     elseif #path == 1 then
         -- special case .. draw point
         local one = path[1]
         nt = nt + 1
-        t[nt] = formatters["%f %f l"](one.x_coord,one.y_coord)
+        t[nt] = f_l(one.x_coord,one.y_coord)
     end
     return t
 end
@@ -224,18 +238,18 @@ local function flushconcatpath(path, t, open)
         nt = 0
     end
     nt = nt + 1
-    t[nt] = formatters["%f %f %f %f %f %f cm"](sx,rx,ry,sy,tx,ty)
+    t[nt] = f_cm(sx,rx,ry,sy,tx,ty)
     for i=1,#path do
         nt = nt + 1
         pth = path[i]
         if not ith then
-            t[nt] = formatters["%f %f m"](mpconcat(pth.x_coord,pth.y_coord))
+            t[nt] = f_m(mpconcat(pth.x_coord,pth.y_coord))
         elseif curved(ith,pth) then
             local a, b = mpconcat(ith.right_x,ith.right_y)
             local c, d = mpconcat(pth.left_x,pth.left_y)
-            t[nt] = formatters["%f %f %f %f %f %f c"](a,b,c,d,mpconcat(pth.x_coord,pth.y_coord))
+            t[nt] = f_c(a,b,c,d,mpconcat(pth.x_coord,pth.y_coord))
         else
-           t[nt] = formatters["%f %f l"](mpconcat(pth.x_coord, pth.y_coord))
+           t[nt] = f_l(mpconcat(pth.x_coord, pth.y_coord))
         end
         ith = pth
     end
@@ -245,15 +259,15 @@ local function flushconcatpath(path, t, open)
         if curved(pth,one) then
             local a, b = mpconcat(pth.right_x,pth.right_y)
             local c, d = mpconcat(one.left_x,one.left_y)
-            t[nt] = formatters["%f %f %f %f %f %f c"](a,b,c,d,mpconcat(one.x_coord, one.y_coord))
+            t[nt] = f_c(a,b,c,d,mpconcat(one.x_coord, one.y_coord))
         else
-            t[nt] = formatters["%f %f l"](mpconcat(one.x_coord,one.y_coord))
+            t[nt] = f_l(mpconcat(one.x_coord,one.y_coord))
         end
     elseif #path == 1 then
         -- special case .. draw point
         nt = nt + 1
         local one = path[1]
-        t[nt] = formatters["%f %f l"](mpconcat(one.x_coord,one.y_coord))
+        t[nt] = f_l(mpconcat(one.x_coord,one.y_coord))
     end
     return t
 end
@@ -268,7 +282,97 @@ metapost.flushnormalpath = flushnormalpath
 -- performance penalty, but so is passing extra arguments (result, flusher, after)
 -- and returning stuff.
 
-local function ignore() end
+local ignore   = function () end
+
+local space    = P(" ")
+local equal    = P("=")
+local key      = C((1-equal)^1) * equal
+local newline  = S("\n\r")^1
+local number   = (((1-space-newline)^1) / tonumber) * (space^0)
+
+local p_number  = number
+local p_string  = C((1-newline)^0)
+local p_boolean = P("false") * Cc(false) + P("true") * Cc(true)
+local p_set     = Ct(number^1)
+local p_path    = Ct(Ct(number * number^-5)^1)
+
+-- local variable =
+--     P("1:")            * key * p_number
+--   + P("2:")            * key * p_string
+--   + P("3:")            * key * p_boolean
+--   + S("4568") * P(":") * key * p_set
+--   + P("7:")            * key * p_path
+--
+-- local pattern_key = Cf ( Carg(1) * (Cg(variable * newline^0)^0), rawset)
+
+local variable =
+    P("1:")            * p_number
+  + P("2:")            * p_string
+  + P("3:")            * p_boolean
+  + S("4568") * P(":") * p_set
+  + P("7:")            * p_path
+
+local pattern_tab = Cf ( Carg(1) * (Cg(variable * newline^0)^0), rawset)
+
+local variable =
+    P("1:")            * p_number
+  + P("2:")            * p_string
+  + P("3:")            * p_boolean
+  + S("4568") * P(":") * number^1
+  + P("7:")            * (number * number^-5)^1
+
+local pattern_lst = (variable * newline^0)^0
+
+metapost.variables = { } -- to be stacked
+metapost.llx       = 0   -- to be stacked
+metapost.lly       = 0   -- to be stacked
+metapost.urx       = 0   -- to be stacked
+metapost.ury       = 0   -- to be stacked
+
+function commands.mprunvar(key,n) -- should be defined in another lib
+    local value = metapost.variables[key]
+    if value ~= nil then
+        local tvalue = type(value)
+        if tvalue == "table" then
+            local ntype = type(n)
+            if ntype == "number" then
+                context(value[n])
+            elseif ntype == "string" then
+                context(concat(value,n))
+            else
+                context(concat(value," "))
+            end
+        elseif tvalue == "number" or tvalue == "boolean" then
+            context(tostring(value))
+        elseif tvalue == "string" then
+            context(value)
+        end
+    end
+end
+
+function metapost.untagvariable(str,variables) -- will be redone
+    if variables == false then
+        return lpegmatch(pattern_lst,str)
+    else
+        return lpegmatch(pattern_tab,str,1,variables or { })
+    end
+end
+
+-- function metapost.processspecial(str)
+--     lpegmatch(pattern_key,object.prescript,1,variables)
+-- end
+
+function metapost.processspecial(str)
+    local code = loadstring(str)
+    if code then
+        if trace_variables then
+            report_metapost("executing special code: %s",str)
+        end
+        code()
+    else
+        report_metapost("invalid special code: %s",str)
+    end
+end
 
 function metapost.flush(result,flusher,askedfig)
     if result then
@@ -283,15 +387,30 @@ function metapost.flush(result,flusher,askedfig)
             local stopfigure = flusher.stopfigure
             local flushfigure = flusher.flushfigure
             local textfigure = flusher.textfigure
-            for f=1, #figures do
+            local processspecial = flusher.processspecial or metapost.processspecial
+            for f=1,#figures do
                 local figure = figures[f]
                 local objects = getobjects(result,figure,f)
-                local fignum = figure:charcode() or 0
+                local fignum  = figure:charcode() or 0
                 if askedfig == "direct" or askedfig == "all" or askedfig == fignum then
                     local t = { }
                     local miterlimit, linecap, linejoin, dashed = -1, -1, -1, false
                     local bbox = figure:boundingbox()
                     local llx, lly, urx, ury = bbox[1], bbox[2], bbox[3], bbox[4]
+                    local variables = { }
+                    metapost.variables = variables
+                    metapost.properties = {
+                        llx    = llx,
+                        lly    = lly,
+                        urx    = urx,
+                        ury    = ury,
+                        slot   = figure:charcode(),
+                        width  = figure:width(),
+                        height = figure:height(),
+                        depth  = figure:depth(),
+                        italic = figure:italcorr(),
+                    }
+                    -- replaced by the above
                     metapost.llx = llx
                     metapost.lly = lly
                     metapost.urx = urx
@@ -308,8 +427,12 @@ function metapost.flush(result,flusher,askedfig)
                             for o=1,#objects do
                                 local object = objects[o]
                                 local objecttype = object.type
-                                if objecttype == "start_bounds" or objecttype == "stop_bounds" or objecttype == "special" then
+                                if objecttype == "start_bounds" or objecttype == "stop_bounds" then
                                     -- skip
+                                elseif objecttype == "special" then
+                                    if processspecial then
+                                        processspecial(object.prescript)
+                                    end
                                 elseif objecttype == "start_clip" then
                                     t[#t+1] = "q"
                                     flushnormalpath(object.path,t,false)
@@ -320,7 +443,7 @@ function metapost.flush(result,flusher,askedfig)
                                 elseif objecttype == "text" then
                                     t[#t+1] = "q"
                                     local ot = object.transform -- 3,4,5,6,1,2
-                                    t[#t+1] = formatters["%f %f %f %f %f %f cm"](ot[3],ot[4],ot[5],ot[6],ot[1],ot[2]) -- TH: formatters["%f %f m %f %f %f %f 0 0 cm"](unpack(ot))
+                                    t[#t+1] = f_cm(ot[3],ot[4],ot[5],ot[6],ot[1],ot[2]) -- TH: formatters["%F %F m %F %F %F %F 0 0 cm"](unpack(ot))
                                     flushfigure(t) -- flush accumulated literals
                                     t = { }
                                     textfigure(object.font,object.dsize,object.text,object.width,object.height,object.depth)
@@ -345,21 +468,21 @@ function metapost.flush(result,flusher,askedfig)
                                     local ml = object.miterlimit
                                     if ml and ml ~= miterlimit then
                                         miterlimit = ml
-                                        t[#t+1] = formatters["%f M"](ml)
+                                        t[#t+1] = f_M(ml)
                                     end
                                     local lj = object.linejoin
                                     if lj and lj ~= linejoin then
                                         linejoin = lj
-                                        t[#t+1] = formatters["%i j"](lj)
+                                        t[#t+1] = f_j(lj)
                                     end
                                     local lc = object.linecap
                                     if lc and lc ~= linecap then
                                         linecap = lc
-                                        t[#t+1] = formatters["%i J"](lc)
+                                        t[#t+1] = f_J(lc)
                                     end
                                     local dl = object.dash
                                     if dl then
-                                        local d = formatters["[%s] %f d"](concat(dl.dashes or {}," "),dl.offset)
+                                        local d = f_d(concat(dl.dashes or {}," "),dl.offset)
                                         if d ~= dashed then
                                             dashed = d
                                             t[#t+1] = dashed
@@ -375,7 +498,7 @@ function metapost.flush(result,flusher,askedfig)
                                     if pen then
                                        if pen.type == 'elliptical' then
                                             transformed, penwidth = pen_characteristics(original) -- boolean, value
-                                            t[#t+1] = formatters["%f w"](penwidth) -- todo: only if changed
+                                            t[#t+1] = f_w(penwidth) -- todo: only if changed
                                             if objecttype == 'fill' then
                                                 objecttype = 'both'
                                             end
@@ -395,7 +518,7 @@ function metapost.flush(result,flusher,askedfig)
                                         if objecttype == "fill" then
                                             t[#t+1] = "h f"
                                         elseif objecttype == "outline" then
-                                            t[#t+1] = (open and "S") or "h S"
+                                            t[#t+1] = open and "S" or "h S"
                                         elseif objecttype == "both" then
                                             t[#t+1] = "h B"
                                         end
@@ -416,7 +539,7 @@ function metapost.flush(result,flusher,askedfig)
                                         if objecttype == "fill" then
                                             t[#t+1] = "h f"
                                         elseif objecttype == "outline" then
-                                            t[#t+1] = (open and "S") or "h S"
+                                            t[#t+1] = open and "S" or "h S"
                                         elseif objecttype == "both" then
                                             t[#t+1] = "h B"
                                         end

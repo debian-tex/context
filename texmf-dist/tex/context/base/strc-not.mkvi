@@ -231,7 +231,7 @@
    \ifnotesenabled
      \strc_counters_increment_sub\currentconstructionnumber\currentconstructionlevel
    \fi
-   \doifnextoptionalelse\strc_notations_command_yes\strc_notations_command_nop}
+   \doifnextoptionalcselse\strc_notations_command_yes\strc_notations_command_nop}
 
 \unexpanded\def\strc_notations_command_nop#title%
   {\strc_constructions_register[\c!label={\descriptionparameter\c!text},\c!reference=,\c!title={#title},\c!bookmark=,\c!list=][]%
@@ -265,7 +265,7 @@
 %    \normalexpanded % not that efficient but also not that frequently used (\normaldef for parser)
 %      {\normaldef\noexpand\strc_pickup_yes[##1]##2\csname\e!stop#stoptag\endcsname{\strc_notations_command_yes[##1]{##2}}%
 %       \normaldef\noexpand\strc_pickup_nop     ##1\csname\e!stop#stoptag\endcsname{\strc_notations_command_nop     {##1}}}%
-%    \doifnextoptionalelse\strc_pickup_yes\strc_pickup_nop}
+%    \doifnextoptionalcselse\strc_pickup_yes\strc_pickup_nop}
 
 \unexpanded\def\strc_notations_start#tag#stoptag%
   {\begingroup
@@ -278,7 +278,7 @@
    \normalexpanded % not that efficient but also not that frequently used (\normaldef for parser)
      {\def\noexpand\strc_pickup_yes[#one]#two\csname\e!stop#stoptag\endcsname{\strc_notations_command_yes[#one]{#two}}%
       \def\noexpand\strc_pickup_nop      #one\csname\e!stop#stoptag\endcsname{\strc_notations_command_nop      {#one}}}%
-   \doifnextoptionalelse\strc_pickup_yes\strc_pickup_nop}
+   \doifnextoptionalcselse\strc_pickup_yes\strc_pickup_nop}
 
 \unexpanded\def\strc_notations_start_yes[#reference]#title%
   {\strc_constructions_register[\c!label={\descriptionparameter\c!text},\c!reference={#reference},\c!title={#title},\c!bookmark=,\c!list=][]%
@@ -460,7 +460,11 @@
        \else\ifconditional\inlocalnotes % todo: per note class
          \global\settrue\postponednote
        \else
+\ifconditional\c_strc_notes_delayed
+    % probably end notes
+\else
          \handlenoteinsert\currentnote\currentnotenumber % either an insert or just delayed
+\fi
        \fi\fi
        \endgroup
      \fi
@@ -622,8 +626,15 @@
 \unexpanded\def\strc_notes_inject_symbol_nop
   {\strc_notes_inject_symbol_indeed\conditionalfalse}
 
-\unexpanded\def\strc_notes_inject_symbol_snc
-  {\currentconstructionsynchronize} % this flushes the data to the list
+% % this flushes the data to the list
+%
+% \unexpanded\def\strc_notes_inject_symbol_snc
+%   {\currentconstructionsynchronize}
+%
+% but instead we need to do this with the content
+
+\unexpanded\def\strc_notes_inject_symbol_snc % so this will go away probably
+  {}
 
 \unexpanded\def\strc_notes_inject_symbol_indeed#synchronize%
   {\removeunwantedspaces
@@ -749,7 +760,9 @@
 
 %appendtoks \notesenabledfalse \to \everymarking
 \appendtoks \notesenabledfalse \to \everybeforepagebody
-\appendtoks \notesenabledfalse \to \everystructurelist % quick hack
+\appendtoks \notesenabledfalse \to \everystructurelist    % quick hack
+\appendtoks \notesenabledfalse \to \everysimplifycommands % quick hack
+\appendtoks \notesenabledfalse \to \everypreroll          % quick hack
 
 %D Often we need to process the whole set of notes and to make that
 %D fast, we use a token register:
@@ -1170,18 +1183,20 @@
      \usesetupsparameter\noteparameter % experimental
      \doifelse{\noteparameter\c!paragraph}\v!yes
         {\nointerlineskip
+         \startvboxtohboxseparator
+           \noteparameter\c!inbetween
+         \stopvboxtohboxseparator
          \startvboxtohbox
-         \handlenoteitself{#tag}{#id}%
-         % add some slack
+           \handlenoteitself{#tag}{#id}%
          \stopvboxtohbox}
         {\handlenoteitself{#tag}{#id}}%
    \egroup
    \the\everyafternoteinsert
    \endgroup}
 
-\unexpanded\def\betweennoteitself#tag%
+\unexpanded\def\betweennoteitself#tag% used ?
   {\edef\currentnote{#tag}%
-   \doif{\noteparameter\c!paragraph}\v!yes\strc_notes_between_paragraphs}
+   \doif{\noteparameter\c!paragraph}\v!yes{\noteparameter\c!inbetween}}
 
 \unexpanded\def\handlenoteitself#tag#id%
   {\edef\currentnotenumber{#id}%
@@ -1192,7 +1207,7 @@
    % as we can have collected notes (e.g. in tables) we need to recover
    % \currentdescriptionattribute and \currentdescriptionsynchronize
    %
-  %\reinstateconstructionnumberentry\currentconstructionlistentry % we could store the number in the entry
+   \reinstateconstructionnumberentry\currentconstructionlistentry % we could store the number in the entry (e.g. needed when local notes in table)
    %
    \dontcomplain
 %  \begingroup
@@ -1233,6 +1248,7 @@
 \appendtoks
   \doif{\noteparameter\c!scope}\v!page{\floatingpenalty\maxdimen}% experiment
   \penalty\currentnotepenalty
+ %\interlinepenalty\maxdimen % todo
   \forgetall
   \strc_notes_set_bodyfont
   \redoconvertfont % to undo \undo calls in in headings etc
@@ -1289,6 +1305,7 @@
      \strc_notes_set_bodyfont
      \setbox\scratchbox\hbox
        {\strc_notes_flush_inserts}%
+     \page_postprocessors_linenumbers_deepbox\scratchbox
      \setbox\scratchbox\hbox
        {\setupcurrentnote
           [\c!location=,
@@ -1304,6 +1321,9 @@
            \fi}}%
      \setbox\scratchbox\hbox{\lower\strutdepth\box\scratchbox}%
      \dp\scratchbox\strutdepth % so we know that it has the note bodyfont depth
+     \ifvmode
+       \nointerlineskip % else sometimes empty line
+     \fi
      \box\scratchbox
      \egroup
      \endgraf
@@ -1332,24 +1352,11 @@
 
 % idea: tag with attr and then just flush them again
 
-\def\strc_notes_between_paragraphs % should not be too much
-  {\noteparameter\c!inbetween}
-
-\def\strc_notes_between_paragraphs_first
-  {\glet\strc_notes_between_paragraphs_indeed\strc_notes_between_paragraphs}% shape works reverse
-
-\def\strc_notes_flush_global % will be done in lua instead
+\def\strc_notes_flush_global
   {\doifelse{\noteparameter\c!paragraph}\v!yes
-     {\vbox
-        {\beginofshapebox
-           \iftrialtypesetting\unvcopied\else\unvboxed\fi\currentnoteinsertionnumber
-         \endofshapebox
-         \let\strc_notes_between_paragraphs_indeed\strc_notes_between_paragraphs_first % shape works reverse
-         \doreshapebox
-           {\hbox{\unhbox\shapebox\strc_notes_between_paragraphs_indeed}}
-           \donothing \donothing \donothing % get rid of penalties etc
-         \innerflushshapebox
-         \convertvboxtohbox}}
+     {\vbox\starthboxestohbox
+        \iftrialtypesetting\unvcopy\else\unvbox\fi\currentnoteinsertionnumber
+      \stophboxestohbox}
      {\iftrialtypesetting\unvcopied\else\unvboxed\fi\currentnoteinsertionnumber}}
 
 %D Supporting end notes is surprisingly easy. Even better, we
@@ -1779,19 +1786,19 @@
   {\dodoubleempty\strc_notes_symbol}
 
 \def\strc_notes_symbol[#tag][#reference]%
-  {\dontleavehmode
-   \begingroup
-   \edef\currentnote{#tag}%
-   \usenotestyleandcolor\c!textstyle\c!textcolor
-   \ifnotesenabled
+  {\ifnotesenabled
+     \dontleavehmode
+     \begingroup
+     \edef\currentnote{#tag}%
+     \usenotestyleandcolor\c!textstyle\c!textcolor
      \ifsecondargument
        \unskip
        \noteparameter\c!textcommand{\in[#reference]}% command here?
      \else
        \noteparameter\c!textcommand\lastnotesymbol % check if command double
      \fi
-   \fi
-   \endgroup}
+     \endgroup
+   \fi}
 
 \unexpanded\def\note
   {\dodoubleempty\strc_notes_note}

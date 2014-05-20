@@ -246,9 +246,10 @@
 % Watch out, for the moment we disable the check for already being defined
 % later we will revert this but first all chardefs must be replaced.
 
-\normalprotected\def\newconstant   #1{\ifdefined#1\let#1\undefined\fi\newcount#1}
-\normalprotected\def\setnewconstant#1{\ifdefined#1\let#1\undefined\fi\newcount#1#1} % just a number
-\normalprotected\def\setconstant     {}                                             % dummy, no checking, so it warns
+\normalprotected\def\newconstant       #1{\ifdefined#1\let#1\undefined\fi\newcount#1}
+\normalprotected\def\setnewconstant    #1{\ifdefined#1\let#1\undefined\fi\newcount#1#1} % just a number
+\normalprotected\def\setconstant         {}                                             % dummy, no checking, so it warns
+\normalprotected\def\setconstantvalue#1#2{\csname#1\endcsname\numexpr#2\relax}
 
 % maybe setconstant with check
 
@@ -300,7 +301,7 @@
 %D 128-1023 are private and should not be touched.
 
 \let\attributeunsetvalue\c_syst_min_counter_value % used to be \minusone
-\normalprotected\def\newattribute{\syst_basics_allocate\c_syst_min_allocated_attribute\attribute\attributedef\c_syst_max_allocated_register}
+\normalprotected\def\newattribute{\syst_basics_allocate\c_syst_last_allocated_attribute\attribute\attributedef\c_syst_max_allocated_register}
 
 %D Not used by \CONTEXT\ but for instance \PICTEX\ needs it. It's a trick to force
 %D strings instead of tokens that take more memory. It's a trick to trick to force
@@ -743,6 +744,9 @@
 
 \normalprotected\def\settrue #1{\let#1\conditionaltrue }
 \normalprotected\def\setfalse#1{\let#1\conditionalfalse}
+
+\normalprotected\def\settruevalue #1{\expandafter\let\csname#1\endcsname\conditionaltrue }
+\normalprotected\def\setfalsevalue#1{\expandafter\let\csname#1\endcsname\conditionalfalse}
 
 \let\newconditional\setfalse
 \let\ifconditional \ifcase

@@ -3,13 +3,16 @@
 %D        version=2008.28.10, % 1995.10.10,
 %D          title=\CONTEXT,
 %D       subtitle=\CONTEXT\ Format Generation,
-%D         author=Hans Hagen,
+%D         author=Hans Hagen, % ɦɑns ɦɑˈχən
 %D           date=\currentdate,
 %D      copyright={PRAGMA ADE \& \CONTEXT\ Development Team}]
 %C
 %C This module is part of the \CONTEXT\ macro||package and is
 %C therefore copyrighted by \PRAGMA. See mreadme.pdf for
 %C details.
+
+% Welcome to context, pronounced as kontekst (rather dutch) and not as
+% conτεχt.
 
 \catcode`\{=1 \catcode`\}=2 \catcode`\#=6
 
@@ -25,8 +28,8 @@
 %D up and the dependencies are more consistent.
 
 \edef\contextformat {\jobname}
-\edef\contextversion{2013.05.28 00:36}
-\edef\contextkind   {current}
+\edef\contextversion{2014.05.18 15:57}
+\edef\contextkind   {beta}
 
 %D For those who want to use this:
 
@@ -91,6 +94,8 @@
 
 \loadmarkfile{cldf-ini}
 
+% \tracecatcodetables
+
 % From here on we have \unexpanded being \normalprotected, as we already had
 % \unexpanded long before etex came around.
 
@@ -138,7 +143,6 @@
 
 \loadmarkfile{node-fin}
 \loadmarkfile{node-mig}
-\loadmarkfile{typo-bld} % par builders
 %loadmarkfile{node-pag}
 
 \loadmarkfile{back-ini}
@@ -162,10 +166,11 @@
 
 \loadmarkfile{supp-ran}
 \loadmarkfile{supp-mat}
-\loadmarkfile{spac-cha}
+%loadmarkfile{spac-cha} % obsolete
 %loadmarkfile{supp-num} % obsolete
 
 \loadmarkfile{typo-ini}
+\loadmarkfile{typo-bld} % par builders
 
 \loadmkvifile{file-syn}
 \loadmkvifile{file-mod}
@@ -229,7 +234,7 @@
 \loadmarkfile{strc-xml}
 \loadmarkfile{strc-def} % might happen later
 \loadmkvifile{strc-ref}
-\loadmarkfile{strc-reg}
+%loadmarkfile{strc-reg}
 \loadmkvifile{strc-lev} % experiment
 
 \loadmarkfile{spac-ali}
@@ -291,7 +296,9 @@
 \loadmarkfile{pack-pos}
 \loadmkvifile{page-mak}
 
-\loadmarkfile{page-lin}
+\loadmarkfile{strc-reg} % uses mixed columns
+
+\loadmkvifile{page-lin}
 \loadmarkfile{page-par}
 \loadmarkfile{typo-pag}
 \loadmarkfile{typo-mar}
@@ -324,19 +331,6 @@
 
 \loadmarkfile{strc-bkm} % bookmarks
 
-\loadmarkfile{tabl-com}
-\loadmarkfile{tabl-pln}
-
-\loadmarkfile{tabl-tab} % thrd-tab stripped and merged
-
-\loadmarkfile{tabl-tbl}
-\loadmarkfile{tabl-ntb}
-\loadmarkfile{tabl-nte}
-\loadmarkfile{tabl-ltb}
-\loadmarkfile{tabl-tsp}
-\loadmkvifile{tabl-xtb}
-\loadmarkfile{tabl-mis}
-
 \loadmarkfile{java-ini}
 
 \loadmkvifile{scrn-fld}
@@ -362,6 +356,23 @@
 \loadmkvifile{font-col}
 \loadmkvifile{font-gds}
 \loadmkvifile{font-aux}
+\loadmkvifile{font-sel}
+
+\loadmarkfile{typo-tal}
+\loadmarkfile{typo-par} % par builders (uses fonts)
+
+\loadmarkfile{tabl-com}
+\loadmarkfile{tabl-pln}
+
+\loadmarkfile{tabl-tab} % thrd-tab stripped and merged
+
+\loadmarkfile{tabl-tbl}
+\loadmarkfile{tabl-ntb}
+\loadmarkfile{tabl-nte}
+\loadmarkfile{tabl-ltb}
+\loadmarkfile{tabl-tsp}
+\loadmkvifile{tabl-xtb}
+\loadmarkfile{tabl-mis}
 
 \loadmarkfile{typo-lan}
 
@@ -384,7 +395,8 @@
 \loadmarkfile{typo-dig}
 \loadmarkfile{typo-rep}
 \loadmkvifile{typo-txt}
-\loadmarkfile{typo-par}
+\loadmarkfile{typo-drp}
+\loadmarkfile{typo-fln}
 
 \loadmkvifile{type-ini}
 \loadmarkfile{type-set}
@@ -392,7 +404,7 @@
 \loadmarkfile{scrp-ini}
 
 \loadmarkfile{lang-wrd} % can be optional (discussion with mm sideeffect)
-%loadmarkfile{lang-rep} % can be optional (bt 2013 side effect)
+\loadmarkfile{lang-rep} % can be optional (bt 2013 side effect)
 
 \loadmarkfile{prop-ini} % only for downward compatibility
 
@@ -403,6 +415,7 @@
 \loadmarkfile{meta-fun}
 \loadmarkfile{meta-pag}
 \loadmarkfile{meta-grd}
+\loadmarkfile{meta-fnt}
 
 \loadmarkfile{page-mrk} % depends on mp
 
@@ -420,7 +433,7 @@
 \loadmarkfile{math-ini}
 \loadmarkfile{math-pln}
 \loadmarkfile{math-for}
-\loadmarkfile{math-def}
+\loadmarkfile{math-def} % also saves some meanings
 \loadmarkfile{math-ali}
 %loadmarkfile{math-arr}
 \loadmkvifile{math-stc}
@@ -430,6 +443,8 @@
 \loadmarkfile{math-int}
 \loadmarkfile{math-del}
 \loadmarkfile{math-fen}
+\loadmkvifile{math-acc}
+\loadmkvifile{math-rad}
 \loadmarkfile{math-inl}
 \loadmarkfile{math-dis}
 %loadmarkfile{math-lan}
@@ -464,8 +479,17 @@
 
 \loadmarkfile{lang-spa} % will become obsolete
 
-\loadmarkfile{bibl-bib}
-\loadmarkfile{bibl-tra}
+% old bibtex support: (will be m-oldbibtex.mkiv)
+
+% \loadmarkfile{bibl-bib}
+% \loadmarkfile{bibl-tra}
+
+% new bibtex support:
+
+\loadmarkfile{publ-ini}
+\loadmarkfile{publ-tra}
+\loadmarkfile{publ-xml}
+\loadmarkfile{publ-old}
 
 %loadmarkfile{x-xtag}  % no longer preloaded
 

@@ -6,7 +6,8 @@ if not modules then modules = { } end modules ['buff-imp-lua'] = {
     license   = "see context related readme files"
 }
 
--- borrowed from scite
+-- borrowed from ctx scite lexers
+-- add goto/label scanning
 --
 -- depricated:
 --
@@ -26,9 +27,9 @@ local core = tohash {
 
 local base = tohash {
     "assert", "collectgarbage", "dofile", "error", "loadfile",
-    "loadstring", "print", "rawget", "rawset", "require", "tonumber",
+    "loadstring", "load", "print", "rawget", "rawset", "require", "tonumber",
     "tostring", "type", "_G", "getmetatable", "ipairs", "next", "pairs",
-    "pcall", "rawequal", "setmetatable", "xpcall", "module", "select",
+    "pcall", "rawequal", "setmetatable", "xpcall", "module", "select", "goto",
 }
 
 local libraries = {
@@ -61,7 +62,7 @@ local libraries = {
     },
     lpeg = tohash{
         "print", "match", "locale", "type", "version", "setmaxstack",
-        "P", "R", "S", "C", "V", "Cs", "Ct", "Cs", "Cp", "Carg",
+        "P", "R", "S", "C", "V", "Cs", "Ct", "Cs", "Cc", "Cp", "Carg",
         "Cg", "Cb", "Cmt", "Cf", "B",
     },
     -- bit
@@ -138,7 +139,7 @@ local comment     = P("--")
 local name        = (patterns.letter + patterns.underscore)
                   * (patterns.letter + patterns.underscore + patterns.digit)^0
 local boundary    = S('()[]{}')
-local special     = S("-+/*^%=#") + P("..")
+local special     = S("-+/*^%=#~|<>") + P("..")
 
 -- The following longstring parser is taken from Roberto's documentation
 -- that can be found at http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html.

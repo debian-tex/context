@@ -26,7 +26,18 @@ words.threshold       = 4
 local numbers         = languages.numbers
 local registered      = languages.registered
 
-local traverse_nodes  = node.traverse
+local nuts            = nodes.nuts
+local tonut           = nuts.tonut
+
+local getfield        = nuts.getfield
+local getnext         = nuts.getnext
+local getid           = nuts.getid
+local getsubtype      = nuts.getsubtype
+local getchar         = nuts.getchar
+local setattr         = nuts.setattr
+
+local traverse_nodes  = nuts.traverse
+
 local wordsdata       = words.data
 local chardata        = characters.data
 local tasks           = nodes.tasks
@@ -96,7 +107,7 @@ end
 -- there is an n=1 problem somewhere in nested boxes
 
 local function mark_words(head,whenfound) -- can be optimized and shared
-    local current, language, done = head, nil, nil, 0, false
+    local current, language, done = tonut(head), nil, nil, 0, false
     local str, s, nds, n = { }, 0, { }, 0 -- n could also be a table, saves calls
     local function action()
         if s > 0 then
@@ -112,9 +123,9 @@ local function mark_words(head,whenfound) -- can be optimized and shared
         n, s = 0, 0
     end
     while current do
-        local id = current.id
+        local id = getid(current)
         if id == glyph_code then
-            local a = current.lang
+            local a = getfield(current,"lang")
             if a then
                 if a ~= language then
                     if s > 0 then
@@ -126,16 +137,16 @@ local function mark_words(head,whenfound) -- can be optimized and shared
                 action()
                 language = a
             end
-            local components = current.components
+            local components = getfield(current,"components")
             if components then
                 n = n + 1
                 nds[n] = current
                 for g in traverse_nodes(components) do
                     s = s + 1
-                    str[s] = utfchar(g.char)
+                    str[s] = utfchar(getchar(g))
                 end
             else
-                local code = current.char
+                local code = getchar(current)
                 local data = chardata[code]
                 if is_letter[data.category] then
                     n = n + 1
@@ -151,12 +162,12 @@ local function mark_words(head,whenfound) -- can be optimized and shared
                 n = n + 1
                 nds[n] = current
             end
-        elseif id == kern_code and current.subtype == kerning_code and s > 0 then
+        elseif id == kern_code and getsubtype(current) == kerning_code and s > 0 then
             -- ok
         elseif s > 0 then
             action()
         end
-        current = current.next
+        current = getnext(current)
     end
     if s > 0 then
         action()
@@ -176,6 +187,8 @@ local enabled    = false
 function words.check(head)
     if enabled then
         return methods[wordmethod](head)
+    elseif not head then
+        return head, false
     else
         return head, false
     end
@@ -207,7 +220,7 @@ table.setmetatableindex(cache, function(t,k) -- k == language, numbers[k] == tag
     else
         c = colist["word:" .. (numbers[k] or "unset")] or colist["word:unknown"]
     end
-    local v = c and function(n) n[a_color] = c end or false
+    local v = c and function(n) setattr(n,a_color,c) end or false
     t[k] = v
     return v
 end)
@@ -226,7 +239,7 @@ end
 
 methods[1] = function(head)
     for n in traverse_nodes(head) do
-        n[a_color] = unsetvalue -- hm, not that selective (reset color)
+        setattr(n,a_color,unsetvalue) -- hm, not that selective (reset color)
     end
     return mark_words(head,sweep)
 end
@@ -327,24 +340,24 @@ end
 
 methods[3] = function(head)
     for n in traverse_nodes(head) do
-        n[a_color] = unsetvalue
+        setattr(n,a_color,unsetvalue)
     end
     return mark_words(head,sweep)
 end
 
 -- for the moment we hook it into the attribute handler
 
---~ languagehacks = { }
+-- languagehacks = { }
 
---~ function languagehacks.process(namespace,attribute,head)
---~     return languages.check(head)
---~ end
+-- function languagehacks.process(namespace,attribute,head)
+--     return languages.check(head)
+-- end
 
---~ chars.plugins[chars.plugins+1] = {
---~     name = "language",
---~     namespace = languagehacks,
---~     processor = languagehacks.process
---~ }
+-- chars.plugins[chars.plugins+1] = {
+--     name = "language",
+--     namespace = languagehacks,
+--     processor = languagehacks.process
+-- }
 
 -- interface
 

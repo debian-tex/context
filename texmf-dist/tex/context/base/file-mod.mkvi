@@ -104,8 +104,10 @@
 \let\currentmoduleparameters\empty
 \let\currentmodule          \s!unknown
 
+\newtoks\everysetupmodule
+
 \unexpanded\def\startmodule
-  {\doifnextoptionalelse\syst_modules_start_yes\syst_modules_start_nop}
+  {\doifnextoptionalcselse\syst_modules_start_yes\syst_modules_start_nop}
 
 \def\syst_modules_start_yes[#name]%
   {\pushmacro\currentmodule
@@ -131,7 +133,8 @@
      \getparameters[\??module\currentmodule:][#name]% internal (defaults)
      \normalexpanded{\getparameters[\??module\currentmodule:][\the\scratchtoks]}% loadtime (user)
    \fi
-   \let\currentmoduleparameters\empty}
+   \let\currentmoduleparameters\empty
+   \the\everysetupmodule}
 
 % to be tested:
 %
@@ -145,7 +148,7 @@
 %    \fi
 %    \let\currentmoduleparameters\empty}
 
-\def\moduleparameter#name#parameter%
+\def\moduleparameter#name#parameter% should have been \namedmoduleparameter
   {\csname\??module
      \ifcsname\??module#name:#parameter\endcsname#name:#parameter\fi
    \endcsname}

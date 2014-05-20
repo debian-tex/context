@@ -31,7 +31,7 @@ return {
         "def", "vardef", "enddef", "expr", "suffix", "text", "primary", "secondary",
         "tertiary", "primarydef", "secondarydef", "tertiarydef",
         "randomseed", "also", "contour", "doublepath",
-        "withcolor", "withpen", "dashed", "if", "else", "elseif", "fi", "for", "endfor", "forever", "exitif", "within",
+        "withcolor", "withcmykcolor", "withpen", "dashed", "if", "else", "elseif", "fi", "for", "endfor", "forever", "exitif", "within",
         "forsuffixes", "downto", "upto", "step", "until",
         "charlist", "extensible", "fontdimen", "headerbyte", "kern", "ligtable",
         "boundarychar", "chardp", "charext", "charht", "charic", "charwd", "designsize",
@@ -51,15 +51,21 @@ return {
         "top", "bot", "lft", "rt", "ulft", "urt", "llft", "lrt",
         --
         "redpart", "greenpart", "bluepart", "cyanpart", "magentapart", "yellowpart", "blackpart", "greypart",
+        "prescriptpart", "postscriptpart",
         "rgbcolor", "cmykcolor", "greycolor", "graycolor",
         "colormodel",  "graypart",
         "dashpart", "penpart",
 --         "colorpart",
-        "stroked", "filled", "textual", "clipped", "bounded",
+        "stroked", "filled", "textual", "clipped", "bounded", "pathpart",
         "expandafter",
+        "minute", "hour", "outputformat", "outputtemplate", "filenametemplate", "fontmapfile", "fontmapline",
+        "fontpart", "fontsize", "glyph", "restoreclipcolor", "troffmode",
+        --
+        "runscript",
     },
     commands = {
         "beginfig", "endfig",
+        "beginglyph", "endglyph", "charscale",
         "rotatedaround", "reflectedabout",
         "arrowhead",
         "currentpen", "currentpicture", "cuttings",
@@ -103,6 +109,8 @@ return {
         "graypart", "graycolor",
         --
         "mm", "pt", "dd", "bp", "cm", "pc", "cc", "in",
+        --
+        "triplet", "quadruplet",
     },
     internals = { -- we need to remove duplicates above
         --

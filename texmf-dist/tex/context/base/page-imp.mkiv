@@ -41,7 +41,7 @@
 \prependtoks
     \page_shipouts_flush_text_data
 \to \everylastshipout
-
+
 % Problem: we need to apply the finalizers to a to be shipped out page (as
 % we can have positioning involved). However, we can also add stuff in the
 % imposition, like cropmarks. Fortunately we do that with metapost so
@@ -293,7 +293,7 @@
      \fi
    \fi}
 
-\def\installpagearrangement #1 % will lchange, no space
+\def\installpagearrangement #1 % will change, no space
   {\setgvalue{\??layoutarranger#1}}
 
 \def\checkinstalledpagearrangement#1% can be empty: aaa,,bbb

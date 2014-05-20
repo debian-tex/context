@@ -20,6 +20,7 @@ if not modules then modules = { } end modules ['math-noa'] = {
 
 local utfchar, utfbyte = utf.char, utf.byte
 local formatters = string.formatters
+local div = math.div
 
 local fonts, nodes, node, mathematics = fonts, nodes, node, mathematics
 
@@ -53,16 +54,34 @@ local report_families     = logs.reporter("mathematics","families")
 local a_mathrendering     = attributes.private("mathrendering")
 local a_exportstatus      = attributes.private("exportstatus")
 
-local mlist_to_hlist      = node.mlist_to_hlist
-local font_of_family      = node.family_font
-local insert_node_after   = node.insert_after
-local insert_node_before  = node.insert_before
-local free_node           = node.free
-local new_node            = node.new -- todo: pool: math_noad math_sub
+local nuts                = nodes.nuts
+local nodepool            = nuts.pool
+local tonut               = nuts.tonut
+local nutstring           = nuts.tostring
 
-local new_kern            = nodes.pool.kern
-local new_rule            = nodes.pool.rule
-local concat_nodes        = nodes.concat
+local getfield            = nuts.getfield
+local setfield            = nuts.setfield
+local getnext             = nuts.getnext
+local getprev             = nuts.getprev
+local getid               = nuts.getid
+local getfont             = nuts.getfont
+local getsubtype          = nuts.getsubtype
+local getchar             = nuts.getchar
+local getattr             = nuts.getattr
+local setattr             = nuts.setattr
+
+local insert_node_after   = nuts.insert_after
+local insert_node_before  = nuts.insert_before
+local free_node           = nuts.free
+local new_node            = nuts.new -- todo: pool: math_noad math_sub
+local copy_node           = nuts.copy
+
+local mlist_to_hlist      = nodes.mlist_to_hlist
+
+local font_of_family      = node.family_font
+
+local new_kern            = nodepool.kern
+local new_rule            = nodepool.rule
 
 local topoints            = number.points
 
@@ -75,7 +94,8 @@ local fontemwidths        = fonthashes.emwidths
 local fontexheights       = fonthashes.exheights
 
 local variables           = interfaces.variables
-local texattribute        = tex.attribute
+local texsetattribute     = tex.setattribute
+local texgetattribute     = tex.getattribute
 local unsetvalue          = attributes.unsetvalue
 
 local chardata            = characters.data
@@ -118,27 +138,29 @@ local hlist_code          = nodecodes.hlist
 local glyph_code          = nodecodes.glyph
 
 local left_fence_code     = 1
+local right_fence_code    = 3
 
 local function process(start,what,n,parent)
     if n then n = n + 1 else n = 0 end
+    local prev = nil
     while start do
-        local id = start.id
+        local id = getid(start)
         if trace_processing then
             if id == math_noad then
-                report_processing("%w%S, class %a",n*2,start,noadcodes[start.subtype])
+                report_processing("%w%S, class %a",n*2,nutstring(start),noadcodes[getsubtype(start)])
             elseif id == math_char then
-                local char = start.char
-                local fam = start.fam
+                local char = getchar(start)
+                local fam  = getfield(start,"fam")
                 local font = font_of_family(fam)
-                report_processing("%w%S, family %a, font %a, char %a, shape %c",n*2,start,fam,font,char,char)
+                report_processing("%w%S, family %a, font %a, char %a, shape %c",n*2,nutstring(start),fam,font,char,char)
             else
-                report_processing("%w%S",n*2,start)
+                report_processing("%w%S",n*2,nutstring(start))
             end
         end
         local proc = what[id]
         if proc then
          -- report_processing("start processing")
-            local done, newstart = proc(start,what,n,parent) -- prev is bugged:  or start.prev
+            local done, newstart = proc(start,what,n,parent) -- prev is bugged:  or getprev(start)
             if newstart then
                 start = newstart
              -- report_processing("stop processing (new start)")
@@ -148,52 +170,57 @@ local function process(start,what,n,parent)
         elseif id == math_char or id == math_textchar or id == math_delim then
             break
         elseif id == math_noad then
-            local noad = start.nucleus      if noad then process(noad,what,n,start) end -- list
-                  noad = start.sup          if noad then process(noad,what,n,start) end -- list
-                  noad = start.sub          if noad then process(noad,what,n,start) end -- list
+if prev then
+    -- we have no proper prev in math nodes yet
+    setfield(start,"prev",prev)
+end
+
+            local noad = getfield(start,"nucleus")      if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"sup")          if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"sub")          if noad then process(noad,what,n,start) end -- list
         elseif id == math_box or id == math_sub then
-         -- local noad = start.list         if noad then process(noad,what,n,start) end -- list
-            local noad = start.head         if noad then process(noad,what,n,start) end -- list
+            local noad = getfield(start,"list")         if noad then process(noad,what,n,start) end -- list (not getlist !)
         elseif id == math_fraction then
-            local noad = start.num          if noad then process(noad,what,n,start) end -- list
-                  noad = start.denom        if noad then process(noad,what,n,start) end -- list
-                  noad = start.left         if noad then process(noad,what,n,start) end -- delimiter
-                  noad = start.right        if noad then process(noad,what,n,start) end -- delimiter
+            local noad = getfield(start,"num")          if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"denom")        if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"left")         if noad then process(noad,what,n,start) end -- delimiter
+                  noad = getfield(start,"right")        if noad then process(noad,what,n,start) end -- delimiter
         elseif id == math_choice then
-            local noad = start.display      if noad then process(noad,what,n,start) end -- list
-                  noad = start.text         if noad then process(noad,what,n,start) end -- list
-                  noad = start.script       if noad then process(noad,what,n,start) end -- list
-                  noad = start.scriptscript if noad then process(noad,what,n,start) end -- list
+            local noad = getfield(start,"display")      if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"text")         if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"script")       if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"scriptscript") if noad then process(noad,what,n,start) end -- list
         elseif id == math_fence then
-            local noad = start.delim        if noad then process(noad,what,n,start) end -- delimiter
+            local noad = getfield(start,"delim")        if noad then process(noad,what,n,start) end -- delimiter
         elseif id == math_radical then
-            local noad = start.nucleus      if noad then process(noad,what,n,start) end -- list
-                  noad = start.sup          if noad then process(noad,what,n,start) end -- list
-                  noad = start.sub          if noad then process(noad,what,n,start) end -- list
-                  noad = start.left         if noad then process(noad,what,n,start) end -- delimiter
-                  noad = start.degree       if noad then process(noad,what,n,start) end -- list
+            local noad = getfield(start,"nucleus")      if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"sup")          if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"sub")          if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"left")         if noad then process(noad,what,n,start) end -- delimiter
+                  noad = getfield(start,"degree")       if noad then process(noad,what,n,start) end -- list
         elseif id == math_accent then
-            local noad = start.nucleus      if noad then process(noad,what,n,start) end -- list
-                  noad = start.sup          if noad then process(noad,what,n,start) end -- list
-                  noad = start.sub          if noad then process(noad,what,n,start) end -- list
-                  noad = start.accent       if noad then process(noad,what,n,start) end -- list
-                  noad = start.bot_accent   if noad then process(noad,what,n,start) end -- list
+            local noad = getfield(start,"nucleus")      if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"sup")          if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"sub")          if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"accent")       if noad then process(noad,what,n,start) end -- list
+                  noad = getfield(start,"bot_accent")   if noad then process(noad,what,n,start) end -- list
         elseif id == math_style then
             -- has a next
         else
             -- glue, penalty, etc
         end
-        start = start.next
+prev = start
+        start = getnext(start)
     end
 end
 
 local function processnoads(head,actions,banner)
     if trace_processing then
         report_processing("start %a",banner)
-        process(head,actions)
+        process(tonut(head),actions)
         report_processing("stop %a",banner)
     else
-        process(head,actions)
+        process(tonut(head),actions)
     end
 end
 
@@ -225,53 +252,77 @@ local familymap = { [0] =
 }
 
 families[math_char] = function(pointer)
-    if pointer.fam == 0 then
-        local a = pointer[a_mathfamily]
+    if getfield(pointer,"fam") == 0 then
+        local a = getattr(pointer,a_mathfamily)
         if a and a > 0 then
-            pointer[a_mathfamily] = 0
+            setattr(pointer,a_mathfamily,0)
             if a > 5 then
-                local char = pointer.char
+                local char = getchar(pointer)
                 local bold = boldmap[char]
                 local newa = a - 3
-                if bold then
-                    pointer[a_exportstatus] = char
-                    pointer.char = bold
-                    if trace_families then
-                        report_families("replacing %C by bold %C, family %s with remap %s becomes %s with remap %s",char,bold,a,familymap[a],newa,familymap[newa])
-                    end
-                else
+                if not bold then
                     if trace_families then
                         report_families("no bold replacement for %C, family %s with remap %s becomes %s with remap %s",char,a,familymap[a],newa,familymap[newa])
                     end
+                    setfield(pointer,"fam",newa)
+                elseif not fontcharacters[font_of_family(newa)][bold] then
+                    if trace_families then
+                        report_families("no bold character for %C, family %s with remap %s becomes %s with remap %s",char,a,familymap[a],newa,familymap[newa])
+                    end
+                    if newa > 3 then
+                        setfield(pointer,"fam",newa-3)
+                    end
+                else
+                    setattr(pointer,a_exportstatus,char)
+                    setfield(pointer,"char",bold)
+                    if trace_families then
+                        report_families("replacing %C by bold %C, family %s with remap %s becomes %s with remap %s",char,bold,a,familymap[a],newa,familymap[newa])
+                    end
+                    setfield(pointer,"fam",newa)
                 end
-                pointer.fam = newa
             else
-                if trace_families then
-                    local char = pointer.char
-                    report_families("family of %C becomes %s with remap %s",char,a,familymap[a])
+                local char = getchar(pointer)
+                if not fontcharacters[font_of_family(a)][char] then
+                    if trace_families then
+                        report_families("no bold replacement for %C",char)
+                    end
+                else
+                    if trace_families then
+                        report_families("family of %C becomes %s with remap %s",char,a,familymap[a])
+                    end
+                    setfield(pointer,"fam",a)
                 end
-                pointer.fam = a
             end
-        else
-         -- pointer.fam = 0
         end
     end
 end
 
 families[math_delim] = function(pointer)
-    if pointer.small_fam == 0 then
-        local a = pointer[a_mathfamily]
+    if getfield(pointer,"small_fam") == 0 then
+        local a = getattr(pointer,a_mathfamily)
         if a and a > 0 then
-            pointer[a_mathfamily] = 0
+            setattr(pointer,a_mathfamily,0)
             if a > 5 then
                 -- no bold delimiters in unicode
                 a = a - 3
             end
-            pointer.small_fam = a
-            pointer.large_fam = a
+            local char = getfield(pointer,"small_char")
+            local okay = fontcharacters[font_of_family(a)][char]
+            if okay then
+                setfield(pointer,"small_fam",a)
+            elseif a > 2 then
+                setfield(pointer,"small_fam",a-3)
+            end
+            local char = getfield(pointer,"large_char")
+            local okay = fontcharacters[font_of_family(a)][char]
+            if okay then
+                setfield(pointer,"large_fam",a)
+            elseif a > 2 then
+                setfield(pointer,"large_fam",a-3)
+            end
         else
-            pointer.small_fam = 0
-            pointer.large_fam = 0
+            setfield(pointer,"small_fam",0)
+            setfield(pointer,"large_fam",0)
         end
     end
 end
@@ -299,8 +350,8 @@ local fallbackstyleattr = mathematics.fallbackstyleattr
 local setnodecolor      = nodes.tracers.colors.set
 
 local function checked(pointer)
-    local char = pointer.char
-    local fam = pointer.fam
+    local char = getchar(pointer)
+    local fam = getfield(pointer,"fam")
     local id = font_of_family(fam)
     local tc = fontcharacters[id]
     if not tc[char] then
@@ -313,27 +364,27 @@ local function checked(pointer)
             if trace_analyzing then
                 setnodecolor(pointer,"font:isol")
             end
-            pointer[a_exportstatus] = char -- testcase: exponentiale
-            pointer.char = newchar
+            setattr(pointer,a_exportstatus,char) -- testcase: exponentiale
+            setfield(pointer,"char",newchar)
             return true
         end
     end
 end
 
 processors.relocate[math_char] = function(pointer)
-    local g = pointer[a_mathgreek] or 0
-    local a = pointer[a_mathalphabet] or 0
+    local g = getattr(pointer,a_mathgreek) or 0
+    local a = getattr(pointer,a_mathalphabet) or 0
     if a > 0 or g > 0 then
         if a > 0 then
-            pointer[a_mathgreek] = 0
+            setattr(pointer,a_mathgreek,0)
         end
         if g > 0 then
-            pointer[a_mathalphabet] = 0
+            setattr(pointer,a_mathalphabet,0)
         end
-        local char = pointer.char
+        local char = getchar(pointer)
         local newchar = remapalphabets(char,a,g)
         if newchar then
-            local fam = pointer.fam
+            local fam = getfield(pointer,"fam")
             local id = font_of_family(fam)
             local characters = fontcharacters[id]
             if characters[newchar] then
@@ -343,7 +394,7 @@ processors.relocate[math_char] = function(pointer)
                 if trace_analyzing then
                     setnodecolor(pointer,"font:isol")
                 end
-                pointer.char = newchar
+                setfield(pointer,"char",newchar)
                 return true
             else
                 local fallback = fallbackstyleattr(a)
@@ -357,7 +408,7 @@ processors.relocate[math_char] = function(pointer)
                             if trace_analyzing then
                                 setnodecolor(pointer,"font:isol")
                             end
-                            pointer.char = newchar
+                            setfield(pointer,"char",newchar)
                             return true
                         elseif trace_remapping then
                             report_remap("char",id,char,newchar," fails (no fallback character)")
@@ -403,19 +454,19 @@ processors.render = { }
 local rendersets = mathematics.renderings.numbers or { } -- store
 
 processors.render[math_char] = function(pointer)
-    local attr = pointer[a_mathrendering]
+    local attr = getattr(pointer,a_mathrendering)
     if attr and attr > 0 then
-        local char = pointer.char
+        local char = getchar(pointer)
         local renderset = rendersets[attr]
         if renderset then
             local newchar = renderset[char]
             if newchar then
-                local fam = pointer.fam
+                local fam = getfield(pointer,"fam")
                 local id = font_of_family(fam)
                 local characters = fontcharacters[id]
                 if characters and characters[newchar] then
-                    pointer.char = newchar
-                    pointer[a_exportstatus] = char
+                    setfield(pointer,"char",newchar)
+                    setattr(pointer,a_exportstatus,char)
                 end
             end
         end
@@ -442,16 +493,20 @@ local mathsize = attributes.private("mathsize")
 local resize = { } processors.resize = resize
 
 resize[math_fence] = function(pointer)
-    if pointer.subtype == left_fence_code then
-        local a = pointer[mathsize]
+    local subtype = getsubtype(pointer)
+    if subtype == left_fence_code or subtype == right_fence_code then
+        local a = getattr(pointer,mathsize)
         if a and a > 0 then
-            pointer[mathsize] = 0
-            local d = pointer.delim
-            local df = d.small_fam
-            local id = font_of_family(df)
-            if id > 0 then
-                local ch = d.small_char
-                d.small_char = mathematics.big(fontdata[id],ch,a)
+            local method, size = div(a,100), a % 100
+            setattr(pointer,mathsize,0)
+            local delimiter = getfield(pointer,"delim")
+            local chr = getfield(delimiter,"small_char")
+            if chr > 0 then
+                local fam = getfield(delimiter,"small_fam")
+                local id = font_of_family(fam)
+                if id > 0 then
+                    setfield(delimiter,"small_char",mathematics.big(fontdata[id],chr,size,method))
+                end
             end
         end
     end
@@ -462,147 +517,34 @@ function handlers.resize(head,style,penalties)
     return true
 end
 
--- respacing
-
--- local mathpunctuation = attributes.private("mathpunctuation")
---
--- local respace = { } processors.respace = respace
-
--- only [nd,ll,ul][po][nd,ll,ul]
-
--- respace[math_char] = function(pointer,what,n,parent) -- not math_noad .. math_char ... and then parent
---     pointer = parent
---     if pointer and pointer.subtype == noad_ord then
---         local a = pointer[mathpunctuation]
---         if a and a > 0 then
---             pointer[mathpunctuation] = 0
---             local current_nucleus = pointer.nucleus
---             if current_nucleus.id == math_char then
---                 local current_char = current_nucleus.char
---                 local fc = chardata[current_char]
---                 fc = fc and fc.category
---                 if fc == "nd" or fc == "ll" or fc == "lu" then
---                     local next_noad = pointer.next
---                     if next_noad and next_noad.id == math_noad and next_noad.subtype == noad_punct then
---                         local next_nucleus = next_noad.nucleus
---                         if next_nucleus.id == math_char then
---                             local next_char = next_nucleus.char
---                             local nc = chardata[next_char]
---                             nc = nc and nc.category
---                             if nc == "po" then
---                                 local last_noad = next_noad.next
---                                 if last_noad and last_noad.id == math_noad and last_noad.subtype == noad_ord then
---                                     local last_nucleus = last_noad.nucleus
---                                     if last_nucleus.id == math_char then
---                                         local last_char = last_nucleus.char
---                                         local lc = chardata[last_char]
---                                         lc = lc and lc.category
---                                         if lc == "nd" or lc == "ll" or lc == "lu" then
---                                             local ord = new_node(math_noad) -- todo: pool
---                                             ord.subtype, ord.nucleus, ord.sub, ord.sup, ord.attr = noad_ord, next_noad.nucleus, next_noad.sub, next_noad.sup, next_noad.attr
---                                         --  next_noad.nucleus, next_noad.sub, next_noad.sup, next_noad.attr = nil, nil, nil, nil
---                                             next_noad.nucleus, next_noad.sub, next_noad.sup = nil, nil, nil -- else crash with attributes ref count
---                                         --~ next_noad.attr = nil
---                                             ord.next = last_noad
---                                             pointer.next = ord
---                                             free_node(next_noad)
---                                         end
---                                     end
---                                 end
---                             end
---                         end
---                     end
---                 end
---             end
---         end
---     end
--- end
-
--- local comma  = 0x002C
--- local period = 0x002E
---
--- respace[math_char] = function(pointer,what,n,parent)
---     pointer = parent
---     if pointer and pointer.subtype == noad_punct then
---         local current_nucleus = pointer.nucleus
---         if current_nucleus.id == math_char then
---             local current_nucleus = pointer.nucleus
---             if current_nucleus.id == math_char then
---                 local current_char = current_nucleus.char
---                 local a = pointer[mathpunctuation]
---                 if not a or a == 0 then
---                     if current_char == comma then
---                         -- default tex: 2,5 or 2, 5 --> 2, 5
---                     elseif current_char == period then
---                         -- default tex: 2.5 or 2. 5 --> 2.5
---                         pointer.subtype = noad_ord
---                     end
---                 elseif a == 1 then
---                     local next_noad = pointer.next
---                     if next_noad and next_noad.id == math_noad then
---                         local next_nucleus = next_noad.nucleus
---                         if next_nucleus.id == math_char and next_nucleus.char == 0 then
---                             nodes.remove(pointer,next_noad,true)
---                         end
---                         if current_char == comma then
---                             -- default tex: 2,5 or 2, 5 --> 2, 5
---                         elseif current_char == period then
---                             -- default tex: 2.5 or 2. 5 --> 2.5
---                             pointer.subtype = noad_ord
---                         end
---                     end
---                 elseif a == 2 then
---                     if current_char == comma or current_char == period then
---                         local next_noad = pointer.next
---                         if next_noad and next_noad.id == math_noad then
---                             local next_nucleus = next_noad.nucleus
---                             if next_nucleus.id == math_char and next_nucleus.char == 0 then
---                                 if current_char == comma then
---                                     -- adaptive: 2, 5 --> 2, 5
---                                 elseif current_char == period then
---                                     -- adaptive: 2. 5 --> 2. 5
---                                 end
---                                 nodes.remove(pointer,next_noad,true)
---                             else
---                                 if current_char == comma then
---                                     -- adaptive: 2,5  --> 2,5
---                                     pointer.subtype = noad_ord
---                                 elseif current_char == period then
---                                     -- adaptive: 2.5  --> 2.5
---                                     pointer.subtype = noad_ord
---                                 end
---                             end
---                         end
---                     end
---                 end
---             end
---         end
---     end
--- end
---
--- function handlers.respace(head,style,penalties)
---     processnoads(head,respace,"respace")
---     return true
--- end
-
--- The following code is dedicated to Luigi Scarso who pointed me
--- to the fact that \not= is not producing valid pdf-a code.
--- The code does not solve this for virtual characters but it does
--- a decent job on collapsing so that fonts that have the right
--- glyph will have a decent unicode point. In the meantime this code
--- has been moved elsewhere.
-
 local collapse = { } processors.collapse = collapse
 
 local mathpairs = characters.mathpairs
 
-mathpairs[0x2032] = { [0x2032] = 0x2033, [0x2033] = 0x2034 } -- (prime,prime) (prime,doubleprime)
-mathpairs[0x2033] = { [0x2032] = 0x2034 }                    -- (doubleprime,prime)
+mathpairs[0x2032] = { [0x2032] = 0x2033, [0x2033] = 0x2034, [0x2034] = 0x2057 } -- (prime,prime) (prime,doubleprime) (prime,tripleprime)
+mathpairs[0x2033] = { [0x2032] = 0x2034, [0x2033] = 0x2057 }                    -- (doubleprime,prime) (doubleprime,doubleprime)
+mathpairs[0x2034] = { [0x2032] = 0x2057 }                                       -- (tripleprime,prime)
+
+mathpairs[0x2035] = { [0x2035] = 0x2036, [0x2036] = 0x2037 }                    -- (reversedprime,reversedprime) (reversedprime,doublereversedprime)
+mathpairs[0x2036] = { [0x2035] = 0x2037 }                                       -- (doublereversedprime,reversedprime)
 
 mathpairs[0x222B] = { [0x222B] = 0x222C, [0x222C] = 0x222D }
 mathpairs[0x222C] = { [0x222B] = 0x222D }
 
-mathpairs[0x007C] = { [0x007C] = 0x2016 } -- double bars
+mathpairs[0x007C] = { [0x007C] = 0x2016, [0x2016] = 0x2980 } -- bar+bar=double bar+double=triple
+mathpairs[0x2016] = { [0x007C] = 0x2980 }                    -- double+bar=triple
+
+local movesub = {
+    -- primes
+    [0x2032] = 0xFE932,
+    [0x2033] = 0xFE933,
+    [0x2034] = 0xFE934,
+    [0x2057] = 0xFE957,
+    -- reverse primes
+    [0x2035] = 0xFE935,
+    [0x2036] = 0xFE936,
+    [0x2037] = 0xFE937,
+}
 
 local validpair = {
     [noad_rel]             = true,
@@ -612,48 +554,79 @@ local validpair = {
     [noad_opnolimits]      = true,
 }
 
-local function collapsepair(pointer,what,n,parent) -- todo: switch to turn in on and off
+local function movesubscript(parent,current_nucleus,current_char)
+    local prev = getfield(parent,"prev")
+    if prev and getid(prev) == math_noad then
+        if not getfield(prev,"sup") and not getfield(prev,"sub") then
+            setfield(current_nucleus,"char",movesub[current_char or getchar(current_nucleus)])
+            -- {f} {'}_n => f_n^'
+            local nucleus = getfield(parent,"nucleus")
+            local sub     = getfield(parent,"sub")
+            local sup     = getfield(parent,"sup")
+            setfield(prev,"sup",nucleus)
+            setfield(prev,"sub",sub)
+            local dummy = copy_node(nucleus)
+            setfield(dummy,"char",0)
+            setfield(parent,"nucleus",dummy)
+            setfield(parent,"sub",nil)
+            if trace_collapsing then
+                report_collapsing("fixing subscript")
+            end
+        end
+    end
+end
+
+local function collapsepair(pointer,what,n,parent,nested) -- todo: switch to turn in on and off
     if parent then
-        if validpair[parent.subtype] then
-            local current_nucleus = parent.nucleus
-            if not parent.sub and not parent.sup and current_nucleus.id == math_char then
-                local current_char = current_nucleus.char
-                local mathpair = mathpairs[current_char]
-                if mathpair then
-                    local next_noad = parent.next
-                    if next_noad and next_noad.id == math_noad then
-                        if validpair[next_noad.subtype] then
-                            local next_nucleus = next_noad.nucleus
-                            if next_nucleus.id == math_char then
-                                local next_char = next_nucleus.char
-                                local newchar = mathpair[next_char]
-                                if newchar then
-                                    local fam = current_nucleus.fam
-                                    local id = font_of_family(fam)
-                                    local characters = fontcharacters[id]
-                                    if characters and characters[newchar] then
-                                        if trace_collapsing then
-                                            report_collapsing("%U + %U => %U",current_char,next_char,newchar)
+        if validpair[getsubtype(parent)] then
+            local current_nucleus = getfield(parent,"nucleus")
+            if getid(current_nucleus) == math_char then
+                local current_char = getchar(current_nucleus)
+                if not getfield(parent,"sub") and not getfield(parent,"sup") then
+                    local mathpair = mathpairs[current_char]
+                    if mathpair then
+                        local next_noad = getnext(parent)
+                        if next_noad and getid(next_noad) == math_noad then
+                            if validpair[getsubtype(next_noad)] then
+                                local next_nucleus = getfield(next_noad,"nucleus")
+                                if getid(next_nucleus) == math_char then
+                                    local next_char = getchar(next_nucleus)
+                                    local newchar = mathpair[next_char]
+                                    if newchar then
+                                        local fam = getfield(current_nucleus,"fam")
+                                        local id = font_of_family(fam)
+                                        local characters = fontcharacters[id]
+                                        if characters and characters[newchar] then
+                                            if trace_collapsing then
+                                                report_collapsing("%U + %U => %U",current_char,next_char,newchar)
+                                            end
+                                            setfield(current_nucleus,"char",newchar)
+                                            local next_next_noad = getnext(next_noad)
+                                            if next_next_noad then
+                                                setfield(parent,"next",next_next_noad)
+                                                setfield(next_next_noad,"prev",parent)
+                                            else
+                                                setfield(parent,"next",nil)
+                                            end
+                                            setfield(parent,"sup",getfield(next_noad,"sup"))
+                                            setfield(parent,"sub",getfield(next_noad,"sub"))
+                                            setfield(next_noad,"sup",nil)
+                                            setfield(next_noad,"sub",nil)
+                                            free_node(next_noad)
+                                            collapsepair(pointer,what,n,parent,true)
+                                            if not nested and movesub[current_char] then
+                                                movesubscript(parent,current_nucleus)
+                                            end
                                         end
-                                        current_nucleus.char = newchar
-                                        local next_next_noad = next_noad.next
-                                        if next_next_noad then
-                                            parent.next = next_next_noad
-                                            next_next_noad.prev = parent
-                                        else
-                                            parent.next = nil
-                                        end
-                                        parent.sup = next_noad.sup
-                                        parent.sub = next_noad.sub
-                                        next_noad.sup = nil
-                                        next_noad.sub = nil
-                                        free_node(next_noad)
-                                        collapsepair(pointer,what,n,parent)
                                     end
                                 end
                             end
                         end
+                    elseif not nested and movesub[current_char] then
+                        movesubscript(parent,current_nucleus,current_char)
                     end
+                elseif not nested and movesub[current_char] then
+                    movesubscript(parent,current_nucleus,current_char)
                 end
             end
         end
@@ -678,13 +651,13 @@ local replaced = { }
 
 local function replace(pointer,what,n,parent)
     pointer = parent -- we're following the parent list (chars trigger this)
-    local next = pointer.next
+    local next = getnext(pointer)
     local start_super, stop_super, start_sub, stop_sub
     local mode = "unset"
-    while next and next.id == math_noad do
-        local nextnucleus = next.nucleus
-        if nextnucleus and nextnucleus.id == math_char and not next.sub and not next.sup then
-            local char = nextnucleus.char
+    while next and getid(next) == math_noad do
+        local nextnucleus = getfield(next,"nucleus")
+        if nextnucleus and getid(nextnucleus) == math_char and not getfield(next,"sub") and not getfield(next,"sup") then
+            local char = getchar(nextnucleus)
             local s = superscripts[char]
             if s then
                 if not start_super then
@@ -694,8 +667,8 @@ local function replace(pointer,what,n,parent)
                     break
                 end
                 stop_super = next
-                next = next.next
-                nextnucleus.char = s
+                next = getnext(next)
+                setfield(nextnucleus,"char",s)
                 replaced[char] = (replaced[char] or 0) + 1
                 if trace_normalizing then
                     report_normalizing("superscript %C becomes %C",char,s)
@@ -710,8 +683,8 @@ local function replace(pointer,what,n,parent)
                         break
                     end
                     stop_sub = next
-                    next = next.next
-                    nextnucleus.char = s
+                    next = getnext(next)
+                    setfield(nextnucleus,"char",s)
                     replaced[char] = (replaced[char] or 0) + 1
                     if trace_normalizing then
                         report_normalizing("subscript %C becomes %C",char,s)
@@ -726,29 +699,29 @@ local function replace(pointer,what,n,parent)
     end
     if start_super then
         if start_super == stop_super then
-            pointer.sup = start_super.nucleus
+            setfield(pointer,"sup",getfield(start_super,"nucleus"))
         else
             local list = new_node(math_sub) -- todo attr
-            list.head = start_super
-            pointer.sup = list
+            setfield(list,"list",start_super)
+            setfield(pointer,"sup",list)
         end
         if mode == "super" then
-            pointer.next = stop_super.next
+            setfield(pointer,"next",getnext(stop_super))
         end
-        stop_super.next = nil
+        setfield(stop_super,"next",nil)
     end
     if start_sub then
         if start_sub == stop_sub then
-            pointer.sub = start_sub.nucleus
+            setfield(pointer,"sub",getfield(start_sub,"nucleus"))
         else
             local list = new_node(math_sub) -- todo attr
-            list.head = start_sub
-            pointer.sub = list
+            setfield(list,"list",start_sub)
+            setfield(pointer,"sub",list)
         end
         if mode == "sub" then
-            pointer.next = stop_sub.next
+            setfield(pointer,"next",getnext(stop_sub))
         end
-        stop_sub.next = nil
+        setfield(stop_sub,"next",nil)
     end
     -- we could return stop
 end
@@ -824,25 +797,25 @@ function mathematics.setalternate(fam,tag)
     local mathalternates = tfmdata.shared and tfmdata.shared.mathalternates
     if mathalternates then
         local m = mathalternates[tag]
-        tex.attribute[a_mathalternate] = m and m.attribute or unsetvalue
+        texsetattribute(a_mathalternate,m and m.attribute or unsetvalue)
     end
 end
 
 alternate[math_char] = function(pointer)
-    local a = pointer[a_mathalternate]
+    local a = getattr(pointer,a_mathalternate)
     if a and a > 0 then
-        pointer[a_mathalternate] = 0
-        local tfmdata = fontdata[font_of_family(pointer.fam)] -- we can also have a famdata
+        setattr(pointer,a_mathalternate,0)
+        local tfmdata = fontdata[font_of_family(getfield(pointer,"fam"))] -- we can also have a famdata
         local mathalternatesattributes = tfmdata.shared.mathalternatesattributes
         if mathalternatesattributes then
             local what = mathalternatesattributes[a]
-            local alt = getalternate(tfmdata,pointer.char,what.feature,what.value)
+            local alt = getalternate(tfmdata,getchar(pointer),what.feature,what.value)
             if alt then
                 if trace_alternates then
                     report_alternates("alternate %a, value %a, replacing glyph %U by glyph %U",
-                        tostring(what.feature),tostring(what.value),pointer.char,alt)
+                        tostring(what.feature),tostring(what.value),getchar(pointer),alt)
                 end
-                pointer.char = alt
+                setfield(pointer,"char",alt)
             end
         end
     end
@@ -929,13 +902,14 @@ end
 local function insert_kern(current,kern)
     local sub  = new_node(math_sub) -- todo: pool
     local noad = new_node(math_noad) -- todo: pool
-    sub.head = kern
-    kern.next = noad
-    noad.nucleus = current
+    setfield(sub,"list",kern)
+    setfield(kern,"next",noad)
+    setfield(noad,"nucleus",current)
     return sub
 end
 
 local setcolor     = nodes.tracers.colors.set
+local resetcolor   = nodes.tracers.colors.reset
 local italic_kern  = new_kern
 local c_positive_d = "trace:db"
 local c_negative_d = "trace:dr"
@@ -947,11 +921,8 @@ trackers.register("math.italics", function(v)
             if k > 0 then
                 return setcolor(new_rule(k,ex,ex),c_positive_d)
             else
-                return concat_nodes {
-                    old_kern(k),
-                    setcolor(new_rule(-k,ex,ex),c_negative_d),
-                    old_kern(k),
-                }
+                -- influences un*
+                return old_kern(k) .. setcolor(new_rule(-k,ex,ex),c_negative_d) .. old_kern(k)
             end
         end
     else
@@ -960,44 +931,44 @@ trackers.register("math.italics", function(v)
 end)
 
 italics[math_char] = function(pointer,what,n,parent)
-    local method = pointer[a_mathitalics]
+    local method = getattr(pointer,a_mathitalics)
     if method and method > 0 then
-        local char = pointer.char
-        local font = font_of_family(pointer.fam) -- todo: table
+        local char = getchar(pointer)
+        local font = font_of_family(getfield(pointer,"fam")) -- todo: table
         local correction, visual = getcorrection(method,font,char)
         if correction then
-            local pid = parent.id
+            local pid = getid(parent)
             local sub, sup
             if pid == math_noad then
-                sup = parent.sup
-                sub = parent.sub
+                sup = getfield(parent,"sup")
+                sub = getfield(parent,"sub")
             end
             if sup or sub then
-                local subtype = parent.subtype
+                local subtype = getsubtype(parent)
                 if subtype == noad_oplimits then
                     if sup then
-                        parent.sup = insert_kern(sup,italic_kern(correction,font))
+                        setfield(parent,"sup",insert_kern(sup,italic_kern(correction,font)))
                         if trace_italics then
                             report_italics("method %a, adding %p italic correction for upper limit of %C",method,correction,char)
                         end
                     end
                     if sub then
                         local correction = - correction
-                        parent.sub = insert_kern(sub,italic_kern(correction,font))
+                        setfield(parent,"sub",insert_kern(sub,italic_kern(correction,font)))
                         if trace_italics then
                             report_italics("method %a, adding %p italic correction for lower limit of %C",method,correction,char)
                         end
                     end
                 else
                     if sup then
-                        parent.sup = insert_kern(sup,italic_kern(correction,font))
+                        setfield(parent,"sup",insert_kern(sup,italic_kern(correction,font)))
                         if trace_italics then
                             report_italics("method %a, adding %p italic correction before superscript after %C",method,correction,char)
                         end
                     end
                 end
             else
-                local next_noad = parent.next
+                local next_noad = getnext(parent)
                 if not next_noad then
                     if n== 1 then -- only at the outer level .. will become an option (always,endonly,none)
                         if trace_italics then
@@ -1005,12 +976,12 @@ italics[math_char] = function(pointer,what,n,parent)
                         end
                         insert_node_after(parent,parent,italic_kern(correction,font))
                     end
-                elseif next_noad.id == math_noad then
-                    local next_subtype = next_noad.subtype
+                elseif getid(next_noad) == math_noad then
+                    local next_subtype = getsubtype(next_noad)
                     if next_subtype == noad_punct or next_subtype == noad_ord then
-                        local next_nucleus = next_noad.nucleus
-                        if next_nucleus.id == math_char then
-                            local next_char = next_nucleus.char
+                        local next_nucleus = getfield(next_noad,"nucleus")
+                        if getid(next_nucleus) == math_char then
+                            local next_char = getchar(next_nucleus)
                             local next_data = chardata[next_char]
                             local visual = next_data.visual
                             if visual == "it" or visual == "bi" then
@@ -1063,14 +1034,14 @@ function mathematics.setitalics(n)
         enable()
     end
     if n == variables.reset then
-        texattribute[a_mathitalics] = unsetvalue
+        texsetattribute(a_mathitalics,unsetvalue)
     else
-        texattribute[a_mathitalics] = tonumber(n) or unsetvalue
+        texsetattribute(a_mathitalics,tonumber(n) or unsetvalue)
     end
 end
 
 function mathematics.resetitalics()
-    texattribute[a_mathitalics] = unsetvalue
+    texsetattribute(a_mathitalics,unsetvalue)
 end
 
 -- variants
@@ -1094,15 +1065,15 @@ local validvariants = { -- fast check on valid
 }
 
 variants[math_char] = function(pointer,what,n,parent) -- also set export value
-    local char = pointer.char
+    local char = getchar(pointer)
     local selector = validvariants[char]
     if selector then
-        local next = parent.next
-        if next and next.id == math_noad then
-            local nucleus = next.nucleus
-            if nucleus and nucleus.id == math_char and nucleus.char == selector then
+        local next = getnext(parent)
+        if next and getid(next) == math_noad then
+            local nucleus = getfield(next,"nucleus")
+            if nucleus and getid(nucleus) == math_char and getchar(nucleus) == selector then
                 local variant
-                local tfmdata = fontdata[font_of_family(pointer.fam)] -- we can also have a famdata
+                local tfmdata = fontdata[font_of_family(getfield(pointer,"fam"))] -- we can also have a famdata
                 local mathvariants = tfmdata.resources.variants -- and variantdata
                 if mathvariants then
                     mathvariants = mathvariants[selector]
@@ -1111,8 +1082,8 @@ variants[math_char] = function(pointer,what,n,parent) -- also set export value
                     end
                 end
                 if variant then
-                    pointer.char = variant
-                    pointer[a_exportstatus] = char -- we don't export the variant as it's visual markup
+                    setfield(pointer,"char",variant)
+                    setattr(pointer,a_exportstatus,char) -- we don't export the variant as it's visual markup
                     if trace_variants then
                         report_variants("variant (%U,%U) replaced by %U",char,selector,variant)
                     end
@@ -1121,8 +1092,8 @@ variants[math_char] = function(pointer,what,n,parent) -- also set export value
                         report_variants("no variant (%U,%U)",char,selector)
                     end
                 end
-                next.prev = pointer
-                parent.next = next.next
+                setfield(next,"prev",pointer)
+                setfield(parent,"next",getnext(next))
                 free_node(next)
             end
         end
@@ -1133,6 +1104,50 @@ function handlers.variants(head,style,penalties)
     processnoads(head,variants,"unicode variant")
     return true
 end
+
+-- for manuals
+
+local classes = { }
+
+local colors = {
+    [noadcodes.rel]             = "trace:dr",
+    [noadcodes.ord]             = "trace:db",
+    [noadcodes.bin]             = "trace:dg",
+    [noadcodes.open]            = "trace:dm",
+    [noadcodes.close]           = "trace:dm",
+    [noadcodes.punct]           = "trace:dc",
+ -- [noadcodes.opdisplaylimits] = "",
+ -- [noadcodes.oplimits]        = "",
+ -- [noadcodes.opnolimits]      = "",
+ -- [noadcodes.inner            = "",
+ -- [noadcodes.under            = "",
+ -- [noadcodes.over             = "",
+ -- [noadcodes.vcenter          = "",
+}
+
+classes[math_char] = function(pointer,what,n,parent)
+    local color = colors[getsubtype(parent)]
+    if color then
+        setcolor(pointer,color)
+    else
+        resetcolor(pointer)
+    end
+end
+
+function handlers.classes(head,style,penalties)
+    processnoads(head,classes,"classes")
+    return true
+end
+
+trackers.register("math.classes",function(v) tasks.setaction("math","noads.handlers.classes",v) end)
+
+-- just for me
+
+function handlers.showtree(head,style,penalties)
+    inspect(nodes.totree(head))
+end
+
+trackers.register("math.showtree",function(v) tasks.setaction("math","noads.handlers.showtree",v) end)
 
 -- the normal builder
 

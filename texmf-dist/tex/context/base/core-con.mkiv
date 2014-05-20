@@ -15,6 +15,8 @@
 
 \registerctxluafile{core-con}{1.001}
 
+% todo: iso date ranges (from/to)
+
 \unprotect
 
 \ifdefined\currentlanguage \else \let\currentlanguage\empty              \fi
@@ -96,6 +98,9 @@
 \def\koreannumerals    #1{\ctxcommand{alphabetic(\number#1,"korean")}}
 \def\koreannumeralsp   #1{\ctxcommand{alphabetic(\number#1,"korean-parent")}}
 \def\koreannumeralsc   #1{\ctxcommand{alphabetic(\number#1,"korean-circle")}}
+
+\let\koreanparentnumerals\koreannumeralsp
+\let\koreancirclenumerals\koreannumeralsc
 
 \def\chinesenumerals   #1{\ctxcommand{chinesenumerals   (\number#1)}}
 \def\chinesecapnumerals#1{\ctxcommand{chinesecapnumerals(\number#1,"cap")}}
@@ -201,8 +206,8 @@
 %D
 %D Anyhow, the conversion looks like:
 
-\def\monthlong #1{\ctxcommand{monthname(#1)}}
-\def\monthshort#1{\ctxcommand{monthmnem(#1)}}
+\unexpanded\def\monthlong #1{\ctxcommand{monthname(#1)}}
+\unexpanded\def\monthshort#1{\ctxcommand{monthmnem(#1)}}
 
 \let\convertmonth\monthlong % for old times sake
 
@@ -213,9 +218,9 @@
 
 \let\month              \monthlong
 
-\def\MONTH     #1{\WORD{\month     {#1}}}
-\def\MONTHLONG #1{\WORD{\monthlong {#1}}}
-\def\MONTHSHORT#1{\WORD{\monthshort{#1}}}
+\unexpanded\def\MONTH     #1{\WORD{\month     {#1}}}
+\unexpanded\def\MONTHLONG #1{\WORD{\monthlong {#1}}}
+\unexpanded\def\MONTHSHORT#1{\WORD{\monthshort{#1}}}
 
 %D We never explicitly needed this, but Tobias Burnus pointed out that it would be
 %D handy to convert to the day of the week. In doing so, we have to calculate the
@@ -235,8 +240,8 @@
 %D \showsetup{weekday}
 %D \showsetup{WEEKDAY}
 
-\def\weekday#1{\ctxcommand{day(#1)}}
-\def\WEEKDAY#1{\WORD{\weekday{#1}}}
+\unexpanded\def\weekday#1{\ctxcommand{day(#1)}}
+\unexpanded\def\WEEKDAY#1{\WORD{\weekday{#1}}}
 
 %D \macros
 %D   {getdayoftheweek, dayoftheweek}
@@ -681,8 +686,8 @@
 \defineconversion [kr-c]                 [\koreancirclenumerals]
 
 \defineconversion [chinesenumerals]      [\chinesenumerals]
-\defineconversion [chinesecapnumeralscn] [\chinesecapnumerals]
-\defineconversion [chineseallnumeralscn] [\chineseallnumerals]
+\defineconversion [chinesecapnumerals]   [\chinesecapnumerals]
+\defineconversion [chineseallnumerals]   [\chineseallnumerals]
 
 \defineconversion [cn]                   [\chinesenumerals]
 \defineconversion [cn-c]                 [\chinesecapnumerals]

@@ -23,7 +23,7 @@ texconfig.half_error_line =     50 --    50 -- obsolete
 texconfig.expand_depth    =  10000 -- 10000
 texconfig.hash_extra      = 100000 --     0
 texconfig.nest_size       =   1000 --    50
-texconfig.max_in_open     =    500 --    15
+texconfig.max_in_open     =    500 --    15 -- in fact it's limited to 127
 texconfig.max_print_line  =  10000 --    79
 texconfig.max_strings     = 500000 -- 15000
 texconfig.param_size      =  25000 --    60
@@ -134,13 +134,14 @@ function texconfig.init()
 
     -- shortcut and helper
 
+    local bytecode = lua.bytecode
+
     local function init(start)
-        local b = lua.bytecode
         local i = start
         local t = os.clock()
-        while b[i] do
-            b[i]() ;
-            b[i] = nil ;
+        while bytecode[i] do
+            bytecode[i]() ;
+            bytecode[i] = nil ;
             i = i + 1
          -- collectgarbage('step')
         end
@@ -158,6 +159,8 @@ function texconfig.init()
             loaded[module] = true
         end
     end
+
+    texconfig.init = function() end
 
 end
 

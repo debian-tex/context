@@ -20,8 +20,24 @@ local utfchar, utfbyte = utf.char, utf.byte
 ----- loadstripped = utilities.lua.loadstripped
 ----- setmetatableindex = table.setmetatableindex
 
-local loadstripped = _LUAVERSION < 5.2 and load or function(str)
-    return load(dump(load(str),true)) -- it only makes sense in luajit and luatex where we have a stipped load
+local loadstripped = nil
+
+if _LUAVERSION < 5.2  then
+
+    loadstripped = function(str,shortcuts)
+        return load(str)
+    end
+
+else
+
+    loadstripped = function(str,shortcuts)
+        if shortcuts then
+            return load(dump(load(str),true),nil,nil,shortcuts)
+        else
+            return load(dump(load(str),true))
+        end
+    end
+
 end
 
 -- todo: make a special namespace for the formatter
@@ -31,10 +47,12 @@ if not number then number = { } end -- temp hack for luatex-fonts
 local stripper = patterns.stripzeros
 
 local function points(n)
+    n = tonumber(n)
     return (not n or n == 0) and "0pt" or lpegmatch(stripper,format("%.5fpt",n/65536))
 end
 
 local function basepoints(n)
+    n = tonumber(n)
     return (not n or n == 0) and "0bp" or lpegmatch(stripper,format("%.5fbp", n*(7200/7227)/65536))
 end
 
@@ -136,17 +154,105 @@ end
 --     print(strings.tabtospace(t[k]))
 -- end
 
-function strings.striplong(str) -- strips all leading spaces
-    str = gsub(str,"^%s*","")
-    str = gsub(str,"[\n\r]+ *","\n")
-    return str
+-- todo: lpeg
+
+-- function strings.striplong(str) -- strips all leading spaces
+--     str = gsub(str,"^%s*","")
+--     str = gsub(str,"[\n\r]+ *","\n")
+--     return str
+-- end
+
+local newline     = patterns.newline
+local endofstring = patterns.endofstring
+local whitespace  = patterns.whitespace
+local spacer      = patterns.spacer
+
+local space       = spacer^0
+local nospace     = space/""
+local endofline   = nospace * newline
+
+local stripend    = (whitespace^1 * endofstring)/""
+
+local normalline  = (nospace * ((1-space*(newline+endofstring))^1) * nospace)
+
+local stripempty  = endofline^1/""
+local normalempty = endofline^1
+local singleempty = endofline * (endofline^0/"")
+local doubleempty = endofline * endofline^-1 * (endofline^0/"")
+
+local stripstart  = stripempty^0
+
+local p_prune_normal    = Cs ( stripstart * ( stripend + normalline + normalempty )^0 )
+local p_prune_collapse  = Cs ( stripstart * ( stripend + normalline + doubleempty )^0 )
+local p_prune_noempty   = Cs ( stripstart * ( stripend + normalline + singleempty )^0 )
+local p_retain_normal   = Cs (              (            normalline + normalempty )^0 )
+local p_retain_collapse = Cs (              (            normalline + doubleempty )^0 )
+local p_retain_noempty  = Cs (              (            normalline + singleempty )^0 )
+
+-- function striplines(str,prune,collapse,noempty)
+--     if prune then
+--         if noempty then
+--             return lpegmatch(p_prune_noempty,str) or str
+--         elseif collapse then
+--             return lpegmatch(p_prune_collapse,str) or str
+--         else
+--             return lpegmatch(p_prune_normal,str) or str
+--         end
+--     else
+--         if noempty then
+--             return lpegmatch(p_retain_noempty,str) or str
+--         elseif collapse then
+--             return lpegmatch(p_retain_collapse,str) or str
+--         else
+--             return lpegmatch(p_retain_normal,str) or str
+--         end
+--     end
+-- end
+
+local striplinepatterns = {
+    ["prune"]               = p_prune_normal,
+    ["prune and collapse"]  = p_prune_collapse, -- default
+    ["prune and no empty"]  = p_prune_noempty,
+    ["retain"]              = p_retain_normal,
+    ["retain and collapse"] = p_retain_collapse,
+    ["retain and no empty"] = p_retain_noempty,
+}
+
+strings.striplinepatterns = striplinepatterns
+
+function strings.striplines(str,how)
+    return str and lpegmatch(how and striplinepatterns[how] or p_prune_collapse,str) or str
 end
 
--- local template = string.striplong([[
+strings.striplong = strings.striplines -- for old times sake
+
+-- local str = table.concat( {
+-- "  ",
+-- "    aap",
+-- "  noot mies",
+-- "  ",
+-- "    ",
+-- " zus    wim jet",
+-- "zus    wim jet",
+-- "       zus    wim jet",
+-- "    ",
+-- }, "\n")
+
+-- local str = table.concat( {
+-- "  aaaa",
+-- "  bb",
+-- "  cccccc",
+-- }, "\n")
+
+-- for k, v in table.sortedhash(utilities.strings.striplinepatterns) do
+--     logs.report("stripper","method: %s, result: [[%s]]",k,utilities.strings.striplines(str,k))
+-- end
+
+-- inspect(strings.striplong([[
 --   aaaa
 --   bb
 --   cccccc
--- ]])
+-- ]]))
 
 function strings.nice(str)
     str = gsub(str,"[:%-+_]+"," ") -- maybe more
@@ -178,6 +284,7 @@ end
 -- octal            %...o   number
 -- string           %...s   string number
 -- float            %...f   number
+-- checked float    %...F   number
 -- exponential      %...e   number
 -- exponential      %...E   number
 -- autofloat        %...g   number
@@ -195,12 +302,14 @@ end
 -- points           %p      number (scaled points)
 -- basepoints       %b      number (scaled points)
 -- table concat     %...t   table
+-- table concat     %{.}t   table
 -- serialize        %...T   sequenced (no nested tables)
+-- serialize        %{.}T   sequenced (no nested tables)
 -- boolean (logic)  %l      boolean
 -- BOOLEAN          %L      boolean
 -- whitespace       %...w
 -- automatic        %...a   'whatever' (string, table, ...)
--- automatic        %...a   "whatever" (string, table, ...)
+-- automatic        %...A   "whatever" (string, table, ...)
 
 local n = 0
 
@@ -262,30 +371,93 @@ function number.signed(i)
     end
 end
 
-local preamble = [[
-local type = type
-local tostring = tostring
-local tonumber = tonumber
-local format = string.format
-local concat = table.concat
-local signed = number.signed
-local points = number.points
-local basepoints = number.basepoints
-local utfchar = utf.char
-local utfbyte = utf.byte
-local lpegmatch = lpeg.match
-local nspaces = string.nspaces
-local tracedchar = string.tracedchar
-local autosingle = string.autosingle
-local autodouble = string.autodouble
-local sequenced = table.sequenced
-]]
+local zero      = P("0")^1 / ""
+local plus      = P("+")   / ""
+local minus     = P("-")
+local separator = S(".")
+local digit     = R("09")
+local trailing  = zero^1 * #S("eE")
+local exponent  = (S("eE") * (plus + Cs((minus * zero^0 * P(-1))/"") + minus) * zero^0 * (P(-1) * Cc("0") + P(1)^1))
+local pattern_a = Cs(minus^0 * digit^1 * (separator/"" * trailing + separator * (trailing + digit)^0) * exponent)
+local pattern_b = Cs((exponent + P(1))^0)
+
+function number.sparseexponent(f,n)
+    if not n then
+        n = f
+        f = "%e"
+    end
+    local tn = type(n)
+    if tn == "string" then -- cast to number
+        local m = tonumber(n)
+        if m then
+            return lpegmatch((f == "%e" or f == "%E") and pattern_a or pattern_b,format(f,m))
+        end
+    elseif tn == "number" then
+        return lpegmatch((f == "%e" or f == "%E") and pattern_a or pattern_b,format(f,n))
+    end
+    return tostring(n)
+end
 
 local template = [[
 %s
 %s
 return function(%s) return %s end
 ]]
+
+local preamble, environment = "", { }
+
+if _LUAVERSION < 5.2  then
+
+    preamble = [[
+local lpeg=lpeg
+local type=type
+local tostring=tostring
+local tonumber=tonumber
+local format=string.format
+local concat=table.concat
+local signed=number.signed
+local points=number.points
+local basepoints= number.basepoints
+local utfchar=utf.char
+local utfbyte=utf.byte
+local lpegmatch=lpeg.match
+local nspaces=string.nspaces
+local tracedchar=string.tracedchar
+local autosingle=string.autosingle
+local autodouble=string.autodouble
+local sequenced=table.sequenced
+local formattednumber=number.formatted
+local sparseexponent=number.sparseexponent
+    ]]
+
+else
+
+    environment = {
+        global          = global or _G,
+        lpeg            = lpeg,
+        type            = type,
+        tostring        = tostring,
+        tonumber        = tonumber,
+        format          = string.format,
+        concat          = table.concat,
+        signed          = number.signed,
+        points          = number.points,
+        basepoints      = number.basepoints,
+        utfchar         = utf.char,
+        utfbyte         = utf.byte,
+        lpegmatch       = lpeg.match,
+        nspaces         = string.nspaces,
+        tracedchar      = string.tracedchar,
+        autosingle      = string.autosingle,
+        autodouble      = string.autodouble,
+        sequenced       = table.sequenced,
+        formattednumber = number.formatted,
+        sparseexponent  = number.sparseexponent,
+    }
+
+end
+
+-- -- --
 
 local arguments = { "a1" } -- faster than previously used (select(n,...))
 
@@ -298,7 +470,7 @@ setmetatable(arguments, { __index =
 })
 
 local prefix_any = C((S("+- .") + R("09"))^0)
-local prefix_tab = C((1-R("az","AZ","09","%%"))^0)
+local prefix_tab = P("{") * C((1-P("}"))^0) * P("}") + C((1-R("az","AZ","09","%%"))^0)
 
 -- we've split all cases as then we can optimize them (let's omit the fuzzy u)
 
@@ -337,7 +509,7 @@ local format_i = function(f)
     if f and f ~= "" then
         return format("format('%%%si',a%s)",f,n)
     else
-        return format("a%s",n)
+        return format("format('%%i',a%s)",n) -- why not just tostring()
     end
 end
 
@@ -351,6 +523,15 @@ end
 local format_f = function(f)
     n = n + 1
     return format("format('%%%sf',a%s)",f,n)
+end
+
+local format_F = function(f)
+    n = n + 1
+    if not f or f == "" then
+        return format("(((a%s > -0.0000000005 and a%s < 0.0000000005) and '0') or (a%s == 1 and '1') or format('%%.9f',a%s))",n,n,n,n)
+    else
+        return format("((a%s == 0 and '0') or (a%s == 1 and '1') or format('%%%sf',a%s))",n,n,f,n)
+    end
 end
 
 local format_g = function(f)
@@ -371,6 +552,16 @@ end
 local format_E = function(f)
     n = n + 1
     return format("format('%%%sE',a%s)",f,n)
+end
+
+local format_j = function(f)
+    n = n + 1
+    return format("sparseexponent('%%%se',a%s)",f,n)
+end
+
+local format_J = function(f)
+    n = n + 1
+    return format("sparseexponent('%%%sE',a%s)",f,n)
 end
 
 local format_x = function(f)
@@ -518,6 +709,68 @@ local format_W = function(f) -- handy when doing depth related indent
     return format("nspaces[%s]",tonumber(f) or 0)
 end
 
+-- maybe to util-num
+
+local digit  = patterns.digit
+local period = patterns.period
+local three  = digit * digit * digit
+
+local splitter = Cs (
+    (((1 - (three^1 * period))^1 + C(three)) * (Carg(1) * three)^1 + C((1-period)^1))
+  * (P(1)/"" * Carg(2)) * C(2)
+)
+
+patterns.formattednumber = splitter
+
+function number.formatted(n,sep1,sep2)
+    local s = type(s) == "string" and n or format("%0.2f",n)
+    if sep1 == true then
+        return lpegmatch(splitter,s,1,".",",")
+    elseif sep1 == "." then
+        return lpegmatch(splitter,s,1,sep1,sep2 or ",")
+    elseif sep1 == "," then
+        return lpegmatch(splitter,s,1,sep1,sep2 or ".")
+    else
+        return lpegmatch(splitter,s,1,sep1 or ",",sep2 or ".")
+    end
+end
+
+-- print(number.formatted(1))
+-- print(number.formatted(12))
+-- print(number.formatted(123))
+-- print(number.formatted(1234))
+-- print(number.formatted(12345))
+-- print(number.formatted(123456))
+-- print(number.formatted(1234567))
+-- print(number.formatted(12345678))
+-- print(number.formatted(12345678,true))
+-- print(number.formatted(1234.56,"!","?"))
+
+local format_m = function(f)
+    n = n + 1
+    if not f or f == "" then
+        f = ","
+    end
+    return format([[formattednumber(a%s,%q,".")]],n,f)
+end
+
+local format_M = function(f)
+    n = n + 1
+    if not f or f == "" then
+        f = "."
+    end
+    return format([[formattednumber(a%s,%q,",")]],n,f)
+end
+
+--
+
+local format_z = function(f)
+    n = n + (tonumber(f) or 1)
+    return "''" -- okay, not that efficient to append '' but a special case anyway
+end
+
+--
+
 local format_rest = function(s)
     return format("%q",s) -- catches " and \n and such
 end
@@ -544,6 +797,8 @@ local format_extension = function(extensions,f,name)
     end
 end
 
+-- aA b cC d eE f gG hH iI jJ lL mM N o p qQ r sS tT uU wW xX z
+
 local builder = Cs { "start",
     start = (
         (
@@ -552,7 +807,7 @@ local builder = Cs { "start",
                 V("!") -- new
               + V("s") + V("q")
               + V("i") + V("d")
-              + V("f") + V("g") + V("G") + V("e") + V("E")
+              + V("f") + V("F") + V("g") + V("G") + V("e") + V("E")
               + V("x") + V("X") + V("o")
               --
               + V("c")
@@ -567,11 +822,13 @@ local builder = Cs { "start",
               + V("t") + V("T")
               + V("l") + V("L")
               + V("I")
-              + V("h") -- new
               + V("w") -- new
               + V("W") -- new
               + V("a") -- new
               + V("A") -- new
+              + V("j") + V("J") -- stripped e E
+              + V("m") + V("M") -- new
+              + V("z") -- new
               --
               + V("*") -- ignores probably messed up %
             )
@@ -585,6 +842,7 @@ local builder = Cs { "start",
     ["i"] = (prefix_any * P("i")) / format_i, -- %i => regular %i (integer)
     ["d"] = (prefix_any * P("d")) / format_d, -- %d => regular %d (integer)
     ["f"] = (prefix_any * P("f")) / format_f, -- %f => regular %f (float)
+    ["F"] = (prefix_any * P("F")) / format_F, -- %F => regular %f (float) but 0/1 check
     ["g"] = (prefix_any * P("g")) / format_g, -- %g => regular %g (float)
     ["G"] = (prefix_any * P("G")) / format_G, -- %G => regular %G (float)
     ["e"] = (prefix_any * P("e")) / format_e, -- %e => regular %e (float)
@@ -608,45 +866,63 @@ local builder = Cs { "start",
     ["b"] = (prefix_any * P("b")) / format_b, -- %b => 12.342bp / maybe: B (and more units)
     ["t"] = (prefix_tab * P("t")) / format_t, -- %t => concat
     ["T"] = (prefix_tab * P("T")) / format_T, -- %t => sequenced
-    ["l"] = (prefix_tab * P("l")) / format_l, -- %l => boolean
-    ["L"] = (prefix_tab * P("L")) / format_L, -- %L => BOOLEAN
+    ["l"] = (prefix_any * P("l")) / format_l, -- %l => boolean
+    ["L"] = (prefix_any * P("L")) / format_L, -- %L => BOOLEAN
     ["I"] = (prefix_any * P("I")) / format_I, -- %I => signed integer
     --
     ["w"] = (prefix_any * P("w")) / format_w, -- %w => n spaces (optional prefix is added)
     ["W"] = (prefix_any * P("W")) / format_W, -- %W => mandate prefix, no specifier
     --
+    ["j"] = (prefix_any * P("j")) / format_j, -- %j => %e (float) stripped exponent (irrational)
+    ["J"] = (prefix_any * P("J")) / format_J, -- %J => %E (float) stripped exponent (irrational)
+    --
+    ["m"] = (prefix_tab * P("m")) / format_m, -- %m => xxx.xxx.xxx,xx (optional prefix instead of .)
+    ["M"] = (prefix_tab * P("M")) / format_M, -- %M => xxx,xxx,xxx.xx (optional prefix instead of ,)
+    --
+    ["z"] = (prefix_any * P("z")) / format_z, -- %M => xxx,xxx,xxx.xx (optional prefix instead of ,)
+    --
     ["a"] = (prefix_any * P("a")) / format_a, -- %a => '...' (forces tostring)
     ["A"] = (prefix_any * P("A")) / format_A, -- %A => "..." (forces tostring)
     --
-    ["*"] = Cs(((1-P("%"))^1 + P("%%")/"%%%%")^1) / format_rest, -- rest (including %%)
+    ["*"] = Cs(((1-P("%"))^1 + P("%%")/"%%")^1) / format_rest, -- rest (including %%)
     --
     ["!"] = Carg(2) * prefix_any * P("!") * C((1-P("!"))^1) * P("!") / format_extension,
 }
 
 -- we can be clever and only alias what is needed
 
+-- local direct = Cs (
+--         P("%")/""
+--       * Cc([[local format = string.format return function(str) return format("%]])
+--       * (S("+- .") + R("09"))^0
+--       * S("sqidfgGeExXo")
+--       * Cc([[",str) end]])
+--       * P(-1)
+--     )
+
 local direct = Cs (
-        P("%")/""
-      * Cc([[local format = string.format return function(str) return format("%]])
-      * (S("+- .") + R("09"))^0
-      * S("sqidfgGeExXo")
-      * Cc([[",str) end]])
-      * P(-1)
-    )
+    P("%")
+  * (S("+- .") + R("09"))^0
+  * S("sqidfgGeExXo")
+  * P(-1) / [[local format = string.format return function(str) return format("%0",str) end]]
+)
 
 local function make(t,str)
     local f
     local p
     local p = lpegmatch(direct,str)
     if p then
+     -- f = loadstripped(p)()
+     -- print("builder 1 >",p)
         f = loadstripped(p)()
     else
         n = 0
-        p = lpegmatch(builder,str,1,"..",t._extensions_) -- after this we know n
+     -- p = lpegmatch(builder,str,1,"..",t._extensions_) -- after this we know n
+        p = lpegmatch(builder,str,1,t._connector_,t._extensions_) -- after this we know n
         if n > 0 then
             p = format(template,preamble,t._preamble_,arguments[n],p)
---           print("builder>",p)
-            f = loadstripped(p)()
+         -- print("builder 2 >",p)
+            f = loadstripped(p,t._environment_)() -- t._environment is not populated (was experiment)
         else
             f = function() return str end
         end
@@ -701,10 +977,28 @@ strings.formatters = { }
 -- table (metatable) in which case we could better keep a count and
 -- clear that table when a threshold is reached
 
-function strings.formatters.new()
-    local t = { _extensions_ = { }, _preamble_ = "", _type_ = "formatter" }
-    setmetatable(t, { __index = make, __call = use })
-    return t
+-- _connector_ is an experiment
+
+if _LUAVERSION < 5.2  then
+
+    function strings.formatters.new(noconcat)
+        local t = { _type_ = "formatter", _connector_ = noconcat and "," or "..", _extensions_ = { }, _preamble_ = preamble, _environment_ = { } }
+        setmetatable(t, { __index = make, __call = use })
+        return t
+    end
+
+else
+
+    function strings.formatters.new(noconcat)
+        local e = { } -- better make a copy as we can overload
+        for k, v in next, environment do
+            e[k] = v
+        end
+        local t = { _type_ = "formatter", _connector_ = noconcat and "," or "..", _extensions_ = { }, _preamble_ = "", _environment_ = e }
+        setmetatable(t, { __index = make, __call = use })
+        return t
+    end
+
 end
 
 -- function strings.formatters.new()
@@ -723,8 +1017,12 @@ string.formatter   = function(str,...) return formatters[str](...) end -- someti
 local function add(t,name,template,preamble)
     if type(t) == "table" and t._type_ == "formatter" then
         t._extensions_[name] = template or "%s"
-        if preamble then
+        if type(preamble) == "string" then
             t._preamble_ = preamble .. "\n" .. t._preamble_ -- so no overload !
+        elseif type(preamble) == "table" then
+            for k, v in next, preamble do
+                t._environment_[k] = v
+            end
         end
     end
 end
@@ -733,11 +1031,31 @@ strings.formatters.add = add
 
 -- registered in the default instance (should we fall back on this one?)
 
-lpeg.patterns.xmlescape = Cs((P("<")/"&lt;" + P(">")/"&gt;" + P("&")/"&amp;" + P('"')/"&quot;" + P(1))^0)
-lpeg.patterns.texescape = Cs((C(S("#$%\\{}"))/"\\%1" + P(1))^0)
+patterns.xmlescape = Cs((P("<")/"&lt;" + P(">")/"&gt;" + P("&")/"&amp;" + P('"')/"&quot;" + P(1))^0)
+patterns.texescape = Cs((C(S("#$%\\{}"))/"\\%1" + P(1))^0)
+patterns.luaescape = Cs(((1-S('"\n'))^1 + P('"')/'\\"' + P('\n')/'\\n"')^0) -- maybe also \0
+patterns.luaquoted = Cs(Cc('"') * ((1-S('"\n'))^1 + P('"')/'\\"' + P('\n')/'\\n"')^0 * Cc('"'))
 
-add(formatters,"xml",[[lpegmatch(xmlescape,%s)]],[[local xmlescape = lpeg.patterns.xmlescape]])
-add(formatters,"tex",[[lpegmatch(texescape,%s)]],[[local texescape = lpeg.patterns.texescape]])
+-- escaping by lpeg is faster for strings without quotes, slower on a string with quotes, but
+-- faster again when other q-escapables are found (the ones we don't need to escape)
+
+-- add(formatters,"xml", [[lpegmatch(xmlescape,%s)]],[[local xmlescape = lpeg.patterns.xmlescape]])
+-- add(formatters,"tex", [[lpegmatch(texescape,%s)]],[[local texescape = lpeg.patterns.texescape]])
+-- add(formatters,"lua", [[lpegmatch(luaescape,%s)]],[[local luaescape = lpeg.patterns.luaescape]])
+
+if _LUAVERSION < 5.2  then
+
+    add(formatters,"xml",[[lpegmatch(xmlescape,%s)]],"local xmlescape = lpeg.patterns.xmlescape")
+    add(formatters,"tex",[[lpegmatch(texescape,%s)]],"local texescape = lpeg.patterns.texescape")
+    add(formatters,"lua",[[lpegmatch(luaescape,%s)]],"local luaescape = lpeg.patterns.luaescape")
+
+else
+
+    add(formatters,"xml",[[lpegmatch(xmlescape,%s)]],{ xmlescape = lpeg.patterns.xmlescape })
+    add(formatters,"tex",[[lpegmatch(texescape,%s)]],{ texescape = lpeg.patterns.texescape })
+    add(formatters,"lua",[[lpegmatch(luaescape,%s)]],{ luaescape = lpeg.patterns.luaescape })
+
+end
 
 -- -- yes or no:
 --

@@ -23,6 +23,8 @@ local report_mptopdf = logs.reporter("graphics","mptopdf")
 
 local mplib, metapost, lpdf, context = mplib, metapost, lpdf, context
 
+local texgetattribute           = tex.getattribute
+
 local pdfrgbcode                = lpdf.rgbcode
 local pdfcmykcode               = lpdf.cmykcode
 local pdfgraycode               = lpdf.graycode
@@ -36,8 +38,8 @@ local mptopdf    = metapost.mptopdf
 
 mptopdf.nofconverted = 0
 
-local f_translate = formatters["1 0 0 0 1 %f %f cm"]   -- no %s due to 1e-035 issues
-local f_concat    = formatters["%f %f %f %f %f %f cm"] -- no %s due to 1e-035 issues
+local f_translate = formatters["1 0 0 0 1 %F %F cm"]   -- no %s due to 1e-035 issues
+local f_concat    = formatters["%F %F %F %F %F %F cm"] -- no %s due to 1e-035 issues
 
 local m_path, m_stack, m_texts, m_version, m_date, m_shortcuts = { }, { }, { }, 0, 0, false
 
@@ -525,8 +527,13 @@ local captures_new = ( space + verbose + procset + preamble )^0
 
 local function parse(m_data)
     if find(m_data,"%%%%BeginResource: procset mpost") then
+     -- report_mptopdf("using sparse scanner, case 1")
+        lpegmatch(captures_new,m_data)
+    elseif find(m_data,"%%%%BeginProlog%s*%S+(.-)%%%%EndProlog") then
+     -- report_mptopdf("using sparse scanner, case 2")
         lpegmatch(captures_new,m_data)
     else
+     -- report_mptopdf("using verbose ps scanner")
         lpegmatch(captures_old,m_data)
     end
 end
@@ -539,7 +546,7 @@ function mptopdf.convertmpstopdf(name)
     resetall()
     local ok, m_data, n = resolvers.loadbinfile(name, 'tex') -- we need a binary load !
     if ok then
-        mps.colormodel = tex.attribute[a_colorspace]
+        mps.colormodel = texgetattribute(a_colorspace)
         statistics.starttiming(mptopdf)
         mptopdf.nofconverted = mptopdf.nofconverted + 1
         pdfcode(formatters["\\letterpercent\\space mptopdf begin: n=%s, file=%s"](mptopdf.nofconverted,file.basename(name)))

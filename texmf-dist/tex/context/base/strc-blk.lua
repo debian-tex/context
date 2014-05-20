@@ -13,7 +13,10 @@ local find, format, validstring = string.find, string.format, string.valid
 local settings_to_set, settings_to_array = utilities.parsers.settings_to_set, utilities.parsers.settings_to_array
 local allocate = utilities.storage.allocate
 
-local structures, context = structures, context
+local context     = context
+local commands    = commands
+
+local structures  = structures
 
 structures.blocks = structures.blocks or { }
 
@@ -75,7 +78,7 @@ end
 
 function blocks.select(state,name,tag,criterium)
     criterium = criterium or "text"
-    if find(tag,"=") then tag = "" end
+    if find(tag,"=",1,true) then tag = "" end
     local names = settings_to_set(name)
     local all = tag == ""
     local tags = not all and settings_to_set(tag)

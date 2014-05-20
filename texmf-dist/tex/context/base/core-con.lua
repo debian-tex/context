@@ -14,14 +14,14 @@ slower but look nicer this way.</p>
 <p>Some code may move to a module in the language namespace.</p>
 --ldx]]--
 
-local command, context = commands, context
-
 local floor, date, time, concat = math.floor, os.date, os.time, table.concat
 local lower, rep, match = string.lower, string.rep, string.match
 local utfchar, utfbyte = utf.char, utf.byte
 local tonumber, tostring = tonumber, tostring
+local P, C, Cs, lpegmatch = lpeg.P, lpeg.C, lpeg.Cs, lpeg.match
 
 local context            = context
+local commands           = commands
 
 local settings_to_array  = utilities.parsers.settings_to_array
 local allocate           = utilities.storage.allocate
@@ -37,9 +37,8 @@ local languages          = languages
 converters.number  = tonumber
 converters.numbers = tonumber
 
-function commands.number(n) context(n) end
-
-commands.numbers = commands.number
+commands.number  = context
+commands.numbers = context
 
 -- to be reconsidered ... languages namespace here, might become local plus a register command
 
@@ -126,13 +125,26 @@ local counters = allocate {
 
 languages.counters = counters
 
-counters['ar']   = counters['arabic']
-counters['gr']   = counters['greek']
-counters['g']    = counters['greek']
-counters['sl']   = counters['slovenian']
-counters['kr']   = counters['korean']
-counters['kr-p'] = counters['korean-parent']
-counters['kr-c'] = counters['korean-circle']
+counters['ar']                   = counters['arabic']
+counters['gr']                   = counters['greek']
+counters['g']                    = counters['greek']
+counters['sl']                   = counters['slovenian']
+counters['kr']                   = counters['korean']
+counters['kr-p']                 = counters['korean-parent']
+counters['kr-c']                 = counters['korean-circle']
+
+counters['thainumerals']         = counters['thai']
+counters['devanagarinumerals']   = counters['devanagari']
+counters['gurmurkhinumerals']    = counters['gurmurkhi']
+counters['gujaratinumerals']     = counters['gujarati']
+counters['tibetannumerals']      = counters['tibetan']
+counters['greeknumerals']        = counters['greek']
+counters['arabicnumerals']       = counters['arabic']
+counters['persiannumerals']      = counters['persian']
+counters['arabicexnumerals']     = counters['persian']
+counters['koreannumerals']       = counters['korean']
+counters['koreanparentnumerals'] = counters['korean-parent']
+counters['koreancirclenumerals'] = counters['korean-circle']
 
 local fallback = utfbyte('0')
 
@@ -209,6 +221,11 @@ function converters.Character (n) return chr (n,upper_offset) end
 function converters.characters(n) return chrs(n,lower_offset) end
 function converters.Characters(n) return chrs(n,upper_offset) end
 
+converters['a']  = converters.characters
+converters['A']  = converters.Characters
+converters['AK'] = converters.Characters
+converters['KA'] = converters.Characters
+
 function commands.alphabetic(n,c) context(do_alphabetic(n,counters[c],lowercharacter)) end
 function commands.Alphabetic(n,c) context(do_alphabetic(n,counters[c],uppercharacter)) end
 function commands.character (n)   context(chr (n,lower_offset)) end
@@ -216,25 +233,12 @@ function commands.Character (n)   context(chr (n,upper_offset)) end
 function commands.characters(n)   context(chrs(n,lower_offset)) end
 function commands.Characters(n)   context(chrs(n,upper_offset)) end
 
-local days = {
-    [false] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
-    [true]  = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
-}
-
-local function weekday(day,month,year)
-    return date("%w",time{year=year,month=month,day=day}) + 1
-end
-
-local function isleapyear(year)
-    return (year % 400 == 0) or ((year % 100 ~= 0) and (year % 4 == 0))
-end
+local weekday    = os.weekday    -- moved to l-os
+local isleapyear = os.isleapyear -- moved to l-os
+local nofdays    = os.nofdays    -- moved to l-os
 
 local function leapyear(year)
     return isleapyear(year) and 1 or 0
-end
-
-local function nofdays(year,month)
-    return days[isleapyear(year)][month]
 end
 
 local function textime()
@@ -254,7 +258,7 @@ converters.nofdays    = nofdays
 converters.textime    = textime
 
 function commands.weekday (day,month,year) context(weekday (day,month,year)) end
-function commands.leapyear(year)           context(leapyear(year))           end -- rather useless
+function commands.leapyear(year)           context(leapyear(year))           end -- rather useless, only for ifcase
 function commands.nofdays (year,month)     context(nofdays (year,month))     end
 
 function commands.year   () context(date("%Y")) end
@@ -285,6 +289,13 @@ end
 converters.toroman       = toroman
 converters.Romannumerals = toroman
 converters.romannumerals = function(n) return lower(toroman(n)) end
+
+converters['i']  = converters.romannumerals
+converters['I']  = converters.Romannumerals
+converters['r']  = converters.romannumerals
+converters['R']  = converters.Romannumerals
+converters['KR'] = converters.Romannumerals
+converters['RK'] = converters.Romannumerals
 
 function commands.romannumerals(n) context(lower(toroman(n))) end
 function commands.Romannumerals(n) context(      toroman(n))  end
@@ -486,6 +497,10 @@ converters.tochinese = tochinese
 function converters.chinesenumerals   (n) return tochinese(n,"normal") end
 function converters.chinesecapnumerals(n) return tochinese(n,"cap"   ) end
 function converters.chineseallnumerals(n) return tochinese(n,"all"   ) end
+
+converters['cn']   = converters.chinesenumerals
+converters['cn-c'] = converters.chinesecapnumerals
+converters['cn-a'] = converters.chineseallnumerals
 
 function commands.chinesenumerals   (n) context(tochinese(n,"normal")) end
 function commands.chinesecapnumerals(n) context(tochinese(n,"cap"   )) end
@@ -713,8 +728,6 @@ function commands.ordinal(n,language)
         context.highordinalstr(o)
     end
 end
-
--- verbose numbers
 
 -- verbose numbers
 
@@ -963,6 +976,20 @@ function commands.verbose(n,language)
     context(t and t.translate(n) or n)
 end
 
+-- These are just helpers but not really for the tex end. Do we have to
+-- use translate here?
+
+local whitespace  = lpeg.patterns.whitespace
+local word        = (1-whitespace) / characters.upper * (1-whitespace)^1
+local spacing     = whitespace^1
+local pattern_one = Cs(word * P(1)^1)
+local pattern_all = Cs((word + spacing)^1)
+
+function converters.word (s) return s end
+function converters.words(s) return s end
+function converters.Word (s) return lpegmatch(pattern_one,s) end
+function converters.Words(s) return lpegmatch(pattern_all,s) end
+
 -- --
 
 local v_day      = variables.day
@@ -984,7 +1011,7 @@ local days = { -- not variables.sunday
     "saturday",
 }
 
-local months = { -- not variables.januari
+local months = { -- not variables.january
     "january",
     "february",
     "march",

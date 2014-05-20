@@ -960,7 +960,7 @@
    \ifnum\c_page_mul_balance_tries>\c_page_mul_balance_tries_max\relax
      \showmessage\m!columns7\empty
    \else
-     \showmessage\m!columns8{\the\c_page_mul_balance_tries\space}%
+     \showmessage\m!columns8{\the\c_page_mul_balance_tries}%
    \fi
    \egroup}
 
@@ -1158,26 +1158,28 @@
     \def\setlocalcolumnfloats
       {\settrue\onlylocalcolumnfloats
        \everypar\everylocalcolumnfloatspar
-       \let\page_mul_flush_float\doflushcolumnfloat
+       \let\page_mul_flush_float \doflushcolumnfloat
        \let\page_mul_flush_floats\doflushcolumnfloats}
 
     \def\setglobalcolumnfloats
       {\setfalse\onlylocalcolumnfloats
        \reseteverypar
-       \let\page_mul_flush_float\relax
+       \let\page_mul_flush_float \relax
        \let\page_mul_flush_floats\noflushcolumnfloats}
 
-    \def\noflushcolumnfloats
-      {\bgroup
-       \xdef\localsavednoffloats{\the\savednoffloats}%
-       \global\savednoffloats\globalsavednoffloats
-       \page_otr_command_flush_top_insertions
-       \xdef\globalsavenoffloats{\the\savednoffloats}%
-       \ifnum\globalsavednoffloats=\zerocount
-         \setlocalcolumnfloats
-       \fi
-       \global\savednoffloats\localsavednoffloats
-       \egroup}
+ % \def\noflushcolumnfloats
+ %   {\bgroup
+ %    \xdef\localsavednoffloats{\the\savednoffloats}%
+ %    \global\savednoffloats\globalsavednoffloats
+ %    \page_otr_command_flush_top_insertions
+ %    \xdef\globalsavenoffloats{\the\savednoffloats}%
+ %    \ifnum\globalsavednoffloats=\zerocount
+ %      \setlocalcolumnfloats
+ %    \fi
+ %    \global\savednoffloats\localsavednoffloats
+ %    \egroup}
+ %
+    \def\noflushcolumnfloats{\doflushcolumnfloats} % not yet redone
 
 %D We need to calculate the amount of free space in a columns. When there is not
 %D enough room, we migrate the float to the next column. These macro's are
@@ -1603,9 +1605,11 @@
     \else
         \balancecolumnsfalse
     \fi
-    \installalign\v!yes {\page_columns_align_option_yes }%
-    \installalign\v!no  {\page_columns_align_option_no  }%
-    \installalign\v!text{\page_columns_align_option_text}%
+    % % this won't work (blocked by check for overloading; too fuzzy anyway)
+    % \installalign\v!yes {\page_columns_align_option_yes }% \stretchcolumnstrue \inheritcolumnsfalse
+    % \installalign\v!no  {\page_columns_align_option_no  }% \stretchcolumnsfalse\inheritcolumnsfalse
+    % \installalign\v!text{\page_columns_align_option_text}% \stretchcolumnsfalse\inheritcolumnstrue
+    % %
     \stretchcolumnsfalse
     \inheritcolumnstrue
     \edef\p_align{\columnsparameter\c!align}%
@@ -1763,6 +1767,32 @@
      {\directdummyparameter\c!distance}%
      {\directdummyparameter\c!n}}
 
+%D Moved here:
+
+\unexpanded\def\page_mul_command_test_column
+  {\dodoubleempty\page_mul_command_test_column_indeed}
+
+\unexpanded\def\page_mul_command_test_column_indeed[#1][#2]% works on last column
+  {\page_otr_command_flush_top_insertions\endgraf
+   \ifdim\pagegoal<\maxdimen
+     \ifdim\pagetotal<\pagegoal
+       \d_page_tests_test\dimexpr
+         \pagegoal
+        -\pagetotal
+         \ifdim\lastskip<\parskip+\parskip\fi
+         \ifsecondargument+#2\fi
+       \relax
+       \getrawnoflines\d_page_tests_test % (raw)
+       \ifnum#1>\noflines
+         \column
+       \fi
+     \else
+       \penalty-\plustenthousand % (untested)
+     \fi
+   \fi}
+
+%D but fragile anyway.
+
 \let\page_mul_command_package_contents\page_one_command_package_contents
 \let\page_mul_command_flush_float_box \page_one_command_flush_float_box
 
@@ -1786,8 +1816,9 @@
    \s!page_otr_command_side_float_output      =\page_mul_command_side_float_output,
    \s!page_otr_command_flush_floats           =\page_mul_command_flush_floats,
    \s!page_otr_command_flush_side_floats      =\page_mul_command_flush_side_floats,
-   \s!page_otr_command_flush_saved_floats     =\page_mul_command_flush_saved_floats
+   \s!page_otr_command_flush_saved_floats     =\page_mul_command_flush_saved_floats,
  % \s!page_otr_command_flush_margin_blocks    =\page_mul_command_flush_margin_blocks, % not used
+   \s!page_otr_command_test_column            =\page_mul_command_test_column
   ]
 
 \protect \endinput

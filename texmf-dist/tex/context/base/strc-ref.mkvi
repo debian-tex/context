@@ -75,6 +75,8 @@
 %D document). By setting the \type{interaction} variable, one
 %D can influences the way interactive references are set.
 
+\let\referenceprefix\empty
+
 \installcorenamespace{referencing}
 
 \installdirectcommandhandler \??referencing {referencing} % \??referencing
@@ -191,12 +193,12 @@
          \globallet\currentreferencecoding\s!tex
        \fi
        % beware, the structures.references.set writes a
-       % \setnextinternalreference
+       \setnextinternalreference
        \strc_references_start_destination_nodes
          \ctxcommand{setreferenceattribute("\currentreferencekind", "\referenceprefix","\currentreferencelabels",
            {
                 references = {
-                %   internal = \nextinternalreference, % no need for an internal as we have an explicit
+                    internal = \nextinternalreference,
                     block    = "\currentsectionblock",
                     section  = structures.sections.currentid(),
                 },
@@ -207,14 +209,14 @@
                         xmlroot  = \ifx\currentreferencecoding\s!xml "\xmldocument"\else nil\fi, % only useful when text
                     \fi
                 },
-                \ifx\currentreferencedata\empty\else
-                    entries = {
-                        text = \!!bs\currentreferencedata\!!es
-                    },
-                \fi
-                \ifx\currentreferenceuserdata\empty\else
-                    userdata = structures.helpers.touserdata(\!!bs\detokenize{#userdata}\!!es)
-                \fi
+            \ifx\currentreferencedata\empty\else
+                entries = {
+                    text = \!!bs\currentreferencedata\!!es
+                },
+            \fi
+            \ifx\currentreferenceuserdata\empty\else
+                userdata = structures.helpers.touserdata(\!!bs\detokenize{#userdata}\!!es)
+            \fi
             },"\interactionparameter\c!focus")
            }%
        \strc_references_stop_destination_nodes
@@ -230,6 +232,7 @@
      \dontleavehmode\hbox attr \destinationattribute\lastdestinationattribute\bgroup
        \strc_references_flush_destination_nodes
      \egroup
+     \prewordbreak % new
    \fi}
 
 \def\strc_references_set_page_only_destination_attribute#labels% could in fact be fully expandable
@@ -240,9 +243,11 @@
        \lastdestinationattribute\attributeunsetvalue
      \else
        \strc_references_start_destination_nodes
-         \ctxcommand{setreferenceattribute("\s!page", "\referenceprefix","\currentreferencelabels",
+\setnextinternalreference
+       \ctxcommand{setreferenceattribute("\s!page", "\referenceprefix","\currentreferencelabels",
             {
                 references = {
+                    internal = \nextinternalreference,
                     block    = "\currentsectionblock",
                     section  = structures.sections.currentid(),
                 },
@@ -257,6 +262,51 @@
      \setbox\b_strc_destination_nodes\emptyhbox
      \lastdestinationattribute\attributeunsetvalue
    \fi}
+
+\unexpanded\def\strc_references_direct_full_user#user#labels#text%
+  {\ifreferencing
+     \strc_references_start_destination_nodes
+     \setnextinternalreference
+     \edef\m_strc_references_user{#user}%
+     \ctxcommand{setreferenceattribute("\s!full", "\referenceprefix","#labels",
+         {
+              references = {
+                  internal = \nextinternalreference,
+                  block    = "\currentsectionblock",
+                  section  = structures.sections.currentid(),
+              },
+              metadata = {
+                  kind = "\s!full",
+              },
+              entries = {
+                  text = \!!bs#text\!!es
+              },
+          \ifx\m_strc_references_user\empty \else
+              userdata = {
+                  \m_strc_references_user
+              }
+          \fi
+          },"\interactionparameter\c!focus")
+         }%
+     \strc_references_stop_destination_nodes
+   \else
+     \setbox\b_strc_destination_nodes\emptyhbox
+     \lastdestinationattribute\attributeunsetvalue
+   \fi
+   % will become obsolete:
+   \xdef\currentdestinationattribute{\number\lastdestinationattribute}%
+   % will become an option:
+   \ifnum\lastdestinationattribute>\zerocount
+     \dontleavehmode\hbox attr \destinationattribute\lastdestinationattribute\bgroup
+       \strc_references_flush_destination_nodes
+     \egroup
+     \prewordbreak % new
+   \fi}
+
+\unexpanded\def\strc_references_direct_full
+  {\strc_references_direct_full_user\empty}
+
+\let\dodirectfullreference\strc_references_direct_full % for at lua end (no longer)
 
 \def\strc_references_set_page_only_destination_box_attribute#cs#labels%
   {\strc_references_set_page_only_destination_attribute{#labels}%
@@ -771,12 +821,24 @@
 \unexpanded\def\setupglobalreferenceprefix[#prefix]%
   {\xdef\referenceprefix{#prefix}}
 
+% \unexpanded\def\pushreferenceprefix#prefix%
+%   {\pushmacro\referenceprefix
+%    \xdef\referenceprefix{#prefix}} % global
+
+% \unexpanded\def\popreferenceprefix
+%   {\popmacro\referenceprefix}
+
+\unexpanded\def\globalpushreferenceprefix#prefix%
+  {\xdef\referenceprefix{\ctxcommand{pushreferenceprefix("#prefix")}}}
+
+\unexpanded\def\globalpopreferenceprefix
+  {\xdef\referenceprefix{\ctxcommand{popreferenceprefix()}}}
+
 \unexpanded\def\pushreferenceprefix#prefix%
-  {\pushmacro\referenceprefix
-   \xdef\referenceprefix{#prefix}}
+  {\edef\referenceprefix{\ctxcommand{pushreferenceprefix("#prefix")}}}
 
 \unexpanded\def\popreferenceprefix
-  {\popmacro\referenceprefix}
+  {\edef\referenceprefix{\ctxcommand{popreferenceprefix()}}}
 
 \def\m_strc_references_prefix_yes{+}
 \def\m_strc_references_prefix_nop{-}
@@ -799,7 +861,7 @@
    \fi\fi\fi\fi}
 
 \appendtoks
-  \setupreferenceprefix[\referencingparameter\c!prefix]
+    \setupreferenceprefix[\referencingparameter\c!prefix]
 \to \everysetupreferencing
 
 %D We can typeset a reference using \type{\in}, \type{\at} and
@@ -898,11 +960,12 @@
    \begingroup
    \let\crlf\space
    \let\\\space
-   \postponenotes
+   \postponenotes % might go
    \referencingparameter\c!left
    \doifreferencefoundelse{#label}
      {\goto{\limitatetext\currentreferencetitle{\referencingparameter\c!width}\unknown}[#label]}% not so efficient (dup lookup)
      {}% todo
+   \flushnotes % might go
    \referencingparameter\c!right
    \endgroup}
 

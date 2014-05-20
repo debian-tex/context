@@ -33,7 +33,7 @@ local type, tostring, tonumber = type, tostring, tonumber
 local format, gsub, match, find = string.format, string.gsub, string.match, string.find
 local concat = table.concat
 local emptystring = string.is_empty
-local lpegmatch, P = lpeg.match, lpeg.P
+local P = lpeg.P
 
 local trace_graphics   = false  trackers.register("metapost.graphics",   function(v) trace_graphics   = v end)
 local trace_tracingall = false  trackers.register("metapost.tracingall", function(v) trace_tracingall = v end)
@@ -121,7 +121,7 @@ local function o_finder(name,mode,ftype)
     return name
 end
 
-local function finder(name, mode, ftype)
+local function finder(name,mode,ftype)
     if mode == "w" then
         return o_finder(name,mode,ftype)
     else
@@ -284,6 +284,8 @@ if mplibone then
 
 else
 
+    -- let end = relax ;
+
     local preamble = [[
         boolean mplib ; mplib := true ;
         let dump = endinput ;
@@ -293,17 +295,28 @@ else
     local methods = {
         double  = "double",
         scaled  = "scaled",
+        binary  = "binary",
+        decimal = "decimal",
         default = "scaled",
-        decimal = false, -- for the moment
     }
+
+    function metapost.runscript(code)
+        return code
+    end
+
+    function metapost.scripterror(str)
+        report_metapost("script error: %s",str)
+    end
 
     function metapost.load(name,method)
         starttiming(mplib)
         method = method and methods[method] or "scaled"
         local mpx = mplib.new {
-            ini_version = true,
-            find_file   = finder,
-            math_mode   = method,
+            ini_version  = true,
+            find_file    = finder,
+            math_mode    = method,
+            run_script   = metapost.runscript,
+            script_error = metapost.scripterror,
         }
         report_metapost("initializing number mode %a",method)
         local result
@@ -400,6 +413,10 @@ local mp_inp, mp_log, mp_tag = { }, { }, 0
 
 -- key/values
 
+if not metapost.initializescriptrunner then
+    function metapost.initializescriptrunner() end
+end
+
 function metapost.process(mpx, data, trialrun, flusher, multipass, isextrapass, askedfig)
     local converted, result = false, { }
     if type(mpx) == "string" then
@@ -407,6 +424,7 @@ function metapost.process(mpx, data, trialrun, flusher, multipass, isextrapass, 
     end
     if mpx and data then
         starttiming(metapost)
+        metapost.initializescriptrunner(mpx,trialrun)
         if trace_graphics then
             if not mp_inp[mpx] then
                 mp_tag = mp_tag + 1
@@ -587,5 +605,56 @@ function metapost.directrun(formatname,filename,outputformat,astable,mpdata)
                 end
             end
         end
+    end
+end
+
+-- goodie
+
+function metapost.quickanddirty(mpxformat,data)
+    if not data then
+        mpxformat = "metafun"
+        data      = mpxformat
+    end
+    local code, bbox
+    local flusher = {
+        startfigure = function(n,llx,lly,urx,ury)
+            code = { }
+            bbox = { llx, lly, urx, ury }
+        end,
+        flushfigure = function(t)
+            for i=1,#t do
+                code[#code+1] = t[i]
+            end
+        end,
+        stopfigure = function()
+        end
+    }
+    local data = format("; beginfig(1) ;\n %s\n ; endfig ;",data)
+    metapost.process(mpxformat, { data }, false, flusher, false, false, "all")
+    if code then
+        return {
+            bbox = bbox or { 0, 0, 0, 0 },
+            code = code,
+            data = data,
+        }
+    else
+        report_metapost("invalid quick and dirty run")
+    end
+end
+
+function metapost.getstatistics(memonly)
+    if memonly then
+        local n, m = 0, 0
+        for name, mpx in next, mpxformats do
+            n = n + 1
+            m = m + mpx:statistics().memory
+        end
+        return n, m
+    else
+        local t = { }
+        for name, mpx in next, mpxformats do
+            t[name] = mpx:statistics()
+        end
+        return t
     end
 end

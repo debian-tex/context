@@ -94,12 +94,14 @@
 \let\layoutcomponentboxattribute  \empty
 
 \unexpanded\def\showlayoutcomponents
-  {%\ctxlua{attributes.viewerlayers.enable()}% automatic
-   \let\setlayoutcomponentattribute  \attr_layoutcomponent_set
+  {\let\setlayoutcomponentattribute  \attr_layoutcomponent_set
    \let\resetlayoutcomponentattribute\attr_layoutcomponent_reset}
 
+\unexpanded\def\attr_layoutcomponent_cleanup
+  {\ctxcommand{cleanuplayers()}}
+
 \appendtoks
-    \ctxcommand{cleanuplayers()}%
+    \attr_layoutcomponent_cleanup
 \to \everyshipout
 
 \protect \endinput

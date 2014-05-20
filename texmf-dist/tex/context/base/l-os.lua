@@ -127,11 +127,17 @@ function io.popen  (...) ioflush() return iopopen(...) end
 
 function os.resultof(command)
     local handle = io.popen(command,"r")
-    return handle and handle:read("*all") or ""
+    if handle then
+        local result = handle:read("*all") or ""
+        handle:close()
+        return result
+    else
+        return ""
+    end
 end
 
 if not io.fileseparator then
-    if find(os.getenv("PATH"),";") then
+    if find(os.getenv("PATH"),";",1,true) then
         io.fileseparator, io.pathseparator, os.type = "\\", ";", os.type or "mswin"
     else
         io.fileseparator, io.pathseparator, os.type = "/" , ":", os.type or "unix"
@@ -172,26 +178,27 @@ if not os.times then -- ?
     end
 end
 
-os.gettimeofday = os.gettimeofday or os.clock
 
-local startuptime = os.gettimeofday()
+local gettimeofday = os.gettimeofday or os.clock
+os.gettimeofday    = gettimeofday
+
+local startuptime = gettimeofday()
 
 function os.runtime()
-    return os.gettimeofday() - startuptime
+    return gettimeofday() - startuptime
 end
 
---~ print(os.gettimeofday()-os.time())
---~ os.sleep(1.234)
---~ print (">>",os.runtime())
---~ print(os.date("%H:%M:%S",os.gettimeofday()))
---~ print(os.date("%H:%M:%S",os.time()))
+-- print(os.gettimeofday()-os.time())
+-- os.sleep(1.234)
+-- print (">>",os.runtime())
+-- print(os.date("%H:%M:%S",os.gettimeofday()))
+-- print(os.date("%H:%M:%S",os.time()))
 
 -- no need for function anymore as we have more clever code and helpers now
 -- this metatable trickery might as well disappear
 
-os.resolvers = os.resolvers or { } -- will become private
-
-local resolvers = os.resolvers
+local resolvers = os.resolvers or { }
+os.resolvers    = resolvers
 
 setmetatable(os, { __index = function(t,k)
     local r = resolvers[k]
@@ -214,6 +221,8 @@ local function guess()
     return os.resultof("echo $HOSTTYPE") or ""
 end
 
+-- os.bits = 32 | 64
+
 if platform ~= "" then
 
     os.platform = platform
@@ -222,10 +231,14 @@ elseif os.type == "windows" then
 
     -- we could set the variable directly, no function needed here
 
-    function os.resolvers.platform(t,k)
+    -- PROCESSOR_ARCHITECTURE : binary platform
+    -- PROCESSOR_ARCHITEW6432 : OS platform
+
+    function resolvers.platform(t,k)
         local platform, architecture = "", os.getenv("PROCESSOR_ARCHITECTURE") or ""
-        if find(architecture,"AMD64") then
-            platform = "mswin-64"
+        if find(architecture,"AMD64",1,true) then
+         -- platform = "mswin-64"
+            platform = "win64"
         else
             platform = "mswin"
         end
@@ -236,12 +249,12 @@ elseif os.type == "windows" then
 
 elseif name == "linux" then
 
-    function os.resolvers.platform(t,k)
+    function resolvers.platform(t,k)
         -- we sometimes have HOSTTYPE set so let's check that first
         local platform, architecture = "", os.getenv("HOSTTYPE") or os.resultof("uname -m") or ""
-        if find(architecture,"x86_64") then
+        if find(architecture,"x86_64",1,true) then
             platform = "linux-64"
-        elseif find(architecture,"ppc") then
+        elseif find(architecture,"ppc",1,true) then
             platform = "linux-ppc"
         else
             platform = "linux"
@@ -263,7 +276,7 @@ elseif name == "macosx" then
         therefore not permitted to run the 64 bit kernel.
       ]]--
 
-    function os.resolvers.platform(t,k)
+    function resolvers.platform(t,k)
      -- local platform, architecture = "", os.getenv("HOSTTYPE") or ""
      -- if architecture == "" then
      --     architecture = os.resultof("echo $HOSTTYPE") or ""
@@ -272,9 +285,9 @@ elseif name == "macosx" then
         if architecture == "" then
          -- print("\nI have no clue what kind of OSX you're running so let's assume an 32 bit intel.\n")
             platform = "osx-intel"
-        elseif find(architecture,"i386") then
+        elseif find(architecture,"i386",1,true) then
             platform = "osx-intel"
-        elseif find(architecture,"x86_64") then
+        elseif find(architecture,"x86_64",1,true) then
             platform = "osx-64"
         else
             platform = "osx-ppc"
@@ -286,9 +299,9 @@ elseif name == "macosx" then
 
 elseif name == "sunos" then
 
-    function os.resolvers.platform(t,k)
+    function resolvers.platform(t,k)
         local platform, architecture = "", os.resultof("uname -m") or ""
-        if find(architecture,"sparc") then
+        if find(architecture,"sparc",1,true) then
             platform = "solaris-sparc"
         else -- if architecture == 'i86pc'
             platform = "solaris-intel"
@@ -300,9 +313,9 @@ elseif name == "sunos" then
 
 elseif name == "freebsd" then
 
-    function os.resolvers.platform(t,k)
+    function resolvers.platform(t,k)
         local platform, architecture = "", os.resultof("uname -m") or ""
-        if find(architecture,"amd64") then
+        if find(architecture,"amd64",1,true) then
             platform = "freebsd-amd64"
         else
             platform = "freebsd"
@@ -314,10 +327,10 @@ elseif name == "freebsd" then
 
 elseif name == "kfreebsd" then
 
-    function os.resolvers.platform(t,k)
+    function resolvers.platform(t,k)
         -- we sometimes have HOSTTYPE set so let's check that first
         local platform, architecture = "", os.getenv("HOSTTYPE") or os.resultof("uname -m") or ""
-        if find(architecture,"x86_64") then
+        if find(architecture,"x86_64",1,true) then
             platform = "kfreebsd-amd64"
         else
             platform = "kfreebsd-i386"
@@ -333,13 +346,19 @@ else
     -- os.setenv("MTX_PLATFORM",platform)
     -- os.platform = platform
 
-    function os.resolvers.platform(t,k)
+    function resolvers.platform(t,k)
         local platform = "linux"
         os.setenv("MTX_PLATFORM",platform)
         os.platform = platform
         return platform
     end
 
+end
+
+function resolvers.bits(t,k)
+    local bits = find(os.platform,"64",1,true) and 64 or 32
+    os.bits = bits
+    return bits
 end
 
 -- beware, we set the randomseed
@@ -380,31 +399,43 @@ end
 
 local timeformat = format("%%s%s",os.timezone(true))
 local dateformat = "!%Y-%m-%d %H:%M:%S"
+local lasttime   = nil
+local lastdate   = nil
 
 function os.fulltime(t,default)
-    t = tonumber(t) or 0
+    t = t and tonumber(t) or 0
     if t > 0 then
         -- valid time
     elseif default then
         return default
     else
-        t = nil
+        t = time()
     end
-    return format(timeformat,date(dateformat,t))
+    if t ~= lasttime then
+        lasttime = t
+        lastdate = format(timeformat,date(dateformat))
+    end
+    return lastdate
 end
 
 local dateformat = "%Y-%m-%d %H:%M:%S"
+local lasttime   = nil
+local lastdate   = nil
 
 function os.localtime(t,default)
-    t = tonumber(t) or 0
+    t = t and tonumber(t) or 0
     if t > 0 then
         -- valid time
     elseif default then
         return default
     else
-        t = nil
+        t = time()
     end
-    return date(dateformat,t)
+    if t ~= lasttime then
+        lasttime = t
+        lastdate = date(dateformat,t)
+    end
+    return lastdate
 end
 
 function os.converttime(t,default)
@@ -472,3 +503,60 @@ end
 -- print(os.which("inkscape"))
 -- print(os.which("gs.exe"))
 -- print(os.which("ps2pdf"))
+
+-- These are moved from core-con.lua (as I needed them elsewhere).
+
+local function isleapyear(year)
+    return (year % 400 == 0) or ((year % 100 ~= 0) and (year % 4 == 0))
+end
+
+os.isleapyear = isleapyear
+
+-- nicer:
+--
+-- local days = {
+--     [false] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+--     [true]  = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+-- }
+--
+-- local function nofdays(year,month)
+--     return days[isleapyear(year)][month]
+--     return month == 2 and isleapyear(year) and 29 or days[month]
+-- end
+--
+-- more efficient:
+
+local days = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+
+local function nofdays(year,month)
+    if not month then
+        return isleapyear(year) and 365 or 364
+    else
+        return month == 2 and isleapyear(year) and 29 or days[month]
+    end
+end
+
+os.nofdays = nofdays
+
+function os.weekday(day,month,year)
+    return date("%w",time { year = year, month = month, day = day }) + 1
+end
+
+function os.validdate(year,month,day)
+    -- we assume that all three values are set
+    -- year is always ok, even if lua has a 1970 time limit
+    if month < 1 then
+        month = 1
+    elseif month > 12 then
+        month = 12
+    end
+    if day < 1 then
+        day = 1
+    else
+        local max = nofdays(year,month)
+        if day > max then
+            day = max
+        end
+    end
+    return year, month, day
+end

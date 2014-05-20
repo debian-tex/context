@@ -10,43 +10,44 @@ local format, find, match, rep = string.format, string.find, string.match, strin
 local tonumber = tonumber
 local S, lpegmatch, lpegtsplitat = lpeg.S, lpeg.match, lpeg.tsplitat
 
-local context = context
+commands       = commands or { }
+local commands = commands
 
-commands = commands or { }
+local context  = context
 
 function commands.writestatus(...) logs.status(...) end -- overloaded later
 
-local firstoftwoarguments  = context.firstoftwoarguments  -- context.constructcsonly("firstoftwoarguments" )
-local secondoftwoarguments = context.secondoftwoarguments -- context.constructcsonly("secondoftwoarguments")
-local firstofoneargument   = context.firstofoneargument   -- context.constructcsonly("firstofoneargument"  )
-local gobbleoneargument    = context.gobbleoneargument    -- context.constructcsonly("gobbleoneargument"   )
+local ctx_firstoftwoarguments  = context.firstoftwoarguments  -- context.constructcsonly("firstoftwoarguments" )
+local ctx_secondoftwoarguments = context.secondoftwoarguments -- context.constructcsonly("secondoftwoarguments")
+local ctx_firstofoneargument   = context.firstofoneargument   -- context.constructcsonly("firstofoneargument"  )
+local ctx_gobbleoneargument    = context.gobbleoneargument    -- context.constructcsonly("gobbleoneargument"   )
 
--- contextsprint(prtcatcodes,[[\ui_fo]]) -- firstofonearguments
--- contextsprint(prtcatcodes,[[\ui_go]]) -- gobbleonearguments
--- contextsprint(prtcatcodes,[[\ui_ft]]) -- firstoftwoarguments
--- contextsprint(prtcatcodes,[[\ui_st]]) -- secondoftwoarguments
+-- contextsprint(prtcatcodes,[[\ui_fo]]) -- ctx_firstofonearguments
+-- contextsprint(prtcatcodes,[[\ui_go]]) -- ctx_gobbleonearguments
+-- contextsprint(prtcatcodes,[[\ui_ft]]) -- ctx_firstoftwoarguments
+-- contextsprint(prtcatcodes,[[\ui_st]]) -- ctx_secondoftwoarguments
 
 function commands.doifelse(b)
     if b then
-        firstoftwoarguments()
+        ctx_firstoftwoarguments()
     else
-        secondoftwoarguments()
+        ctx_secondoftwoarguments()
     end
 end
 
 function commands.doif(b)
     if b then
-        firstofoneargument()
+        ctx_firstofoneargument()
     else
-        gobbleoneargument()
+        ctx_gobbleoneargument()
     end
 end
 
 function commands.doifnot(b)
     if b then
-        gobbleoneargument()
+        ctx_gobbleoneargument()
     else
-        firstofoneargument()
+        ctx_firstofoneargument()
     end
 end
 
@@ -58,9 +59,9 @@ end
 
 function commands.doifelsespaces(str)
     if find(str,"^ +$") then
-        firstoftwoarguments()
+        ctx_firstoftwoarguments()
     else
-        secondoftwoarguments()
+        ctx_secondoftwoarguments()
     end
 end
 
@@ -83,12 +84,12 @@ function commands.doifcommonelse(a,b) -- often the same test
     for i=1,na do
         for j=1,nb do
             if ha[i] == hb[j] then
-                firstoftwoarguments()
+                ctx_firstoftwoarguments()
                 return
             end
         end
     end
-    secondoftwoarguments()
+    ctx_secondoftwoarguments()
 end
 
 function commands.doifinsetelse(a,b)
@@ -96,20 +97,20 @@ function commands.doifinsetelse(a,b)
     if not hb then hb = lpegmatch(s,b) h[b] = hb end
     for i=1,#hb do
         if a == hb[i] then
-            firstoftwoarguments()
+            ctx_firstoftwoarguments()
             return
         end
     end
-    secondoftwoarguments()
+    ctx_secondoftwoarguments()
 end
 
 local pattern = lpeg.patterns.validdimen
 
 function commands.doifdimenstringelse(str)
     if lpegmatch(pattern,str) then
-        firstoftwoarguments()
+        ctx_firstoftwoarguments()
     else
-        secondoftwoarguments()
+        ctx_secondoftwoarguments()
     end
 end
 

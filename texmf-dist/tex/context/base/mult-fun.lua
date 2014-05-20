@@ -17,13 +17,14 @@ return {
         --
         "sqr", "log", "ln", "exp", "inv", "pow", "pi", "radian",
         "tand", "cotd", "sin", "cos", "tan", "cot", "atan", "asin", "acos",
-        "invsin", "invcos", "acosh", "asinh", "sinh", "cosh",
+        "invsin", "invcos", "invtan", "acosh", "asinh", "sinh", "cosh",
         "paired", "tripled",
         "unitcircle", "fulldiamond", "unitdiamond", "fullsquare",
      -- "halfcircle", "quartercircle",
         "llcircle", "lrcircle", "urcircle", "ulcircle",
         "tcircle", "bcircle", "lcircle", "rcircle",
         "lltriangle", "lrtriangle", "urtriangle", "ultriangle",
+        "uptriangle", "downtriangle", "lefttriangle", "righttriangle", "triangle",
         "smoothed", "cornered", "superellipsed", "randomized", "squeezed", "enlonged", "shortened",
         "punked", "curved", "unspiked", "simplified", "blownup", "stretched",
         "enlarged", "leftenlarged", "topenlarged", "rightenlarged", "bottomenlarged",
@@ -96,6 +97,11 @@ return {
         "drawpath", "drawpoint", "drawpoints", "drawcontrolpoints", "drawcontrollines", "drawpointlabels",
         "drawlineoptions", "drawpointoptions", "drawcontroloptions", "drawlabeloptions", "draworiginoptions", "drawboundoptions", "drawpathoptions", "resetdrawoptions",
         --
+        "undashed",
+        --
         "decorated", "redecorated", "undecorated",
+        --
+        "passvariable", "passarrayvariable", "tostring", "format", "formatted",
+        "startpassingvariable", "stoppassingvariable",
     },
 }

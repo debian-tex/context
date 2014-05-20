@@ -128,10 +128,16 @@
 \newif\if!!doned   \newif\if!!donee    \newif\if!!donef
 
 \def\!!zerocount {0} % alongside \zerocount
-\def\!!minusone {-1} % alongside \minusone
-\def\!!plusone   {1} % alongside \plusone
-\def\!!plustwo   {2} % alongside \plustwo
-\def\!!plusthree {3} % alongside \plusthree
+\def\!!minusone {-1} % ...
+\def\!!plusone   {1} % ...
+\def\!!plustwo   {2} % ...
+\def\!!plusthree {3} % ...
+\def\!!plusfour  {4} % ...
+\def\!!plusfive  {5} % ...
+\def\!!plussix   {6} % ...
+\def\!!plusseven {7} % ...
+\def\!!pluseight {8} % ...
+\def\!!plusnine  {9} % alongside \plusnine
 
 \setnewconstant   \uprotationangle    0
 \setnewconstant\rightrotationangle   90
@@ -346,6 +352,12 @@
    \let\if_next_blank_space_token\iffalse
    \futurelet\nexttoken\syst_helpers_inspect_next_bgroup_character}
 
+\unexpanded\def\doifnextbgroupcselse#1#2%
+  {\let\m_syst_action_yes#1%
+   \let\m_syst_action_nop#2%
+   \let\if_next_blank_space_token\iffalse
+   \futurelet\nexttoken\syst_helpers_inspect_next_bgroup_character}
+
 \def\syst_helpers_inspect_next_bgroup_character
   {\ifx\nexttoken\blankspace
      \expandafter\syst_helpers_reinspect_next_bgroup_character
@@ -401,7 +413,52 @@
      \expandafter\m_syst_action_nop
    \fi}
 
-%D This macro uses some auxiliary macros. Although we were able to program quite
+%D Here's one for skipping spaces and pars, handy for:
+%D
+%D \starttyping
+%D \hbox
+%D
+%D   {a few lines later}
+%D \stoptyping
+
+% \unexpanded\def\assumelongusagecs#1%
+%   {\let\m_syst_action#1%
+%    \futurelet\nexttoken\syst_helpers_ignore_par_character}
+%
+% \def\syst_helpers_ignore_par_character
+%   {\ifx\nexttoken\blankspace
+%      \expandafter\syst_helpers_ignore_par_character_blankspace
+%    \else
+%      \expandafter\syst_helpers_ignore_par_character_followup
+%    \fi}
+%
+% \def\syst_helpers_ignore_par_character_followup
+%   {\ifx\nexttoken\par
+%      \expandafter\syst_helpers_ignore_par_partoken
+%    \else
+%      \expandafter\m_syst_action
+%    \fi}
+%
+% \def\syst_helpers_ignore_par_partoken
+%   {\afterassignment\m_syst_action\let\nexttoken}
+
+\unexpanded\def\assumelongusagecs#1% can be relaxed when we have long support in \hbox etc
+  {\let\m_syst_action#1%
+   \futurelet\nexttoken\syst_helpers_ignore_spacing}
+
+\def\syst_helpers_ignore_spacing
+  {\ifx\nexttoken\blankspace
+     \singleexpandafter\syst_helpers_ignore_spacing_blankspace
+   \else\ifx\nexttoken\par
+     \doubleexpandafter\syst_helpers_ignore_spacing_partoken
+   \else
+     \doubleexpandafter\m_syst_action
+   \fi\fi}
+
+\def\syst_helpers_ignore_spacing_partoken\par
+  {\futurelet\nexttoken\syst_helpers_ignore_spacing}
+
+%D These macros use some auxiliary macros. Although we were able to program quite
 %D complicated things, I only understood these after rereading the \TEX book. The
 %D trick is in using a command with a one character name. Such commands differ from
 %D the longer ones in the fact that trailing spaces are {\em not} skipped. This
@@ -428,6 +485,9 @@
 
 \def\:{\syst_helpers_reinspect_next_parenthesis_character}
 \expandafter\def\: {\let\if_next_blank_space_token\iftrue\futurelet\nexttoken\syst_helpers_inspect_next_parenthesis_character}
+
+\def\:{\syst_helpers_ignore_spacing_blankspace}
+\expandafter\def\: {\futurelet\nexttoken\syst_helpers_ignore_spacing}
 
 \let\:\next
 
@@ -1243,8 +1303,13 @@
 %D complicated arguments, for instance arguments that
 %D consist of two or more expandable tokens.
 
-\def\getfirstcharacter  #1{\ctxcommand{getfirstcharacter(\!!bs#1\!!es)}}
-\def\doiffirstcharelse#1#2{\ctxcommand{doiffirstcharelse(\!!bs#1\!!es,\!!bs#2\!!es)}} % chr str
+\let\firstcharacter     \empty
+\let\remainingcharacters\empty
+
+\unexpanded\def\getfirstcharacter     #1{\ctxcommand{getfirstcharacter(\!!bs#1\!!es)}}
+\unexpanded\def\doiffirstcharelse   #1#2{\ctxcommand{doiffirstcharelse(\!!bs#1\!!es,\!!bs#2\!!es)}} % chr str
+\unexpanded\def\thefirstcharacter     #1{\ctxcommand{thefirstcharacter(\!!bs#1\!!es)}}
+\unexpanded\def\theremainingcharacters#1{\ctxcommand{theremainingcharacters(\!!bs#1\!!es)}}
 
 %D \macros
 %D   {doifinstringelse, doifincsnameelse}
@@ -2892,13 +2957,18 @@
 %D
 %D Trivial:
 
-\def\letempty             #1{\let#1\empty}
-\def\globalletempty#1{\global\let#1\empty}
+\unexpanded\def\letempty             #1{\let#1\empty}
+\unexpanded\def\globalletempty#1{\global\let#1\empty}
 
-\def\letvalueempty        #1{\expandafter\let\csname#1\endcsname\empty}
-\def\letgvalueempty#1{\global\expandafter\let\csname#1\endcsname\empty}
-\def\letvaluerelax        #1{\expandafter\let\csname#1\endcsname\relax}
-\def\letgvalurelax #1{\global\expandafter\let\csname#1\endcsname\relax}
+\unexpanded\def\letvalueempty        #1{\expandafter\let\csname#1\endcsname\empty}
+\unexpanded\def\letgvalueempty#1{\global\expandafter\let\csname#1\endcsname\empty}
+\unexpanded\def\letvaluerelax        #1{\expandafter\let\csname#1\endcsname\relax}
+\unexpanded\def\letgvalurelax #1{\global\expandafter\let\csname#1\endcsname\relax}
+
+\unexpanded\def\relaxvalueifundefined#1%
+  {\ifcsname#1\endcsname \else
+     \expandafter\let\csname#1\endcsname\relax
+   \fi}
 
 %D \macros
 %D   {wait}
@@ -3122,6 +3192,63 @@
 
 \def\s!unexpanded{unexpanded}
 
+% \bgroup \obeylines
+%
+% \global\let\stoptexdefinition\relax
+%
+% \unexpanded\gdef\starttexdefinition%
+%   {\bgroup%
+%    \obeylines%
+%    \syst_helpers_start_tex_definition}
+%
+% \gdef\syst_helpers_start_tex_definition #1
+%   {\catcode\endoflineasciicode\ignorecatcode%
+%    \doifinstringelse\letterhash{\detokenize{#1}}\syst_helpers_start_tex_definition_yes\syst_helpers_start_tex_definition_nop#1
+%   }
+%
+% \gdef\syst_helpers_start_tex_definition_yes#1 #2
+%   {\edef\texdefinitionname{#1}%
+%    \ifx\texdefinitionname\s!unexpanded%
+%      \expandafter\syst_helpers_start_tex_definition_yes_unexpanded%
+%    \else%
+%      \expandafter\syst_helpers_start_tex_definition_yes_normal%
+%    \fi%
+%    {#1}#2
+%    }
+%
+% \gdef\syst_helpers_start_tex_definition_yes_unexpanded#1#2 #3
+%                                        #4\stoptexdefinition%
+%   {\egroup% #1=unexpanded
+%    \unexpanded\expandafter\def\csname#2\endcsname#3{#4}}
+%
+% \gdef\syst_helpers_start_tex_definition_yes_normal#1#2
+%                                     #3\stoptexdefinition%
+%   {\egroup%
+%    \expandafter\def\csname#1\endcsname#2{#3}}
+%
+% \gdef\syst_helpers_start_tex_definition_nop#1
+%   {\syst_helpers_start_tex_definition_nop_indeed{#1}{}}
+%
+% \gdef\syst_helpers_start_tex_definition_nop_indeed#1#2#3\stoptexdefinition%
+%   {\egroup%
+%    \expandafter\def\csname#1\endcsname{#3}}
+%
+% \egroup
+
+% \starttexdefinition unexpanded test #1
+%     [here #1]
+% \stoptexdefinition
+%
+% \starttexdefinition global unexpanded test
+%     [here test]
+% \stoptexdefinition
+%
+% \scratchcounter=123
+%
+% \starttexdefinition global unexpanded expanded test #oeps
+%     [here #oeps: \the\scratchcounter]
+% \stoptexdefinition
+
 \bgroup \obeylines
 
 \global\let\stoptexdefinition\relax
@@ -3129,39 +3256,15 @@
 \unexpanded\gdef\starttexdefinition%
   {\bgroup%
    \obeylines%
-   \syst_helpers_start_tex_definition}
+   \syst_helpers_start_tex_definition_one}
 
-\gdef\syst_helpers_start_tex_definition #1
+\gdef\syst_helpers_start_tex_definition_one#1
   {\catcode\endoflineasciicode\ignorecatcode%
-   \doifinstringelse\letterhash{\detokenize{#1}}\syst_helpers_start_tex_definition_yes\syst_helpers_start_tex_definition_nop#1
-  }
+   \syst_helpers_start_tex_definition_two{#1}}
 
-\gdef\syst_helpers_start_tex_definition_yes#1 #2
-  {\edef\texdefinitionname{#1}%
-   \ifx\texdefinitionname\s!unexpanded%
-     \expandafter\syst_helpers_start_tex_definition_yes_unexpanded%
-   \else%
-     \expandafter\syst_helpers_start_tex_definition_yes_normal%
-   \fi%
-   {#1}#2
-   }
-
-\gdef\syst_helpers_start_tex_definition_yes_unexpanded#1#2 #3
-                                       #4\stoptexdefinition%
-  {\egroup% #1=unexpanded
-   \unexpanded\expandafter\def\csname#2\endcsname#3{#4}}
-
-\gdef\syst_helpers_start_tex_definition_yes_normal#1#2
-                                    #3\stoptexdefinition%
+\gdef\syst_helpers_start_tex_definition_two#1#2\stoptexdefinition%
   {\egroup%
-   \expandafter\def\csname#1\endcsname#2{#3}}
-
-\gdef\syst_helpers_start_tex_definition_nop#1
-  {\syst_helpers_start_tex_definition_nop_indeed{#1}{}}
-
-\gdef\syst_helpers_start_tex_definition_nop_indeed#1#2#3\stoptexdefinition%
-  {\egroup%
-   \expandafter\def\csname#1\endcsname{#3}}
+   \ctxcommand{thetexdefinition("#1")}{#2}}
 
 \egroup
 
@@ -4481,7 +4584,6 @@
   {\let\dodogotopar#1%
    \redogotopar\par}
 
-
 \unexpanded\def\GetPar
   {\expanded
      {\dowithpar
@@ -5380,7 +5482,7 @@
 %D We have to use a two||step implementation, because the
 %D expansion has to take place outside \type{\uppercase}.
 %D
-%D These might up as \LUA based helpers (i.e. considere these
+%D These might end up as \LUA based helpers (i.e. consider these
 %D obsolete:
 
 \unexpanded\def\syst_helpers_do_IF#1#2%
@@ -5802,7 +5904,7 @@
 \ifdefined\normalquitvmode \let\dontleavehmode\normalquitvmode \fi
 
 %D \macros
-%D   {uppercasestring,lowercasestring}
+%D   {utfupper, utflower, uppercasestring, lowercasestring}
 %D
 %D The names tell what they do:
 %D
@@ -5813,14 +5915,20 @@
 %D
 %D The first argument may be a \type{\macro}.
 
-\unexpanded\def\uppercasestring#1\to#2%
-  {\uppercase\expandafter{\expandafter\dodoglobal\expandafter\edef\expandafter#2\expandafter{\normalexpanded{#1}}}}
-
-\unexpanded\def\lowercasestring#1\to#2%
-  {\lowercase\expandafter{\expandafter\dodoglobal\expandafter\edef\expandafter#2\expandafter{\normalexpanded{#1}}}}
+% \unexpanded\def\uppercasestring#1\to#2%
+%   {\uppercase\expandafter{\expandafter\dodoglobal\expandafter\edef\expandafter#2\expandafter{\normalexpanded{#1}}}}
+%
+% \unexpanded\def\lowercasestring#1\to#2%
+%   {\lowercase\expandafter{\expandafter\dodoglobal\expandafter\edef\expandafter#2\expandafter{\normalexpanded{#1}}}}
 
 %D These macros are sort of obsolete as we never use uppercase this
-%D way.
+%D way. But nevertheless we provide them:
+
+\def\utfupper#1{\ctxcommand{upper(\!!bs#1\!!es)}} % expandable
+\def\utflower#1{\ctxcommand{lower(\!!bs#1\!!es)}} % expandable
+
+\unexpanded\def\uppercasestring#1\to#2{\dodoglobal\edef#2{\ctxcommand{upper(\!!bs#1\!!es)}}}
+\unexpanded\def\lowercasestring#1\to#2{\dodoglobal\edef#2{\ctxcommand{lower(\!!bs#1\!!es)}}}
 
 %D \macros
 %D   {handletokens}
@@ -6673,11 +6781,31 @@
 %D
 %D This one is for Mojca Miklavec, who made me aware of the fact that
 %D \type {page-imp.tex} was not the best place to hide it.
+%D
+%D \startbuffer
+%D \def\DoSomething#1{ [item #1] }
+%D
+%D \processranges[1,4:5]\DoSomething \par
+%D \dowithrange  {1,4:5}\DoSomething \par
+%D \stopbuffer
+%D
+%D \typebuffer \blank \getbuffer \blank
 
-\unexpanded\def\dowithrange#1#2% #2 takes number
-  {\splitstring#1\at:\to\fromrange\and\torange
-   \ifx\torange\empty\let\torange\fromrange\fi
-   \dostepwiserecurse\fromrange\torange1{#2{\recurselevel}}}
+\def\syst_helpers_with_range#1%
+  {\splitstring#1\at:\to\m_syst_helpers_range_from\and\m_syst_helpers_range_to
+   \ifx\m_syst_helpers_range_to\empty\let\m_syst_helpers_range_to\m_syst_helpers_range_from\fi
+   \dostepwiserecurse\m_syst_helpers_range_from\m_syst_helpers_range_to\plusone{\m_helpers_range_action{##1}}}%
+
+\unexpanded\def\processranges[#1]#2% #1= n:m,p,q:r
+  {\def\m_helpers_range_action{#2}%
+   \processcommacommand[#1]\syst_helpers_with_range}
+
+\unexpanded\def\dowithrange#1#2%
+  {\def\m_helpers_range_action{#2}%
+   \processcommacommand[#1]\syst_helpers_with_range}
+
+% \def\DoSomething#1{ [item #1] }
+% \dowithrange[1,4:5]\DoSomething
 
 %D \macros
 %D   {ignoreimplicitspaces}

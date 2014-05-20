@@ -11,15 +11,16 @@ if not modules then modules = { } end modules ['scrp-ini'] = {
 
 local attributes, nodes, node = attributes, nodes, node
 
-local trace_analyzing  = false  trackers.register("scripts.analyzing",  function(v) trace_analyzing  = v end)
-local trace_injections = false  trackers.register("scripts.injections", function(v) trace_injections = v end)
+local trace_analyzing    = false  trackers.register("scripts.analyzing",        function(v) trace_analyzing   = v end)
+local trace_injections   = false  trackers.register("scripts.injections",       function(v) trace_injections  = v end)
+local trace_splitting    = false  trackers.register("scripts.splitting",        function(v) trace_splitting   = v end)
+local trace_splitdetail  = false  trackers.register("scripts.splitting.detail", function(v) trace_splitdetail = v end)
 
 local report_preprocessing = logs.reporter("scripts","preprocessing")
+local report_splitting     = logs.reporter("scripts","splitting")
 
-local utfchar = utf.char
-
-local first_glyph       = node.first_glyph or node.first_character
-local traverse_id       = node.traverse_id
+local utfbyte, utfsplit = utf.byte, utf.split
+local gmatch = string.gmatch
 
 local texsetattribute   = tex.setattribute
 
@@ -28,6 +29,9 @@ local unsetvalue        = attributes.unsetvalue
 
 local glyph_code        = nodecodes.glyph
 local glue_code         = nodecodes.glue
+
+local emwidths          = fonts.hashes.emwidths
+local exheights         = fonts.hashes.exheights
 
 local a_scriptinjection = attributes.private('scriptinjection')
 local a_scriptsplitting = attributes.private('scriptsplitting')
@@ -40,6 +44,28 @@ local setmetatableindex = table.setmetatableindex
 
 local enableaction      = nodes.tasks.enableaction
 local disableaction     = nodes.tasks.disableaction
+
+local nuts              = nodes.nuts
+local tonut             = nuts.tonut
+local tonode            = nuts.tonode
+
+local getnext           = nuts.getnext
+local getchar           = nuts.getchar
+local getfont           = nuts.getfont
+local getid             = nuts.getid
+local getattr           = nuts.getattr
+local setattr           = nuts.setattr
+
+local insert_node_after = nuts.insert_after
+local first_glyph       = nuts.first_glyph
+local traverse_id       = nuts.traverse_id
+
+local nodepool          = nuts.pool
+
+local new_glue          = nodepool.glue
+local new_rule          = nodepool.rule
+local new_penalty       = nodepool.penalty
+----- new_gluespec      = nodepool.gluespec
 
 scripts                 = scripts or { }
 local scripts           = scripts
@@ -198,7 +224,7 @@ local function provide(t,k)
     return v
 end
 
-setmetatableindex(hash,provide)
+setmetatableindex(hash,provide) -- should come from char-def
 
 scripts.hash = hash
 
@@ -385,7 +411,7 @@ scripts.numbertocategory = numbertocategory
 
 local function colorize(start,stop)
     for n in traverse_id(glyph_code,start) do
-        local kind = numbertocategory[n[a_scriptstatus]]
+        local kind = numbertocategory[getattr(n,a_scriptstatus)]
         if kind then
             local ac = scriptcolors[kind]
             if ac then
@@ -417,16 +443,17 @@ end
 -- we can have a fonts.hashes.originals
 
 function scripts.injectors.handler(head)
+    head = tonut(head)
     local start = first_glyph(head) -- we already have glyphs here (subtype 1)
     if not start then
-        return head, false
+        return tonode(head), false
     else
         local last_a, normal_process, lastfont, originals = nil, nil, nil, nil
         local done, first, last, ok = false, nil, nil, false
         while start do
-            local id = start.id
+            local id = getid(start)
             if id == glyph_code then
-                local a = start[a_scriptinjection]
+                local a = getattr(start,a_scriptinjection)
                 if a then
                     if a ~= last_a then
                         if first then
@@ -448,7 +475,7 @@ function scripts.injectors.handler(head)
                         normal_process = handler.injector
                     end
                     if normal_process then
-                        local f = start.font
+                        local f = getfont(start)
                         if f ~= lastfont then
                             originals = fontdata[f].resources
                             if resources then
@@ -458,13 +485,13 @@ function scripts.injectors.handler(head)
                             end
                             lastfont = f
                         end
-                        local c = start.char
+                        local c = getchar(start)
                         if originals then
                             c = originals[c] or c
                         end
                         local h = hash[c]
                         if h then
-                            start[a_scriptstatus] = categorytonumber[h]
+                            setattr(start,a_scriptstatus,categorytonumber[h])
                             if not first then
                                 first, last = start, start
                             else
@@ -525,7 +552,7 @@ function scripts.injectors.handler(head)
                     first, last = nil, nil
                 end
             end
-            start = start.next
+            start = getnext(start)
         end
         if ok then
             if trace_analyzing then
@@ -538,13 +565,293 @@ function scripts.injectors.handler(head)
             end
             done = true
         end
-        return head, done
+        return tonode(head), done
     end
 end
 
-function scripts.splitters.handler(head)
-    return head, false
+-- kind of experimental .. might move to it's own module
+
+-- function scripts.splitters.handler(head)
+--     return head, false
+-- end
+
+local function addwords(tree,data)
+    if not tree then
+        tree = { }
+    end
+    for word in gmatch(data,"%S+") do
+        local root = tree
+        local list = utfsplit(word,true)
+        for i=1,#list do
+            local l = utfbyte(list[i])
+            local r = root[l]
+            if not r then
+                r = { }
+                root[l] = r
+            end
+            if i == #list then
+                r.final = word -- true -- could be something else, like word in case of tracing
+            else
+                root = r
+            end
+        end
+    end
+    return tree
 end
+
+local loaded = { }
+
+function splitters.load(handler,files)
+    local files  = handler.files
+    local tree   = handler.tree or { }
+    handler.tree = tree
+    if not files then
+        return
+    elseif type(files) == "string" then
+        files         = { files }
+        handler.files = files
+    end
+    if trace_splitting then
+        report_splitting("loading splitter data for language/script %a",handler.name)
+    end
+    loaded[handler.name or "unknown"] = (loaded[handler.name or "unknown"] or 0) + 1
+    statistics.starttiming(loaded)
+    for i=1,#files do
+        local filename = files[i]
+        local fullname = resolvers.findfile(filename)
+        if fullname == "" then
+            fullname = resolvers.findfile(filename .. ".gz")
+        end
+        if fullname ~= "" then
+            if trace_splitting then
+                report_splitting("loading file %a",fullname)
+            end
+            local suffix, gzipped = gzip.suffix(fullname)
+            if suffix == "lua" then
+                local specification = table.load(fullname,gzipped and gzip.load)
+                 if specification then
+                    local lists = specification.lists
+                    if lists then
+                        for i=1,#lists do
+                            local entry = lists[i]
+                            local data = entry.data
+                            if data then
+                                if entry.compression == "zlib" then
+                                    data = zlib.decompress(data)
+                                    if entry.length and entry.length ~= #data then
+                                        report_splitting("compression error in file %a",fullname)
+                                    end
+                                end
+                                if data then
+                                    addwords(tree,data)
+                                end
+                            end
+                        end
+                    end
+                end
+            else
+                local data = gzipped and io.loadgzip(fullname) or io.loaddata(fullname)
+                if data then
+                    addwords(tree,data)
+                end
+            end
+        else
+            report_splitting("unknown file %a",filename)
+        end
+    end
+    statistics.stoptiming(loaded)
+    return tree
+end
+
+statistics.register("loaded split lists", function()
+    if next(loaded) then
+        return string.format("%s, load time: %s",table.sequenced(loaded),statistics.elapsedtime(loaded))
+    end
+end)
+
+-- function splitters.addlist(name,filename)
+--     local handler = scripts.handlers[name]
+--     if handler and filename then
+--         local files = handler.files
+--         if not files then
+--             files = { }
+--         elseif type(files) == "string" then
+--             files = { files }
+--         end
+--         handler.files = files
+--         if type(filename) == "string" then
+--             filename = utilities.parsers.settings_to_array(filename)
+--         end
+--         if type(filename) == "table" then
+--             for i=1,#filename do
+--                 files[#files+1] = filenames[i]
+--             end
+--         end
+--     end
+-- end
+--
+-- commands.setscriptsplitterlist = splitters.addlist
+
+local categories = characters.categories or { }
+
+local function hit(root,head)
+    local current   = getnext(head)
+    local lastrun   = false
+    local lastfinal = false
+    while current and getid(current) == glyph_code do
+        local char = getchar(current)
+        local newroot = root[char]
+        if newroot then
+            local final = newroot.final
+            if final then
+                lastrun   = current
+                lastfinal = final
+            end
+            root = newroot
+        elseif categories[char] == "mn" then
+            -- continue
+        else
+            return lastrun, lastfinal
+        end
+        current = getnext(current)
+    end
+    if lastrun then
+        return lastrun, lastfinal
+    end
+end
+
+local tree, attr, proc
+
+function splitters.handler(head) -- todo: also first_glyph test
+    head = tonut(head)
+    local current = head
+    local done = false
+    while current do
+        if getid(current) == glyph_code then
+            local a = getattr(current,a_scriptsplitting)
+            if a then
+                if a ~= attr then
+                    local handler = numbertohandler[a]
+                    tree = handler.tree or { }
+                    attr = a
+                    proc = handler.splitter
+                end
+                if proc then
+                    local root = tree[getchar(current)]
+                    if root then
+                        -- we don't check for attributes in the hitter (yet)
+                        local last, final = hit(root,current)
+                        if last then
+                            local next = getnext(last)
+                            if next and getid(next) == glyph_code then
+                                local nextchar = getchar(next)
+                                if tree[nextchar] then
+                                    if trace_splitdetail then
+                                        if type(final) == "string" then
+                                            report_splitting("advance %s processing between <%s> and <%c>","with",final,nextchar)
+                                        else
+                                            report_splitting("advance %s processing between <%c> and <%c>","with",char,nextchar)
+                                        end
+                                    end
+                                    head, current = proc(handler,head,current,last,1)
+                                    done = true
+                                else
+                                    if trace_splitdetail then
+                                        -- could be punctuation
+                                        if type(final) == "string" then
+                                            report_splitting("advance %s processing between <%s> and <%c>","without",final,nextchar)
+                                        else
+                                            report_splitting("advance %s processing between <%c> and <%c>","without",char,nextchar)
+                                        end
+                                    end
+                                    head, current = proc(handler,head,current,last,2)
+                                    done = true
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        current = getnext(current)
+    end
+    return tonode(head), done
+end
+
+local function marker(head,current,font,color) -- could become: nodes.tracers.marker
+    local ex = exheights[font]
+    local em = emwidths [font]
+    head, current = insert_node_after(head,current,new_penalty(10000))
+    head, current = insert_node_after(head,current,new_glue(-0.05*em))
+    head, current = insert_node_after(head,current,new_rule(0.05*em,1.5*ex,0.5*ex))
+    setnodecolor(current,color)
+    return head, current
+end
+
+-- local function process(handler,head,first,last)
+--     dataset = numbertodataset[first[a_scriptsplitting]]
+--     stretch = emwidths[first.font]*dataset.inter_word_stretch_factor
+--     return insert_node_after(head,last,new_glue(0,stretch))
+-- end
+--
+-- local cache = { }  table.setmetatableindex(cache,function(t,k)
+--     local v = new_gluespec(0,k)
+--     nodepool.register(v)
+--     t[k] = v
+--     return v
+-- end)
+-- return insert_node_after(head,last,new_glue(cache[last_s]))
+
+local last_a, last_f, last_s, last_q
+
+function splitters.insertafter(handler,head,first,last,detail)
+    local a = getattr(first,a_scriptsplitting)
+    local f = getfont(first)
+    if a ~= last_a or f ~= last_f then
+        last_s = emwidths[f] * numbertodataset[a].inter_word_stretch_factor
+        last_a = a
+        last_f = f
+    end
+    if trace_splitting then
+        head, last = marker(head,last,f,detail == 2 and "trace:r" or "trace:g")
+    end
+    if ignore then
+        return head, last
+    else
+        return insert_node_after(head,last,new_glue(0,last_s))
+    end
+end
+
+-- word-xx.lua:
+--
+-- return {
+--     comment   = "test",
+--     copyright = "not relevant",
+--     language  = "en",
+--     timestamp = "2013-05-20 14:15:21",
+--     version   = "1.00",
+--     lists     = {
+--         {
+--          -- data = "we thrive information in thick worlds because of our marvelous and everyday capacity to select edit single out structure highlight group pair merge harmonize synthesize focus organize condense reduce boil down choose categorize catalog classify list abstract scan look into idealize isolate discriminate distinguish screen pigeonhole pick over sort integrate blend inspect filter lump skip smooth chunk average approximate cluster aggregate outline summarize itemize review dip into flip through browse glance into leaf through skim refine enumerate glean synopsize winnow the wheat from the chaff and separate the sheep from the goats",
+--             data = "abstract aggregate and approximate average because blend boil browse capacity catalog categorize chaff choose chunk classify cluster condense dip discriminate distinguish down edit enumerate everyday filter flip focus from glance glean goats group harmonize highlight idealize in information inspect integrate into isolate itemize leaf list look lump marvelous merge of organize our out outline over pair pick pigeonhole reduce refine review scan screen select separate sheep single skim skip smooth sort structure summarize synopsize synthesize the thick thrive through to we wheat winnow worlds",
+--         },
+--     },
+-- }
+
+scripts.installmethod {
+    name        = "test",
+    splitter    = splitters.insertafter,
+    initializer = splitters.load,
+    files       = {
+     -- "scrp-imp-word-test.lua",
+        "word-xx.lua",
+    },
+    datasets    = {
+        default = {
+            inter_word_stretch_factor = 0.25, -- of quad
+        },
+    },
+}
 
 -- new plugin:
 
@@ -576,15 +883,15 @@ setmetatableindex(cache_nop,function(t,k) local v = { } t[k] = v return v end)
 -- playing nice
 
 function autofontfeature.handler(head)
-    for n in traverse_id(glyph_code,head) do
-     -- if n[a_scriptinjection] then
+    for n in traverse_id(glyph_code,tonut(head)) do
+     -- if getattr(n,a_scriptinjection) then
      --     -- already tagged by script feature, maybe some day adapt
      -- else
-            local char = n.char
+            local char = getchar(n)
             local script = otfscripts[char]
             if script then
-                local dynamic = n[0] or 0
-                local font = n.font
+                local dynamic = getattr(n,0) or 0
+                local font = getfont(n)
                 if dynamic > 0 then
                     local slot = cache_yes[font]
                     local attr = slot[script]
@@ -610,7 +917,7 @@ function autofontfeature.handler(head)
                         end
                     end
                     if attr ~= 0 then
-                        n[0] = attr
+                        setattr(n,0,attr)
                         -- maybe set scriptinjection when associated
                     end
                 end

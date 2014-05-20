@@ -337,11 +337,11 @@
 
 \defineregister
   [texmacro]
-  [texmacros]
+% [texmacros]
 
 \definesorting
   [texcommand]
-  [texcommands]
+% [texcommands]
 
 \setupsorting
   [texcommand]
@@ -390,6 +390,7 @@
 
 \startxmlsetups xml:setups:register
     \xmlsetup{#1}{xml:setups:assemblename}
+    % not really needed if we just use setups
     \expanded{\texcommand[stp:x:\currentSETUPfullname]{#1}}
 \stopxmlsetups
 
@@ -404,7 +405,7 @@
 
 \xmlregisterdocumentsetup{setups}{xml:setups:basics}
 
-\def\loadsetups{\complexorsimple\loadsetups}
+\unexpanded\def\loadsetups{\complexorsimple\loadsetups}
 
 \let\loadedsetups\empty % we load more setups, setups:<name>
 
@@ -416,7 +417,7 @@
      {\doonlyonce{setups:#1}
         {\doglobal\prependtocommalist{setups:#1}\loadedsetups % last overloads first
          \xmlloadonly{setups:#1}{#1}{setups}%
-         \xmlfilter{setups:#1}{interface/command/command(xml:setups:register)}}}} % qualified path saves > 50% runtime
+         \xmlfilter{setups:#1}{/interface/command/command(xml:setups:register)}}}} % qualified path saves > 50% runtime
 
 \newif\ifshortsetup
 
@@ -447,8 +448,18 @@
 % \def\showsetupindeed#1%
 %   {\xmlfilterlist{\loadedsetups}{interface/command[@name='#1']/command(xml:setups:typeset)}}
 
+% \def\showsetupindeed#1%
+%   {\xmlfilterlist{\loadedsetups}{/interface/command['#1' == (@type=='environment' and 'start' or '') .. @name]/command(xml:setups:typeset)}}
+
+% \setelementnature[setup][display]
+% \setelementnature[setup][mixed]
+
 \def\showsetupindeed#1%
-  {\xmlfilterlist{\loadedsetups}{interface/command['#1' == (@type=='environment' and 'start' or '') .. @name]/command(xml:setups:typeset)}}
+  {\startelement[setup][name=#1]%
+     \startelement[noexport][comment={setup definition #1}]
+       \xmlfilterlist{\loadedsetups}{/interface/command['#1' == (@type=='environment' and 'start' or '') .. @name]/command(xml:setups:typeset)}%
+     \stopelement
+   \stopelement}
 
 \unexpanded\def\placesetup    {\placelistofsorts[texcommand][\c!criterium=\v!used]}
 \unexpanded\def\placeallsetups{\placelistofsorts[texcommand][\c!criterium=\v!all ]}
@@ -475,15 +486,15 @@
         \veryraggedright
         \doglobal\newcounter\currentSETUPargument
         \xdef\maximumSETUPargument{\xmlcount{#1}{/arguments/*}}
+        \edef\currentSETUPhash{\xmlatt{#1}{hash}}
         \bgroup
             \enablemode[setups-pass-one]%
             \doif {\xmlatt{#1}{generated}} {yes} {
                 \ttsl
             }
-            \doifelse {\xmlatt{#1}{type}} {environment} {
-                \tex{\e!start}
-            } {
-                \tex{}
+            \letterbackslash
+            \doif {\xmlatt{#1}{type}} {environment} {
+                \e!start
             }
             \xmlfilter{#1}{/sequence/first()}
             \ignorespaces
@@ -530,7 +541,7 @@
 
 \startxmlsetups xml:setups:resolve
     \ignorespaces
-    \xmlfilterlist{\loadedsetups}{interface/define[@name='\xmlatt{#1}{name}']/first()}
+    \xmlfilterlist{\loadedsetups}{/interface/define[@name='\xmlatt{#1}{name}']/first()}
 \stopxmlsetups
 
 %D This is the first pass; here we generate the top line.
@@ -605,7 +616,11 @@
         \egroup
         \startfirstSETUPcolumn{\showSETUPnumber}%
             \ignorespaces
-            \xmlflush{#1}
+            \xmldoifelse{#1}{/(parameter|inherit)}{
+                \xmlflush{#1}
+            } {
+             ...
+            }
             \let\previousSETUPargument\currentSETUPargument
         \stopfirstSETUPcolumn
         \blank[\v!halfline]
@@ -631,6 +646,20 @@
     \startsecondSETUPcolumn{\c!setup!reserved!{\xmlatt{#1}{name}}}{=}
         \ignorespaces
         \xmlflush{#1}
+        \doifmode{interface:setup:defaults} {
+            \ifx\currentSETUPhash\empty \else
+                \begingroup
+                    % todo, make a one level expansion of parameter
+                    \let\emwidth \relax
+                    \let\exheight\relax
+                    \edef\currentSETUPvalue{\csname named\currentSETUPhash parameter\endcsname\empty{\xmlatt{#1}{name}}}
+                    \ifx\currentSETUPvalue\empty \else
+                        =\space
+                        \detokenize\expandafter{\currentSETUPvalue}
+                    \fi
+                \endgroup
+            \fi
+        }
     \stopsecondSETUPcolumn
     \ignorespaces
 \stopxmlsetups
@@ -661,7 +690,7 @@
    \secondSETUPcolumn {
         \c!setup!text!{\getmessage{setup}{inherits}}
         \enspace
-        \tex{}
+        \letterbackslash
         \xmlatt{#1}{name}
     } {}
     \ignorespaces
@@ -746,5 +775,76 @@
 \def\showSETUPtriplet    #1{\showSETUP{#1}{[x:y:z=]}                            {[x:y:z=,..]}}
 \def\showSETUPword       #1{\showSETUP{#1}{\leftargument...\rightargument}      {\leftargument.. ... ..\rightargument}}
 \def\showSETUPcontent    #1{\showSETUP{#1}{\leftargument...\rightargument}      {\leftargument.. ... ..\rightargument}}
+
+% A prelude to a rewrite and some more:
+
+\definetype[parametercommand][type]
+\definetype[parameterkey]    [type]
+\definetype[parametervalue]  [type][space=on]
+
+\setuptype[parametercommand] [color=darkmagenta]
+\setuptype[parametervalue]   [color=darkyellow]
+
+\startxmlsetups xml:setups:parameters:value
+    \edef\currentsetupparameterkey  {\xmlatt{#1}{name}}
+    \edef\currentsetupparametervalue{\csname named\currentsetupparametercategory parameter\endcsname\currentsetupparameterinstance\currentsetupparameterkey}
+    \ifx\currentsetupparameterinstance\empty
+        \expanded {
+            \NC \parameterkey  {\currentsetupparameterkey}
+            \NC \parametervalue{\detokenize\expandafter{\currentsetupparametervalue}}
+            \NC \NR
+        }
+    \else\ifx\currentsetupparametervalue\empty
+    \else
+        \edef\currentsetupparameterdefault{\csname named\currentsetupparametercategory parameter\endcsname\empty\currentsetupparameterkey}
+        \ifx\currentsetupparametervalue\currentsetupparameterdefault
+            % skip
+        \else
+            \expanded {
+                \NC \parameterkey  {\currentsetupparameterkey}
+                \NC \parametervalue{\detokenize\expandafter{\currentsetupparametervalue}}
+                \NC \NR
+            }
+        \fi
+    \fi\fi
+\stopxmlsetups
+
+\startxmlsetups xml:setups:parameters:values
+    \blank[big]
+    \expanded {
+        \parametercommand {
+            \currentsetupparametercommand
+            \space:\space
+            \ifx\currentsetupparameterinstance\empty
+                defaults
+            \else
+                \currentsetupparameterinstance
+            \fi
+        }
+    }
+    \blank[big,samepage]
+    \starttabulate[|l|p|]
+        \xmlall
+            {#1}
+            {/interface/command[@name=='\currentsetupparametercommand']/arguments/assignments/parameter/command(xml:setups:parameters:value)}
+        \ifnum\noftabulaterows = \zerocount
+            \NC \parameterkey{no specific settings} \NC \NC \NR
+        \fi
+    \stoptabulate
+\stopxmlsetups
+
+\starttexdefinition showrootvalues [#1]
+    \edef\currentsetupparametercategory{#1}
+    \edef\currentsetupparametercommand{setup#1}
+    \let\currentsetupparameterinstance\empty
+    \xmlsetup{\loadedsetups}{xml:setups:parameters:values}
+\stoptexdefinition
+
+\starttexdefinition showinstancevalues [#1]#2[#3]
+    \edef\currentsetupparametercategory{#1}
+    \edef\currentsetupparametercommand{setup#1}
+    \edef\currentsetupparameterinstance{#3}
+    \xmlsetup{\loadedsetups}{xml:setups:parameters:values}
+\stoptexdefinition
 
 \protect \endinput

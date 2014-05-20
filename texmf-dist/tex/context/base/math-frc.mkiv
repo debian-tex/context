@@ -102,18 +102,67 @@
 \setupmathfractions
   [\c!mathstyle=,
    \c!alternative=\v!inner,
+   \c!margin=\zeropoint,
    \c!rulethickness=.25\exheight,
    \c!left=0x2E,
    \c!right=0x2E,
+   \c!topdistance=,
+   \c!bottomdistance=,
    \c!rule=\v!auto]
 
 \appendtoks
     \setuevalue{\currentmathfraction}{\math_frac{\currentmathfraction}}%
 \to \everydefinemathfraction
 
+% Sometimes users want control over the distances:
+
+\let\math_fraction_set_distance\relax
+
+\appendtoks
+    \math_fraction_set_distance
+\to \everymathematics
+
+\unexpanded\def\math_fraction_set_distance_top
+  {\Umathfractionnumup    \displaystyle\m_math_fraction_distance_top
+   \relax}
+
+\unexpanded\def\math_fraction_set_distance_bot
+  {\Umathfractiondenomdown\displaystyle\m_math_fraction_distance_bot
+   \relax}
+
+\unexpanded\def\math_fraction_set_distance_all
+  {\Umathfractionnumup    \displaystyle\m_math_fraction_distance_top
+   \Umathfractiondenomdown\displaystyle\m_math_fraction_distance_bot
+   \relax}
+
+\appendtoks
+    \ifx\currentmathfraction\empty
+      \edef\m_math_fraction_distance_top{\mathfractionparameter\c!topdistance}%
+      \edef\m_math_fraction_distance_bot{\mathfractionparameter\c!bottomdistance}%
+      \ifx\m_math_fraction_distance_top\empty
+        \ifx\m_math_fraction_distance_bot\empty
+          \let\math_fraction_set_distance\relax
+        \else
+          \let\math_fraction_set_distance\math_fraction_set_distance_bot
+        \fi
+      \else
+        \ifx\m_math_fraction_distance_bot\empty
+          \let\math_fraction_set_distance\math_fraction_set_distance_top
+        \else
+          \let\math_fraction_set_distance\math_fraction_set_distance_all
+        \fi
+      \fi
+    \fi
+\to \everysetupmathfraction
+
+% So far for control.
+
+\newdimen\d_math_fraction_margin
+
 \unexpanded\def\math_frac#1%
   {\begingroup
    \edef\currentmathfraction{#1}%
+   \d_math_fraction_margin\mathfractionparameter\c!margin
    \edef\p_math_fractions_color{\mathfractionparameter\c!color}%
    \ifx\p_math_fractions_color\empty
      \expandafter\math_frac_normal
@@ -139,17 +188,56 @@
     \number\dimexpr\mathfractionparameter\c!rulethickness%
   )}}
 
-\setvalue{\??mathfractionalternative\v!inner}#1#2%
+% Having a \withmarginornot{#1}{#2} makes not much sense nor do
+% 4 tests or 4 redundant kerns (longer node lists plus possible
+% interference). A split in normal and margin also makes testing
+% easier. When left and right margins are needed we might merge
+% the variants again. After all, these are not real installers.
+
+\setvalue{\??mathfractionalternative\v!inner}%
+  {\ifcase\d_math_fraction_margin
+      \expandafter\math_fraction_inner_normal
+   \else
+      \expandafter\math_fraction_inner_margin
+   \fi}
+
+\def\math_fraction_inner_normal#1#2%
   {\Ustack{%
      {\usemathstyleparameter\mathfractionparameter{#1}}% we should store this one
      \math_frac_command
      {\usemathstyleparameter\mathfractionparameter{#2}}% and reuse it here
    }\endgroup}
 
-\setvalue{\??mathfractionalternative\v!outer}#1#2%
+\def\math_fraction_inner_margin#1#2%
+  {\Ustack{%
+     {\kern\d_math_fraction_margin
+      \usemathstyleparameter\mathfractionparameter{#1}% we should store this one
+      \kern\d_math_fraction_margin}%
+     \math_frac_command
+     {\kern\d_math_fraction_margin
+      \usemathstyleparameter\mathfractionparameter{#2}% and reuse it here
+      \kern\d_math_fraction_margin}%
+   }\endgroup}
+
+\setvalue{\??mathfractionalternative\v!outer}%
+  {\ifcase\d_math_fraction_margin
+      \expandafter\math_fraction_outer_normal
+   \else
+      \expandafter\math_fraction_outer_margin
+   \fi}
+
+\def\math_fraction_outer_normal#1#2%
   {\Ustack{%
      \usemathstyleparameter\mathfractionparameter
      {{#1}\math_frac_command{#2}}%
+   }\endgroup}
+
+\def\math_fraction_outer_margin#1#2%
+  {\Ustack{%
+     \usemathstyleparameter\mathfractionparameter
+     {{\kern\d_math_fraction_margin#1\kern\d_math_fraction_margin}%
+      \math_frac_command
+      {\kern\d_math_fraction_margin#2\kern\d_math_fraction_margin}}%
    }\endgroup}
 
 \definemathfraction[frac][\c!mathstyle=]
@@ -231,7 +319,7 @@
 %D \getbuffer
 
 \unexpanded\def\cfrac
-  {\doifnextoptionalelse\math_cfrac_yes\math_cfrac_nop}
+  {\doifnextoptionalcselse\math_cfrac_yes\math_cfrac_nop}
 
 \def\math_cfrac_nop    {\math_cfrac_indeed[cc]}
 \def\math_cfrac_yes[#1]{\math_cfrac_indeed[#1cc]}

@@ -41,9 +41,10 @@ local trace_detail        = false  trackers.register("structures.detail",     fu
 
 local report_structure    = logs.reporter("structure","sectioning")
 
-local structures          = structures
 local context             = context
+local commands            = commands
 
+local structures          = structures
 local helpers             = structures.helpers
 local documents           = structures.documents
 local sections            = structures.sections
@@ -59,6 +60,10 @@ local stopapplyprocessor  = processors.stopapply
 local strippedprocessor   = processors.stripped
 
 local a_internal          = attributes.private('internal')
+
+local ctx_convertnumber   = context.convertnumber
+local ctx_sprint          = context.sprint
+local ctx_finalizeauto    = context.finalizeautostructurelevel
 
 -- -- -- document -- -- --
 
@@ -170,15 +175,16 @@ end)
 
 --
 
-sections.levelmap = sections.levelmap or { }
+sections.verbose          = true
 
-local levelmap = sections.levelmap
+local sectionblockdata    = sections.sectionblockdata or { }
+sections.sectionblockdata = sectionblockdata
+
+local levelmap            = sections.levelmap or { }
+sections.levelmap         = levelmap
+levelmap.block            = -1
 
 storage.register("structures/sections/levelmap", sections.levelmap, "structures.sections.levelmap")
-
-sections.verbose = true
-
-levelmap.block = -1
 
 function sections.setlevel(name,level) -- level can be number or parent (=string)
     local l = tonumber(level)
@@ -196,17 +202,21 @@ function sections.getlevel(name)
     return levelmap[name] or 0
 end
 
-function sections.setblock(name)
+table.setmetatableindex(sectionblockdata,"table")
+
+function sections.setblock(name,settings)
     local block = name or data.block or "unknown" -- can be used to set the default
     data.block = block
+    sectionblockdata[block] = settings
     return block
 end
 
-function sections.pushblock(name)
+function sections.pushblock(name,settings)
     counters.check(0) -- we assume sane usage of \page between blocks
     local block = name or data.block
     data.blocks[#data.blocks+1] = block
     data.block = block
+    sectionblockdata[block] = settings
     documents.reset()
     return block
 end
@@ -233,7 +243,7 @@ end
 
 local saveset = { } -- experiment, see sections/tricky-001.tex
 
-function sections.somelevel(given)
+function sections.setentry(given)
     -- old number
     local numbers     = data.numbers
 
@@ -450,7 +460,7 @@ function sections.structuredata(depth,key,default,honorcatcodetable) -- todo: sp
     local data = data.status[depth]
     local d
     if data then
-        if find(key,"%.") then
+        if find(key,".",1,true) then
             d = accesstable(key,data)
         else
             d = data.titledata
@@ -462,7 +472,7 @@ function sections.structuredata(depth,key,default,honorcatcodetable) -- todo: sp
             local metadata = data.metadata
             local catcodes = metadata and metadata.catcodes
             if catcodes then
-                context.sprint(catcodes,d)
+                ctx_sprint(catcodes,d)
             else
                 context(d)
             end
@@ -471,7 +481,7 @@ function sections.structuredata(depth,key,default,honorcatcodetable) -- todo: sp
         else
             local catcodes = catcodenumbers[honorcatcodetable]
             if catcodes then
-                context.sprint(catcodes,d)
+                ctx_sprint(catcodes,d)
             else
                 context(d)
             end
@@ -506,14 +516,20 @@ function sections.current()
     return data.status[data.depth]
 end
 
-function sections.depthnumber(n)
+local function depthnumber(n)
     local depth = data.depth
     if not n or n == 0 then
         n = depth
     elseif n < 0 then
         n = depth + n
     end
-    return context(data.numbers[n] or 0)
+    return data.numbers[n] or 0
+end
+
+sections.depthnumber = depthnumber
+
+function commands.depthnumber(n)
+    return context(depthnumber(n))
 end
 
 function sections.autodepth(numbers)
@@ -574,11 +590,11 @@ local function process(index,numbers,ownnumbers,criterium,separatorset,conversio
             if ownnumber ~= "" then
                 applyprocessor(ownnumber)
             elseif conversion and conversion ~= "" then -- traditional (e.g. used in itemgroups)
-                context.convertnumber(conversion,number)
+                ctx_convertnumber(conversion,number)
             else
                 local theconversion = sets.get("structure:conversions",block,conversionset,index,"numbers")
                 local data = startapplyprocessor(theconversion)
-                context.convertnumber(data or "numbers",number)
+                ctx_convertnumber(data or "numbers",number)
                 stopapplyprocessor()
             end
         end
@@ -736,13 +752,13 @@ function sections.typesetnumber(entry,kind,...) -- kind='section','number','pref
                         applyprocessor(connector)
                     end
                 else
-if groupsuffix and kind ~= "prefix" then
-    if result then
-        result[#result+1] = strippedprocessor(groupsuffix)
-    else
-        applyprocessor(groupsuffix)
-    end
-end
+                    if groupsuffix and kind ~= "prefix" then
+                        if result then
+                            result[#result+1] = strippedprocessor(groupsuffix)
+                        else
+                            applyprocessor(groupsuffix)
+                        end
+                    end
                     if stopper then
                         if result then
                             result[#result+1] = strippedprocessor(stopper)
@@ -768,94 +784,104 @@ end
 
 function sections.findnumber(depth,what) -- needs checking (looks wrong and slow too)
     local data = data.status[depth or data.depth]
-    if data then
-        local index = data.references.section
-        local collected = sections.collected
-        local sectiondata = collected[index]
-        if sectiondata and sectiondata.hidenumber ~= true then -- can be nil
-            local quit = what == v_previous or what == v_next
-            if what == v_first or what == v_previous then
-                for i=index,1,-1 do
-                    local s = collected[i]
-                    if s then
-                        local n = s.numbers
-                        if #n == depth and n[depth] and n[depth] ~= 0 then
-                            sectiondata = s
-                            if quit then
-                                break
-                            end
-                        elseif #n < depth then
+    if not data then
+        return
+    end
+    local references = data.references
+    if not references then
+        return
+    end
+    local index       = references.section
+    local collected   = sections.collected
+    local sectiondata = collected[index]
+    if sectiondata and sectiondata.hidenumber ~= true then -- can be nil
+        local quit = what == v_previous or what == v_next
+        if what == v_first or what == v_previous then
+            for i=index,1,-1 do
+                local s = collected[i]
+                if s then
+                    local n = s.numbers
+                    if #n == depth and n[depth] and n[depth] ~= 0 then
+                        sectiondata = s
+                        if quit then
                             break
                         end
-                    end
-                end
-            elseif what == v_last or what == v_next then
-                for i=index,#collected do
-                    local s = collected[i]
-                    if s then
-                        local n = s.numbers
-                        if #n == depth and n[depth] and n[depth] ~= 0 then
-                            sectiondata = s
-                            if quit then
-                                break
-                            end
-                        elseif #n < depth then
-                            break
-                        end
+                    elseif #n < depth then
+                        break
                     end
                 end
             end
-            return sectiondata
+        elseif what == v_last or what == v_next then
+            for i=index,#collected do
+                local s = collected[i]
+                if s then
+                    local n = s.numbers
+                    if #n == depth and n[depth] and n[depth] ~= 0 then
+                        sectiondata = s
+                        if quit then
+                            break
+                        end
+                    elseif #n < depth then
+                        break
+                    end
+                end
+            end
         end
+        return sectiondata
     end
 end
 
 function sections.finddata(depth,what)
     local data = data.status[depth or data.depth]
-    if data then
-        -- if sectiondata and sectiondata.hidenumber ~= true then -- can be nil
-        local index = data.references.listindex
-        if index then
-            local collected = structures.lists.collected
-            local quit = what == v_previous or what == v_next
-            if what == v_first or what == v_previous then
-                for i=index-1,1,-1 do
-                    local s = collected[i]
-                    if not s then
+    if not data then
+        return
+    end
+    local references = data.references
+    if not references then
+        return
+    end
+    local index = references.listindex
+    if not index then
+        return
+    end
+    local collected = structures.lists.collected
+    local quit      = what == v_previous or what == v_next
+    if what == v_first or what == v_previous then
+        for i=index-1,1,-1 do
+            local s = collected[i]
+            if not s then
+                break
+            elseif s.metadata.kind == "section" then -- maybe check on name
+                local n = s.numberdata.numbers
+                if #n == depth and n[depth] and n[depth] ~= 0 then
+                    data = s
+                    if quit then
                         break
-                    elseif s.metadata.kind == "section" then -- maybe check on name
-                        local n = s.numberdata.numbers
-                        if #n == depth and n[depth] and n[depth] ~= 0 then
-                            data = s
-                            if quit then
-                                break
-                            end
-                        elseif #n < depth then
-                            break
-                        end
                     end
-                end
-            elseif what == v_last or what == v_next then
-                for i=index+1,#collected do
-                    local s = collected[i]
-                    if not s then
-                        break
-                    elseif s.metadata.kind == "section" then -- maybe check on name
-                        local n = s.numberdata.numbers
-                        if #n == depth and n[depth] and n[depth] ~= 0 then
-                            data = s
-                            if quit then
-                                break
-                            end
-                        elseif #n < depth then
-                            break
-                        end
-                    end
+                elseif #n < depth then
+                    break
                 end
             end
         end
-        return data
+    elseif what == v_last or what == v_next then
+        for i=index+1,#collected do
+            local s = collected[i]
+            if not s then
+                break
+            elseif s.metadata.kind == "section" then -- maybe check on name
+                local n = s.numberdata.numbers
+                if #n == depth and n[depth] and n[depth] ~= 0 then
+                    data = s
+                    if quit then
+                        break
+                    end
+                elseif #n < depth then
+                    break
+                end
+            end
+        end
     end
+    return data
 end
 
 function sections.internalreference(sectionname,what) -- to be used in pagebuilder (no marks used)
@@ -910,7 +936,7 @@ function commands.autonextstructurelevel(level)
     else
         for i=level,#levels do
             if levels[i] then
-                context.finalizeautostructurelevel()
+                ctx_finalizeauto()
                 levels[i] = false
             end
         end
@@ -921,7 +947,7 @@ end
 function commands.autofinishstructurelevels()
     for i=1,#levels do
         if levels[i] then
-            context.finalizeautostructurelevel()
+            ctx_finalizeauto()
         end
     end
     levels = { }
@@ -929,8 +955,8 @@ end
 
 -- interface (some are actually already commands, like sections.fullnumber)
 
-commands.structurenumber            = function()             sections.fullnumber()                        end
-commands.structuretitle             = function()             sections.title     ()                        end
+commands.structurenumber            = sections.fullnumber
+commands.structuretitle             = sections.title
 
 commands.structurevariable          = function(name)         sections.structuredata(nil,name)             end
 commands.structureuservariable      = function(name)         sections.userdata     (nil,name)             end
@@ -938,15 +964,23 @@ commands.structurecatcodedget       = function(name)         sections.structured
 commands.structuregivencatcodedget  = function(name,catcode) sections.structuredata(nil,name,nil,catcode) end
 commands.structureautocatcodedget   = function(name,catcode) sections.structuredata(nil,name,nil,catcode) end
 
-commands.namedstructurevariable     = function(depth,name)   sections.structuredata(depth,name)           end
-commands.namedstructureuservariable = function(depth,name)   sections.userdata     (depth,name)           end
+commands.namedstructurevariable     = sections.structuredata
+commands.namedstructureuservariable = sections.userdata
 
---
+commands.setsectionlevel            = sections.setlevel
+commands.setsectionnumber           = sections.setnumber
+commands.getsectionnumber           = sections.getnumber
+commands.getfullsectionnumber       = sections.fullnumber
+commands.getstructuredata           = sections.structuredata
+commands.getcurrentsectionlevel     = sections.getcurrentlevel
 
-function commands.setsectionblock (name) context(sections.setblock(name))  end
-function commands.pushsectionblock(name) context(sections.pushblock(name)) end
-function commands.popsectionblock ()     context(sections.popblock())      end
+commands.setsectionblock            = sections.setblock
+commands.pushsectionblock           = sections.pushblock
+commands.popsectionblock            = sections.popblock
 
+commands.registersection            = sections.register
+commands.setsectionentry            = sections.setentry
+commands.reportstructure            = sections.reportstructure
 --
 
 local byway = "^" .. v_by -- ugly but downward compatible

@@ -42,7 +42,7 @@ local basicengines = allocate {
  -- ["texluajit.exe"] = "luajittex",
 }
 
-local luaengines=allocate {
+local luaengines = allocate {
     ["lua"]    = true,
     ["luajit"] = true,
 }
@@ -57,6 +57,7 @@ environment.basicengines = basicengines
 -- instead we could set ranges
 
 if not arg then
+    environment.used_as_library = true
     -- used as library
 elseif luaengines[file.removesuffix(arg[-1])] then
 --     arg[-1] = arg[0]
@@ -65,6 +66,8 @@ elseif luaengines[file.removesuffix(arg[-1])] then
 --         arg[k-1] = arg[k]
 --     end
 --     remove(arg) -- last
+--
+--    environment.used_as_library = true
 elseif validengines[file.removesuffix(arg[0])] then
     if arg[1] == "--luaonly" then
         arg[-1] = arg[0]
@@ -194,7 +197,7 @@ function environment.reconstructcommandline(arg,noquote)
             a = resolvers.resolve(a)
             a = unquoted(a)
             a = gsub(a,'"','\\"') -- tricky
-            if find(a," ") then
+            if find(a," ",1,true) then
                 result[#result+1] = quoted(a)
             else
                 result[#result+1] = a

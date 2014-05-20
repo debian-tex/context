@@ -15,6 +15,14 @@ n='otf'/>.</p>
 <p>The following code still has traces of intermediate font support
 where we handles font encodings. Eventually font encoding goes
 away.</p>
+
+<p>The embedding of a font involves creating temporary files and
+depending on your system setup that can fail. It took more than a
+day to figure out why sometimes embedding failed in mingw luatex
+where running on a real path like c:\... failed while running on
+say e:\... being a link worked well. The native windows binaries
+don't have this issue.</p>
+
 --ldx]]--
 
 local fonts, logs, trackers, containers, resolvers = fonts, logs, trackers, containers, resolvers
@@ -53,6 +61,8 @@ afm.syncspace            = true -- when true, nicer stretch values
 afm.addligatures         = true -- best leave this set to true
 afm.addtexligatures      = true -- best leave this set to true
 afm.addkerns             = true -- best leave this set to true
+
+local applyruntimefixes  = fonts.treatments and fonts.treatments.applyfixes
 
 local function setmode(tfmdata,value)
     if value then
@@ -219,6 +229,7 @@ local function get_indexes(data,pfbname)
                     report_afm("getting index data from %a",pfbname)
                 end
                 for index, glyph in next, glyphs do
+            --  for index, glyph in table.sortedhash(glyphs) do
                     local name = glyph.name
                     if name then
                         local char = characters[name]
@@ -309,7 +320,7 @@ local addkerns, addligatures, addtexligatures, unify, normalize -- we will imple
 function afm.load(filename)
     -- hm, for some reasons not resolved yet
     filename = resolvers.findfile(filename,'afm') or ""
-    if filename ~= "" then
+    if filename ~= "" and not fonts.names.ignoredfile(filename) then
         local name = file.removesuffix(file.basename(filename))
         local data = containers.read(afm.cache,name)
         local attr = lfs.attributes(filename)
@@ -334,6 +345,7 @@ function afm.load(filename)
                     get_indexes(data,pfbname)
                 elseif trace_loading then
                     report_afm("no pfb file for %a",filename)
+                 -- data.resources.filename = "unset" -- better than loading the afm file
                 end
                 report_afm("unifying %a",filename)
                 unify(data,filename)
@@ -359,6 +371,9 @@ function afm.load(filename)
                 report_afm("saving %a in cache",name)
                 data = containers.write(afm.cache, name, data)
                 data = containers.read(afm.cache,name)
+            end
+            if applyruntimefixes and data then
+                applyruntimefixes(filename,data)
             end
         end
         return data
@@ -405,7 +420,7 @@ unify = function(data, filename)
                 if unicode then
                     krn[unicode] = kern
                 else
-                    print(unicode,name)
+                 -- print(unicode,name)
                 end
             end
             description.kerns = krn
@@ -637,10 +652,10 @@ local function copytotfm(data)
         parameters.x_height      = 400
         parameters.quad          = 1000
         --
-        if italicangle then
+        if italicangle and italicangle ~= 0 then
             parameters.italicangle  = italicangle
             parameters.italicfactor = math.cos(math.rad(90+italicangle))
-            parameters.slant        = - math.round(math.tan(italicangle*math.pi/180))
+            parameters.slant        = - math.tan(italicangle*math.pi/180)
         end
         if monospaced then
             parameters.space_stretch = 0

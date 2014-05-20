@@ -17,45 +17,6 @@
 
 \unprotect
 
-\startluacode
-    local format, gsub, find, match = string.format, string.gsub, string.find, string.match
-
-    local simplify = true
-
-    local function strip(n,e)
-        -- get rid of e(0)
-        -- get rid of e(+*)
-        e = gsub(e,"^+","")
-        -- remove leading zeros
-        e = gsub(e,"^([+-]*)0+(%d)","%1%2")
-        if not simplify then
-            -- take it as it is
-        elseif n == "1" then
-            return format("10^{%s}",e)
-        end
-        return format("%s\\times10^{%s}",n,e)
-    end
-
-    function metapost.format_n(fmt,str)
-        fmt = gsub(fmt,"@","%%")
-        local initial, hasformat, final = match(fmt,"^(.-)(%%.-[%a])(.-)$")
-        if hasformat then
-            str = format(fmt,str)
-            str = gsub(str,"(.-)e(.-)$",strip)
-            str = format("%s\\mathematics{%s}%s",initial,str,final)
-        elseif not find(fmt,"%%") then
-            str = format("%"..fmt,str)
-            str = gsub(str,"(.-)e(.-)$",strip)
-            str = format("\\mathematics{%s}",str)
-        end
-        context(str)
-    end
-\stopluacode
-
-\unexpanded\def\MPgraphformat#1#2{\ctxlua{metapost.format_n("#1","#2")}}
-
-% We could also delegate parsing using lower level plugins.
-
 \defineMPinstance
   [graph]
   [\s!format=metafun,
@@ -64,36 +25,53 @@
    \c!method=\s!double]
 
 \startMPdefinitions{graph}
-    if unknown context_grap: input "mp-grap.mpiv" ; fi ;
-\stopMPdefinitions
-
-% For backwards compatibility (for the moment), also load the graph macros in
-% the standard MP instance (scaled integer):
-
-\startMPdefinitions
-    if unknown context_grap: input "mp-grap.mpiv" ; fi ;
+    if unknown context_grap : input mp-grap.mpiv ; fi ;
 \stopMPdefinitions
 
 \protect
 
 \continueifinputfile{m-graph.mkiv}
 
+%D We put this test here as in \type {meta-tex.mkiv} it would abort due to redefinition
+%D of namespaces.
+
 \starttext
 
 \startMPpage[instance=graph]
-    label(format("@g","1e-8"),  (0,       0)) ;
-    label(format("@g","1e+8"),  (2cm,     0)) ;
-    label(format("@g","1e-10"), (0,  -0.5cm)) ;
-    label(format("@g","1e+10"), (2cm,-0.5cm)) ;
-    label(format("@g","1e-12"), (0,  -1.0cm)) ;
-    label(format("@g","1e+12"), (2cm,-1.0cm)) ;
-    label(format("@g","1e-0"),  (0,  -1.5cm)) ;
-    label(format("@g","1e+0"),  (2cm,-1.5cm)) ;
-    label(format("@g","1"),     (0,  -2.0cm)) ;
-    label(format("@g","1"),     (2cm,-2.0cm)) ;
-    label(format("@g","1e-102"),(0,  -2.5cm)) ;
-    label(format("@g","1e+102"),(2cm,-2.5cm)) ;
+    label.rt(format("@g","1e-8"),  (0,       0)) ;
+    label.rt(format("@g","1e+8"),  (2cm,     0)) ;
+    label.rt(format("@g","1e-10"), (0,  -0.5cm)) ;
+    label.rt(format("@g","1e+10"), (2cm,-0.5cm)) ;
+    label.rt(format("@g","1e-12"), (0,  -1.0cm)) ;
+    label.rt(format("@g","1e+12"), (2cm,-1.0cm)) ;
+    label.rt(format("@g","1e-0"),  (0,  -1.5cm)) ;
+    label.rt(format("@g","1e+0"),  (2cm,-1.5cm)) ;
+    label.rt(format("@g","1"),     (0,  -2.0cm)) ;
+    label.rt(format("@g","1"),     (2cm,-2.0cm)) ;
+    label.rt(format("@g","1e-102"),(0,  -2.5cm)) ;
+    label.rt(format("@g","1e+102"),(2cm,-2.5cm)) ;
+    currentpicture := currentpicture shifted (-4cm,0) ;
+    %
+    label.rt(format("@j","1e-8"),  (0,       0)) ;
+    label.rt(format("@j","1e+8"),  (2cm,     0)) ;
+    label.rt(format("@j","1e-10"), (0,  -0.5cm)) ;
+    label.rt(format("@j","1e+10"), (2cm,-0.5cm)) ;
+    label.rt(format("@j","1e-12"), (0,  -1.0cm)) ;
+    label.rt(format("@j","1e+12"), (2cm,-1.0cm)) ;
+    label.rt(format("@j","1e-0"),  (0,  -1.5cm)) ;
+    label.rt(format("@j","1e+0"),  (2cm,-1.5cm)) ;
+    label.rt(format("@j","1"),     (0,  -2.0cm)) ;
+    label.rt(format("@j","1"),     (2cm,-2.0cm)) ;
+    label.rt(format("@j","1e-102"),(0,  -2.5cm)) ;
+    label.rt(format("@j","1e+102"),(2cm,-2.5cm)) ;
+    label.rt(formatted("(@f,@f)",(1.23,4.56)),(0cm,-3.0cm)) ;
+    label.rt(formatted("(@i,@i)",(1.23,4.56)),(0cm,-3.5cm)) ;
+    label.rt(formatted("(@g,@g)",(1.23,4.56)),(0cm,-4.0cm)) ;
+    label.rt(formatted("(@e,@e)",(1.23,4.56)),(0cm,-4.5cm)) ;
+    label.rt(formatted("(@j,@j)",(1.23,4.56)),(0cm,-5.0cm)) ;
 \stopMPpage
+
+\stoptext
 
 % \startMPpage[instance=graph]
 % draw begingraph(3in,2in);
@@ -153,5 +131,3 @@
 %     autogrid(otick.bot,otick.rt);
 % endgraph;
 % \stopMPpage
-
-\stoptext

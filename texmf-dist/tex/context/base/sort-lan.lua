@@ -9,6 +9,7 @@ if not modules then modules = { } end modules ['sort-lan'] = {
 
 -- todo: look into uts#10 (2012) ... some experiments ... something
 -- to finish in winter.
+-- todo: U+1E9E (german SS)
 
 -- Many vectors were supplied by Wolfgang Schuster and Philipp
 -- Gesang. However this is a quite adapted and reformatted variant
@@ -58,7 +59,7 @@ definitions["en"] = { parent = "default" }
 definitions['nl'] = {
     parent = 'default',
     replacements = {
-        { "ij", 'y' }, { "IJ", 'Y' },
+        { "ij", 'y' }, { "IJ", 'Y' }, -- hm
     },
 }
 
@@ -309,7 +310,7 @@ local ch, CH = utfchar(replacementoffset + 1), utfchar(replacementoffset + 11)
 
 definitions["cz"] = {
     replacements = {
-        { "ch", ch }, { "CH", CH }
+        { "ch", ch }, { "Ch", ch }, { "CH", ch }
     },
     entries = {
         ["a"] = "a", ["á"] = "a", ["b"] = "b", ["c"] = "c",  ["č"] = "č",

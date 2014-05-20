@@ -93,6 +93,9 @@ local function requireswiglib(required,version)
     local trace_swiglib = trace_swiglib or package.helpers.trace
     local library = loaded[required]
     if library == nil then
+        if trace_swiglib then
+            report_swiglib("requiring library %a with version %a",required,version or "any")
+        end
         -- initialize a few variables
         local required_full = gsub(required,"%.","/") -- package.helpers.lualibfile
         local required_path = pathpart(required_full)
@@ -209,7 +212,7 @@ local function requireswiglib(required,version)
             if libtype == "function" then
                 library = library()
             else
-                report_swiglib("load error: %a returns %a, message %a",opener,libtype,message or "no message")
+                report_swiglib("load error: %a returns %a, message %a, library %a",opener,libtype,(string.gsub(message or "no message","[%s]+$","")),found_library or "no library")
                 library = false
             end
             dir.pop()
@@ -252,7 +255,8 @@ recommended loader.
 
 ]]--
 
-local swiglibs = { }
+local swiglibs    = { }
+local initializer = "core"
 
 function swiglib(name,version)
     local library = swiglibs[name]
@@ -261,7 +265,12 @@ function swiglib(name,version)
         if trace_swiglib then
             report_swiglib("loading %a",name)
         end
-        library = requireswiglib("swiglib." .. name,version)
+        if not find(name,"%." .. initializer .. "$") then
+            fullname = "swiglib." .. name .. "." .. initializer
+        else
+            fullname = "swiglib." .. name
+        end
+        library = requireswiglib(fullname,version)
         swiglibs[name] = library
         statistics.stoptiming(swiglibs)
     end

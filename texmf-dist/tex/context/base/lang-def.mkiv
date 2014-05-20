@@ -219,10 +219,9 @@
    \c!rightquote=\upperrightsinglesixquote,
    \c!leftquotation=\lowerleftdoubleninequote,
    \c!rightquotation=\upperrightdoublesixquote,
-   \c!date={\v!day,\fourperemspace,\v!month,\space,\v!year}
+   \c!date={\v!day,{.\fourperemspace},\v!month,\space,\v!year},
    \s!lefthyphenmin=2,
-   \s!righthyphenmin=3
-]
+   \s!righthyphenmin=3]
 
 \installlanguage
   [\s!sk]
@@ -235,10 +234,9 @@
    \c!rightquote=\upperrightsinglesixquote,
    \c!leftquotation=\lowerleftdoubleninequote,
    \c!rightquotation=\upperrightdoublesixquote,
-   \c!date={\v!day,\fourperemspace,\v!month,\space,\v!year}
+   \c!date={\v!day,{.\fourperemspace},\v!month,\space,\v!year},
    \s!lefthyphenmin=2,
-   \s!righthyphenmin=3
-]
+   \s!righthyphenmin=3]
 
 \installlanguage
   [\s!hr]
@@ -271,7 +269,7 @@
 \installlanguage [\s!slovak]    [\s!sk]
 \installlanguage [\s!croatian]  [\s!hr]
 \installlanguage [\s!slovenian] [\s!sl]
-\installlanguage [slovene]   [\s!sl] % both possible (mojca: still needed?)
+\installlanguage [slovene]      [\s!sl] % both possible (mojca: still needed?)
 
 \def\doconvertsloveniancharacters{\dodoconvertcharacters{25}}
 
@@ -400,7 +398,7 @@
    \c!rightquote=\upperrightsingleninequote,
    \c!leftquotation=\upperleftdoublesixquote,
    \c!rightquotation=\upperrightdoubleninequote,
-   \c!date={\v!year,\space,\v!month,\space,\v!day}
+   \c!date={\v!year,\space,\v!month,\space,\v!day},
    \s!patterns=\s!tk,
    \s!lefthyphenmin=1,
    \s!righthyphenmin=2]
@@ -636,6 +634,10 @@
    \c!rightquotation=\upperrightdoubleninequote,
    \c!date={\v!year,\space,\v!month,\space,\v!day}]
 
+\installlanguage[\s!pt-br][\c!default=\s!pt]    % Brazil
+\installlanguage[\s!es-es][\c!default=\s!es]    % Spain
+\installlanguage[\s!es-la][\c!default=\s!es]    % Latin America
+
 \installlanguage
   [\s!ro]
   [\c!spacing=\v!packed,
@@ -697,6 +699,26 @@
    \s!righthyphenmin=3]
 
 \installlanguage [\s!thai] [\s!th]
+
+%D Malayalam (needs to be checked)
+
+\installlanguage
+  [\s!ml]
+  [\c!spacing=\v!broad,
+   \c!leftsentence=\emdash,
+   \c!rightsentence=\emdash,
+   \c!leftsubsentence=\emdash,
+   \c!rightsubsentence=\emdash,
+   \c!leftquote=\upperleftsinglesixquote,
+   \c!rightquote=\upperrightsingleninequote,
+   \c!leftquotation=\upperleftdoublesixquote,
+   \c!rightquotation=\upperrightdoubleninequote,
+   \c!date={\v!month,\space,\v!day,{,\space},\v!year},
+   \s!patterns=\s!ml,
+   \s!lefthyphenmin=2,
+   \s!righthyphenmin=3]
+
+\installlanguage [\s!malayalam] [\s!ml]
 
 %D Todo: generate this one from languages.data
 

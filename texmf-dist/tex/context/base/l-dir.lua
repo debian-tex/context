@@ -25,6 +25,9 @@ local isdir      = lfs.isdir
 local isfile     = lfs.isfile
 local currentdir = lfs.currentdir
 local chdir      = lfs.chdir
+local mkdir      = lfs.mkdir
+
+local onwindows  = os.type == "windows" or find(os.getenv("PATH"),";",1,true)
 
 -- in case we load outside luatex
 
@@ -136,11 +139,33 @@ end
 
 dir.collectpattern = collectpattern
 
-local pattern = Ct {
-    [1] = (C(P(".") + P("/")^1) + C(R("az","AZ") * P(":") * P("/")^0) + Cc("./")) * V(2) * V(3),
-    [2] = C(((1-S("*?/"))^0 * P("/"))^0),
-    [3] = C(P(1)^0)
-}
+local separator
+
+if onwindows then -- we could sanitize here
+
+--     pattern = Ct {
+--         [1] = (C(P(".") + S("/\\")^1) + C(R("az","AZ") * P(":") * S("/\\")^0) + Cc("./")) * V(2) * V(3),
+--         [2] = C(((1-S("*?/\\"))^0 * S("/\\"))^0),
+--         [3] = C(P(1)^0)
+--     }
+
+    local slash = S("/\\") / "/"
+
+    pattern = Ct {
+        [1] = (Cs(P(".") + slash^1) + Cs(R("az","AZ") * P(":") * slash^0) + Cc("./")) * V(2) * V(3),
+        [2] = Cs(((1-S("*?/\\"))^0 * slash)^0),
+        [3] = Cs(P(1)^0)
+    }
+
+else -- assume unix
+
+    pattern = Ct {
+        [1] = (C(P(".") + P("/")^1) + Cc("./")) * V(2) * V(3),
+        [2] = C(((1-S("*?/"))^0 * P("/"))^0),
+        [3] = C(P(1)^0)
+    }
+
+end
 
 local filter = Cs ( (
     P("**") / ".*" +
@@ -164,7 +189,7 @@ local function glob(str,t)
             local split = lpegmatch(pattern,str) -- we could use the file splitter
             if split then
                 local root, path, base = split[1], split[2], split[3]
-                local recurse = find(base,"%*%*")
+                local recurse = find(base,"**",1,true) -- find(base,"%*%*")
                 local start = root .. path
                 local result = lpegmatch(filter,start .. base)
                 globpattern(start,result,recurse,t)
@@ -190,7 +215,7 @@ local function glob(str,t)
                 local t = t or { }
                 local action = action or function(name) t[#t+1] = name end
                 local root, path, base = split[1], split[2], split[3]
-                local recurse = find(base,"%*%*")
+                local recurse =  find(base,"**",1,true) -- find(base,"%*%*")
                 local start = root .. path
                 local result = lpegmatch(filter,start .. base)
                 globpattern(start,result,recurse,action)
@@ -257,25 +282,32 @@ end
 
 local make_indeed = true -- false
 
-local onwindows = os.type == "windows" or find(os.getenv("PATH"),";")
-
 if onwindows then
 
     function dir.mkdirs(...)
-        local str, pth = "", ""
-        for i=1,select("#",...) do
-            local s = select(i,...)
-            if s == "" then
-                -- skip
-            elseif str == "" then
-                str = s
-            else
-                str = str .. "/" .. s
+        local n = select("#",...)
+        local str
+        if n == 1 then
+            str = select(1,...)
+            if isdir(str) then
+                return str, true
+            end
+        else
+            str = ""
+            for i=1,n do
+                local s = select(i,...)
+                if s == "" then
+                    -- skip
+                elseif str == "" then
+                    str = s
+                else
+                    str = str .. "/" .. s
+                end
             end
         end
-        local first, middle, last
+        local pth = ""
         local drive = false
-        first, middle, last = match(str,"^(//)(//*)(.*)$")
+        local first, middle, last = match(str,"^(//)(//*)(.*)$")
         if first then
             -- empty network path == local path
         else
@@ -309,7 +341,7 @@ if onwindows then
                 pth = pth .. "/" .. s
             end
             if make_indeed and not isdir(pth) then
-                lfs.mkdir(pth)
+                mkdir(pth)
             end
         end
         return pth, (isdir(pth) == true)
@@ -330,14 +362,23 @@ if onwindows then
 else
 
     function dir.mkdirs(...)
-        local str, pth = "", ""
-        for i=1,select("#",...) do
-            local s = select(i,...)
-            if s and s ~= "" then -- we catch nil and false
-                if str ~= "" then
-                    str = str .. "/" .. s
-                else
-                    str = s
+        local n = select("#",...)
+        local str, pth
+        if n == 1 then
+            str = select(1,...)
+            if isdir(str) then
+                return str, true
+            end
+        else
+            str = ""
+            for i=1,n do
+                local s = select(i,...)
+                if s and s ~= "" then -- we catch nil and false
+                    if str ~= "" then
+                        str = str .. "/" .. s
+                    else
+                        str = s
+                    end
                 end
             end
         end
@@ -352,7 +393,7 @@ else
                     pth = pth .. "/" .. s
                 end
                 if make_indeed and not first and not isdir(pth) then
-                    lfs.mkdir(pth)
+                    mkdir(pth)
                 end
             end
         else
@@ -360,7 +401,7 @@ else
             for s in gmatch(str,"[^/]+") do
                 pth = pth .. "/" .. s
                 if make_indeed and not isdir(pth) then
-                    lfs.mkdir(pth)
+                    mkdir(pth)
                 end
             end
         end

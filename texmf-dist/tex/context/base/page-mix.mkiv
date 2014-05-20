@@ -28,6 +28,8 @@
 % top and bottom inserts
 % wide floats
 % move floats
+% offsets (inner ones, so we change the hsize  ... needed with backgrounds
+% when no content we currently loose the page
 
 % luatex buglet:
 %
@@ -55,7 +57,11 @@
 \setupmixedcolumns
   [\c!distance=1.5\bodyfontsize,
    \c!n=\plustwo,
-  %\c!rule=\v!none,
+  %\c!align=, % inherit
+  %\c!before=,
+  %\c!after=,
+  %\c!separator=\v!none,
+  %\c!setups=,
    \c!frame=\v!off,
    \c!strut=\v!no,
    \c!offset=\v!overlay,
@@ -64,12 +70,13 @@
    \c!maxwidth=\makeupwidth,
    \c!grid=\v!tolerant,
    \c!step=.25\lineheight, % needs some experimenting
+  %\c!splitmethod=\v!fixed, % will be default
    \c!method=\ifinner\s!box\else\s!otr\fi] % automatic as suggested by WS
 
 \let\startmixedcolumns\relax % defined later
 \let\stopmixedcolumns \relax % defined later
 
-\appendtoks
+\appendtoks % could become an option
     \setuevalue{\e!start\currentmixedcolumns}{\startmixedcolumns[\currentmixedcolumns]}%
     \setuevalue{\e!stop \currentmixedcolumns}{\stopmixedcolumns}%
 \to \everydefinemixedcolumns
@@ -158,7 +165,8 @@
 \definemixedcolumns
   [\s!itemgroupcolumns]
   [\c!n=\itemgroupparameter\c!n,
-   \c!rule=\v!off,
+   \c!separator=\v!none,
+   \c!splitmethod=\v!none,
    \c!balance=\v!yes]
 
 \unexpanded\def\strc_itemgroups_start_columns
@@ -201,7 +209,7 @@
    \fi
    \global\setbox\b_page_mix_preceding\vbox
      {\page_otr_command_flush_top_insertions
-      \ifdim\ht\b_page_mix_preceding=\zeropoint \else
+      \ifdim\htdp\b_page_mix_preceding=\zeropoint \else
         \writestatus\m!columns{preceding error}%
         \unvbox\b_page_mix_preceding
       \fi
@@ -219,7 +227,7 @@
 
 \unexpanded\def\page_mix_command_set_hsize
   {\hsize\d_page_mix_column_width
-   \textwidth\d_page_mul_used_width} % needs thinking ... grouping etc
+   \textwidth\d_page_mix_column_width}
 
 %D When setting the vsize we make sure that we collect a few more lines than needed
 %D so that we have enough to split over the columns. Collecting too much is somewhat
@@ -249,7 +257,8 @@
   {\goodbreak}
 
 \installcolumnbreakmethod \s!mixedcolumn \v!yes
-  {\penalty\c_page_mix_break_forced\relax}
+  {\par
+   \penalty\c_page_mix_break_forced\relax}
 
 %D As we operate in grid snapping mode, we use a dedicated macro to enable this
 %D mechamism.
@@ -289,7 +298,7 @@
 \unexpanded\def\page_mix_command_inject_separator
   {\bgroup
    \hss
-   \csname\??mixedcolumnsseparator\mixedcolumnsparameter\c!separator\endcsname
+   \csname\??mixedcolumnsseparator\mixedcolumnsparameter\c!separator\endcsname % was \c!rule
    \hss
    \egroup}
 
@@ -478,12 +487,23 @@
      %
      \page_mix_command_set_vsize
      \page_mix_command_set_hsize
-   \fi}
+   \fi
+   \usealignparameter\mixedcolumnsparameter
+   \usesetupsparameter\mixedcolumnsparameter}
+
+% \setvalue{\??mixedcolumnsstop\s!otr}%
+%   {\par
+%    \ifcase\c_page_mix_otr_nesting\or
+%      \c_page_mix_routine\c_page_mix_routine_balance
+%      \page_otr_trigger_output_routine
+%    \fi}
 
 \setvalue{\??mixedcolumnsstop\s!otr}%
   {\par
    \ifcase\c_page_mix_otr_nesting\or
-     \c_page_mix_routine\c_page_mix_routine_balance
+     \doifelse{\mixedcolumnsparameter\c!balance}\v!yes
+       {\c_page_mix_routine\c_page_mix_routine_balance}%
+       {\penalty-\plustenthousand}% weird hack, we need to trigger the otr sometimes (new per 20140306, see balancing-001.tex)
      \page_otr_trigger_output_routine
    \fi}
 
@@ -500,7 +520,8 @@
 %D footnotes. Eventually we will have multiple strategies available.
 
 \unexpanded\def\page_mix_routine_construct#1%
-  {\ctxcommand{mixsetsplit {
+  {\d_page_mix_max_height\mixedcolumnsparameter\c!maxheight % can have changed due to header=high
+   \ctxcommand{mixsetsplit {
        box         = \number\b_page_mix_collected,
        nofcolumns  = \number\c_page_mix_n_of_columns,
        maxheight   = \number\d_page_mix_max_height,
@@ -511,6 +532,7 @@
        strutht     = \number\strutht,
        strutdp     = \number\strutdp,
        threshold   = \number\d_page_mix_threshold,
+       splitmethod = "\mixedcolumnsparameter\c!splitmethod",
        balance     = "#1",
        alternative = "\mixedcolumnsparameter\c!alternative",
        grid        = \ifgridsnapping true\else false\fi,
@@ -521,16 +543,22 @@
   {\ctxcommand{mixfinalize()}%
    \setbox\b_page_mix_collected\vbox \bgroup
      \ifvoid\b_page_mix_preceding \else
+       \page_postprocessors_linenumbers_deepbox\b_page_mix_preceding
        \box\b_page_mix_preceding
        \global\d_page_mix_preceding_height\zeropoint
        \nointerlineskip
      \fi
      \hskip\d_page_mix_leftskip
      \page_mix_hbox to \d_page_mix_max_width \bgroup
-       \letmixedcolumnsparameter\c!strut\v!no
-       % maybe use \c_page_mix_used_of_columns
-       \dorecurse\c_page_mix_n_of_columns {%
-         \inheritedmixedcolumnsframed{\page_mix_command_package_column}%
+       \dorecurse\c_page_mix_n_of_columns{%
+         % needs packaging anyway
+         \setbox\scratchbox\page_mix_command_package_column
+         \page_marks_synchronize_column\plusone\c_page_mix_n_of_columns\recurselevel\scratchbox
+         % for the moment a quick and dirty patch .. we need to go into the box (hence the \plusone) .. a slowdowner
+         \page_lines_add_numbers_to_box\scratchbox\recurselevel\c_page_mix_n_of_columns\plusone
+         % the framed needs a reset of strut, align, setups etc
+         \inheritedmixedcolumnsframedbox\currentmixedcolumns\scratchbox
+         % optional
          \ifnum\recurselevel<\c_page_mix_n_of_columns
            \page_mix_command_inject_separator
          \fi
@@ -717,7 +745,7 @@
 %          \global\setfalse\c_page_floats_room
 %    \else
       \global\settrue\c_page_floats_room
-   \fi
+   \fi\fi
    \ifdim\floatwidth>\hsize
      \showmessage\m!columns{11}\empty
      \global\setfalse\c_page_floats_room
@@ -759,6 +787,21 @@
 \unexpanded\def\page_mix_command_next_page_and_inserts
   {\page_otr_eject_page_and_flush_inserts}
 
+%D Moved here and dedicated:
+
+\unexpanded\def\page_mix_command_test_column
+  {\dodoubleempty\page_mix_command_test_column_indeed}
+
+\unexpanded\def\page_mix_command_test_column_indeed[#1][#2]% works on last column
+  {\par
+   \begingroup
+   \scratchdimen\dimexpr#1\lineheight\ifsecondargument+#2\fi\relax
+   \ifdim\scratchdimen>\zeropoint
+     \attribute\checkedbreakattribute\number\scratchdimen
+     \penalty\c_page_mix_break_forced\relax
+   \fi
+   \endgroup}
+
 %D We need to hook some handlers into the output routine and we define
 %D a dedicated one:
 
@@ -782,8 +825,9 @@
    \s!page_otr_command_side_float_output      =\page_mix_command_side_float_output,
    \s!page_otr_command_flush_floats           =\page_mix_command_flush_floats,
    \s!page_otr_command_flush_side_floats      =\page_mix_command_flush_side_floats,
-   \s!page_otr_command_flush_saved_floats     =\page_mix_command_flush_saved_floats
+   \s!page_otr_command_flush_saved_floats     =\page_mix_command_flush_saved_floats,
  % \s!page_otr_command_flush_margin_blocks    =\page_mix_command_flush_margin_blocks, % not used
+   \s!page_otr_command_test_column            =\page_mix_command_test_column
   ]
 
 %D Only a few float placement options are supported:

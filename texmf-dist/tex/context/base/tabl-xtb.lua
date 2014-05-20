@@ -25,19 +25,22 @@ this mechamism will be improved so that it can replace its older cousin.
 
 -- todo: use linked list instead of r/c array
 
-local commands, context, tex, node = commands, context, tex, node
+local tonumber = tonumber
 
-local texdimen    = tex.dimen
-local texcount    = tex.count
-local texbox      = tex.box
-local texsetcount = tex.setcount
-local texsetdimen = tex.setdimen
-
-local format      = string.format
-local concat      = table.concat
-local points      = number.points
-
+local commands                = commands
 local context                 = context
+local tex                     = tex
+
+local texgetcount             = tex.getcount
+local texsetcount             = tex.setcount
+local texgetdimen             = tex.getdimen
+local texsetdimen             = tex.setdimen
+local texget                  = tex.get
+
+local format                  = string.format
+local concat                  = table.concat
+local points                  = number.points
+
 local context_beginvbox       = context.beginvbox
 local context_endvbox         = context.endvbox
 local context_blank           = context.blank
@@ -48,13 +51,24 @@ local variables               = interfaces.variables
 local setmetatableindex       = table.setmetatableindex
 local settings_to_hash        = utilities.parsers.settings_to_hash
 
-local copy_node_list          = node.copy_list
-local hpack_node_list         = node.hpack
-local vpack_node_list         = node.vpack
-local slide_node_list         = node.slide
-local flush_node_list         = node.flush_list
+local nuts                    = nodes.nuts -- here nuts gain hardly nothing
+local tonut                   = nuts.tonut
+local tonode                  = nuts.tonode
 
-local nodepool                = nodes.pool
+local getnext                 = nuts.getnext
+local getprev                 = nuts.getprev
+local getlist                 = nuts.getlist
+local getfield                = nuts.getfield
+local getbox                  = nuts.getbox
+
+local setfield                = nuts.setfield
+
+local copy_node_list          = nuts.copy_list
+local hpack_node_list         = nuts.hpack
+local flush_node_list         = nuts.flush_list
+local takebox                 = nuts.takebox
+
+local nodepool                = nuts.pool
 
 local new_glue                = nodepool.glue
 local new_kern                = nodepool.kern
@@ -68,6 +82,7 @@ local v_height                = variables.height
 local v_repeat                = variables["repeat"]
 local v_max                   = variables.max
 local v_fixed                 = variables.fixed
+local v_auto                  = variables.auto
 
 local xtables                 = { }
 typesetters.xtables           = xtables
@@ -171,11 +186,11 @@ function xtables.create(settings)
     settings.leftmargindistance = tonumber(settings.leftmargindistance) or 0
     settings.rightmargindistance = tonumber(settings.rightmargindistance) or 0
     settings.options = settings_to_hash(settings.option)
-    settings.textwidth = tonumber(settings.textwidth) or tex.hsize
-    settings.lineheight = tonumber(settings.lineheight) or texdimen.lineheight
+    settings.textwidth = tonumber(settings.textwidth) or texget("hsize")
+    settings.lineheight = tonumber(settings.lineheight) or texgetdimen("lineheight")
     settings.maxwidth = tonumber(settings.maxwidth) or settings.textwidth/8
  -- if #stack > 0 then
- --     settings.textwidth = tex.hsize
+ --     settings.textwidth = texget("hsize")
  -- end
     data.criterium_v =   2 * data.settings.lineheight
     data.criterium_h = .75 * data.settings.textwidth
@@ -186,10 +201,10 @@ function xtables.initialize_reflow_width(option)
     local r = data.currentrow
     local c = data.currentcolumn + 1
     local drc = data.rows[r][c]
-    drc.nx = texcount.c_tabl_x_nx
-    drc.ny = texcount.c_tabl_x_ny
+    drc.nx = texgetcount("c_tabl_x_nx")
+    drc.ny = texgetcount("c_tabl_x_ny")
     local distances = data.distances
-    local distance = texdimen.d_tabl_x_distance
+    local distance = texgetdimen("d_tabl_x_distance")
     if distance > distances[c] then
         distances[c] = distance
     end
@@ -214,25 +229,25 @@ function xtables.set_reflow_width()
     while row[c].span do -- can also be previous row ones
         c = c + 1
     end
-    local tb = texbox.b_tabl_x
+    local tb = getbox("b_tabl_x")
     local drc = row[c]
     --
     drc.list = true -- we don't need to keep the content around as we're in trial mode (no: copy_node_list(tb))
     --
-    local widths, width = data.widths, tb.width
+    local widths, width = data.widths, getfield(tb,"width")
     if width > widths[c] then
         widths[c] = width
     end
-    local heights, height = data.heights, tb.height
+    local heights, height = data.heights, getfield(tb,"height")
     if height > heights[r] then
         heights[r] = height
     end
-    local depths, depth = data.depths, tb.depth
+    local depths, depth = data.depths, getfield(tb,"depth")
     if depth > depths[r] then
         depths[r] = depth
     end
     --
-    local dimensionstate = texcount.frameddimensionstate
+    local dimensionstate = texgetcount("frameddimensionstate")
     local fixedcolumns = data.fixedcolumns
     local fixedrows = data.fixedrows
     if dimensionstate == 1 then
@@ -244,13 +259,26 @@ function xtables.set_reflow_width()
     elseif dimensionstate == 3 then
         fixedrows[r]    = height -- width
         fixedcolumns[c] = width -- height
-    else -- probably something frozen, like an image -- we could parse the list
+    elseif data.options[v_auto] then -- new per 5/5/2014
+        data.autowidths[c] = true
+    else
+        -- no dimensions are set in the cell
         if width <= data.criterium_h and height >= data.criterium_v then
+            -- somewhat tricky branch
             if width > fixedcolumns[c] then -- how about a span here?
-                fixedcolumns[c] = width
+                -- maybe an image, so let's fix
+                 fixedcolumns[c] = width
+            end
+        else
+            -- safeguard as it could be text that can be recalculated
+            -- and the previous branch could have happened in a previous
+            -- row and then forces a wrong one-liner in a multiliner
+            if width > fixedcolumns[c] then
+                data.autowidths[c] = true -- new per 5/5/2014
             end
         end
     end
+    --
     drc.dimensionstate = dimensionstate
     --
     local nx, ny = drc.nx, drc.ny
@@ -294,19 +322,20 @@ function xtables.initialize_reflow_height()
     for x=1,drc.nx-1 do
         w = w + widths[c+x]
     end
-    texdimen.d_tabl_x_width = w
+    texsetdimen("d_tabl_x_width",w)
     local dimensionstate = drc.dimensionstate or 0
+-- print(r,c,w,data.autowidths[c])
     if dimensionstate == 1 or dimensionstate == 3 then
         -- width was fixed so height is known
-        texcount.c_tabl_x_skip_mode = 1
+        texsetcount("c_tabl_x_skip_mode",1)
     elseif dimensionstate == 2 then
         -- height is enforced
-        texcount.c_tabl_x_skip_mode = 1
+        texsetcount("c_tabl_x_skip_mode",1)
     elseif data.autowidths[c] then
         -- width has changed so we need to recalculate the height
-        texcount.c_tabl_x_skip_mode = 0
+        texsetcount("c_tabl_x_skip_mode",0)
     else
-        texcount.c_tabl_x_skip_mode = 1
+        texsetcount("c_tabl_x_skip_mode",1)
     end
 end
 
@@ -315,23 +344,23 @@ function xtables.set_reflow_height()
     local c = data.currentcolumn
     local rows = data.rows
     local row = rows[r]
---     while row[c].span do -- we could adapt drc.nx instead
---         c = c + 1
---     end
-    local tb = texbox.b_tabl_x
+ -- while row[c].span do -- we could adapt drc.nx instead
+ --     c = c + 1
+ -- end
+    local tb = getbox("b_tabl_x")
     local drc = row[c]
     if data.fixedrows[r] == 0 then --  and drc.dimensionstate < 2
-        local heights, height = data.heights, tb.height
+        local heights, height = data.heights, getfield(tb,"height")
         if height > heights[r] then
             heights[r] = height
         end
-        local depths, depth = data.depths, tb.depth
+        local depths, depth = data.depths, getfield(tb,"depth")
         if depth > depths[r] then
             depths[r] = depth
         end
     end
---     c = c + drc.nx - 1
---     data.currentcolumn = c
+ -- c = c + drc.nx - 1
+ -- data.currentcolumn = c
 end
 
 function xtables.initialize_construct()
@@ -357,9 +386,9 @@ function xtables.initialize_construct()
         h = h + heights[r+y]
         d = d + depths[r+y]
     end
-    texdimen.d_tabl_x_width = w
-    texdimen.d_tabl_x_height = h + d
-    texdimen.d_tabl_x_depth = 0
+    texsetdimen("d_tabl_x_width",w)
+    texsetdimen("d_tabl_x_height",h + d)
+    texsetdimen("d_tabl_x_depth",0)
 end
 
 function xtables.set_construct()
@@ -367,14 +396,15 @@ function xtables.set_construct()
     local c = data.currentcolumn
     local rows = data.rows
     local row = rows[r]
---     while row[c].span do -- can also be previous row ones
---         c = c + 1
---     end
+ -- while row[c].span do -- can also be previous row ones
+ --     c = c + 1
+ -- end
     local drc = row[c]
     -- this will change as soon as in luatex we can reset a box list without freeing
-    drc.list = copy_node_list(texbox.b_tabl_x)
---     c = c + drc.nx - 1
---     data.currentcolumn = c
+--     drc.list = copy_node_list(getbox("b_tabl_x"))
+drc.list = takebox("b_tabl_x")
+ -- c = c + drc.nx - 1
+ -- data.currentcolumn = c
 end
 
 local function showwidths(where,widths,autowidths)
@@ -382,7 +412,7 @@ local function showwidths(where,widths,autowidths)
     for i=1,#widths do
         result[#result+1] = format("%12s%s",points(widths[i]),autowidths[i] and "*" or " ")
     end
-    return report_xtable("%s : %s",where,concat(result," "))
+    return report_xtable("%s widths: %s",where,concat(result," "))
 end
 
 function xtables.reflow_width()
@@ -559,8 +589,8 @@ function xtables.reflow_height()
         local total = totalheight + totaldepth
         local leftover = settings.textheight - total
         if leftover > 0 then
-            local leftheight = (totalheight / total ) * leftover / #heights
-            local leftdepth  = (totaldepth  / total ) * leftover / #depths
+            local leftheight = (totalheight / total) * leftover / #heights
+            local leftdepth  = (totaldepth  / total) * leftover / #depths
             for i=1,nofrows do
                 heights[i] = heights[i] + leftheight
                 depths [i] = depths [i] + leftdepth
@@ -645,23 +675,23 @@ function xtables.construct()
             end
             local list = drc.list
             if list then
-                list.shift = list.height + list.depth
+                setfield(list,"shift",getfield(list,"height") + getfield(list,"depth"))
              -- list = hpack_node_list(list) -- is somehow needed
-             -- list.width = 0
-             -- list.height = 0
-             -- list.depth = 0
+             -- setfield(list,"width",0)
+             -- setfield(list,"height",0)
+             -- setfield(list,"depth",0)
                 -- faster:
                 local h = new_hlist()
-                h.list = list
+                setfield(h,"list",list)
                 list = h
                 --
                 if start then
-                    stop.next = list
-                    list.prev = stop
+                    setfield(stop,"next",list)
+                    setfield(list,"prev",stop)
                 else
                     start = list
                 end
-                stop = list -- one node anyway, so not needed: slide_node_list(list)
+                stop = list
             end
             local step = widths[c]
             if c < nofcolumns then
@@ -669,8 +699,8 @@ function xtables.construct()
             end
             local kern = new_kern(step)
             if stop then
-                stop.prev = kern
-                stop.next = kern
+                setfield(stop,"next",kern)
+                setfield(kern,"prev",stop)
             else -- can be first spanning next row (ny=...)
                 start = kern
             end
@@ -679,8 +709,8 @@ function xtables.construct()
         if start then
             if rightmargindistance > 0 then
                 local kern = new_kern(rightmargindistance)
-                stop.next = kern
-                kern.prev = stop
+                setfield(stop,"next",kern)
+                setfield(kern,"prev",stop)
              -- stop = kern
             end
             return start, heights[r] + depths[r], hasspan
@@ -720,9 +750,11 @@ function xtables.construct()
         texsetdimen("global","d_tabl_x_final_width",0)
     else
         texsetcount("global","c_tabl_x_state",1)
-        texsetdimen("global","d_tabl_x_final_width",body[1][1].width)
+        texsetdimen("global","d_tabl_x_final_width",getfield(body[1][1],"width"))
     end
 end
+
+-- todo: join as that is as efficient as fushing multiple
 
 local function inject(row,copy,package)
     local list = row[1]
@@ -731,8 +763,8 @@ local function inject(row,copy,package)
     end
     if package then
         context_beginvbox()
-        context(list)
-        context(new_kern(row[2]))
+        context(tonode(list))
+        context(tonode(new_kern(row[2])))
         context_endvbox()
         context_nointerlineskip() -- figure out a better way
         if row[4] then
@@ -740,13 +772,13 @@ local function inject(row,copy,package)
         elseif row[3] then
             context_blank(row[3] .. "sp") -- why blank ?
         else
-            context(new_glue(0))
+            context(tonode(new_glue(0)))
         end
     else
-        context(list)
-        context(new_kern(row[2]))
+        context(tonode(list))
+        context(tonode(new_kern(row[2])))
         if row[3] then
-            context(new_glue(row[3]))
+            context(tonode(new_glue(row[3])))
         end
     end
 end
@@ -819,7 +851,7 @@ function xtables.flush(directives) -- todo split by size / no inbetween then .. 
                         inject(head[i],repeatheader)
                     end
                     if rowdistance > 0 then
-                        context(new_glue(rowdistance))
+                        context(tonode(new_glue(rowdistance)))
                     end
                     if not repeatheader then
                         results[head_mode] = { }
@@ -832,7 +864,7 @@ function xtables.flush(directives) -- todo split by size / no inbetween then .. 
                         inject(more[i],true)
                     end
                     if rowdistance > 0 then
-                        context(new_glue(rowdistance))
+                        context(tonode(new_glue(rowdistance)))
                     end
                 end
             elseif headsize > 0 and repeatheader then -- following chunk gets head
@@ -842,7 +874,7 @@ function xtables.flush(directives) -- todo split by size / no inbetween then .. 
                         inject(head[i],true)
                     end
                     if rowdistance > 0 then
-                        context(new_glue(rowdistance))
+                        context(tonode(new_glue(rowdistance)))
                     end
                 end
             else -- following chunk gets nothing
@@ -869,7 +901,7 @@ function xtables.flush(directives) -- todo split by size / no inbetween then .. 
                     -- all is flushed and footer fits
                     if footsize > 0 then
                         if rowdistance > 0 then
-                            context(new_glue(rowdistance))
+                            context(tonode(new_glue(rowdistance)))
                         end
                         for i=1,#foot do
                             inject(foot[i])
@@ -883,7 +915,7 @@ function xtables.flush(directives) -- todo split by size / no inbetween then .. 
                     -- todo: try to flush a few more lines
                     if repeatfooter and footsize > 0 then
                         if rowdistance > 0 then
-                            context(new_glue(rowdistance))
+                            context(tonode(new_glue(rowdistance)))
                         end
                         for i=1,#foot do
                             inject(foot[i],true)
@@ -935,13 +967,13 @@ function xtables.flush(directives) -- todo split by size / no inbetween then .. 
                 inject(head[i])
             end
             if #head > 0 and rowdistance > 0 then
-                context(new_glue(rowdistance))
+                context(tonode(new_glue(rowdistance)))
             end
             for i=1,#body do
                 inject(body[i])
             end
             if #foot > 0 and rowdistance > 0 then
-                context(new_glue(rowdistance))
+                context(tonode(new_glue(rowdistance)))
             end
             for i=1,#foot do
                 inject(foot[i])
@@ -961,12 +993,30 @@ function xtables.cleanup()
             flush_node_list(r[1])
         end
     end
+
+    -- local rows = data.rows
+    -- for i=1,#rows do
+    --     local row = rows[i]
+    --     for i=1,#row do
+    --         local cell = row[i]
+    --         local list = cell.list
+    --         if list then
+    --             cell.width  = getfield(list,"width")
+    --             cell.height = getfield(list,"height")
+    --             cell.depth  = getfield(list,"depth")
+    --             cell.list   = true
+    --         end
+    --     end
+    -- end
+    -- data.result = nil
+    -- inspect(data)
+
     data = table.remove(stack)
 end
 
 function xtables.next_row()
     local r = data.currentrow + 1
-    data.modes[r] = texcount.c_tabl_x_mode
+    data.modes[r] = texgetcount("c_tabl_x_mode")
     data.currentrow = r
     data.currentcolumn = 0
 end
@@ -986,3 +1036,6 @@ commands.x_table_init_construct     = xtables.initialize_construct
 commands.x_table_set_reflow_width   = xtables.set_reflow_width
 commands.x_table_set_reflow_height  = xtables.set_reflow_height
 commands.x_table_set_construct      = xtables.set_construct
+
+commands.x_table_r  = function() context(data.currentrow    or 0) end
+commands.x_table_c  = function() context(data.currentcolumn or 0) end

@@ -34,6 +34,8 @@ as the current variant was written when <l n='lpeg'/> showed up and it's easier 
 build tables in one go.</p>
 --ldx]]--
 
+if lpeg.setmaxstack then lpeg.setmaxstack(1000) end -- deeply nested xml files
+
 xml = xml or { }
 local xml = xml
 
@@ -627,7 +629,6 @@ local publicdoctype    = doctypename * somespace * P("PUBLIC") * somespace * val
 local systemdoctype    = doctypename * somespace * P("SYSTEM") * somespace * value * somespace * doctypeset
 local simpledoctype    = (1-close)^1 -- * balanced^0
 local somedoctype      = C((somespace * (publicdoctype + systemdoctype + definitiondoctype + simpledoctype) * optionalspace)^0)
-local somedoctype      = C((somespace * (publicdoctype + systemdoctype + definitiondoctype + simpledoctype) * optionalspace)^0)
 
 local instruction      = (spacing * begininstruction * someinstruction * endinstruction) / function(...) add_special("@pi@",...) end
 local comment          = (spacing * begincomment     * somecomment     * endcomment    ) / function(...) add_special("@cm@",...) end
@@ -745,8 +746,11 @@ local function _xmlconvert_(data, settings)
     end
     if errorstr and errorstr ~= "" then
         result.error = true
+    else
+        errorstr = nil
     end
     result.statistics = {
+        errormessage = errorstr,
         entities = {
             decimals     = dcache,
             hexadecimals = hcache,
@@ -1015,25 +1019,27 @@ local function verbose_document(e,handlers)
 end
 
 local function serialize(e,handlers,...)
-    local initialize = handlers.initialize
-    local finalize   = handlers.finalize
-    local functions  = handlers.functions
-    if initialize then
-        local state = initialize(...)
-        if not state == true then
-            return state
+    if e then
+        local initialize = handlers.initialize
+        local finalize   = handlers.finalize
+        local functions  = handlers.functions
+        if initialize then
+            local state = initialize(...)
+            if not state == true then
+                return state
+            end
         end
-    end
-    local etg = e.tg
-    if etg then
-        (functions[etg] or functions["@el@"])(e,handlers)
- -- elseif type(e) == "string" then
- --     functions["@tx@"](e,handlers)
-    else
-        functions["@dc@"](e,handlers) -- dc ?
-    end
-    if finalize then
-        return finalize()
+        local etg = e.tg
+        if etg then
+            (functions[etg] or functions["@el@"])(e,handlers)
+     -- elseif type(e) == "string" then
+     --     functions["@tx@"](e,handlers)
+        else
+            functions["@dc@"](e,handlers) -- dc ?
+        end
+        if finalize then
+            return finalize()
+        end
     end
 end
 

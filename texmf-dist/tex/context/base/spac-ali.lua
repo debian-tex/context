@@ -10,17 +10,28 @@ local div = math.div
 local format = string.format
 
 local tasks            = nodes.tasks
-local appendaction     = tasks.appendaction
-local prependaction    = tasks.prependaction
-local disableaction    = tasks.disableaction
 local enableaction     = tasks.enableaction
 
-local slide_nodes      = node.slide
-local hpack_nodes      = node.hpack -- nodes.fasthpack not really faster here
+local nuts             = nodes.nuts
+local nodepool         = nuts.pool
+
+local tonode           = nuts.tonode
+local tonut            = nuts.tonut
+
+local getfield         = nuts.getfield
+local setfield         = nuts.setfield
+local getnext          = nuts.getnext
+local getprev          = nuts.getprev
+local getid            = nuts.getid
+local getlist          = nuts.getlist
+local getattr          = nuts.getattr
+local setattr          = nuts.setattr
+local getsubtype       = nuts.getsubtype
+
+local hpack_nodes      = nuts.hpack -- nodes.fasthpack not really faster here
+local linked_nodes     = nuts.linked
 
 local unsetvalue       = attributes.unsetvalue
-
-local concat_nodes     = nodes.concat
 
 local nodecodes        = nodes.nodecodes
 local listcodes        = nodes.listcodes
@@ -29,14 +40,12 @@ local hlist_code       = nodecodes.hlist
 local vlist_code       = nodecodes.vlist
 local line_code        = listcodes.line
 
-local nodepool         = nodes.pool
-
 local new_stretch      = nodepool.stretch
 
 local a_realign        = attributes.private("realign")
 
-local texattribute     = tex.attribute
-local texcount         = tex.count
+local texsetattribute  = tex.setattribute
+local texgetcount      = tex.getcount
 
 local isleftpage       = layouts.status.isleftpage
 
@@ -58,10 +67,10 @@ local function handler(head,leftpage,realpageno)
     local current = head
     local done = false
     while current do
-        local id = current.id
+        local id = getid(current)
         if id == hlist_code then
-            if current.subtype == line_code then
-                local a = current[a_realign]
+            if getsubtype(current) == line_code then
+                local a = getattr(current,a_realign)
                 if not a or a == 0 then
                     -- skip
                 else
@@ -77,12 +86,12 @@ local function handler(head,leftpage,realpageno)
                             action = leftpage and 2 or 1
                         end
                         if action == 1 then
-                            current.list = hpack_nodes(concat_nodes{current.list,new_stretch(3)},current.width,"exactly")
+                            setfield(current,"list",hpack_nodes(linked_nodes(getlist(current),new_stretch(3)),getfield(current,"width"),"exactly"))
                             if trace_realign then
                                 report_realign("flushing left, align %a, page %a, realpage %a",align,pageno,realpageno)
                             end
                         elseif action == 2 then
-                            current.list = hpack_nodes(concat_nodes{new_stretch(3),current.list},current.width,"exactly")
+                            setfield(current,"list",hpack_nodes(linked_nodes(new_stretch(3),getlist(current)),getfield(current,"width"),"exactly"))
                             if trace_realign then
                                 report_realign("flushing right. align %a, page %a, realpage %a",align,pageno,realpageno)
                             end
@@ -92,22 +101,23 @@ local function handler(head,leftpage,realpageno)
                         done = true
                         nofrealigned = nofrealigned + 1
                     end
-                    current[a_realign] = unsetvalue
+                    setattr(current,a_realign,unsetvalue)
                 end
             end
-            handler(current.list,leftpage,realpageno)
+            handler(getlist(current),leftpage,realpageno)
         elseif id == vlist_code then
-            handler(current.list,leftpage,realpageno)
+            handler(getlist(current),leftpage,realpageno)
         end
-        current = current.next
+        current = getnext(current)
     end
     return head, done
 end
 
 function alignments.handler(head)
     local leftpage = isleftpage(true,false)
-    local realpageno = texcount.realpageno
-    return handler(head,leftpage,realpageno)
+    local realpageno = texgetcount("realpageno")
+    local head, done = handler(tonut(head),leftpage,realpageno)
+    return tonode(head), done
 end
 
 local enabled = false
@@ -120,7 +130,7 @@ function alignments.set(n)
             report_realign("enabled")
         end
     end
-    texattribute[a_realign] = texcount.realpageno * 10 + n
+    texsetattribute(a_realign,texgetcount("realpageno") * 10 + n)
 end
 
 commands.setrealign = alignments.set
