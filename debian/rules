@@ -52,6 +52,7 @@ binary-indep: build-indep
 
 	# install man pages
 	dh_installman texmf-dist/doc/man/man1/*.1
+	dh_installman debian/manpages/texfont.man debian/manpages/texfind.man
 
 
 	dh_installdocs debian/changelog.Debian.prerelease	\
