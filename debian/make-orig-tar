@@ -1,7 +1,7 @@
 
 tlnet=${1:-/var/www/norbert/tlpretest}
 
-basever=2014.05.18
+basever=2014.05.21
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
