@@ -1,6 +1,6 @@
 name context
 category Package
-revision 34112
+revision 34221
 shortdesc The ConTeXt macro package.
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
@@ -22,7 +22,7 @@ execute AddFormat name=cont-it mode=disabled engine=pdftex         patterns=cont
 execute AddFormat name=cont-nl mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-nl.mkii"
 execute AddFormat name=cont-ro mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-ro.mkii"
 execute addMap original-context-symbol.map
-runfiles size=11182
+runfiles size=11193
  texmf-dist/bibtex/bst/context/cont-ab.bst
  texmf-dist/bibtex/bst/context/cont-au.bst
  texmf-dist/bibtex/bst/context/cont-no.bst
@@ -289,6 +289,7 @@ runfiles size=11182
  texmf-dist/scripts/context/ruby/tmftools.rb
  texmf-dist/scripts/context/ruby/xmltools.rb
  texmf-dist/scripts/context/stubs/install/first-setup.bat
+ texmf-dist/scripts/context/stubs/install/first-setup.sh
  texmf-dist/scripts/context/stubs/mswin/context.exe
  texmf-dist/scripts/context/stubs/mswin/ctxtools.exe
  texmf-dist/scripts/context/stubs/mswin/luatools.exe
@@ -1187,6 +1188,7 @@ runfiles size=11182
  texmf-dist/tex/context/base/prop-mis.mkii
  texmf-dist/tex/context/base/publ-aut.lua
  texmf-dist/tex/context/base/publ-dat.lua
+ texmf-dist/tex/context/base/publ-fnd.lua
  texmf-dist/tex/context/base/publ-imp-apa.mkiv
  texmf-dist/tex/context/base/publ-imp-cite.mkiv
  texmf-dist/tex/context/base/publ-imp-commands.mkiv
@@ -1841,6 +1843,7 @@ runfiles size=11182
  texmf-dist/tex/context/base/x-ldx.ctx
  texmf-dist/tex/context/base/x-ldx.lua
  texmf-dist/tex/context/base/x-ldx.mkiv
+ texmf-dist/tex/context/base/x-mathml-html.mkiv
  texmf-dist/tex/context/base/x-mathml.lua
  texmf-dist/tex/context/base/x-mathml.mkii
  texmf-dist/tex/context/base/x-mathml.mkiv

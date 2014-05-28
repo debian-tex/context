@@ -1,12 +1,14 @@
 name context.doc
 category Package
-revision 34112
+revision 34221
 shortdesc doc files of context
-docfiles size=331
+docfiles size=404
  texmf-dist/doc/context/document/general/manuals/mreadme.pdf
  texmf-dist/doc/context/document/general/manuals/tiptrick.pdf
  texmf-dist/doc/context/manuals/allkind/mcommon.tex
+ texmf-dist/doc/context/manuals/allkind/mkiv-publications-graph.bib
  texmf-dist/doc/context/manuals/allkind/mkiv-publications.bib
+ texmf-dist/doc/context/manuals/allkind/mkiv-publications.pdf
  texmf-dist/doc/context/manuals/allkind/mkiv-publications.tex
  texmf-dist/doc/context/manuals/allkind/mreadme.tex
  texmf-dist/doc/context/manuals/allkind/publications-en.xml
