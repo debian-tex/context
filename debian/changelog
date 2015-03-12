@@ -1,3 +1,10 @@
+context (2014.05.21.20140528-2~UNRELEASED) UNRELEASED; urgency=medium
+
+  * Fix creation of some helper scripts in debian/rules
+    (Closes: #780330) [hilmar-guest]
+
+ -- Hilmar Preuße <hille42@web.de>  Thu, 12 Mar 2015 18:04:24 +0100
+
 context (2014.05.21.20140528-1) unstable; urgency=medium
 
   * upload to unstable
