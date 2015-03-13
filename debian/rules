@@ -45,9 +45,9 @@ binary-indep: build-indep
 	rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
 	#
 	##cp texmf-dist/scripts/context/stubs/unix/* $(instbase)/usr/bin
-	(echo "#!/bin/sh"; echo 'mtxrun --script pdftrimwhite $$@' ) > $(instbase)/usr/bin/pdftrimwhite
-	(echo "#!/bin/sh"; echo 'mtxrun --script texfind $$@' ) > $(instbase)/usr/bin/texfind
-	(echo "#!/bin/sh"; echo 'mtxrun --script texfont $$@' ) > $(instbase)/usr/bin/texfont
+	(echo "#!/bin/sh"; echo 'mtxrun --script pdftrimwhite "$$@"' ) > $(instbase)/usr/bin/pdftrimwhite
+	(echo "#!/bin/sh"; echo 'mtxrun --script texfind "$$@"' ) > $(instbase)/usr/bin/texfind
+	(echo "#!/bin/sh"; echo 'mtxrun --script texfont "$$@"' ) > $(instbase)/usr/bin/texfont
 	####(echo "#!/usr/bin/perl"; tail -n +3 texmf-dist/scripts/context/perl/pdftrimwhite.pl ) > $(instbase)/usr/bin/pdftrimwhite
 
 	# install man pages
