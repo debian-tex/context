@@ -44,7 +44,12 @@ end
 
 if not number then number = { } end -- temp hack for luatex-fonts
 
-local stripper = patterns.stripzeros
+local stripper    = patterns.stripzeros
+local newline     = patterns.newline
+local endofstring = patterns.endofstring
+local whitespace  = patterns.whitespace
+local spacer      = patterns.spacer
+local spaceortab  = patterns.spaceortab
 
 local function points(n)
     n = tonumber(n)
@@ -62,12 +67,12 @@ number.basepoints = basepoints
 -- str = " \n \ntest  \n test\ntest "
 -- print("["..string.gsub(string.collapsecrlf(str),"\n","+").."]")
 
-local rubish     = patterns.spaceortab^0 * patterns.newline
-local anyrubish  = patterns.spaceortab + patterns.newline
+local rubish     = spaceortab^0 * newline
+local anyrubish  = spaceortab + newline
 local anything   = patterns.anything
-local stripped   = (patterns.spaceortab^1 / "") * patterns.newline
+local stripped   = (spaceortab^1 / "") * newline
 local leading    = rubish^0 / ""
-local trailing   = (anyrubish^1 * patterns.endofstring) / ""
+local trailing   = (anyrubish^1 * endofstring) / ""
 local redundant  = rubish^3 / "\n"
 
 local pattern = Cs(leading * (trailing + redundant + stripped + anything)^0)
@@ -129,7 +134,7 @@ local pattern =
               return ""
           end
       end
-    + patterns.newline * Cp() / function(position)
+    + newline * Cp() / function(position)
           extra, start = 0, position
       end
     + patterns.anything
@@ -161,11 +166,6 @@ end
 --     str = gsub(str,"[\n\r]+ *","\n")
 --     return str
 -- end
-
-local newline     = patterns.newline
-local endofstring = patterns.endofstring
-local whitespace  = patterns.whitespace
-local spacer      = patterns.spacer
 
 local space       = spacer^0
 local nospace     = space/""
@@ -216,13 +216,18 @@ local striplinepatterns = {
     ["retain"]              = p_retain_normal,
     ["retain and collapse"] = p_retain_collapse,
     ["retain and no empty"] = p_retain_noempty,
+    ["collapse"]            = patterns.collapser, -- how about: stripper fullstripper
 }
+
+setmetatable(striplinepatterns,{ __index = function(t,k) return p_prune_collapse end })
 
 strings.striplinepatterns = striplinepatterns
 
 function strings.striplines(str,how)
-    return str and lpegmatch(how and striplinepatterns[how] or p_prune_collapse,str) or str
+    return str and lpegmatch(striplinepatterns[how],str) or str
 end
+
+-- also see: string.collapsespaces
 
 strings.striplong = strings.striplines -- for old times sake
 
@@ -356,10 +361,10 @@ strings.tracers    = tracedchars
 function string.tracedchar(b)
     -- todo: table
     if type(b) == "number" then
-        return tracedchars[b] or (utfchar(b) .. " (U+" .. format('%05X',b) .. ")")
+        return tracedchars[b] or (utfchar(b) .. " (U+" .. format("%05X",b) .. ")")
     else
         local c = utfbyte(b)
-        return tracedchars[c] or (b .. " (U+" .. format('%05X',c) .. ")")
+        return tracedchars[c] or (b .. " (U+" .. (c and format("%05X",c) or "?????") .. ")")
     end
 end
 
@@ -525,12 +530,21 @@ local format_f = function(f)
     return format("format('%%%sf',a%s)",f,n)
 end
 
-local format_F = function(f)
+-- The next one formats an integer as integer and very small values as zero. This is needed
+-- for pdf backend code.
+--
+--   1.23 % 1 : 0.23
+-- - 1.23 % 1 : 0.77
+--
+-- We could probably use just %s with integers but who knows what Lua 5.3 will do? So let's
+-- for the moment use %i.
+
+local format_F = function(f) -- beware, no cast to number
     n = n + 1
     if not f or f == "" then
-        return format("(((a%s > -0.0000000005 and a%s < 0.0000000005) and '0') or (a%s == 1 and '1') or format('%%.9f',a%s))",n,n,n,n)
+        return format("(((a%s > -0.0000000005 and a%s < 0.0000000005) and '0') or format((a%s %% 1 == 0) and '%%i' or '%%.9f',a%s))",n,n,n,n)
     else
-        return format("((a%s == 0 and '0') or (a%s == 1 and '1') or format('%%%sf',a%s))",n,n,f,n)
+        return format("format((a%s %% 1 == 0) and '%%i' or '%%%sf',a%s)",n,f,n)
     end
 end
 
@@ -830,7 +844,7 @@ local builder = Cs { "start",
               + V("m") + V("M") -- new
               + V("z") -- new
               --
-              + V("*") -- ignores probably messed up %
+           -- + V("?") -- ignores probably messed up %
             )
           + V("*")
         )
@@ -885,6 +899,7 @@ local builder = Cs { "start",
     ["A"] = (prefix_any * P("A")) / format_A, -- %A => "..." (forces tostring)
     --
     ["*"] = Cs(((1-P("%"))^1 + P("%%")/"%%")^1) / format_rest, -- rest (including %%)
+    ["?"] = Cs(((1-P("%"))^1               )^1) / format_rest, -- rest (including %%)
     --
     ["!"] = Carg(2) * prefix_any * P("!") * C((1-P("!"))^1) * P("!") / format_extension,
 }
@@ -1082,3 +1097,29 @@ end
 -- string.formatteds = formatteds
 --
 -- setmetatable(formatteds, { __index = make, __call = use })
+
+-- This is a somewhat silly one used in commandline reconstruction but the older
+-- method, using a combination of fine, gsub, quoted and unquoted was not that
+-- reliable.
+--
+-- '"foo"bar \"and " whatever"' => "foo\"bar \"and \" whatever"
+-- 'foo"bar \"and " whatever'   => "foo\"bar \"and \" whatever"
+
+local dquote = patterns.dquote -- P('"')
+local equote = patterns.escaped + dquote / '\\"' + 1
+local space  = patterns.space
+local cquote = Cc('"')
+
+local pattern =
+    Cs(dquote * (equote - P(-2))^0 * dquote)                    -- we keep the outer but escape unescaped ones
+  + Cs(cquote * (equote - space)^0 * space * equote^0 * cquote) -- we escape unescaped ones
+
+function string.optionalquoted(str)
+    return lpegmatch(pattern,str) or str
+end
+
+local pattern = Cs((newline / (os.newline or "\r") + 1)^0)
+
+function string.replacenewlines(str)
+    return lpegmatch(pattern,str)
+end

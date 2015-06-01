@@ -77,6 +77,7 @@ local format, validstring = string.format, string.valid
 local insert, remove = table.insert, table.remove
 local setmetatable, next = setmetatable, next
 local formatters = string.formatters
+local toboolean = toboolean
 
 local attributes, nodes, node, variables = attributes, nodes, node, variables
 
@@ -115,6 +116,7 @@ local v_continue         = variables.continue
 local v_first            = variables.first
 local v_text             = variables.text
 local v_column           = variables.column
+local v_line             = variables.line
 
 local nuts               = nodes.nuts
 local nodepool           = nuts.pool
@@ -165,9 +167,6 @@ local localpar_code      = whatsitcodes.localpar
 local nodepool           = nuts.pool
 
 local new_kern           = nodepool.kern
-local new_glue           = nodepool.glue
-local new_penalty        = nodepool.penalty
-local new_stretch        = nodepool.stretch
 local new_usernumber     = nodepool.usernumber
 local new_latelua        = nodepool.latelua
 
@@ -176,8 +175,6 @@ local lateluafunction    = nodepool.lateluafunction
 local texgetcount        = tex.getcount
 local texgetdimen        = tex.getdimen
 local texget             = tex.get
-
-local points             = number.points
 
 local isleftpage         = layouts.status.isleftpage
 local registertogether   = builders.paragraphs.registertogether -- tonode
@@ -374,11 +371,13 @@ end
 local status, nofstatus = { }, 0
 
 local f_anchor = formatters["_plib_.set('md:h',%i,{x=true,c=true})"]
+
 local function setanchor(h_anchor)
     return new_latelua(f_anchor(h_anchor))
 end
 
 -- local t_anchor = { x = true, c = true }
+--
 -- local function setanchor(h_anchor)
 --      return lateluafunction(function() setposition("md:h",h_anchor,t_anchor) end)
 -- end
@@ -449,7 +448,7 @@ local function realign(current,candidate)
         anchor = v_text
     end
     if inline or anchor ~= v_text or candidate.psubtype == alignment_code then
-        -- the alignment_code check catches margintexts ste before a tabulate
+        -- the alignment_code check catches margintexts before a tabulate
         h_anchors = h_anchors + 1
         anchornode = setanchor(h_anchors)
         local blob = getposition('md:h',h_anchors)
@@ -555,6 +554,9 @@ end
 
 local function inject(parent,head,candidate)
     local box          = candidate.box
+    if not box then
+        return head, nil, false -- we can have empty texts
+    end
     local width        = getfield(box,"width")
     local height       = getfield(box,"height")
     local depth        = getfield(box,"depth")
@@ -574,6 +576,11 @@ local function inject(parent,head,candidate)
     nofdelayed         = nofdelayed + 1
     status[nofstatus]  = candidate
     -- yet untested
+    baseline = tonumber(baseline)
+    if not baseline then
+        baseline = toboolean(baseline)
+    end
+    --
     if baseline == true then
         baseline = false
         -- hbox vtop
@@ -600,10 +607,10 @@ local function inject(parent,head,candidate)
 --         offset = offset + height
     end
     if stack == v_yes then
-        offset = offset + candidate.dy
+        offset = offset + candidate.dy -- always
         shift = shift + offset
     elseif stack == v_continue then
-        offset = offset + candidate.dy
+        offset = offset + candidate.dy -- always
         if firstonstack then
             offset = offset + getovershoot(location)
         end
@@ -620,8 +627,18 @@ local function inject(parent,head,candidate)
         if trace_margindata then
             report_margindata("top aligned by %p",delta)
         end
-        if delta < candidate.threshold then
+        if delta < candidate.threshold then -- often we need a negative threshold here
             shift = shift + voffset + delta
+        end
+    elseif method == v_line then
+        if getfield(parent,"depth") == 0 then
+            local delta = height - getfield(parent,"height")
+            if trace_margindata then
+                report_margindata("top aligned by %p (no depth)",delta)
+            end
+            if delta < candidate.threshold then -- often we need a negative threshold here
+                shift = shift + voffset + delta
+            end
         end
     elseif method == v_first then
         if baseline then
@@ -740,17 +757,23 @@ local function flushed(scope,parent) -- current is hlist
         for l=1,#locations do
             local location = locations[l]
             local store = displaystore[category][location][scope]
-            while true do
-                local candidate = remove(store,1) -- brr, local stores are sparse
-                if candidate then -- no vpack, as we want to realign
-                    head, room, con = inject(parent,head,candidate)
-                    done = true
-                    continue = continue or con
-                    nofstored = nofstored - 1
-                    registertogether(tonode(parent),room) -- !! tonode
-                else
-                    break
+            if store then
+                while true do
+                    local candidate = remove(store,1) -- brr, local stores are sparse
+                    if candidate then -- no vpack, as we want to realign
+                        head, room, con = inject(parent,head,candidate)
+                        done = true
+                        continue = continue or con
+                        nofstored = nofstored - 1
+                        if room then
+                            registertogether(tonode(parent),room) -- !! tonode
+                        end
+                    else
+                        break
+                    end
                 end
+            else
+             -- report_margindata("fatal error: invalid category %a",category or "?")
             end
         end
     end
@@ -836,15 +859,15 @@ function margins.globalhandler(head,group) -- check group
         end
         return head, false
     elseif group == "hmode_par" then
-        return handler("global",head,group)
+        return handler(v_global,head,group)
     elseif group == "vmode_par" then              -- experiment (for alignments)
-        return handler("global",head,group)
+        return handler(v_global,head,group)
      -- this needs checking as we then get quite some one liners to process and
      -- we cannot look ahead then:
     elseif group == "box" then                    -- experiment (for alignments)
-        return handler("global",head,group)
+        return handler(v_global,head,group)
     elseif group == "alignment" then              -- experiment (for alignments)
-        return handler("global",head,group)
+        return handler(v_global,head,group)
     else
         if trace_margingroup then
             report_margindata("ignored 2, group %a, stored %s, inhibit %a",group,nofstored,inhibit)
@@ -885,9 +908,9 @@ function margins.finalhandler(head)
      -- if trace_margindata then
      --     report_margindata("flushing stage two, instore: %s, delayed: %s",nofstored,nofdelayed)
      -- end
-head = tonut(head)
-local head, done = finalhandler(head)
-head = tonode(head)
+        head = tonut(head)
+        local head, done = finalhandler(head)
+        head = tonode(head)
         return head, done
     else
         return head, false
@@ -928,4 +951,32 @@ statistics.register("margin data", function()
     end
 end)
 
-commands.savemargindata = margins.save
+interfaces.implement {
+    name      = "savemargindata",
+    actions   = margins.save,
+    arguments = {
+        {
+           { "location" },
+           { "method" },
+           { "category" },
+           { "name" },
+           { "scope" },
+           { "number", "integer" },
+           { "margin" },
+           { "distance", "dimen" },
+           { "hoffset", "dimen" },
+           { "voffset", "dimen" },
+           { "dy", "dimen" },
+           { "bottomspace", "dimen" },
+           { "baseline"}, -- dimen or string or
+           { "threshold", "dimen" },
+           { "inline", "boolean" },
+           { "anchor" },
+        -- { "leftskip", "dimen" },
+        -- { "rightskip", "dimen" },
+           { "align" },
+           { "line", "integer" },
+           { "stack" },
+        }
+    }
+}

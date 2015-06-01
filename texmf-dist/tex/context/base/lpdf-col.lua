@@ -48,6 +48,7 @@ local registercolor           = colors.register
 local colorsvalue             = colors.value
 local transparenciesvalue     = transparencies.value
 local forcedmodel             = colors.forcedmodel
+local getpagecolormodel       = colors.getpagecolormodel
 
 local c_transparency          = pdfconstant("Transparency")
 
@@ -98,11 +99,10 @@ table.setmetatableindex(transparencygroups, function(transparencygroups,colormod
     end
 end)
 
-local currentgroupcolormodel
-
 local function addpagegroup()
-    if currentgroupcolormodel then
-        local g = transparencygroups[currentgroupcolormodel]
+    local model = getpagecolormodel()
+    if model then
+        local g = transparencygroups[model]
         if g then
             addtopageattributes("Group",g)
         end
@@ -110,13 +110,6 @@ local function addpagegroup()
 end
 
 lpdf.registerpagefinalizer(addpagegroup,3,"pagegroup")
-
-local function synchronizecolormodel(model)
-    currentgroupcolormodel = model
-end
-
-backends.codeinjections.synchronizecolormodel = synchronizecolormodel
-commands.synchronizecolormodel                = synchronizecolormodel
 
 -- injection code (needs a bit reordering)
 
@@ -184,7 +177,7 @@ local f_gray_function = formatters["%s mul"]
 
 local documentcolorspaces = pdfdictionary()
 
-local spotcolorhash      = { } -- not needed
+local spotcolorhash       = { } -- not needed
 local spotcolornames      = { }
 local indexcolorhash      = { }
 local delayedindexcolors  = { }
@@ -202,7 +195,7 @@ end
 -- This should become delayed i.e. only flush when used; in that case we need
 -- need to store the specification and then flush them when accesssomespotcolor
 -- is called. At this moment we assume that splotcolors that get defined are
--- also used which keeps the overhad small anyway.
+-- also used which keeps the overhad small anyway. Tricky for mp ...
 
 local processcolors
 
@@ -240,6 +233,7 @@ local function registersomespotcolor(name,noffractions,names,p,colorspace,range,
         local colorants = pdfdictionary()
         for n in gmatch(names,"[^,]+") do
             local name = spotcolornames[n] or n
+            -- the cmyk names assume that they are indeed these colors
             if n == "cyan" then
                 name = "Cyan"
             elseif n == "magenta" then
@@ -250,9 +244,15 @@ local function registersomespotcolor(name,noffractions,names,p,colorspace,range,
                 name = "Black"
             else
                 local sn = spotcolorhash[name] or spotcolorhash[n]
+                if not sn then
+                    report_color("defining %a as colorant",name)
+                    colors.definespotcolor("",name,"p=1",true)
+                    sn = spotcolorhash[name] or spotcolorhash[n]
+                end
                 if sn then
                     colorants[name] = pdfreference(sn)
                 else
+                    -- maybe some day generate colorants (spot colors for multi) automatically
                     report_color("unknown colorant %a, using black instead",name or n)
                     name = "Black"
                 end
@@ -484,8 +484,11 @@ function registrations.transparency(n,a,t)
 end
 
 statistics.register("page group warning", function()
-    if done and not transparencygroups[currentgroupcolormodel] then
-        return "transparencies are used but no pagecolormodel is set"
+    if done then
+        local model = getpagecolormodel()
+        if model and not transparencygroups[model] then
+            return "transparencies are used but no pagecolormodel is set"
+        end
     end
 end)
 
@@ -529,6 +532,12 @@ end
 
 lpdf.color = lpdfcolor
 
+interfaces.implement {
+    name      = "lpdf_color",
+    actions   = { lpdfcolor, context },
+    arguments = "integer"
+}
+
 function lpdf.colorspec(model,ca,default)
     if ca and ca > 0 then
         local cv = colors.value(ca)
@@ -553,7 +562,7 @@ function lpdf.colorspec(model,ca,default)
 end
 
 function lpdf.pdfcolor(attribute) -- bonus, for pgf and friends
-    context(lpdfcolor(1,attribute))
+    return lpdfcolor(1,attribute)
 end
 
 function lpdf.transparency(ct,default) -- kind of overlaps with transparencycode

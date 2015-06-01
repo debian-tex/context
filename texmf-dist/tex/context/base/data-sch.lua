@@ -31,8 +31,18 @@ function cleaners.none(specification)
     return specification.original
 end
 
-function cleaners.strip(specification)
-    return (gsub(specification.original,"[^%a%d%.]+","-")) -- so we keep periods
+-- function cleaners.strip(specification)
+--     -- todo: only keep suffix periods, so after the last
+--     return (gsub(specification.original,"[^%a%d%.]+","-")) -- so we keep periods
+-- end
+
+function cleaners.strip(specification) -- keep suffixes
+    local path, name = file.splitbase(specification.original)
+    if path == "" then
+        return (gsub(name,"[^%a%d%.]+","-"))
+    else
+        return (gsub((gsub(path,"%.","-") .. "-" .. name),"[^%a%d%.]+","-"))
+    end
 end
 
 function cleaners.md5(specification)
@@ -55,7 +65,7 @@ local cached, loaded, reused, thresholds, handlers = { }, { }, { }, { }, { }
 
 local function runcurl(name,cachename) -- we use sockets instead or the curl library when possible
     local command = "curl --silent --insecure --create-dirs --output " .. cachename .. " " .. name
-    os.spawn(command)
+    os.execute(command)
 end
 
 local function fetch(specification)

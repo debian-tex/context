@@ -6,14 +6,19 @@ if not modules then modules = { } end modules ['attr-ini'] = {
     license   = "see context related readme files"
 }
 
-local commands, context, nodes, storage = commands, context, nodes, storage
-
 local next, type = next, type
 
 --[[ldx--
 <p>We start with a registration system for atributes so that we can use the
 symbolic names later on.</p>
 --ldx]]--
+
+local nodes           = nodes
+local context         = context
+local storage         = storage
+local commands        = commands
+
+local implement       = interfaces.implement
 
 attributes            = attributes or { }
 local attributes      = attributes
@@ -53,13 +58,13 @@ storage.register("attributes/list",    list,    "attributes.list")
 names[0], numbers["fontdynamic"] = "fontdynamic", 0
 
 --[[ldx--
-<p>We can use the attributes in the range 127-255 (outside user space). These
-are only used when no attribute is set at the \TEX\ end which normally
-happens in <l n='context'/>.</p>
+<p>private attributes are used by the system and public ones are for users. We use dedicated
+ranges of numbers for them. Of course a the <l n='context'/> end a private attribute can be
+accessible too, so a private attribute can have a public appearance.</p>
 --ldx]]--
 
-sharedstorage.attributes_last_private = sharedstorage.attributes_last_private or  127
-sharedstorage.attributes_last_public  = sharedstorage.attributes_last_public  or 1024
+sharedstorage.attributes_last_private = sharedstorage.attributes_last_private or  127 -- very private (can become 15)
+sharedstorage.attributes_last_public  = sharedstorage.attributes_last_public  or 1024 -- less private
 
 function attributes.private(name) -- at the lua end (hidden from user)
     local number = numbers[name]
@@ -97,8 +102,8 @@ end
 
 attributes.system = attributes.private
 
-function attributes.define(name,number,category)
-    return (attributes[category or "public"] or attributes["public"])(name,number)
+function attributes.define(name,category)
+    return (attributes[category or "public"] or attributes["public"])(name)
 end
 
 -- tracers
@@ -126,19 +131,11 @@ function attributes.ofnode(n)
     showlist(n,n.attr)
 end
 
--- interface
-
-commands.showattributes = attributes.showcurrent
-
-function commands.defineattribute(name,category)
-    context(attributes.define(name,category))
-end
-
 -- rather special
 
 local store = { }
 
-function commands.savecurrentattributes(name)
+function attributes.save(name)
     name = name or ""
     local n = node.current_attr()
     n = n and n.next
@@ -153,7 +150,7 @@ function commands.savecurrentattributes(name)
     }
 end
 
-function commands.restorecurrentattributes(name)
+function attributes.restore(name)
     name = name or ""
     local t = store[name]
     if t then
@@ -171,3 +168,28 @@ function commands.restorecurrentattributes(name)
     end
  -- store[name] = nil
 end
+
+implement {
+    name      = "defineattribute",
+    arguments = { "string", "string" },
+    actions   = { attributes.define, context }
+}
+
+-- interface
+
+implement {
+    name      = "showattributes",
+    actions   = attributes.showcurrent
+}
+
+implement {
+    name      = "savecurrentattributes",
+    arguments = "string",
+    actions   = attributes.save
+}
+
+implement {
+    name      = "restorecurrentattributes",
+    arguments = "string",
+    actions   = attributes.restore
+}

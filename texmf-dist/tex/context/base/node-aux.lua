@@ -314,13 +314,17 @@ nuts .firstcharinbox = firstcharinbox
 nodes.firstcharinbox = firstcharinbox
 nodes.firstcharacter = vianuts(firstcharacter)
 
-function commands.buildtextaccent(n)
-    local char = firstcharinbox(n)
-    if char > 0 then
-     -- context.accent(false,char)
-        context([[\accent%s\relax]],char)
+interfaces.implement {
+    name      = "buildtextaccent",
+    arguments = "integer",
+    actions   = function(n) -- Is this crap really used? Or was it an experiment?
+        local char = firstcharinbox(n)
+        if char > 0 then
+         -- context.accent(false,char)
+            context([[\accent%s\relax]],char)
+        end
     end
-end
+}
 
 -- this depends on fonts, so we have a funny dependency ... will be
 -- sorted out .. we could make tonodes a plugin into this
@@ -352,7 +356,8 @@ local function tonodes(str,fnt,attr) -- (str,template_glyph) -- moved from blob-
             n = new_glyph(fnt,s)
         end
         if attr then -- normally false when template
-            setfield(n,"attr",copy_node_list(attr))
+         -- setfield(n,"attr",copy_node_list(attr))
+            setfield(n,"attr",attr)
         end
         if head then
             insert_node_after(head,tail,n)

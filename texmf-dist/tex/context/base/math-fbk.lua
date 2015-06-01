@@ -20,7 +20,6 @@ local virtualcharacters = { }
 
 local identifiers       = fonts.hashes.identifiers
 local lastmathids       = fonts.hashes.lastmathids
-local tounicode16       = fonts.mappings.tounicode16
 
 -- we need a trick (todo): if we define scriptscript, script and text in
 -- that order we could use their id's .. i.e. we could always add a font
@@ -190,12 +189,12 @@ virtualcharacters[0x207B] = function(data)
 end
 
 virtualcharacters[0x208A] = function(data)
-    data.replacement = 0x2212
+    data.replacement = 0x002B
     return raised(data,true)
 end
 
 virtualcharacters[0x208B] = function(data)
-    data.replacement = 0x002B
+    data.replacement = 0x2212
     return raised(data,true)
 end
 
@@ -330,7 +329,7 @@ end
 
 -- we could move the defs from math-act here
 
-local function accent_to_extensible(target,newchr,original,oldchr,height,depth,swap,offset)
+local function accent_to_extensible(target,newchr,original,oldchr,height,depth,swap,offset,unicode)
     local characters = target.characters
     local olddata = characters[oldchr]
     -- brrr ... pagella has only next
@@ -350,6 +349,7 @@ local function accent_to_extensible(target,newchr,original,oldchr,height,depth,s
             width    = olddata.width,
             height   = height,
             depth    = depth,
+            unicode  = unicode,
         }
         local glyphdata = newdata
         local nextglyph = olddata.next
@@ -415,7 +415,7 @@ virtualcharacters[0x203E] = function(data) -- could be FE33E instead
         height = target.parameters.xheight/4
         depth  = height
     end
-    return accent_to_extensible(target,0x203E,data.original,0x0305,height,depth)
+    return accent_to_extensible(target,0x203E,data.original,0x0305,height,depth,nil,nil,0x203E)
 end
 
 virtualcharacters[0xFE33E] = virtualcharacters[0x203E] -- convenient
@@ -426,37 +426,37 @@ local function smashed(data,unicode,swap,private)
     local original = data.original
     local chardata = target.characters[unicode]
     if chardata and chardata.height > target.parameters.xheight then
-        return accent_to_extensible(target,private,original,unicode,0,0,swap)
+        return accent_to_extensible(target,private,original,unicode,0,0,swap,nil,unicode)
     else
         return original.characters[unicode]
     end
 end
 
-addextra(0xFE3DE, { description="EXTENSIBLE OF 0x03DE", unicodeslot=0xFE3DE, mathextensible = "r", mathstretch = "h" } )
-addextra(0xFE3DC, { description="EXTENSIBLE OF 0x03DC", unicodeslot=0xFE3DC, mathextensible = "r", mathstretch = "h" } )
-addextra(0xFE3B4, { description="EXTENSIBLE OF 0x03B4", unicodeslot=0xFE3B4, mathextensible = "r", mathstretch = "h" } )
+addextra(0xFE3DE, { description="EXTENSIBLE OF 0x03DE", unicodeslot=0xFE3DE, mathextensible = "r", mathstretch = "h", mathclass = "topaccent" } )
+addextra(0xFE3DC, { description="EXTENSIBLE OF 0x03DC", unicodeslot=0xFE3DC, mathextensible = "r", mathstretch = "h", mathclass = "topaccent" } )
+addextra(0xFE3B4, { description="EXTENSIBLE OF 0x03B4", unicodeslot=0xFE3B4, mathextensible = "r", mathstretch = "h", mathclass = "topaccent" } )
 
 virtualcharacters[0xFE3DE] = function(data) return smashed(data,0x23DE,0x23DF,0xFE3DE) end
 virtualcharacters[0xFE3DC] = function(data) return smashed(data,0x23DC,0x23DD,0xFE3DC) end
 virtualcharacters[0xFE3B4] = function(data) return smashed(data,0x23B4,0x23B5,0xFE3B4) end
 
-addextra(0xFE3DF, { description="EXTENSIBLE OF 0x03DF", unicodeslot=0xFE3DF, mathextensible = "r", mathstretch = "h" } )
-addextra(0xFE3DD, { description="EXTENSIBLE OF 0x03DD", unicodeslot=0xFE3DD, mathextensible = "r", mathstretch = "h" } )
-addextra(0xFE3B5, { description="EXTENSIBLE OF 0x03B5", unicodeslot=0xFE3B5, mathextensible = "r", mathstretch = "h" } )
+addextra(0xFE3DF, { description="EXTENSIBLE OF 0x03DF", unicodeslot=0xFE3DF, mathextensible = "r", mathstretch = "h", mathclass = "botaccent" } )
+addextra(0xFE3DD, { description="EXTENSIBLE OF 0x03DD", unicodeslot=0xFE3DD, mathextensible = "r", mathstretch = "h", mathclass = "botaccent" } )
+addextra(0xFE3B5, { description="EXTENSIBLE OF 0x03B5", unicodeslot=0xFE3B5, mathextensible = "r", mathstretch = "h", mathclass = "botaccent" } )
 
-virtualcharacters[0xFE3DF] = function(data) return data.target.characters[0x23DF] end
-virtualcharacters[0xFE3DD] = function(data) return data.target.characters[0x23DD] end
-virtualcharacters[0xFE3B5] = function(data) return data.target.characters[0x23B5] end
+virtualcharacters[0xFE3DF] = function(data) local c = data.target.characters[0x23DF] if c then c.unicode = 0x23DF return c end end
+virtualcharacters[0xFE3DD] = function(data) local c = data.target.characters[0x23DD] if c then c.unicode = 0x23DD return c end end
+virtualcharacters[0xFE3B5] = function(data) local c = data.target.characters[0x23B5] if c then c.unicode = 0x23B5 return c end end
 
 -- todo: add some more .. numbers might change
 
-addextra(0xFE302, { description="EXTENSIBLE OF 0x0302", unicodeslot=0xFE302, mathstretch = "h" } )
-addextra(0xFE303, { description="EXTENSIBLE OF 0x0303", unicodeslot=0xFE303, mathstretch = "h" } )
+addextra(0xFE302, { description="EXTENSIBLE OF 0x0302", unicodeslot=0xFE302, mathstretch = "h", mathclass = "topaccent" } )
+addextra(0xFE303, { description="EXTENSIBLE OF 0x0303", unicodeslot=0xFE303, mathstretch = "h", mathclass = "topaccent" } )
 
 local function smashed(data,unicode,private)
     local target = data.target
     local height = target.parameters.xheight / 2
-    local c, done = accent_to_extensible(target,private,data.original,unicode,height,0,nil,-height)
+    local c, done = accent_to_extensible(target,private,data.original,unicode,height,0,nil,-height,unicode)
     if done then
         c.top_accent = nil -- or maybe also all the others
     end
@@ -467,15 +467,21 @@ virtualcharacters[0xFE302] = function(data) return smashed(data,0x0302,0xFE302) 
 virtualcharacters[0xFE303] = function(data) return smashed(data,0x0303,0xFE303) end
 
 -- another crazy hack .. doesn't work as we define scrscr first .. we now have smaller
--- primes so we have smaller primes for the moment, big ones will become an option
+-- primes so we have smaller primes for the moment, big ones will become an option ..
+-- these primes in fonts are a real mess .. kind of a dead end, so don't wonder about
+-- the values below
+
+-- todo: check tounicodes
 
 local function smashed(data,unicode,optional)
     local oldchar = data.characters[unicode]
     if oldchar then
-        local height  = 1.2 * data.target.parameters.xheight
+        local xheight = data.target.parameters.xheight
+        local height  = 1.2 * xheight
+        local shift   = oldchar.height - height
         local newchar = {
             commands = {
-                { "down", oldchar.height - height },
+                { "down", shift },
                 { "char", unicode },
             },
             height = height,
@@ -486,6 +492,30 @@ local function smashed(data,unicode,optional)
         report_fallbacks("missing %U prime in font %a",unicode,data.target.properties.fullname)
     end
 end
+
+-- -- relocate all but less flexible so not used .. instead some noad hackery plus
+-- -- the above
+--
+-- local function smashed(data,unicode,optional)
+--     local oldchar = data.characters[unicode]
+--     if oldchar then
+--         local xheight = data.target.parameters.xheight
+--         local height  = oldchar.height
+--         local shift   = oldchar.height < 1.5*xheight and -(1.8*xheight-height) or 0
+--         local newchar = {
+--             commands = {
+--                 { "down", shift },
+--                 { "char", unicode },
+--             },
+--             unicode = unicode,
+--             height  = height,
+--             width   = oldchar.width,
+--         }
+--         return newchar
+--     elseif not optional then
+--         report_fallbacks("missing %U prime in font %a",unicode,data.target.properties.fullname)
+--     end
+-- end
 
 addextra(0xFE932, { description="SMASHED PRIME 0x02032", unicodeslot=0xFE932 } )
 addextra(0xFE933, { description="SMASHED PRIME 0x02033", unicodeslot=0xFE933 } )
@@ -520,7 +550,7 @@ local function actuarian(data)
         -- todo: add alttext
         -- compromise: lm has large hooks e.g. \actuarial{a}
         width     = basewidth + 4 * linewidth,
-        tounicode = tounicode16(0x20E7),
+        unicode   = 0x20E7,
         commands  = {
             { "right", 2 * linewidth },
             { "down", - baseheight - 3 * linewidth },

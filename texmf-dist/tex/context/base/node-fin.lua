@@ -9,7 +9,7 @@ if not modules then modules = { } end modules ['node-fin'] = {
 -- this module is being reconstructed
 -- local functions, only slightly slower
 --
--- leaders are also triggers
+-- leaders are also triggers ... see colo-ext for an example (negate a box)
 
 local next, type, format = next, type, string.format
 
@@ -27,7 +27,6 @@ local getid              = nuts.getid
 local getlist            = nuts.getlist
 local getleader          = nuts.getleader
 local getattr            = nuts.getattr
-local setattr            = nuts.setattr
 
 local copy_node          = nuts.copy
 local insert_node_before = nuts.insert_before
@@ -51,6 +50,8 @@ local numbers            = attributes.numbers
 local a_trigger          = attributes.private('trigger')
 local triggering         = false
 
+local implement          = interfaces.implement
+
 local starttiming        = statistics.starttiming
 local stoptiming         = statistics.stoptiming
 local loadstripped       = utilities.lua.loadstripped
@@ -60,6 +61,9 @@ local unsetvalue         = attributes.unsetvalue
 
 function states.enabletriggering () triggering = true  end
 function states.disabletriggering() triggering = false end
+
+implement { name = "enablestatetriggering",  actions = states.enabletriggering  }
+implement { name = "disablestatetriggering", actions = states.disabletriggering }
 
 nodes.plugindata = nil
 
@@ -129,7 +133,7 @@ end
 
 local nsdata, nsnone, nslistwise, nsforced, nsselector, nstrigger
 local current, current_selector, done = 0, 0, false -- nb, stack has a local current !
-local nsbegin, nsend
+local nsbegin, nsend, nsreset
 
 function states.initialize(namespace,attribute,head)
     nsdata           = namespace.data
@@ -143,6 +147,7 @@ function states.initialize(namespace,attribute,head)
     done             = false -- todo: done cleanup
     nsstep           = namespace.resolve_step
     if nsstep then
+        nsreset      = namespace.resolve_reset
         nsbegin      = namespace.resolve_begin
         nsend        = namespace.resolve_end
         nspush       = namespace.push
@@ -168,7 +173,6 @@ function states.finalize(namespace,attribute,head) -- is this one ok?
     return head, false, false
 end
 
--- disc nodes can be ignored
 -- we need to deal with literals too (reset as well as oval)
 -- if id == glyph_code or (id == whatsit_code and getsubtype(stack) == pdfliteral_code) or (id == rule_code and stack.width ~= 0) or (id == glue_code and stack.leader) then
 
@@ -181,6 +185,8 @@ local function process(namespace,attribute,head,inheritance,default) -- one attr
         local id = getid(stack)
         if id == glyph_code then
             check = true
+     -- elseif id == disc_code then
+     --     check = true -- no longer needed as we flatten replace
         elseif id == glue_code then
             leader = getleader(stack)
             if leader then
@@ -294,6 +300,8 @@ local function selective(namespace,attribute,head,inheritance,default) -- two at
         local id = getid(stack)
         if id == glyph_code then
             check = true
+     -- elseif id == disc_code then
+     --     check = true -- no longer needed as we flatten replace
         elseif id == glue_code then
             leader = getleader(stack)
             if leader then
@@ -364,7 +372,7 @@ local function selective(namespace,attribute,head,inheritance,default) -- two at
                         done = done or ok
                     end
                     -- end nested
-					leader = false
+                    leader = false
                 end
             elseif default and inheritance then
                 if current ~= default then
@@ -484,14 +492,17 @@ end
 -- experimental
 
 local function stacker(namespace,attribute,head,default) -- no triggering, no inheritance, but list-wise
-    nsbegin()
+
+--     nsbegin()
+    local stacked  = false
+
     local current  = head
     local previous = head
     local done     = false
-    local okay     = false
     local attrib   = default or unsetvalue
     local check    = false
     local leader   = false
+
     while current do
         local id = getid(current)
         if id == glyph_code then
@@ -530,13 +541,15 @@ local function stacker(namespace,attribute,head,default) -- no triggering, no in
         if check then
             local a = getattr(current,attribute) or unsetvalue
             if a ~= attrib then
+                if not stacked then
+                    stacked = true
+                    nsbegin()
+                end
                 local n = nsstep(a)
                 if n then
-                 -- !!!! TEST CODE !!!!
-                 -- head = insert_node_before(head,current,copied(nsdata[tonumber(n)])) -- a
                     head = insert_node_before(head,current,tonut(n)) -- a
                 end
-                attrib, done, okay = a, true, true
+                attrib, done = a, true
                 if leader then
                     -- tricky as a leader has to be a list so we cannot inject before
                     local list, ok = stacker(namespace,attribute,leader,attrib)
@@ -550,19 +563,23 @@ local function stacker(namespace,attribute,head,default) -- no triggering, no in
         previous = current
         current = getnext(current)
     end
-    if okay then
-        local n = nsend()
-        if n then
-             -- !!!! TEST CODE !!!!
-         -- head = insert_node_after(head,previous,copied(nsdata[tostring(n)]))
-            head = insert_node_after(head,previous,tonut(n))
-        end
+
+if stacked then
+
+    local n = nsend()
+    while n do
+        head = insert_node_after(head,previous,tonut(n))
+        n = nsend()
     end
+
+end
+
     return head, done
 end
 
 states.stacker = function(namespace,attribute,head,default)
     local head, done = stacker(namespace,attribute,tonut(head),default)
+    nsreset()
     return tonode(head), done
 end
 

@@ -31,6 +31,7 @@ visualizers.specifications = specifications
 
 local context              = context
 local commands             = commands
+local implement            = interfaces.implement
 
 local tabtospace           = utilities.strings.tabtospace
 local variables            = interfaces.variables
@@ -43,6 +44,7 @@ local v_auto               = variables.auto
 local v_yes                = variables.yes
 local v_last               = variables.last
 local v_all                = variables.all
+local v_absolute           = variables.absolute
 
 -- beware, all macros have an argument:
 
@@ -317,6 +319,10 @@ function visualizers.register(name,specification)
         specification.direct  = parser
     end
     return specification
+end
+
+function visualizers.getspecification(name)
+    return specifications[lower(name)]
 end
 
 local escapepatterns       = allocate()
@@ -623,14 +629,16 @@ end
 
 local function getrange(lines,first,last,range) -- 1,3 1,+3 fromhere,tothere
     local noflines = #lines
-    local first, last = first or 1, last or noflines
+    local first    = first or 1
+    local last     = last or noflines
     if last < 0 then
         last = noflines + last
     end
-    local range = settings.range
     local what = settings_to_array(range)
-    local r_first, r_last = what[1], what[2]
-    local f, l = tonumber(r_first), tonumber(r_last)
+    local r_first = what[1]
+    local r_last  = what[2]
+    local f       = tonumber(r_first)
+    local l       = tonumber(r_last)
     if r_first then
         if f then
             if f > first then
@@ -687,6 +695,7 @@ local function filter(lines,settings) -- todo: inline or display in settings
     end
     local line, n = 0, 0
     local first, last, m = getstrip(lines)
+    local range = settings.range
     if range then
         first, last = getrange(lines,first,last,range)
         first, last = getstrip(lines,first,last)
@@ -698,17 +707,9 @@ end
 
 local getlines = buffers.getlines
 
--- interface
-
-function commands.doifelsevisualizer(name)
-    commands.doifelse(specifications[lower(name)])
-end
-
-commands.loadvisualizer = visualizers.load
-
 -- local decodecomment = resolvers.macros.decodecomment -- experiment
 
-function commands.typebuffer(settings)
+local function typebuffer(settings)
     local lines = getlines(settings.name)
     if lines then
         ctx_displayverbatiminitialize(#lines)
@@ -721,7 +722,7 @@ function commands.typebuffer(settings)
     end
 end
 
-function commands.processbuffer(settings)
+local function processbuffer(settings)
     local lines = getlines(settings.name)
     if lines then
         local content, m = filter(lines,settings)
@@ -738,21 +739,30 @@ end
 -- match but slower when there is no match. But anyway, we need a more clever
 -- parser so we use lpeg.
 --
--- [[\text ]]  [[\text{}]]  [[\text \text ]]  [[\text \\ \text ]]
+-- [[\text ]]  [[\text{}]]  [[\foo\bar .tex]] [[\text \text ]]  [[\text \\ \text ]]
 --
 -- needed in e.g. tabulate (manuals)
 
-local compact_all  = Cs((P("\\") * ((1-S("\\ "))^1) * (P(" ")/"") * (P(-1) + S("[{")) + 1)^0)
-local compact_last = Cs((P(" ")^1 * P(-1)/"" + 1)^0)
+local fences    = S([[[{]])
+local symbols   = S([[!#"$%&'*()+,-./:;<=>?@[]^_`{|}~]])
+local space     = S([[ ]])
+local backslash = S([[\]])
+local nospace   = space^1/""
+local endstring = P(-1)
 
-function commands.typestring(settings)
+local compactors = {
+    [v_all]      = Cs((backslash * (1-backslash-space)^1 * nospace * (endstring + fences) + 1)^0),
+    [v_absolute] = Cs((backslash * (1-symbols  -space)^1 * nospace * (symbols+backslash) + 1) ^0),
+    [v_last]     = Cs((space^1   * endstring/"" + 1)^0),
+}
+
+local function typestring(settings)
     local content = settings.data
     if content and content ~= "" then
-        local compact = settings.compact
-        if compact == v_all then
-            content = lpegmatch(compact_all,content)
-        elseif compact == v_last then
-            content = lpegmatch(compact_last,content)
+        local compact   = settings.compact
+        local compactor = compact and compactors[compact]
+        if compactor then
+            content = lpegmatch(compactor,content)
         end
      -- content = decodecomment(content)
      -- content = dotabs(content,settings)
@@ -760,7 +770,7 @@ function commands.typestring(settings)
     end
 end
 
-function commands.typefile(settings)
+local function typefile(settings)
     local filename = settings.name
     local foundname = resolvers.findtexfile(filename)
     if foundname and foundname ~= "" then
@@ -782,3 +792,78 @@ function commands.typefile(settings)
         end
     end
 end
+
+implement {
+    name      = "type",
+    actions   = typestring,
+    arguments = {
+        {
+            { "data"    },
+            { "tab"     },
+            { "method"  },
+            { "compact" },
+            { "nature"  },
+            { "escape"  },
+        }
+    }
+}
+
+implement {
+    name      = "processbuffer",
+    actions   = processbuffer,
+    arguments = {
+        {
+             { "name" },
+             { "strip" },
+             { "tab" },
+             { "method" },
+             { "nature" },
+        }
+    }
+}
+
+implement {
+    name    = "typebuffer",
+    actions = typebuffer,
+    arguments = {
+        {
+             { "name" },
+             { "strip" },
+             { "range" },
+             { "regime" },
+             { "tab" },
+             { "method" },
+             { "escape" },
+             { "nature" },
+        }
+    }
+}
+
+implement {
+    name    = "typefile",
+    actions = typefile,
+    arguments = {
+        {
+             { "name" },
+             { "strip" },
+             { "range" },
+             { "regime" },
+             { "tab" },
+             { "method" },
+             { "escape" },
+             { "nature" },
+        }
+    }
+}
+
+implement {
+    name      = "doifelsevisualizer",
+    actions   = { visualizers.getspecification, commands.doifelse },
+    arguments = "string"
+}
+
+implement {
+    name      = "loadvisualizer",
+    actions   = visualizers.load,
+    arguments = "string"
+}

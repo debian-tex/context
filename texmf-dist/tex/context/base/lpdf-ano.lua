@@ -116,8 +116,8 @@ local pdf_border_style        = pdfarray { 0, 0, 0 } -- radius radius linewidth
 local pdf_border_color        = nil
 local set_border              = false
 
-function pdfborder()
-    border_set = true
+local function pdfborder()
+    set_border = true
     return pdf_border_style, pdf_border_color
 end
 
@@ -157,6 +157,9 @@ local pagereferences   = allocate() -- annots are cached themselves
 
 setmetatableindex(pagedestinations, function(t,k)
     k = tonumber(k)
+    if not k or k <= 0 then
+        return pdfnull()
+    end
     local v = rawget(t,k)
     if v then
      -- report_reference("page number expected, got %s: %a",type(k),k)
@@ -172,6 +175,9 @@ end)
 
 setmetatableindex(pagereferences,function(t,k)
     k = tonumber(k)
+    if not k or k <= 0 then
+        return nil
+    end
     local v = rawget(t,k)
     if v then
         return v
@@ -244,7 +250,7 @@ local function pdfnametree(destinations)
         for j=i,amount do
             local destination = sorted[j]
             local pagenumber  = destinations[destination]
-            names[#names+1] = destination
+            names[#names+1] = tostring(destination) -- tostring is a safeguard
             names[#names+1] = pdfreference(pagenumber)
         end
         local first = sorted[i]
@@ -325,7 +331,7 @@ local f_fith  = formatters["<< /D [ %i 0 R /FitH %0.3F ] >>"]
 local f_fitv  = formatters["<< /D [ %i 0 R /FitV %0.3F ] >>"]
 local f_fitbh = formatters["<< /D [ %i 0 R /FitBH %0.3F ] >>"]
 local f_fitbv = formatters["<< /D [ %i 0 R /FitBV %0.3F ] >>"]
-local f_fitr  = formatters["<< /D [ %i 0 R /FitR [ %0.3F %0.3F %0.3F %0.3F ] ] >>"]
+local f_fitr  = formatters["<< /D [ %i 0 R /FitR %0.3F %0.3F %0.3F %0.3F ] >>"]
 
 local v_standard  = variables.standard
 local v_frame     = variables.frame
@@ -338,15 +344,28 @@ local v_tight     = variables.tight
 
 -- nicer is to create dictionaries and set properties but it's a bit overkill
 
+-- The problem with the following settings is that they are guesses: we never know
+-- if a box is part of something larger that needs to be in view, or that we are
+-- dealing with a vbox or vtop so the used h/d values cannot be trusted in a tight
+-- view. Of course some decent additional offset would be nice so maybe i'll add
+-- that some day. I never use anything else than 'fit' anyway as I think that the
+-- document should fit the device (and vice versa). In fact, with todays swipe
+-- and finger zooming this whole view is rather useless and as with any zooming
+-- one looses the overview and keeps zooming.
+
 local destinationactions = {
-    [v_standard]  = function(r,w,h,d) return f_xyz  (r,pdfrectangle(w,h,d))  end, -- local left,top with zoom (0 in our case)
-    [v_frame]     = function(r,w,h,d) return f_fitr (r,pdfrectangle(w,h,d))  end, -- fit rectangle in window
-    [v_width]     = function(r,w,h,d) return f_fith (r, gethpos()   *factor) end, -- top coordinate, fit width of page in window
-    [v_minwidth]  = function(r,w,h,d) return f_fitbh(r, gethpos()   *factor) end, -- top coordinate, fit width of content in window
-    [v_height]    = function(r,w,h,d) return f_fitv (r,(getvpos()+h)*factor) end, -- left coordinate, fit height of page in window
-    [v_minheight] = function(r,w,h,d) return f_fitbv(r,(getvpos()+h)*factor) end, -- left coordinate, fit height of content in window
-    [v_fit]       =                          f_fit,                               -- fit page in window
-    [v_tight]     =                          f_fitb,                              -- fit content in window
+ -- [v_standard]  = function(r,w,h,d) return f_xyz  (r,pdfrectangle(w,h,d)) end,                   -- local left,top with zoom (0 in our case)
+    [v_standard]  = function(r,w,h,d) return f_xyz  (r,gethpos()*factor,(getvpos()+h)*factor) end, -- local left,top with no zoom
+    [v_frame]     = function(r,w,h,d) return f_fitr (r,pdfrectangle(w,h,d)) end,                   -- fit rectangle in window
+ -- [v_width]     = function(r,w,h,d) return f_fith (r,gethpos()*factor) end,                      -- top coordinate, fit width of page in window
+    [v_width]     = function(r,w,h,d) return f_fith (r,(getvpos()+h)*factor) end,                  -- top coordinate, fit width of page in window
+ -- [v_minwidth]  = function(r,w,h,d) return f_fitbh(r,gethpos()*factor) end,                      -- top coordinate, fit width of content in window
+    [v_minwidth]  = function(r,w,h,d) return f_fitbh(r,(getvpos()+h)*factor) end,                  -- top coordinate, fit width of content in window
+ -- [v_height]    = function(r,w,h,d) return f_fitv (r,(getvpos()+h)*factor) end,                  -- left coordinate, fit height of page in window
+    [v_height]    = function(r,w,h,d) return f_fitv (r,gethpos()*factor) end,                      -- left coordinate, fit height of page in window
+ -- [v_minheight] = function(r,w,h,d) return f_fitbv(r,(getvpos()+h)*factor) end,                  -- left coordinate, fit height of content in window
+    [v_minheight] = function(r,w,h,d) return f_fitbv(r,gethpos()*factor) end,                      -- left coordinate, fit height of content in window    [v_fit]       =                          f_fit,                                                 -- fit page in window
+    [v_tight]     =                          f_fitb,                                               -- fit content in window
 }
 
 local mapping = {
@@ -377,7 +396,7 @@ end)
 
 local function flushdestination(width,height,depth,names,view)
     local r = pdfpagereference(texgetcount("realpageno"))
-    if view == defaultview then
+    if view == defaultview or not view or view == "" then
         r = pagedestinations[r]
     else
         local action = view and destinationactions[view] or defaultaction
@@ -420,6 +439,9 @@ function nodeinjections.destination(width,height,depth,names,view)
                     usedviews[name] = view
                     names[n] = autoprefix .. name
                     doview = true
+                else
+                 -- names[n] = autoprefix .. name
+                    names[n] = false
                 end
             end
         elseif method == v_page then
@@ -540,7 +562,9 @@ local function pdfaction(actions)
                 if what then
                     what = what(a,actions)
                 end
-                if what then
+                if action == what then
+                    -- ignore this one, else we get a loop
+                elseif what then
                     action.Next = what
                     action = what
                 else
@@ -1025,53 +1049,109 @@ function specials.action(var)
     end
 end
 
-local function build(levels,start,parent,method)
-    local startlevel = levels[start][1]
+local function build(levels,start,parent,method,nested)
+    local startlevel = levels[start].level
     local i, n = start, 0
     local child, entry, m, prev, first, last, f, l
     while i and i <= #levels do
-        local li = levels[i]
-        local level, title, reference, open = li[1], li[2], li[3], li[4]
-        if level < startlevel then
-            pdfflushobject(child,entry)
-            return i, n, first, last
-        elseif level == startlevel then
-            if trace_bookmarks then
-                report_bookmark("%3i %w%s %s",reference.realpage,(level-1)*2,(open and "+") or "-",title)
-            end
-            local prev = child
-            child = pdfreserveobject()
-            if entry then
-                entry.Next = child and pdfreference(child)
-                pdfflushobject(prev,entry)
-            end
-            entry = pdfdictionary {
-                Title  = pdfunicode(title),
-                Parent = parent,
-                Prev   = prev and pdfreference(prev),
-                A      = somedestination(reference.internal,reference.internal,reference.realpage),
-            }
-         -- entry.Dest = somedestination(reference.internal,reference.internal,reference.realpage)
-            if not first then first, last = child, child end
-            prev = child
-            last = prev
-            n = n + 1
+        local current = levels[i]
+        if current.usedpage == false then
+            -- safeguard
             i = i + 1
-        elseif i < #levels and level > startlevel then
-            i, m, f, l = build(levels,i,pdfreference(child),method)
-            entry.Count = (open and m) or -m
-            if m > 0 then
-                entry.First, entry.Last = pdfreference(f), pdfreference(l)
-            end
         else
-            -- missing intermediate level but ok
-            i, m, f, l = build(levels,i,pdfreference(child),method)
-            entry.Count = (open and m) or -m
-            if m > 0 then
-                entry.First, entry.Last = pdfreference(f), pdfreference(l)
+            local level     = current.level
+            local title     = current.title
+            local reference = current.reference
+            local opened    = current.opened
+            local reftype   = type(reference)
+            local variant   = "unknown"
+            if reftype == "table" then
+                -- we're okay
+                variant  = "list"
+            elseif reftype == "string" then
+                local resolved = references.identify("",reference)
+                local realpage = resolved and structures.references.setreferencerealpage(resolved) or 0
+                if realpage > 0 then
+                    variant  = "realpage"
+                    realpage = realpage
+                end
+            elseif reftype == "number" then
+                if reference > 0 then
+                    variant  = "realpage"
+                    realpage = reference
+                end
+            else
+                -- error
             end
-            pdfflushobject(child,entry)
-            return i, n, first, last
+            if variant == "unknown" then
+                -- error, ignore
+                i = i + 1
+            elseif level <= startlevel then
+                if level < startlevel then
+                    if nested then -- could be an option but otherwise we quit too soon
+                        if entry then
+                            pdfflushobject(child,entry)
+                        else
+                            report_bookmark("error 1")
+                        end
+                        return i, n, first, last
+                    else
+                        report_bookmark("confusing level change at level %a around %a",level,title)
+                    end
+                end
+                if trace_bookmarks then
+                    report_bookmark("%3i %w%s %s",reference.realpage,(level-1)*2,(opened and "+") or "-",title)
+                end
+                local prev = child
+                child = pdfreserveobject()
+                if entry then
+                    entry.Next = child and pdfreference(child)
+                    pdfflushobject(prev,entry)
+                end
+                local action = nil
+                if variant == "list" then
+                    action = somedestination(reference.internal,reference.internal,reference.realpage)
+                elseif variant == "realpage" then
+                    action = pagereferences[realpage]
+                end
+                entry = pdfdictionary {
+                    Title  = pdfunicode(title),
+                    Parent = parent,
+                    Prev   = prev and pdfreference(prev),
+                    A      = action,
+                }
+             -- entry.Dest = somedestination(reference.internal,reference.internal,reference.realpage)
+                if not first then first, last = child, child end
+                prev = child
+                last = prev
+                n = n + 1
+                i = i + 1
+            elseif i < #levels and level > startlevel then
+                i, m, f, l = build(levels,i,pdfreference(child),method,true)
+                if entry then
+                    entry.Count = (opened and m) or -m
+                    if m > 0 then
+                        entry.First = pdfreference(f)
+                        entry.Last  = pdfreference(l)
+                    end
+                else
+                    report_bookmark("error 2")
+                end
+            else
+                -- missing intermediate level but ok
+                i, m, f, l = build(levels,i,pdfreference(child),method,true)
+                if entry then
+                    entry.Count = (opened and m) or -m
+                    if m > 0 then
+                        entry.First = pdfreference(f)
+                        entry.Last  = pdfreference(l)
+                    end
+                    pdfflushobject(child,entry)
+                else
+                    report_bookmark("error 3")
+                end
+                return i, n, first, last
+            end
         end
     end
     pdfflushobject(child,entry)
@@ -1079,10 +1159,9 @@ local function build(levels,start,parent,method)
 end
 
 function codeinjections.addbookmarks(levels,method)
-    if #levels > 0 then
-        structures.bookmarks.flatten(levels) -- dirty trick for lack of structure
+    if levels and #levels > 0 then
         local parent = pdfreserveobject()
-        local _, m, first, last = build(levels,1,pdfreference(parent),method or "internal")
+        local _, m, first, last = build(levels,1,pdfreference(parent),method or "internal",false)
         local dict = pdfdictionary {
             Type  = pdfconstant("Outlines"),
             First = pdfreference(first),

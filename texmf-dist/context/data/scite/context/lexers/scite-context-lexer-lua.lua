@@ -25,6 +25,7 @@ local lualexer    = lexer.new("lua","scite-context-lexer-lua")
 local whitespace  = lualexer.whitespace
 
 local stringlexer = lexer.load("scite-context-lexer-lua-longstring")
+local labellexer  = lexer.load("scite-context-lexer-lua-labelstring")
 
 local directives  = { } -- communication channel
 
@@ -164,6 +165,7 @@ lexer.embed_lexer(lualexer, stringlexer, token("quote",longtwostart), token("str
 
 local integer       = P("-")^-1 * (patterns.hexadecimal + patterns.decimal)
 local number        = token("number", patterns.float + integer)
+                    * (token("error",R("AZ","az","__")^1))^0
 
 -- officially 127-255 are ok but not utf so useless
 
@@ -185,19 +187,31 @@ local structure     = token("special", S('{}[]()'))
 local optionalspace = spacing^0
 local hasargument   = #S("{([")
 
+-- ideal should be an embedded lexer ..
+
 local gotokeyword   = token("keyword", P("goto"))
                     * spacing
                     * token("grouping",validword)
 local gotolabel     = token("keyword", P("::"))
+                    * (spacing + shortcomment)^0
                     * token("grouping",validword)
+                    * (spacing + shortcomment)^0
                     * token("keyword", P("::"))
 
-local p_keywords    = exact_match(keywords)
-local p_functions   = exact_match(functions)
-local p_constants   = exact_match(constants)
+----- p_keywords    = exact_match(keywords)
+----- p_functions   = exact_match(functions)
+----- p_constants   = exact_match(constants)
+----- p_internals   = P("__")
+-----               * exact_match(internals)
+
+local p_finish      = #(1-R("az","AZ","__"))
+local p_keywords    = lexer.helpers.utfchartabletopattern(keywords)  * p_finish -- exact_match(keywords)
+local p_functions   = lexer.helpers.utfchartabletopattern(functions) * p_finish -- exact_match(functions)
+local p_constants   = lexer.helpers.utfchartabletopattern(constants) * p_finish -- exact_match(constants)
 local p_internals   = P("__")
-                    * exact_match(internals)
-local p_csnames     = just_match(csnames)
+                    * lexer.helpers.utfchartabletopattern(internals) * p_finish -- exact_match(internals)
+
+local p_csnames     = lexer.helpers.utfchartabletopattern(csnames) * p_finish -- just_match(csnames)
 local keyword       = token("keyword", p_keywords)
 local builtin       = token("plain",   p_functions)
 local constant      = token("data",    p_constants)

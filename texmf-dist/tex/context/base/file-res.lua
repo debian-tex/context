@@ -17,7 +17,10 @@ local report_files  = logs.reporter("files","readfile")
 
 resolvers.maxreadlevel = 2
 
-directives.register("resolvers.maxreadlevel", function(v) resolvers.maxreadlevel = tonumber(v) or resolvers.maxreadlevel end)
+directives.register("resolvers.maxreadlevel", function(v)
+ -- resolvers.maxreadlevel = (v == false and 0) or (v == true and 2) or tonumber(v) or 2
+    resolvers.maxreadlevel = v == false and 0 or tonumber(v) or 2
+end)
 
 local finders, loaders, openers = resolvers.finders, resolvers.loaders, resolvers.openers
 
@@ -131,7 +134,7 @@ openers.fix = openers.file loaders.fix = loaders.file
 openers.set = openers.file loaders.set = loaders.file
 openers.any = openers.file loaders.any = loaders.file
 
-function getreadfilename(scheme,path,name) -- better do a split and then pass table
+local function getreadfilename(scheme,path,name) -- better do a split and then pass table
     local fullname
     if hasscheme(name) or is_qualified_path(name) then
         fullname = name
@@ -146,16 +149,24 @@ end
 
 resolvers.getreadfilename = getreadfilename
 
-function commands.getreadfilename(scheme,path,name)
-    context(getreadfilename(scheme,path,name))
-end
-
 -- a name belonging to the run but also honoring qualified
 
-function commands.locfilename(name)
-    context(getreadfilename("loc",".",name))
-end
+local implement = interfaces.implement
 
-function commands.doiflocfileelse(name)
-    commands.doifelse(isfile(getreadfilename("loc",".",name)))
-end
+implement {
+    name      = "getreadfilename",
+    actions   = { getreadfilename, context },
+    arguments = { "string", "string", "string" }
+}
+
+implement {
+    name      = "locfilename",
+    actions   = { getreadfilename, context },
+    arguments = { "'loc'","'.'", "string" },
+}
+
+implement {
+    name      = "doifelselocfile",
+    actions   = { getreadfilename, isfile, commands.doifelse },
+    arguments = { "'loc'","'.'", "string" },
+}

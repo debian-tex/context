@@ -43,6 +43,7 @@ local rawset, next = rawset, next
 local V, P, S, R, C, Cc, Cs, matchlpeg = lpeg.V, lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.Cc, lpeg.Cs, lpeg.match
 local format, lower = string.format, string.lower
 local appendlpeg = lpeg.append
+local utfchartabletopattern = lpeg.utfchartabletopattern
 local mergetable, mergedtable, keys, loweredkeys = table.merge, table.merged, table.keys, table.loweredkeys
 local setmetatablenewindex = table.setmetatablenewindex
 local utfchar = utf.char
@@ -50,12 +51,11 @@ local utfchar = utf.char
 physics            = physics or { }
 physics.units      = physics.units or { }
 
-local variables    = interfaces.variables
-local v_reverse    = variables.reverse
 local allocate     = utilities.storage.allocate
 
 local context      = context
 local commands     = commands
+local implement    = interfaces.implement
 
 local trace_units  = false
 local report_units = logs.reporter("units")
@@ -173,8 +173,8 @@ local p_c = (ddigitspace^1 * dskipperiod)^0                   -- ___.
 local p_c_dparser = math_one + math_two + dleader * p_c * dtrailer * dfinal
 local c_p_dparser = math_one + math_two + dleader * c_p * dtrailer * dfinal
 
-function commands.digits(str,p_c)
-    if p_c == v_reverse then
+local function makedigits(str,reverse)
+    if reverse then
         matchlpeg(p_c_dparser,str)
     else
         matchlpeg(c_p_dparser,str)
@@ -287,17 +287,28 @@ local long_units = {
 
     -- synonyms
 
-    ["Metric Ton"]              = "tonne",
+    MetricTon                   = "tonne",
     Litre                       = "liter",
+
+    ["Metric Ton"]              = "tonne",
 
     -- non-SI units whose values must be obtained experimentally (Table 7)
 
-    ["Electron Volt"]           = "electronvolt",
+    AtomicMassUnit              = "atomicmassunit",
+    AstronomicalUnit            = "astronomicalunit",
+    ElectronVolt                = "electronvolt",
     Dalton                      = "dalton",
+
     ["Atomic Mass Unit"]        = "atomicmassunit",
     ["Astronomical Unit"]       = "astronomicalunit",
+    ["Electron Volt"]           = "electronvolt",
 
     -- special cases (catch doubles, okay, a bit over the top)
+
+    DegreesCelsius              = "celsius",
+    DegreesFahrenheit           = "fahrenheit",
+    DegreeCelsius               = "celsius",
+    DegreeFahrenheit            = "fahrenheit",
 
     ["Degrees Celsius"]         = "celsius",
     ["Degrees Fahrenheit"]      = "fahrenheit",
@@ -323,11 +334,13 @@ local long_units = {
     Hg                          = "mercury",
  -- ["Millimetre Of Mercury"]   = [[mmHg]],
     Angstrom                    = "angstrom", -- strictly Ångström
-    ["Nautical Mile"]           = "nauticalmile",
+    NauticalMile                = "nauticalmile",
     Barn                        = "barn",
     Knot                        = "knot",
     Neper                       = "neper",
     Bel                         = "bel", -- in practice only decibel used
+
+    ["Nautical Mile"]           = "nauticalmile",
 
     -- other non-SI units from CGS system (Table 9)
 
@@ -601,7 +614,7 @@ labels.units = allocate {
     electronvolt                = { labels = { en = [[eV]]                       } },
     dalton                      = { labels = { en = [[Da]]                       } },
     atomicmassunit              = { labels = { en = [[u]]                        } },
-    astronomicalunit            = { labels = { en = [[ua]]                       } },
+    astronomicalunit            = { labels = { en = [[au]]                       } },
     bar                         = { labels = { en = [[bar]]                      } },
     angstrom                    = { labels = { en = [[Å]]                        } }, -- strictly Ångström
     nauticalmile                = { labels = { en = [[M]]                        } },
@@ -651,11 +664,11 @@ labels.suffixes = allocate {
     square     = { labels = { en = [[2]]  } },
     cubic      = { labels = { en = [[3]]  } },
     quadratic  = { labels = { en = [[4]]  } },
-    inverse    = { labels = { en = [[-1]] } },
-    ilinear    = { labels = { en = [[-1]] } },
-    isquare    = { labels = { en = [[-2]] } },
-    icubic     = { labels = { en = [[-3]] } },
-    iquadratic = { labels = { en = [[-4]]  } },
+    inverse    = { labels = { en = [[\mathminus1]] } },
+    ilinear    = { labels = { en = [[\mathminus1]] } },
+    isquare    = { labels = { en = [[\mathminus2]] } },
+    icubic     = { labels = { en = [[\mathminus3]] } },
+    iquadratic = { labels = { en = [[\mathminus4]] } },
 }
 
 local function dimpus(p,u,s)
@@ -762,6 +775,20 @@ local function update_parsers() -- todo: don't remap utf sequences
     local p_short_operator = appendlpeg(short_operators)
     local p_short_suffix   = appendlpeg(short_suffixes)
 
+    -- more efficient but needs testing
+
+--     local p_long_prefix    = utfchartabletopattern(all_long_prefixes)  / all_long_prefixes
+--     local p_long_unit      = utfchartabletopattern(all_long_units)     / all_long_units
+--     local p_long_operator  = utfchartabletopattern(all_long_operators) / all_long_operators
+--     local p_long_suffix    = utfchartabletopattern(all_long_suffixes)  / all_long_suffixes
+--     local p_symbol         = utfchartabletopattern(all_symbol_units)   / all_symbol_units
+--     local p_packaged       = utfchartabletopattern(all_packaged_units) / all_packaged_units
+
+--     local p_short_prefix   = utfchartabletopattern(short_prefixes)     / short_prefixes
+--     local p_short_unit     = utfchartabletopattern(short_units)        / short_units
+--     local p_short_operator = utfchartabletopattern(short_operators)    / short_operators
+--     local p_short_suffix   = utfchartabletopattern(short_suffixes)     / short_suffixes
+
     -- we can can cleanup some space issues here (todo)
 
     local unitparser = P { "unit",
@@ -799,6 +826,18 @@ local function update_parsers() -- todo: don't remap utf sequences
                       + V("nothing")     * V("shortunit")
                       + V("longprefix")  * V("shortunit")  -- centi m
                       + V("shortprefix") * V("longunit"),  -- c meter
+
+--         combination   = (   V("longprefix")   -- centi meter
+--                           + V("nothing")
+--                         ) * V("longunit")
+--                       + (   V("shortprefix")  -- c m
+--                           + V("nothing")
+--                           + V("longprefix")
+--                         ) * V("shortunit")    -- centi m
+--                       + (   V("shortprefix")  -- c meter
+--                         ) * V("longunit"),
+
+
         dimension     = V("somespace")
                       * (
                             V("packaged") / dimpre
@@ -812,9 +851,7 @@ local function update_parsers() -- todo: don't remap utf sequences
                       * V("somespace"),
         snippet       = V("dimension")
                       + V("somesymbol"),
-        unit          = (
-                            V("snippet")
-                          * (V("operator") * V("snippet"))^0
+        unit          = (   V("snippet") * (V("operator") * V("snippet"))^0
                           + V("somepackaged")
                         )^1,
     }
@@ -854,7 +891,7 @@ local p_c_parser = nil
 local c_p_parser = nil
 local dirty      = true
 
-function commands.unit(str,p_c)
+local function makeunit(str,reverse)
     if dirty then
         if trace_units then
             report_units("initializing parser")
@@ -863,7 +900,7 @@ function commands.unit(str,p_c)
         dirty = false
     end
     local ok
-    if p_c == v_reverse then
+    if reverse then
         ok = matchlpeg(p_c_parser,str)
     else
         ok = matchlpeg(c_p_parser,str)
@@ -909,7 +946,7 @@ local mapping = {
     packaged = "packaged",
 }
 
-function commands.registerunit(category,list)
+local function registerunit(category,list)
     if not list or list == "" then
         list = category
         category = "unit"
@@ -922,3 +959,11 @@ function commands.registerunit(category,list)
     end
  -- inspect(tables)
 end
+
+physics.units.registerunit = registerunit
+
+implement { name = "digits_normal",  actions = makedigits,   arguments = "string" }
+implement { name = "digits_reverse", actions = makedigits,   arguments = { "string", true } }
+implement { name = "unit_normal",    actions = makeunit,     arguments = "string"}
+implement { name = "unit_reverse",   actions = makeunit,     arguments = { "string", true } }
+implement { name = "registerunit",   actions = registerunit, arguments = { "string", "string" } }

@@ -65,7 +65,6 @@ local getid               = nuts.getid
 local getsubtype          = nuts.getsubtype
 local getlist             = nuts.getlist
 local getattr             = nuts.getattr
-local setattr             = nuts.setattr
 local getfield            = nuts.getfield
 local setfield            = nuts.setfield
 
@@ -147,7 +146,7 @@ local report_directions   = logs.reporter("typesetting","directions two")
 --
 -- l   : left to right
 -- r   : right to left
--- al  : right to legt arabic (esp punctuation issues)
+-- al  : right to left arabic (esp punctuation issues)
 
 -- explicit: (new)
 --
@@ -327,7 +326,7 @@ end
 -- ש ( ל ( א ) כ ) 2-8,4-6
 -- ש ( ל [ א ] כ ) 2-8,4-6
 
-function resolve_fences(list,size,start,limit)
+local function resolve_fences(list,size,start,limit)
     -- N0: funny effects, not always better, so it's an options
     local stack = { }
     local top   = 0
@@ -820,7 +819,7 @@ local function apply_to_list(list,size,head,pardir)
             if enddir and getsubtype(current) == parfillskip_code then
                 -- insert the last enddir before \parfillskip glue
                 local d = new_textdir(enddir)
--- setfield(d,"attr",copy_node(getfield(current,"attr")))
+             -- setfield(d,"attr",getfield(current,"attr"))
                 head = insert_node_before(head,current,d)
                 enddir = false
                 done = true
@@ -829,7 +828,7 @@ local function apply_to_list(list,size,head,pardir)
             if begindir and getsubtype(current) == localpar_code then
                 -- local_par should always be the 1st node
                 local d = new_textdir(begindir)
--- setfield(d,"attr",copy_node(getfield(current,"attr")))
+             -- setfield(d,"attr",getfield(current,"attr"))
                 head, current = insert_node_after(head,current,d)
                 begindir = nil
                 done = true
@@ -837,7 +836,7 @@ local function apply_to_list(list,size,head,pardir)
         end
         if begindir then
             local d = new_textdir(begindir)
--- setfield(d,"attr",copy_node(getfield(current,"attr")))
+         -- setfield(d,"attr",getfield(current,"attr"))
             head = insert_node_before(head,current,d)
             done = true
         end
@@ -849,7 +848,7 @@ local function apply_to_list(list,size,head,pardir)
         end
         if enddir then
             local d = new_textdir(enddir)
--- setfield(d,"attr",copy_node(getfield(current,"attr")))
+         -- setfield(d,"attr",getfield(current,"attr"))
             head, current = insert_node_after(head,current,d)
             done = true
         end

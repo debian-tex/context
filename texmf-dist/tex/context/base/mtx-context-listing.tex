@@ -24,13 +24,20 @@
 % --scite               : pretty print comform suffix using scite lexer
 % --bodyfont=list       : additional bodyfont settings
 % --paperformat=spec    : paper*print or paperxprint
+% --compact             : small margins, small font
 %
 % end help
 
 \input mtx-context-common.tex
 
+\doifdocumentargument {compact} {
+    \setdocumentargument{topspace} {5mm}
+    \setdocumentargument{backspace}{5mm}
+    \setdocumentargument{bodyfont} {8pt}
+}
+
 \setupbodyfont
-  [11pt,tt,\getdocumentargument{bodyfont}]
+  [dejavu,11pt,tt,\getdocumentargument{bodyfont}] % dejavu is more complete
 
 \setuptyping
   [lines=yes]
@@ -85,7 +92,8 @@
         if document.arguments.sort then
             table.sort(document.files)
         end
-        for _, filename in ipairs(document.files) do
+        for i=1,#document.files do
+            local filename = document.files[i]
             if not string.find(filename,"^mtx%-context%-") then
                 local pretty = document.arguments.pretty
                 if pretty == true then

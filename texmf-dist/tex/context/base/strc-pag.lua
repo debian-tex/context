@@ -25,6 +25,7 @@ local counterdata         = counters.data
 local variables           = interfaces.variables
 local context             = context
 local commands            = commands
+local implement           = interfaces.implement
 
 local processors          = typesetters.processors
 local applyprocessor      = processors.apply
@@ -61,10 +62,12 @@ function pages.save(prefixdata,numberdata,extradata)
         if trace_pages then
             report_pages("saving page %s.%s",realpage,userpage)
         end
+        local viewerprefix = extradata.viewerprefix
+        local state = extradata.state
         local data = {
             number       = userpage,
-            viewerprefix = extradata.viewerprefix,
-            state        = extradata.state,
+            viewerprefix = viewerprefix ~= "" and viewerprefix or nil,
+            state        = state ~= "" and state or nil, -- maybe let "start" be default
             block        = sections.currentblock(),
             prefixdata   = prefixdata and helpers.simplify(prefixdata),
             numberdata   = numberdata and helpers.simplify(numberdata),
@@ -269,6 +272,24 @@ function pages.is_odd(n)
     end
 end
 
+function pages.on_right(n)
+    local pagemode = texgetcount("pageduplexmode")
+    if pagemode == 2 or pagemode == 1 then
+        n = n or texgetcount("realpageno")
+        if texgetcount("pagenoshift") % 2 == 0 then
+            return n % 2 == 0
+        else
+            return n % 2 ~= 0
+        end
+    else
+        return true
+    end
+end
+
+function pages.in_body(n)
+    return texgetcount("pagebodymode") > 0
+end
+
 -- move to strc-pag.lua
 
 function counters.analyze(name,counterspecification)
@@ -323,5 +344,58 @@ end
 
 --
 
-commands.savepagedata      = pages.save
-commands.prefixedconverted = sections.prefixedconverted -- weird place
+implement {
+    name      = "savepagedata",
+    actions   = pages.save,
+    arguments = {
+        {
+            { "prefix" },
+            { "separatorset" },
+            { "conversionset" },
+            { "conversion" },
+            { "set" },
+            { "segments" },
+            { "connector" },
+        },
+        {
+            { "conversionset" },
+            { "conversion" },
+            { "starter" },
+            { "stopper" },
+        },
+        {
+            { "viewerprefix" },
+            { "state" },
+        }
+    }
+}
+
+implement { -- weird place
+    name      = "prefixedconverted",
+    actions   = sections.prefixedconverted,
+    arguments = {
+        "string",
+        {
+            { "prefix" },
+            { "separatorset" },
+            { "conversionset" },
+            { "conversion" },
+            { "starter" },
+            { "stopper" },
+            { "set" },
+            { "segments" },
+            { "connector" },
+        },
+        {
+            { "order" },
+            { "separatorset" },
+            { "conversionset" },
+            { "conversion" },
+            { "starter" },
+            { "stopper" },
+            { "segments" },
+            { "type" },
+            { "criterium" },
+        }
+    }
+}

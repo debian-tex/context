@@ -8,11 +8,16 @@ if not modules then modules = { } end modules ['spac-ver'] = {
 
 -- we also need to call the spacer for inserts!
 
+-- somehow lists still don't always have proper prev nodes so i need to
+-- check all of the luatex code some day .. maybe i should replece the
+-- whole mvl handler by lua code .. why not
+
 -- todo: use lua nodes with lua data (>0.79)
 -- see ** can go when 0.79
 
 -- this code dates from the beginning and is kind of experimental; it
--- will be optimized and improved soon
+-- will be optimized and improved soon .. it's way too complex now but
+-- dates from less possibilities
 --
 -- the collapser will be redone with user nodes; also, we might get make
 -- parskip into an attribute and appy it explicitly thereby getting rid
@@ -33,13 +38,20 @@ local formatters = string.formatters
 
 local P, C, R, S, Cc = lpeg.P, lpeg.C, lpeg.R, lpeg.S, lpeg.Cc
 
-local nodes, node, trackers, attributes, context, commands, tex =  nodes, node, trackers, attributes, context, commands, tex
+local nodes       =  nodes
+local node        =  node
+local trackers    =  trackers
+local attributes  =  attributes
+local context     =  context
+local tex         =  tex
 
 local texlists    = tex.lists
 local texgetdimen = tex.getdimen
+local texsetdimen = tex.setdimen
 local texnest     = tex.nest
 
 local variables   = interfaces.variables
+local implement   = interfaces.implement
 
 -- vertical space handler
 
@@ -49,7 +61,6 @@ local trace_page_builder     = false  trackers.register("builders.page",     fun
 local trace_collect_vspacing = false  trackers.register("vspacing.collect",  function(v) trace_collect_vspacing = v end)
 local trace_vspacing         = false  trackers.register("vspacing.spacing",  function(v) trace_vspacing         = v end)
 local trace_vsnapping        = false  trackers.register("vspacing.snapping", function(v) trace_vsnapping        = v end)
-local trace_vpacking         = false  trackers.register("vspacing.packing",  function(v) trace_vpacking         = v end)
 local trace_specials         = false  trackers.register("vspacing.specials", function(v) trace_specials         = v end)
 
 local report_vspacing     = logs.reporter("vspacing","spacing")
@@ -104,6 +115,7 @@ local nodepool            = nuts.pool
 local new_penalty         = nodepool.penalty
 local new_kern            = nodepool.kern
 local new_rule            = nodepool.rule
+local new_glue            = nodepool.glue
 local new_gluespec        = nodepool.gluespec
 
 local nodecodes           = nodes.nodecodes
@@ -134,11 +146,13 @@ local default = {
     strut     = true,
     hfraction = 1,
     dfraction = 1,
+    bfraction = 0.25,
 }
 
 local fractions = {
     minheight = "hfraction", maxheight = "hfraction",
     mindepth  = "dfraction", maxdepth  = "dfraction",
+    box       = "bfraction",
     top       = "tlines",    bottom    = "blines",
 }
 
@@ -330,27 +344,58 @@ local function snap_hlist(where,current,method,height,depth) -- method.strut is 
             t[#t+1] = formatters["auto: snapht %p snapdp %p"](snapht,snapdp)
         end
     end
-    local h = height or getfield(current,"height")
-    local d = depth or getfield(current,"depth")
-    local hr, dr, ch, cd = method.hfraction or 1, method.dfraction or 1, h, d
-    local tlines, blines = method.tlines or 1, method.blines or 1
-    local done, plusht, plusdp = false, snapht, snapdp
+
+    local h        = (method.noheight and 0) or height or getfield(current,"height")
+    local d        = (method.nodepth  and 0) or depth  or getfield(current,"depth")
+    local hr       = method.hfraction or 1
+    local dr       = method.dfraction or 1
+    local br       = method.bfraction or 0
+    local ch       = h
+    local cd       = d
+    local tlines   = method.tlines or 1
+    local blines   = method.blines or 1
+    local done     = false
+    local plusht   = snapht
+    local plusdp   = snapdp
     local snaphtdp = snapht + snapdp
 
-    if method.none then
+    if method.box then
+        local br = 1 - br
+        if br < 0 then
+            br = 0
+        elseif br > 1 then
+            br = 1
+        end
+        local n = ceiled((h+d-br*snapht-br*snapdp)/snaphtdp)
+        local x = n * snaphtdp - h - d
+        plusht = h + x / 2
+        plusdp = d + x / 2
+    elseif method.max then
+        local n = ceiled((h+d)/snaphtdp)
+        local x = n * snaphtdp - h - d
+        plusht = h + x / 2
+        plusdp = d + x / 2
+    elseif method.min then
+        local n = floored((h+d)/snaphtdp)
+        local x = n * snaphtdp - h - d
+        plusht = h + x / 2
+        plusdp = d + x / 2
+    elseif method.none then
         plusht, plusdp = 0, 0
         if t then
             t[#t+1] = "none: plusht 0pt plusdp 0pt"
         end
     end
     if method.halfline then -- extra halfline
-        plusht, plusdp = plusht + snaphtdp/2, plusdp + snaphtdp/2
+        plusht = plusht + snaphtdp/2
+        plusdp = plusdp + snaphtdp/2
         if t then
             t[#t+1] = formatters["halfline: plusht %p plusdp %p"](plusht,plusdp)
         end
     end
     if method.line then -- extra line
-        plusht, plusdp = plusht + snaphtdp, plusdp + snaphtdp
+        plusht = plusht + snaphtdp
+        plusdp = plusdp + snaphtdp
         if t then
             t[#t+1] = formatters["line: plusht %p plusdp %p"](plusht,plusdp)
         end
@@ -512,6 +557,12 @@ local function snap_hlist(where,current,method,height,depth) -- method.strut is 
         t[#t+1] = formatters["final height: %p -> %p"](h,ch)
         t[#t+1] = formatters["final depth: %p -> %p"](d,cd)
     end
+-- todo:
+--
+--     if h < 0 or d < 0 then
+--         h = 0
+--         d = 0
+--     end
     if t then
         report_snapper("trace: %s type %s\n\t%\n\tt",where,nodecodes[getid(current)],t)
     end
@@ -879,19 +930,18 @@ local special_penalty_xxx =     0
 -- header don't break but also make sure that we have at least a decent
 -- break when we have succesive ones (often when testing)
 
+-- todo: mark headers as such so that we can recognize them
+
 local specialmethods = { }
 local specialmethod  = 1
 
 local properties = nodes.properties.data
 
-specialmethods[1] = function(start,penalty)
+specialmethods[1] = function(pagehead,pagetail,start,penalty)
     --
-    if penalty < special_penalty_min or penalty > special_penalty_max then
+    if not pagehead or penalty < special_penalty_min or penalty > special_penalty_max then
         return
     end
-    -- this can move to the caller
-    local pagehead = tonut(texlists.page_head)
-    local pagetail = find_node_tail(pagehead) -- no texlists.page_tail yet-- no texlists.page_tail yet
     local current  = pagetail
     --
     -- nodes.showsimplelist(pagehead,0)
@@ -927,51 +977,88 @@ specialmethods[1] = function(start,penalty)
                         return
                     end
                 elseif trace_specials then
-                    report_specials("  context %a, higher level, continue",p)
+                    report_specials("  context penalty %a, higher level, continue",p)
                 end
-            elseif trace_specials then
-                report_specials("  regular penalty, continue")
+            else
+                local p = getfield(current,"penalty")
+                if p < 10000 then
+                    -- assume some other mechanism kicks in so we seem to have content
+                    if trace_specials then
+                        report_specials("  regular penalty %a, quitting",p)
+                    end
+                    break
+                else
+                    if trace_specials then
+                        report_specials("  regular penalty %a, continue",p)
+                    end
+                end
             end
         end
         current = getprev(current)
     end
+    -- none found, so no reson to be special
+    if trace_specials then
+        if pagetail then
+            report_specials("  context penalty, discarding, nothing special")
+        else
+            report_specials("  context penalty, discarding, nothing preceding")
+        end
+    end
+    return special_penalty_xxx
 end
 
 -- specialmethods[2] : always put something before and use that as to-be-changed
+--
+-- we could inject a vadjust to force a recalculation .. a mess
+--
+-- So, the next is far from robust and okay but for the moment this overlaying
+-- has to do. Always test this with the examples in spec-ver.mkvi!
 
-local function check_experimental_overlay(head,current) -- todo
+local function check_experimental_overlay(head,current)
     local p = nil
     local c = current
     local n = nil
 
-setfield(head,"prev",nil) -- till we have 0.79 **
+ -- setfield(head,"prev",nil) -- till we have 0.79 **
 
-    local function overlay(p, n, s, mvl)
-        local c = getprev(n)
-        while c and c ~= p do
-            local p = getprev(c)
-            free_node(c)
-            c = p
+    local function overlay(p,n,mvl)
+        local p_ht  = getfield(p,"height")
+        local p_dp  = getfield(p,"depth")
+        local n_ht  = getfield(n,"height")
+        local skips = 0
+        --
+        -- We deal with this at the tex end .. we don't see spacing .. enabling this code
+        -- is probably harmless btu then we need to test it.
+        --
+        local c = getnext(p)
+        while c and c ~= n do
+            local id = getid(c)
+            if id == glue_code then
+                skips = skips + getfield(getfield(c,"glue_spec"),"width")
+            elseif id == kern_code then
+                skips = skips + getfield(c,"kern")
+            end
+            c = getnext(c)
         end
-        setfield(n,"prev",nil)
-        if not mvl then
-            setfield(p,"next",n)
-        end
-        local p_ht = getfield(p,"height")
-        local p_dp = getfield(p,"depth")
-        local n_ht = getfield(n,"height")
-        local delta = n_ht + s + p_dp
+        --
+        local delta = n_ht + skips + p_dp
+        texsetdimen("global","d_spac_overlay",-delta) -- for tracing
         local k = new_kern(-delta)
-        if trace_vspacing then
-            report_vspacing("overlaying, prev height: %p, prev depth: %p, next height: %p, skips: %p, move up: %p",p_ht,p_dp,n_ht,s,delta)
-        end
         if n_ht > p_ht then
-            -- we should adapt pagetotal ! (need a hook for that)
+            -- we should adapt pagetotal ! (need a hook for that) .. now we have the wrong pagebreak
             setfield(p,"height",n_ht)
         end
-        return k
+        insert_node_before(head,n,k)
+        if p == head then
+            head = k
+        end
+        if trace_vspacing then
+            report_vspacing("overlaying, prev height: %p, prev depth: %p, next height: %p, skips: %p, move up: %p",p_ht,p_dp,n_ht,skips,delta)
+        end
+        return remove_node(head,current,true)
     end
 
+    -- goto next line
     while c do
         local id = getid(c)
         if id == glue_code or id == penalty_code or id == kern_code then
@@ -985,7 +1072,7 @@ setfield(head,"prev",nil) -- till we have 0.79 **
         end
     end
     if n then
-        -- we have a next line
+        -- we have a next line, goto prev line
         c = current
         while c do
             local id = getid(c)
@@ -1002,44 +1089,32 @@ setfield(head,"prev",nil) -- till we have 0.79 **
             if a_snapmethod == a_snapvbox then
                 -- quit, we're not on the mvl
             else
-                -- messy
                 local c = tonut(texlists.page_head)
-                local s = 0
-                while c do
+                while c and c ~= n do
                     local id = getid(c)
-                    if id == glue_code then
-                        if p then
-                            s = s + getfield(getfield(c,"glue_spec"),"width")
-                        end
-                    elseif id == kern_code then
-                        if p then
-                            s = s + getfield(c,"kern")
-                        end
-                    elseif id == penalty_code then
-                        -- skip (actually, remove)
-                    elseif id == hlist_code then
+                    if id == hlist_code then
                         p = c
-                        s = 0
-                    else
-                        p = nil
-                        s = 0
                     end
                     c = getnext(c)
                 end
                 if p and p ~= n then
-                    local k = overlay(p,n,s,true)
-                    insert_node_before(n,n,k)
-                    return k, getnext(n)
+                    return overlay(p,n,true)
                 end
             end
         elseif p ~= n then
-            local k = overlay(p,n,0,false   )
-            insert_node_after(p,p,k)
-            return head, getnext(n)
+            return overlay(p,n,false)
         end
     end
+    -- in fact, we could try again later ... so then no remove (a few tries)
     return remove_node(head, current, true)
 end
+
+-- This will be replaced after 0.80+ when we have a more robust look-back and
+-- can look at the bigger picture.
+
+-- todo: look back and when a special is there before a list is seen penalty keep ut
+
+-- we now look back a lot, way too often
 
 local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also pass tail
     if trace then
@@ -1051,6 +1126,19 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
     local parskip, ignore_parskip, ignore_following, ignore_whitespace, keep_together = nil, false, false, false, false
     --
     -- todo: keep_together: between headers
+    --
+    local pagehead = nil
+    local pagetail = nil
+
+    local function getpagelist()
+        if not pagehead then
+            pagehead = texlists.page_head
+            if pagehead then
+                pagehead = tonut(texlists.page_head)
+                pagetail = find_node_tail(pagehead) -- no texlists.page_tail yet-- no texlists.page_tail yet
+            end
+        end
+    end
     --
     local function flush(why)
         if penalty_data then
@@ -1068,7 +1156,14 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
                 head = insert_node_before(head,current,p)
             end
 -- if penalty_data > special_penalty_min and penalty_data < special_penalty_max then
-    properties[p] = { special_penalty = special_penalty or penalty_data }
+    local props = properties[p]
+    if props then
+        props.special_penalty = special_penalty or penalty_data
+    else
+        properties[p] = {
+            special_penalty = special_penalty or penalty_data
+        }
+    end
 -- end
         end
         if glue_data then
@@ -1089,6 +1184,26 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
         penalty_order, penalty_data, natural_penalty = 0, nil, nil
         parskip, ignore_parskip, ignore_following, ignore_whitespace = nil, false, false, false
     end
+    --
+
+-- quick hack, can be done nicer
+-- local nobreakfound = nil
+-- local function checknobreak()
+--     local pagehead, pagetail = getpagelist()
+--     local current = pagetail
+--     while current do
+--         local id = getid(current)
+--         if id == hlist_code or id == vlist_code then
+--             return false
+--         elseif id == penalty_code then
+--             return getfield(current,"penalty") >= 10000
+--         end
+--         current = getprev(current)
+--     end
+--     return false
+-- end
+
+    --
     if trace_vsnapping then
         report_snapper("global ht/dp = %p/%p, local ht/dp = %p/%p",
             texgetdimen("globalbodyfontstrutheight"), texgetdimen("globalbodyfontstrutdepth"),
@@ -1096,9 +1211,15 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
         )
     end
     if trace then trace_info("start analyzing",where,what) end
+
+-- local headprev = getprev(head)
+
     while current do
         local id = getid(current)
         if id == hlist_code or id == vlist_code then
+-- if nobreakfound == nil then
+--     nobreakfound = false
+-- end
             -- needs checking, why so many calls
             if snap then
                 local list = getlist(current)
@@ -1144,6 +1265,17 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
          -- natural_penalty = getfield(current,"penalty")
          -- if trace then trace_done("removed penalty",current) end
          -- head, current = remove_node(head, current, true)
+
+-- if nobreakfound == nil then
+--     nobreakfound = checknobreak()
+-- end
+-- if nobreakfound and getfield(current,"penalty") <= 10000 then
+--  -- if trace then
+--         trace_done("removed penalty",current)
+--  -- end
+--     head, current = remove_node(head, current, true)
+-- end
+
             current = getnext(current)
         elseif id == kern_code then
             if snap and trace_vsnapping and getfield(current,"kern") ~= 0 then
@@ -1159,7 +1291,8 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
                 local sp = getattr(current,a_skippenalty)    -- has no default, no unset (yet)
                 if sp and sc == penalty then
                     if where == "page" then
-                        local p = specialmethods[specialmethod](current,sp)
+                        getpagelist()
+                        local p = specialmethods[specialmethod](pagehead,pagetail,current,sp)
                         if p then
                             if trace then
                                 trace_skip("previous special penalty %a is changed to %a using method %a",sp,p,specialmethod)
@@ -1167,6 +1300,12 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
                             special_penalty = sp
                             sp = p
                         end
+
+-- else
+--     if nobreakfound == nil then
+--         nobreakfound = checknobreak()
+--     end
+
                     end
                     if not penalty_data then
                         penalty_data = sp
@@ -1176,6 +1315,14 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
                         penalty_data = sp
                     end
                     if trace then trace_skip("penalty in skip",sc,so,sp,current) end
+
+-- if nobreakfound then
+--     penalty_data = 10000
+--     if trace then
+--         trace_skip("nobreak found before penalty in skip",sc,so,sp,current)
+--     end
+-- end
+
                     head, current = remove_node(head, current, true)
                 elseif not sc then  -- if not sc then
                     if glue_data then
@@ -1234,6 +1381,8 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
                 elseif sc == overlay then
                     -- todo (overlay following line over previous
                     if trace then trace_skip("overlay",sc,so,sp,current) end
+                        -- beware: head can actually be after the affected nodes as
+                        -- we look back ... some day head will the real head
                     head, current = check_experimental_overlay(head,current,a_snapmethod)
                 elseif ignore_following then
                     if trace then trace_skip("disabled",sc,so,sp,current) end
@@ -1431,9 +1580,16 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
         local p = new_penalty(penalty_data)
         if trace then trace_done("result",p) end
         head, tail = insert_node_after(head,tail,p)
--- if penalty_data > special_penalty_min and penalty_data < special_penalty_max then
-    properties[p] = { special_penalty = special_penalty or penalty_data }
--- end
+     -- if penalty_data > special_penalty_min and penalty_data < special_penalty_max then
+            local props = properties[p]
+            if props then
+                props.special_penalty = special_penalty or penalty_data
+            else
+                properties[p] = {
+                    special_penalty = special_penalty or penalty_data
+                }
+            end
+     -- end
     end
     if glue_data then
         if not tail then tail = find_node_tail(head) end
@@ -1445,7 +1601,7 @@ local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also 
         else
             head, tail = insert_node_after(head,tail,glue_data)
         end
-texnest[texnest.ptr].prevdepth = 0 -- appending to the list bypasses tex's prevdepth handler
+        texnest[texnest.ptr].prevdepth = 0 -- appending to the list bypasses tex's prevdepth handler
     end
     if trace then
         if glue_data or penalty_data then
@@ -1456,6 +1612,13 @@ texnest[texnest.ptr].prevdepth = 0 -- appending to the list bypasses tex's prevd
             trace_info("head has been changed from %a to %a",nodecodes[getid(oldhead)],nodecodes[getid(head)])
         end
     end
+
+-- if headprev then
+--     setprev(head,headprev)
+--     setnext(headprev,head)
+-- end
+-- print("C HEAD",tonode(head))
+
     return head, true
 end
 
@@ -1544,7 +1707,7 @@ local ignore = table.tohash {
 function vspacing.vboxhandler(head,where)
     if head and not ignore[where] then
         local h = tonut(head)
-        if getnext(h) then
+        if getnext(h) then -- what if a one liner and snapping?
             h = collapser(h,"vbox",where,trace_vbox_vspacing,true,a_snapvbox) -- todo: local snapper
             return tonode(h)
         end
@@ -1552,13 +1715,17 @@ function vspacing.vboxhandler(head,where)
     return head
 end
 
-function vspacing.collapsevbox(n) -- for boxes but using global a_snapmethod
+function vspacing.collapsevbox(n,aslist) -- for boxes but using global a_snapmethod
     local box = getbox(n)
     if box then
         local list = getlist(box)
         if list then
             list = collapser(list,"snapper","vbox",trace_vbox_vspacing,true,a_snapmethod)
-            setfield(box,"list",vpack_node(list))
+            if aslist then
+                setfield(box,"list",list) -- beware, dimensions of box are wrong now
+            else
+                setfield(box,"list",vpack_node(list))
+            end
         end
     end
 end
@@ -1576,10 +1743,58 @@ end
 
 -- interface
 
-commands.vspacing          = vspacing.analyze
-commands.vspacingsetamount = vspacing.setskip
-commands.vspacingdefine    = vspacing.setmap
-commands.vspacingcollapse  = vspacing.collapsevbox
-commands.vspacingsnap      = vspacing.snapbox
-commands.resetprevdepth    = vspacing.resetprevdepth
-commands.definesnapmethod  = vspacing.definesnapmethod
+implement {
+    name      = "vspacing",
+    actions   = vspacing.analyze,
+    scope     = "private",
+    arguments = "string"
+}
+
+implement {
+    name      = "resetprevdepth",
+    actions   = vspacing.resetprevdepth,
+    scope     = "private"
+}
+
+implement {
+    name      = "vspacingsetamount",
+    actions   = vspacing.setskip,
+    scope     = "private",
+    arguments = "string",
+}
+
+implement {
+    name      = "vspacingdefine",
+    actions   = vspacing.setmap,
+    scope     = "private",
+    arguments = { "string", "string" }
+}
+
+implement {
+    name      = "vspacingcollapse",
+    actions   = vspacing.collapsevbox,
+    scope     = "private",
+    arguments = "integer"
+}
+
+implement {
+    name      = "vspacingcollapseonly",
+    actions   = vspacing.collapsevbox,
+    scope     = "private",
+    arguments = { "integer", true }
+}
+
+implement {
+    name      = "vspacingsnap",
+    actions   = vspacing.snapbox,
+    scope     = "private",
+    arguments = { "integer", "integer" }
+}
+
+implement {
+    name      = "definesnapmethod",
+    actions   = vspacing.definesnapmethod,
+    scope     = "private",
+    arguments = { "string", "string" }
+}
+

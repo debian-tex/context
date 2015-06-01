@@ -13,7 +13,9 @@ if not modules then modules = { } end modules ["page-mix"] = {
 -- local trackers, logs, storage = trackers, logs, storage
 -- local number, table = number, table
 
+local next, type = next, type
 local concat = table.concat
+local ceil, floor = math.ceil, math.floor
 
 local trace_state  = false  trackers.register("mixedcolumns.trace",  function(v) trace_state  = v end)
 local trace_detail = false  trackers.register("mixedcolumns.detail", function(v) trace_detail = v end)
@@ -81,6 +83,10 @@ local v_auto              = variables.auto
 local v_none              = variables.none
 local v_more              = variables.more
 local v_less              = variables.less
+local v_halfline          = variables.halfline
+
+local context             = context
+local implement           = interfaces.implement
 
 pagebuilders              = pagebuilders or { }
 pagebuilders.mixedcolumns = pagebuilders.mixedcolumns or { }
@@ -222,7 +228,7 @@ local function stripbottomglue(results,discarded)
     return height
 end
 
-local function setsplit(specification) -- a rather large function
+local function preparesplit(specification) -- a rather large function
     local box = specification.box
     if not box then
         report_state("fatal error, no box")
@@ -239,35 +245,35 @@ local function setsplit(specification) -- a rather large function
         return
     end
     slidenodes(head) -- we can have set prev's to nil to prevent backtracking
-    local discarded = { }
-    local originalhead = head
-    local originalwidth = specification.originalwidth or getfield(list,"width")
+    local discarded      = { }
+    local originalhead   = head
+    local originalwidth  = specification.originalwidth or getfield(list,"width")
     local originalheight = specification.originalheight or getfield(list,"height")
-    local current = head
-    local skipped = 0
-    local height = 0
-    local depth = 0
-    local skip = 0
-    local splitmethod = specification.splitmethod or false
+    local current        = head
+    local skipped        = 0
+    local height         = 0
+    local depth          = 0
+    local skip           = 0
+    local splitmethod    = specification.splitmethod or false
     if splitmethod == v_none then
         splitmethod = false
     end
-    local options = settings_to_hash(specification.option or "")
+    local options     = settings_to_hash(specification.option or "")
     local stripbottom = specification.alternative == v_local
-    local cycle = specification.cycle or 1
-    local nofcolumns = specification.nofcolumns or 1
+    local cycle       = specification.cycle or 1
+    local nofcolumns  = specification.nofcolumns or 1
     if nofcolumns == 0 then
         nofcolumns = 1
     end
     local preheight = specification.preheight or 0
-    local extra = specification.extra or 0
+    local extra     = specification.extra or 0
     local maxheight = specification.maxheight
-    local optimal = originalheight/nofcolumns
+    local optimal   = originalheight/nofcolumns
     if specification.balance ~= v_yes then
         optimal = maxheight
     end
-    local target = optimal + extra
-    local overflow = target > maxheight - preheight
+    local target    = optimal + extra
+    local overflow  = target > maxheight - preheight
     local threshold = specification.threshold or 0
     if overflow then
         target = maxheight - preheight
@@ -428,6 +434,7 @@ local function setsplit(specification) -- a rather large function
     local function checked(advance,where,locked)
         local total   = skip + height + depth + advance
         local delta   = total - target
+-- - 65536*3
         local state   = "same"
         local okay    = false
         local skipped = 0
@@ -477,7 +484,15 @@ local function setsplit(specification) -- a rather large function
             end
             height = height + depth + skip
             depth  = 0
+if advance < 0 then
+    height = height + advance
+    skip   = 0
+    if height < 0 then
+        height = 0
+    end
+else
             skip   = height > 0 and advance or 0
+end
             if trace_state then
                 report_state("%-7s > column %s, height %p, depth %p, skip %p","glue",column,height,depth,skip)
             end
@@ -595,7 +610,8 @@ local function setsplit(specification) -- a rather large function
         local nxtid = nxt and getid(nxt)
         line = line + 1
         local inserts, currentskips, nextskips, inserttotal = nil, 0, 0, 0
-        local advance = getfield(current,"height") -- + getfield(current,"depth")
+        local advance = getfield(current,"height")
+-- + getfield(current,"depth") -- when > strutdp
         if trace_state then
             report_state("%-7s > column %s, content: %s","line",column,listtoutf(getlist(current),true,true))
         end
@@ -716,10 +732,12 @@ local kept = head
     return specification
 end
 
-function mixedcolumns.finalize(result)
+local function finalize(result)
     if result then
-        local results = result.results
-        for i=1,result.nofcolumns do
+        local results  = result.results
+        local columns  = result.nofcolumns
+        local maxtotal = 0
+        for i=1,columns do
             local r = results[i]
             local h = r.head
             if h then
@@ -747,6 +765,16 @@ function mixedcolumns.finalize(result)
                     r.inserts[c] = t
                 end
             end
+            local total = r.height + r.depth
+            if total > maxtotal then
+                maxtotal = total
+            end
+            r.total = total
+        end
+        result.maxtotal = maxtotal
+        for i=1,columns do
+            local r = results[i]
+            r.extra = maxtotal - r.total
         end
     end
 end
@@ -761,12 +789,12 @@ local function report_deltas(result,str)
     report_state("%s, cycles %s, deltas % | t",str,result.cycle or 1,t)
 end
 
-function mixedcolumns.setsplit(specification)
+local function setsplit(specification)
     splitruns = splitruns + 1
     if trace_state then
         report_state("split run %s",splitruns)
     end
-    local result = setsplit(specification)
+    local result = preparesplit(specification)
     if result then
         if result.overflow then
             if trace_state then
@@ -779,7 +807,7 @@ function mixedcolumns.setsplit(specification)
             local cycles = specification.cycles or 100
             while result.rest and cycle <= cycles do
                 specification.extra = cycle * step
-                result = setsplit(specification) or result
+                result = preparesplit(specification) or result
                 if trace_state then
                     report_state("cycle: %s.%s, original height %p, total height %p",
                         splitruns,cycle,result.originalheight,result.nofcolumns*result.targetheight)
@@ -801,7 +829,7 @@ function mixedcolumns.setsplit(specification)
     end
 end
 
-function mixedcolumns.getsplit(result,n)
+local function getsplit(result,n)
     if not result then
         report_state("flush, column %s, no result",n)
         return
@@ -819,13 +847,14 @@ function mixedcolumns.getsplit(result,n)
     local strutht    = result.strutht
     local strutdp    = result.strutdp
     local lineheight = strutht + strutdp
+    local isglobal   = result.alternative == v_global
 
     local v = new_vlist()
     setfield(v,"list",h)
 
  -- local v = vpack(h,"exactly",height)
 
-    if result.alternative == v_global then -- option
+    if isglobal then -- option
         result.height = result.maxheight
     end
 
@@ -833,11 +862,56 @@ function mixedcolumns.getsplit(result,n)
     local dp = 0
     local wd = result.originalwidth
 
-    local grid = result.grid
+    local grid         = result.grid
+    local internalgrid = result.internalgrid
+    local httolerance  = .25
+    local dptolerance  = .50
+    local lineheight   = internalgrid == v_halfline and lineheight/2 or lineheight
+
+    local function amount(r,s,t)
+        local l = ceil((r-t)/lineheight)
+        local a = lineheight * l
+        if a > s then
+            return a - s
+        else
+            return s
+        end
+    end
 
     if grid then
-        ht = lineheight * math.ceil(result.height/lineheight) - strutdp
-        dp = strutdp
+        -- print(n,result.maxtotal,r.total,r.extra)
+        if isglobal then
+            local rh = r.height
+         -- ht = (lineheight * ceil(result.height/lineheight) - strutdp
+            ht = amount(rh,strutdp,0)
+            dp = strutdp
+        else
+            -- natural dimensions
+            local rh = r.height
+            local rd = r.depth
+            if rh > ht then
+                ht = amount(rh,strutdp,httolerance*strutht)
+            end
+            if rd > dp then
+                dp = amount(rd,strutht,dptolerance*strutdp)
+            end
+            -- forced dimensions
+            local rh = result.height or 0
+            local rd = result.depth or 0
+            if rh > ht then
+                ht = amount(rh,strutdp,httolerance*strutht)
+            end
+            if rd > dp then
+                dp = amount(rd,strutht,dptolerance*strutdp)
+            end
+            -- always one line at least
+            if ht < strutht then
+                ht = strutht
+            end
+            if dp < strutdp then
+                dp = strutdp
+            end
+        end
     else
         ht = result.height
         dp = result.depth
@@ -867,19 +941,19 @@ function mixedcolumns.getsplit(result,n)
     return v
 end
 
-function mixedcolumns.getrest(result)
+local function getrest(result)
     local rest = result and result.rest
     result.rest = nil -- to be sure
     return rest
 end
 
-function mixedcolumns.getlist(result)
+local function getlist(result)
     local originalhead = result and result.originalhead
     result.originalhead = nil -- to be sure
     return originalhead
 end
 
-function mixedcolumns.cleanup(result)
+local function cleanup(result)
     local discarded = result.discarded
     for i=1,#discarded do
         freenode(discarded[i])
@@ -887,52 +961,100 @@ function mixedcolumns.cleanup(result)
     result.discarded = { }
 end
 
+mixedcolumns.setsplit = setsplit
+mixedcolumns.getsplit = getsplit
+mixedcolumns.finalize = finalize
+mixedcolumns.getrest  = getrest
+mixedcolumns.getlist  = getlist
+mixedcolumns.cleanup  = cleanup
+
 -- interface --
 
 local result
 
-function commands.mixsetsplit(specification)
-    if result then
-        for k, v in next, specification do
-            result[k] = v
+implement {
+    name      = "mixsetsplit",
+    actions   = function(specification)
+        if result then
+            for k, v in next, specification do
+                result[k] = v
+            end
+            result = setsplit(result)
+        else
+            result = setsplit(specification)
         end
-        result = mixedcolumns.setsplit(result)
-    else
-        result = mixedcolumns.setsplit(specification)
-    end
-end
+    end,
+    arguments = {
+        {
+           { "box", "integer" },
+           { "nofcolumns", "integer" },
+           { "maxheight", "dimen" },
+           { "step", "dimen" },
+           { "cycles", "integer" },
+           { "preheight", "dimen" },
+           { "prebox", "integer" },
+           { "strutht", "dimen" },
+           { "strutdp", "dimen" },
+           { "threshold", "dimen" },
+           { "splitmethod" },
+           { "balance" },
+           { "alternative" },
+           { "internalgrid" },
+           { "grid", "boolean" },
+        }
+    }
+}
 
-function commands.mixgetsplit(n)
-    if result then
-        context(tonode(mixedcolumns.getsplit(result,n)))
-    end
-end
+implement {
+    name      = "mixgetsplit",
+    arguments = "integer",
+    actions   = function(n)
+        if result then
+            context(tonode(getsplit(result,n)))
+        end
+    end,
+}
 
-function commands.mixfinalize()
-    if result then
-        mixedcolumns.finalize(result)
+implement {
+    name    = "mixfinalize",
+    actions = function()
+        if result then
+            finalize(result)
+        end
     end
-end
+}
 
-function commands.mixflushrest()
-    if result then
-        context(tonode(mixedcolumns.getrest(result)))
+implement {
+    name    = "mixflushrest",
+    actions = function()
+        if result then
+            context(tonode(getrest(result)))
+        end
     end
-end
+}
 
-function commands.mixflushlist()
-    if result then
-        context(tonode(mixedcolumns.getlist(result)))
+implement {
+    name = "mixflushlist",
+    actions = function()
+        if result then
+            context(tonode(getlist(result)))
+        end
     end
-end
+}
 
-function commands.mixstate()
-    context(result and result.rest and 1 or 0)
-end
-
-function commands.mixcleanup()
-    if result then
-        mixedcolumns.cleanup(result)
-        result = nil
+implement {
+    name    = "mixstate",
+    actions = function()
+        context(result and result.rest and 1 or 0)
     end
-end
+}
+
+implement {
+    name = "mixcleanup",
+    actions = function()
+        if result then
+            cleanup(result)
+            result = nil
+        end
+    end
+}

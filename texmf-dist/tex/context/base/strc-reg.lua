@@ -47,6 +47,8 @@ local v_text               = variables.text
 local context              = context
 local commands             = commands
 
+local implement            = interfaces.implement
+
 local matchingtilldepth    = sections.matchingtilldepth
 local numberatdepth        = sections.numberatdepth
 local currentlevel         = sections.currentlevel
@@ -64,6 +66,10 @@ local a_destination        = attributes.private('destination')
 
 local absmaxlevel          = 5 -- \c_strc_registers_maxlevel
 
+local h_prefixpage              = helpers.prefixpage
+local h_prefixlastpage          = helpers.prefixlastpage
+local h_title                   = helpers.title
+
 local ctx_startregisteroutput   = context.startregisteroutput
 local ctx_stopregisteroutput    = context.stopregisteroutput
 local ctx_startregistersection  = context.startregistersection
@@ -74,12 +80,114 @@ local ctx_startregisterentry    = context.startregisterentry
 local ctx_stopregisterentry     = context.stopregisterentry
 local ctx_startregisterpages    = context.startregisterpages
 local ctx_stopregisterpages     = context.stopregisterpages
-local ctx_stopregisterseewords  = context.stopregisterseewords
 local ctx_startregisterseewords = context.startregisterseewords
+local ctx_stopregisterseewords  = context.stopregisterseewords
 local ctx_registerentry         = context.registerentry
 local ctx_registerseeword       = context.registerseeword
 local ctx_registerpagerange     = context.registerpagerange
 local ctx_registeronepage       = context.registeronepage
+
+-- possible export, but ugly code (overloads)
+--
+-- local output, section, entries, nofentries, pages, words, rawtext
+--
+-- h_title = function(a,b) rawtext = a end
+--
+-- local function ctx_startregisteroutput()
+--     output     = { }
+--     section    = nil
+--     entries    = nil
+--     nofentries = nil
+--     pages      = nil
+--     words      = nil
+--     rawtext    = nil
+-- end
+-- local function ctx_stopregisteroutput()
+--     inspect(output)
+--     output     = nil
+--     section    = nil
+--     entries    = nil
+--     nofentries = nil
+--     pages      = nil
+--     words      = nil
+--     rawtext    = nil
+-- end
+-- local function ctx_startregistersection(tag)
+--     section = { }
+--     output[#output+1] = {
+--         section = section,
+--         tag     = tag,
+--     }
+-- end
+-- local function ctx_stopregistersection()
+-- end
+-- local function ctx_startregisterentries(n)
+--     entries = { }
+--     nofentries = 0
+--     section[#section+1] = entries
+-- end
+-- local function ctx_stopregisterentries()
+-- end
+-- local function ctx_startregisterentry(n) -- or subentries (nested?)
+--     nofentries = nofentries + 1
+--     entry = { }
+--     entries[nofentries] = entry
+-- end
+-- local function ctx_stopregisterentry()
+--     nofentries = nofentries - 1
+--     entry = entries[nofentries]
+-- end
+-- local function ctx_startregisterpages()
+--     pages = { }
+--     entry.pages = pages
+-- end
+-- local function ctx_stopregisterpages()
+-- end
+-- local function ctx_startregisterseewords()
+--     words = { }
+--     entry.words = words
+-- end
+-- local function ctx_stopregisterseewords()
+-- end
+-- local function ctx_registerentry(processor,internal,seeparent,text)
+--     text()
+--     entry.text = {
+--         processor = processor,
+--         internal  = internal,
+--         seeparent = seeparent,
+--         text      = rawtext,
+--     }
+-- end
+-- local function ctx_registerseeword(i,n,processor,internal,seeindex,seetext)
+--     seetext()
+--     entry.words[i] = {
+--         processor = processor,
+--         internal  = internal,
+--         seeparent = seeparent,
+--         seetext   = rawtext,
+--     }
+-- end
+-- local function ctx_registerpagerange(fprocessor,finternal,frealpage,lprocessor,linternal,lrealpage)
+--     pages[#pages+1] = {
+--         first = {
+--             processor = fprocessor,
+--             internal  = finternal,
+--             realpage  = frealpage,
+--         },
+--         last = {
+--             processor = lprocessor,
+--             internal  = linternal,
+--             realpage  = lrealpage,
+--         },
+--     }
+-- end
+-- local function ctx_registeronepage(processor,internal,realpage)
+--     pages[#pages+1] = {
+--         processor = processor,
+--         internal  = internal,
+--         realpage  = realpage,
+--     }
+-- end
 
 -- some day we will share registers and lists (although there are some conceptual
 -- differences in the application of keywords)
@@ -194,6 +302,7 @@ local function filtercollected(names,criterium,number,collected,prevmode)
         end
     else -- sectionname, number
         -- beware, this works ok for registers
+        -- to be redone with reference instead
         local depth = sections.getlevel(criterium)
         local number = tonumber(number) or numberatdepth(depth) or 0
         if trace_registers then
@@ -309,30 +418,71 @@ end
 
 registers.define           = defineregister -- 4 times is somewhat over the top but we want consistency
 registers.setmethod        = defineregister -- and we might have a difference some day
-commands.defineregister    = defineregister
-commands.setregistermethod = defineregister
+
+implement {
+    name      = "defineregister",
+    actions   = defineregister,
+    arguments = { "string", "string" }
+}
+
+implement {
+    name      = "setregistermethod",
+    actions   = defineregister, -- duplicate use
+    arguments = { "string", "string" }
+}
 
 local entrysplitter = lpeg.tsplitat('+') -- & obsolete in mkiv
 
 local tagged = { }
 
+-- this whole splitting is an inheritance of mkii
+
 local function preprocessentries(rawdata)
     local entries = rawdata.entries
     if entries then
-        local e, k = entries[1] or "", entries[2] or ""
-        local et, kt, entryproc, pageproc
-        if type(e) == "table" then
-            et = e
-        else
-            entryproc, e = splitprocessor(e)
+        --
+     -- local e = entries[1] or ""
+     -- local k = entries[2] or ""
+     -- local et, kt, entryproc, pageproc
+     -- if type(e) == "table" then
+     --     et = e
+     -- else
+     --     entryproc, e = splitprocessor(e)
+     --     et = lpegmatch(entrysplitter,e)
+     -- end
+     -- if type(k) == "table" then
+     --     kt = k
+     -- else
+     --     pageproc, k = splitprocessor(k)
+     --     kt = lpegmatch(entrysplitter,k)
+     -- end
+        --
+        local processors = rawdata.processors
+        local et         = entries.entries
+        local kt         = entries.keys
+        local entryproc  = processors and processors.entry
+        local pageproc   = processors and processors.page
+        if entryproc == "" then
+            entryproc = nil
+        end
+        if pageproc == "" then
+            pageproc = nil
+        end
+        if not et then
+            local p, e = splitprocessor(entries.entry or "")
+            if p then
+                entryproc = p
+            end
             et = lpegmatch(entrysplitter,e)
         end
-        if type(k) == "table" then
-            kt = k
-        else
-            pageproc, k = splitprocessor(k)
+        if not kt then
+            local p, k = splitprocessor(entries.key or "")
+            if p then
+                pageproc = p
+            end
             kt = lpegmatch(entrysplitter,k)
         end
+        --
         entries = { }
         local ok = false
         for k=#et,1,-1 do
@@ -347,7 +497,7 @@ local function preprocessentries(rawdata)
         end
         rawdata.list = entries
         if pageproc or entryproc then
-            rawdata.processors = { entryproc, pageproc }
+            rawdata.processors = { entryproc, pageproc } -- old way: indexed .. will be keys
         end
         rawdata.entries = nil
     end
@@ -361,6 +511,11 @@ local function storeregister(rawdata) -- metadata, references, entries
     local references = rawdata.references
     local metadata   = rawdata.metadata
     -- checking
+    if not metadata then
+        metadata = { }
+        rawdata.metadata = metadata
+    end
+    --
     if not metadata.kind then
         metadata.kind = "entry"
     end
@@ -371,6 +526,11 @@ local function storeregister(rawdata) -- metadata, references, entries
     --
     local name     = metadata.name
     local notsaved = tobesaved[name].metadata.notsaved
+    --
+    if not references then
+        references         = { }
+        rawdata.references = references
+    end
     --
     local internal = references.internal
     if not internal then
@@ -408,7 +568,9 @@ local function storeregister(rawdata) -- metadata, references, entries
     return #entries
 end
 
-local function enhanceregister(name,n)
+registers.store = storeregister
+
+function registers.enhance(name,n)
     local data = tobesaved[name].metadata.notsaved and collected[name] or tobesaved[name]
     local entry = data.entries[n]
     if entry then
@@ -416,7 +578,7 @@ local function enhanceregister(name,n)
     end
 end
 
-local function extendregister(name,tag,rawdata) -- maybe do lastsection internally
+function registers.extend(name,tag,rawdata) -- maybe do lastsection internally
     if type(tag) == "string" then
         tag = tagged[tag]
     end
@@ -460,18 +622,70 @@ local function extendregister(name,tag,rawdata) -- maybe do lastsection internal
     end
 end
 
-registers.store   = storeregister
-registers.enhance = enhanceregister
-registers.extend  = extendregister
-
-function commands.storeregister(rawdata)
-    local nofentries = storeregister(rawdata)
-    setinternalreference(nil,nil,rawdata.references.internal)
-    context(nofentries)
+function registers.get(tag,n)
+    local list = tobesaved[tag]
+    return list and list.entries[n]
 end
 
-commands.enhanceregister = enhanceregister
-commands.extendregister  = extendregister
+implement {
+    name      = "enhanceregister",
+    actions   = registers.enhance,
+    arguments = { "string", "integer" }
+}
+
+implement {
+    name      = "extendregister",
+    actions   = registers.extend,
+    arguments = { "string", "string" }
+}
+
+implement {
+    name      = "storeregister",
+    actions   = function(rawdata)
+        local nofentries = storeregister(rawdata)
+        setinternalreference { internal = rawdata.references.internal }
+        context(nofentries)
+    end,
+    arguments = {
+        {
+            { "metadata", {
+                    { "kind" },
+                    { "name" },
+                    { "coding" },
+                    { "level", "integer" },
+                    { "catcodes", "integer" },
+                    { "own" },
+                    { "xmlroot" },
+                    { "xmlsetup" }
+                }
+            },
+            { "entries", {
+                    { "entries", "list" },
+                    { "keys", "list" },
+                    { "entry" },
+                    { "key" }
+                }
+            },
+            { "references", {
+                    { "internal", "integer" },
+                    { "section", "integer" },
+                    { "label" }
+                }
+            },
+            { "seeword", {
+                    { "text" }
+                }
+            },
+            { "processors", {
+                    { "entry" },
+                    { "key" },
+                    { "page" }
+                }
+            },
+            { "userdata" },
+        }
+    }
+}
 
 -- sorting and rendering
 
@@ -508,7 +722,7 @@ end
 
 local seeindex = 0
 
--- meerdere loops, seewords, dan words, an seewords
+-- meerdere loops, seewords, dan words, anders seewords
 
 local function crosslinkseewords(result) -- all words
     -- collect all seewords
@@ -712,10 +926,21 @@ end
 
 registers.analyze = analyzeregister
 
-function registers.analyze(class,options)
-    context(analyzeregister(class,options))
-end
-
+implement {
+    name      = "analyzeregister",
+    actions   = { analyzeregister, context },
+    arguments = {
+        "string",
+        {
+            { "language" },
+            { "method" },
+            { "numberorder" },
+            { "compress" },
+            { "criterium" },
+            { "pagenumber", "boolean" },
+        }
+    }
+}
 
 -- todo take conversion from index
 
@@ -724,19 +949,13 @@ function registers.userdata(index,name)
     return data and data.userdata and data.userdata[name] or nil
 end
 
-function commands.registeruserdata(index,name)
-    local data = references.internals[tonumber(index)]
-    data = data and data.userdata and data.userdata[name]
-    if data then
-        context(data)
-    end
-end
+implement {
+    name      = "registeruserdata",
+    actions   = { registers.userdata, context },
+    arguments = { "integer", "string" }
+}
 
 -- todo: ownnumber
-
-local h_prefixpage     = helpers.prefixpage
-local h_prefixlastpage = helpers.prefixlastpage
-local h_title          = helpers.title
 
 local function pagerange(f_entry,t_entry,is_last,prefixspec,pagespec)
     local fer, ter = f_entry.references, t_entry.references
@@ -873,8 +1092,8 @@ function registers.flush(data,options,prefixspec,pagespec)
                 if #list > 1 then
                     list[#list] = nil
                 else
-                    -- we have an \seeindex{Foo}{Bar} without Foo being defined anywhere
-                    report_registers("invalid see entry in register %a, reference %a",entry.metadata.name,list[1][1])
+                 -- we have an \seeindex{Foo}{Bar} without Foo being defined anywhere .. somehow this message is wrong
+                 -- report_registers("invalid see entry in register %a, reference %a",entry.metadata.name,list[1][1])
                 end
             end
         end
@@ -882,60 +1101,68 @@ function registers.flush(data,options,prefixspec,pagespec)
         -- but we don't want to allocate too many entries so there we go
         while d < #data do
             d = d + 1
-            local entry = data[d]
+            local entry    = data[d]
+            local metadata = entry.metadata
+            local kind     = metadata.kind
+            local list     = entry.list
             local e = { false, false, false }
             for i=3,maxlevel do
                 e[i] = false
             end
-            local metadata = entry.metadata
-            local kind = metadata.kind
-            local list = entry.list
             for i=1,maxlevel do
                 if list[i] then
                     e[i] = list[i][1]
                 end
-                if e[i] ~= done[i] then
-                    if e[i] and e[i] ~= "" then
-                        done[i] = e[i]
-                        for j=i+1,maxlevel do
-                            done[j] = false
-                        end
-                        if started then
-                            ctx_stopregisterentry()
-                            started = false
-                        end
-                        if n == i then
+                if e[i] == done[i] then
+                    -- skip
+                elseif not e[i] then
+                    -- see ends up here
+                    -- can't happen any more
+                    done[i] = false
+                    for j=i+1,maxlevel do
+                        done[j] = false
+                    end
+                elseif e[i] == "" then
+                    done[i] = false
+                    for j=i+1,maxlevel do
+                        done[j] = false
+                    end
+                else
+                    done[i] = e[i]
+                    for j=i+1,maxlevel do
+                        done[j] = false
+                    end
+                    if started then
+                        ctx_stopregisterentry()
+                        started = false
+                    end
+                    if n == i then
 --                             ctx_stopregisterentries()
 --                             ctx_startregisterentries(n)
-                        else
-                            while n > i do
-                                n = n - 1
-                                ctx_stopregisterentries()
-                            end
-                            while n < i do
-                                n = n + 1
-                                ctx_startregisterentries(n)
-                            end
-                        end
-                        local references = entry.references
-                        local processors = entry.processors
-                        local internal  = references.internal or 0
-                        local seeparent = references.seeparent or ""
-                        local processor = processors and processors[1] or ""
-                        -- so, we need to keep e as is (local), or we need local title = e[i] ... which might be
-                        -- more of a problem
-                        ctx_startregisterentry(0) -- will become a counter
-                        started = true
-                        if metadata then
-                            ctx_registerentry(processor,internal,seeparent,function() h_title(e[i],metadata) end)
-                        else -- ?
-                            ctx_registerentry(processor,internal,seeindex,e[i])
-                        end
                     else
-                        done[i] = false
-                        for j=i+1,maxlevel do
-                            done[j] = false
+                        while n > i do
+                            n = n - 1
+                            ctx_stopregisterentries()
                         end
+                        while n < i do
+                            n = n + 1
+                            ctx_startregisterentries(n)
+                        end
+                    end
+                    local references = entry.references
+                    local processors = entry.processors
+                    local internal   = references.internal or 0
+                    local seeparent  = references.seeparent or ""
+                    local processor  = processors and processors[1] or ""
+                    -- so, we need to keep e as is (local), or we need local title = e[i] ... which might be
+                    -- more of a problem
+                    ctx_startregisterentry(0) -- will become a counter
+                    started = true
+                    if metadata then
+                        ctx_registerentry(processor,internal,seeparent,function() h_title(e[i],metadata) end)
+                    else
+                        -- can this happen?
+                        ctx_registerentry(processor,internal,seeindex,e[i])
                     end
                 end
             end
@@ -1051,7 +1278,8 @@ function registers.flush(data,options,prefixspec,pagespec)
                     local seetext   = seeword.text or ""
                     local processor = seeword.processor or (entry.processors and entry.processors[1]) or ""
                     local seeindex  = entry.references.seeindex or ""
-                    ctx_registerseeword(i,n,processor,0,seeindex,seetext)
+                 -- ctx_registerseeword(i,nt,processor,0,seeindex,seetext)
+                    ctx_registerseeword(i,nt,processor,0,seeindex,function() h_title(seetext,metadata) end)
                 end
                 ctx_stopregisterseewords()
             end
@@ -1078,12 +1306,42 @@ function registers.flush(data,options,prefixspec,pagespec)
  -- collectgarbage("collect")
 end
 
-local function processregister(class,...)
+function registers.process(class,...)
     if analyzeregister(class,...) > 0 then
         local data = collected[class]
         registers.flush(data,...)
     end
 end
 
-registers.process        = processregister
-commands.processregister = processregister
+implement {
+    name      = "processregister",
+    actions   = registers.process,
+    arguments = {
+        "string",
+        {
+            { "language" },
+            { "method" },
+            { "numberorder" },
+            { "compress" },
+            { "criterium" },
+            { "pagenumber", "boolean" },
+        },
+        {
+            { "separatorset" },
+            { "conversionset" },
+            { "starter" },
+            { "stopper" },
+            { "set" },
+            { "segments" },
+            { "connector" },
+        },
+        {
+            { "prefix" },
+            { "separatorset" },
+            { "conversionset" },
+            { "starter" },
+            { "stopper" },
+            { "segments" },
+        }
+    }
+}

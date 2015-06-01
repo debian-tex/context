@@ -1,17 +1,18 @@
 name context.doc
 category Package
-revision 34221
+revision 37464
 shortdesc doc files of context
-docfiles size=404
- texmf-dist/doc/context/document/general/manuals/mreadme.pdf
- texmf-dist/doc/context/document/general/manuals/tiptrick.pdf
- texmf-dist/doc/context/manuals/allkind/mcommon.tex
- texmf-dist/doc/context/manuals/allkind/mkiv-publications-graph.bib
- texmf-dist/doc/context/manuals/allkind/mkiv-publications.bib
- texmf-dist/doc/context/manuals/allkind/mkiv-publications.pdf
- texmf-dist/doc/context/manuals/allkind/mkiv-publications.tex
- texmf-dist/doc/context/manuals/allkind/mreadme.tex
- texmf-dist/doc/context/manuals/allkind/publications-en.xml
+docfiles size=610
+ texmf-dist/doc/context/documents/general/manuals/epub-mkiv-demo.epub
+ texmf-dist/doc/context/documents/general/manuals/epub-mkiv-demo.pdf
+ texmf-dist/doc/context/documents/general/manuals/epub-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/mreadme.pdf
+ texmf-dist/doc/context/documents/general/manuals/swiglib-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/tiptrick.pdf
+ texmf-dist/doc/context/documents/general/manuals/tools-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/units-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/workflows-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/xtables-mkiv.pdf
  texmf-dist/doc/context/scripts/mkii/ctxtools.html
  texmf-dist/doc/context/scripts/mkii/ctxtools.man
  texmf-dist/doc/context/scripts/mkii/ctxtools.xml
@@ -59,9 +60,6 @@ docfiles size=404
  texmf-dist/doc/context/scripts/mkiv/mtx-base.html
  texmf-dist/doc/context/scripts/mkiv/mtx-base.man
  texmf-dist/doc/context/scripts/mkiv/mtx-base.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.html
- texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.man
- texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-cache.html
  texmf-dist/doc/context/scripts/mkiv/mtx-cache.man
  texmf-dist/doc/context/scripts/mkiv/mtx-cache.xml
@@ -152,6 +150,27 @@ docfiles size=404
  texmf-dist/doc/context/scripts/mkiv/mtxrun.html
  texmf-dist/doc/context/scripts/mkiv/mtxrun.man
  texmf-dist/doc/context/scripts/mkiv/mtxrun.xml
+ texmf-dist/doc/context/sources/general/manuals/epub/epub-mkiv-demo.tex
+ texmf-dist/doc/context/sources/general/manuals/epub/epub-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/mcommon.tex
+ texmf-dist/doc/context/sources/general/manuals/readme/mreadme.tex
+ texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/tiptrick/tiptrick.tex
+ texmf-dist/doc/context/sources/general/manuals/tiptrick/tiptrick.xml
+ texmf-dist/doc/context/sources/general/manuals/tools/tools-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/units/units-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-graphics.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-injectors.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-resources.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-setups.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-style.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-suspects.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-xml.tex
+ texmf-dist/doc/context/sources/general/manuals/xtables/xtables-mkiv.tex
  texmf-dist/doc/man/man1/context.1
  texmf-dist/doc/man/man1/context.man1.pdf
  texmf-dist/doc/man/man1/luatools.1
@@ -160,8 +179,6 @@ docfiles size=404
  texmf-dist/doc/man/man1/mtx-babel.man1.pdf
  texmf-dist/doc/man/man1/mtx-base.1
  texmf-dist/doc/man/man1/mtx-base.man1.pdf
- texmf-dist/doc/man/man1/mtx-bibtex.1
- texmf-dist/doc/man/man1/mtx-bibtex.man1.pdf
  texmf-dist/doc/man/man1/mtx-cache.1
  texmf-dist/doc/man/man1/mtx-cache.man1.pdf
  texmf-dist/doc/man/man1/mtx-chars.1

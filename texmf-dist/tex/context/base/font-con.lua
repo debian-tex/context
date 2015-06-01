@@ -45,6 +45,8 @@ constructors.cache           = containers.define("fonts", "constructors", constr
 
 constructors.privateoffset   = 0xF0000 -- 0x10FFFF
 
+constructors.cacheintex      = true -- so we see the original table in fonts.font
+
 -- Some experimental helpers (handy for tracing):
 --
 -- todo: extra:
@@ -394,7 +396,8 @@ function constructors.scale(tfmdata,specification)
     targetparameters.forcedsize  = forcedsize  -- context specific
     targetparameters.extrafactor = extrafactor -- context specific
     --
-    local tounicode     = resources.tounicode
+    local tounicode     = fonts.mappings.tounicode
+    --
     local defaultwidth  = resources.defaultwidth  or 0
     local defaultheight = resources.defaultheight or 0
     local defaultdepth  = resources.defaultdepth or 0
@@ -436,6 +439,7 @@ function constructors.scale(tfmdata,specification)
     target.tounicode     = 1
     target.cidinfo       = properties.cidinfo
     target.format        = properties.format
+    target.cache         = constructors.cacheintex and "yes" or "renew"
     --
     local fontname = properties.fontname or tfmdata.fontname -- for the moment we fall back on
     local fullname = properties.fullname or tfmdata.fullname -- names in the tfmdata although
@@ -452,6 +456,7 @@ function constructors.scale(tfmdata,specification)
     target.filename = filename
     target.psname   = psname
     target.name     = name
+    --
     --
     properties.fontname = fontname
     properties.fullname = fullname
@@ -500,7 +505,9 @@ function constructors.scale(tfmdata,specification)
     local autoitalicamount = properties.autoitalicamount
     local stackmath        = not properties.nostackmath
     local nonames          = properties.noglyphnames
-    local nodemode         = properties.mode == "node"
+    local haskerns         = properties.haskerns     or properties.mode == "base" -- we can have afm in node mode
+    local hasligatures     = properties.hasligatures or properties.mode == "base" -- we can have afm in node mode
+    local realdimensions   = properties.realdimensions
     --
     if changed and not next(changed) then
         changed = false
@@ -594,43 +601,45 @@ function constructors.scale(tfmdata,specification)
     -- we can have a dumb mode (basemode without math etc) that skips most
     --
     for unicode, character in next, characters do
-        local chr, description, index, touni
+        local chr, description, index
         if changed then
-            -- basemode hack (we try to catch missing tounicodes, e.g. needed for ssty in math cambria)
             local c = changed[unicode]
             if c then
-                local ligatures = character.ligatures -- the original ligatures (as we cannot rely on remapping)
                 description = descriptions[c] or descriptions[unicode] or character
                 character = characters[c] or character
                 index = description.index or c
-                if tounicode then
-                    touni = tounicode[index] -- nb: index!
-                    if not touni then -- goodie
-                        local d = descriptions[unicode] or characters[unicode]
-                        local i = d.index or unicode
-                        touni = tounicode[i] -- nb: index!
-                    end
-                end
-                if ligatures and not character.ligatures then
-                    character.ligatures = ligatures -- the original targets (for now at least.. see libertine smallcaps)
-                end
             else
                 description = descriptions[unicode] or character
                 index = description.index or unicode
-                if tounicode then
-                    touni = tounicode[index] -- nb: index!
-                end
             end
         else
             description = descriptions[unicode] or character
             index = description.index or unicode
-            if tounicode then
-                touni = tounicode[index] -- nb: index!
-            end
         end
         local width  = description.width
         local height = description.height
         local depth  = description.depth
+        if realdimensions then
+            -- this is mostly for checking issues
+            if not height or height == 0 then
+                local bb = description.boundingbox
+                local ht =  bb[4]
+                if ht ~= 0 then
+                    height = ht
+                end
+                if not depth or depth == 0 then
+                    local dp = -bb[2]
+                    if dp ~= 0 then
+                        depth = dp
+                    end
+                end
+            elseif not depth or depth == 0 then
+                local dp = -description.boundingbox[2]
+                if dp ~= 0 then
+                    depth = dp
+                end
+            end
+        end
         if width  then width  = hdelta*width  else width  = scaledwidth  end
         if height then height = vdelta*height else height = scaledheight end
     --  if depth  then depth  = vdelta*depth  else depth  = scaleddepth  end
@@ -669,8 +678,10 @@ function constructors.scale(tfmdata,specification)
                 }
             end
         end
-        if touni then
-            chr.tounicode = touni
+        local isunicode = description.unicode
+        if isunicode then
+            chr.unicode   = isunicode
+            chr.tounicode = tounicode(isunicode)
         end
         if hasquality then
             -- we could move these calculations elsewhere (saves calculations)
@@ -767,7 +778,7 @@ function constructors.scale(tfmdata,specification)
                 end
             end
         end
-        if not nodemode then
+        if haskerns then
             local vk = character.kerns
             if vk then
                 local s = sharedkerns[vk]
@@ -778,6 +789,8 @@ function constructors.scale(tfmdata,specification)
                 end
                 chr.kerns = s
             end
+        end
+        if hasligatures then
             local vl = character.ligatures
             if vl then
                 if true then
@@ -964,6 +977,8 @@ function constructors.finalize(tfmdata)
     tfmdata.extend         = nil
     tfmdata.slant          = nil
     tfmdata.units_per_em   = nil
+    --
+    tfmdata.cache          = nil
     --
     properties.finalized   = true
     --
@@ -1362,3 +1377,50 @@ function constructors.applymanipulators(what,tfmdata,features,trace,report)
         end
     end
 end
+
+function constructors.addcoreunicodes(unicodes) -- maybe make this a metatable if used at all
+    if not unicodes then
+        unicodes = { }
+    end
+    unicodes.space  = 0x0020
+    unicodes.hyphen = 0x002D
+    unicodes.zwj    = 0x200D
+    unicodes.zwnj   = 0x200C
+    return unicodes
+end
+
+-- -- keep for a while: old tounicode code
+--
+-- if changed then
+--     -- basemode hack (we try to catch missing tounicodes, e.g. needed for ssty in math cambria)
+--     local c = changed[unicode]
+--     if c then
+--      -- local ligatures = character.ligatures -- the original ligatures (as we cannot rely on remapping)
+--         description = descriptions[c] or descriptions[unicode] or character
+--         character = characters[c] or character
+--         index = description.index or c
+--         if tounicode then
+--             touni = tounicode[index] -- nb: index!
+--             if not touni then -- goodie
+--                 local d = descriptions[unicode] or characters[unicode]
+--                 local i = d.index or unicode
+--                 touni = tounicode[i] -- nb: index!
+--             end
+--         end
+--      -- if ligatures and not character.ligatures then
+--      --     character.ligatures = ligatures -- the original targets (for now at least.. see libertine smallcaps)
+--      -- end
+--     else
+--         description = descriptions[unicode] or character
+--         index = description.index or unicode
+--         if tounicode then
+--             touni = tounicode[index] -- nb: index!
+--         end
+--     end
+-- else
+--     description = descriptions[unicode] or character
+--     index = description.index or unicode
+--     if tounicode then
+--         touni = tounicode[index] -- nb: index!
+--     end
+-- end

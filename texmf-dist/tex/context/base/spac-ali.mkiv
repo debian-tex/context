@@ -38,8 +38,8 @@
 \to \everyforgetall
 
 \unexpanded\def\resetrealignsignal{\attribute\realignattribute\attributeunsetvalue}
-\unexpanded\def\signalinnerrealign{\ctxcommand{setrealign(2)}}
-\unexpanded\def\signalouterrealign{\ctxcommand{setrealign(1)}}
+\unexpanded\def\signalinnerrealign{\clf_setrealign\plustwo}
+\unexpanded\def\signalouterrealign{\clf_setrealign\plusone}
 
 \installcorenamespace{aligncommand}
 \installcorenamespace{alignhorizontal}
@@ -206,6 +206,9 @@
 
 \unexpanded\def\spac_align_set_stretch
   {\emergencystretch\bodyfontsize}
+
+\unexpanded\def\spac_align_set_extreme_stretch
+  {\emergencystretch10\bodyfontsize}
 
 % Vertical
 
@@ -562,6 +565,12 @@
      \spac_align_use_indeed
    \fi}
 
+\unexpanded\def\dousealignparameter#1% faster local variant
+  {\edef\m_spac_align_asked{#1}%
+   \ifx\m_spac_align_asked\empty\else
+     \spac_align_use_indeed
+   \fi}
+
 \def\spac_align_use_indeed
   {\expandafter\let\expandafter\raggedcommand\csname\??alignmentnormalcache\m_spac_align_asked\endcsname
    \ifx\raggedcommand\relax
@@ -675,6 +684,7 @@
 \setvalue{\??aligncommand\v!tolerant       }{\t_spac_align_collected\expandafter{\the\t_spac_align_collected\spac_align_set_tolerant}}
 \setvalue{\??aligncommand\v!verytolerant   }{\t_spac_align_collected\expandafter{\the\t_spac_align_collected\spac_align_set_very_tolerant}}
 \setvalue{\??aligncommand\v!stretch        }{\t_spac_align_collected\expandafter{\the\t_spac_align_collected\spac_align_set_stretch}}
+\setvalue{\??aligncommand\v!extremestretch }{\t_spac_align_collected\expandafter{\the\t_spac_align_collected\spac_align_set_extreme_stretch}}
 
 %D For Wolfgang:
 
@@ -715,7 +725,7 @@
      \forgetall
      \let\\=\endgraf
      \ifdoublesided\signalinnerrealign\fi
-     \doifrightpageelse\spac_align_set_horizontal_right\spac_align_set_horizontal_left
+     \doifelserightpage\spac_align_set_horizontal_right\spac_align_set_horizontal_left
      \let\next}
 
 \unexpanded\def\obox#1#2#3%
@@ -723,7 +733,7 @@
      \forgetall
      \let\\=\endgraf
      \ifdoublesided\signalouterrealign\fi
-     \doifrightpageelse\c_spac_align_state_horizontal_left\spac_align_set_horizontal_right
+     \doifelserightpage\c_spac_align_state_horizontal_left\spac_align_set_horizontal_right
      \let\next}
 
 \let\raggedbox\relax
@@ -961,7 +971,7 @@
      \hbox}
 
 \def\doxcheckline % used for floats so multipass anyway
-  {\signalrightpage\doifrightpageelse\donetrue\donefalse}
+  {\signalrightpage\doifelserightpage\donetrue\donefalse}
 
 \setvalue{\??alignline\v!inner      }{\doxalignline\doxcheckline++\zeropoint       \relax\hss  }
 \setvalue{\??alignline\v!outer      }{\doxalignline\doxcheckline++\zeropoint       \hss  \relax}
@@ -1060,12 +1070,26 @@
 \letvalue{\??alignsimplereverse\v!middle    }\spac_align_simple_middle
 
 \unexpanded\def\simplealignedbox#1#2%
-  {\hbox to #1\csname\??alignsimple\ifcsname\??alignsimple#2\endcsname#2\else\v!right\fi\endcsname}
+  {\hbox \ifdim#1>\zeropoint to #1
+     \csname\??alignsimple\ifcsname\??alignsimple#2\endcsname#2\else\v!right\fi\expandafter\endcsname
+   \fi}
+
+\unexpanded\def\simplealignedboxplus#1#2#3%
+  {\hbox #3 \ifdim#1>\zeropoint to #1
+     \csname\??alignsimple\ifcsname\??alignsimple#2\endcsname#2\else\v!right\fi\expandafter\endcsname
+   \fi}
 
 \newconditional\alignsimplelefttoright \settrue\alignsimplelefttoright
 
 \unexpanded\def\simplereversealignedbox#1#2%
-  {\hbox to #1\csname\??alignsimplereverse\ifcsname\??alignsimplereverse#2\endcsname#2\else\v!left\fi\endcsname}
+  {\hbox \ifdim#1>\zeropoint to #1
+     \csname\??alignsimplereverse\ifcsname\??alignsimplereverse#2\endcsname#2\else\v!left\fi\expandafter\endcsname
+   \fi}
+
+\unexpanded\def\simplereversealignedboxplus#1#2#3%
+  {\hbox #3 \ifdim#1>\zeropoint to #1
+     \csname\??alignsimplereverse\ifcsname\??alignsimplereverse#2\endcsname#2\else\v!left\fi\expandafter\endcsname
+   \fi}
 
 % \installnamespace{alignsets}
 %

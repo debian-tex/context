@@ -29,6 +29,8 @@ local packers       = utilities.packers
 local allocate      = utilities.storage.allocate
 local mark          = utilities.storage.mark
 
+local implement     = interfaces.implement
+
 local texgetcount   = tex.getcount
 
 local report_passes = logs.reporter("job","passes")
@@ -36,7 +38,7 @@ local report_passes = logs.reporter("job","passes")
 job                 = job or { }
 local job           = job
 
-job.version         = 1.25
+job.version         = 1.30
 job.packversion     = 1.02
 
 -- some day we will implement loading of other jobs and then we need
@@ -62,21 +64,35 @@ end
 
 job.comment("version",job.version)
 
-local enabled = true
+local enabled     = true
+local initialized = false
 
 directives.register("job.save",function(v) enabled = v end)
+----------.register("job.keep",function(v) kept    = v end)
 
 function job.disablesave() -- can be command
     enabled = false
 end
 
 function job.initialize(loadname,savename)
-    job.load(loadname) -- has to come after  structure is defined !
-    luatex.registerstopactions(function()
-        if enabled and not status.lasterrorstring or status.lasterrorstring == "" then
-            job.save(savename)
+    if not initialized then
+        if not loadname or loadname == "" then
+            loadname = tex.jobname .. ".tuc"
         end
-    end)
+        if not savename or savename == "" then
+            savename = tex.jobname .. ".tua"
+        end
+        job.load(loadname) -- has to come after  structure is defined !
+        luatex.registerstopactions(function()
+            if enabled and not status.lasterrorstring or status.lasterrorstring == "" then
+             -- if kept then
+             --     job.keep(loadname) -- could move to mtx-context instead
+             -- end
+                job.save(savename)
+            end
+        end)
+        initialized = true
+    end
 end
 
 function job.register(collected, tobesaved, initializer, finalizer, serializer)
@@ -283,6 +299,28 @@ function job.loadother(filename)
     statistics.stoptiming(_load_)
 end
 
+-- function job.keep(filename)
+--     local suffix = file.suffix(filename)
+--     local base   = file.removesuffix(filename)
+--     if suffix == "" then
+--         suffix = "tuc"
+--     end
+--     for i=1,10 do
+--         local tmpname = format("%s-%s-%02d.tmp",base,suffix,i)
+--         if lfs.isfile(tmpname) then
+--             os.remove(tmpname)
+--             report_passes("removing %a",tmpname)
+--         end
+--     end
+--     if lfs.isfile(filename) then
+--         local tmpname = format("%s-%s-%02d.tmp",base,suffix,environment.currentrun or 1)
+--         report_passes("copying %a into %a",filename,tmpname)
+--         file.copy(filename,tmpname)
+--     else
+--         report_passes("no file %a, nothing kept",filename)
+--     end
+-- end
+
 -- eventually this will end up in strc-ini
 
 statistics.register("startup time", function()
@@ -352,6 +390,24 @@ function statistics.formatruntime(runtime)
     end
 end
 
+implement {
+    name      = "savevariable",
+    actions   = job.variables.save,
+    arguments = { "string", "string" }
+}
 
-commands.savevariable  = job.variables.save
-commands.setjobcomment = job.comment
+implement {
+    name      = "setjobcomment",
+    actions   = job.comment,
+    arguments = { { "*" } }
+}
+
+implement {
+    name      = "initializejob",
+    actions   = job.initialize
+}
+
+implement {
+    name      = "disablejobsave",
+    actions   = job.disablesave
+}

@@ -14,6 +14,12 @@ if not modules then modules = { } end modules ['pack-rul'] = {
 -- challenge: adapt glue_set
 -- setfield(h,"glue_set", getfield(h,"glue_set") * getfield(h,"width")/maxwidth -- interesting ... doesn't matter much
 
+-- \framed[align={lohi,middle}]{$x$}
+-- \framed[align={lohi,middle}]{$ $}
+-- \framed[align={lohi,middle}]{\hbox{ }}
+-- \framed[align={lohi,middle}]{\hbox{}}
+-- \framed[align={lohi,middle}]{$\hskip2pt$}
+
 local type = type
 
 local hlist_code      = nodes.nodecodes.hlist
@@ -23,6 +29,8 @@ local line_code       = nodes.listcodes.line
 
 local texsetdimen     = tex.setdimen
 local texsetcount     = tex.setcount
+
+local implement       = interfaces.implement
 
 local nuts            = nodes.nuts
 
@@ -39,7 +47,7 @@ local hpack           = nuts.hpack
 local traverse_id     = nuts.traverse_id
 local node_dimensions = nuts.dimensions
 
-function commands.doreshapeframedbox(n)
+local function doreshapeframedbox(n)
     local box            = getbox(n)
     local noflines       = 0
     local firstheight    = nil
@@ -91,7 +99,7 @@ function commands.doreshapeframedbox(n)
              -- vdone = true
             end
             if not firstheight then
-                -- done
+                -- done)
             elseif maxwidth ~= 0 then
                 if hdone then
                     for h in traverse_id(hlist_code,list) do
@@ -117,6 +125,8 @@ function commands.doreshapeframedbox(n)
              -- end
                 setfield(box,"width",maxwidth)
                 averagewidth = noflines > 0 and totalwidth/noflines or 0
+            else -- e.g. empty math {$ $} or \hbox{} or ...
+setfield(box,"width",0)
             end
         end
     end
@@ -128,7 +138,7 @@ function commands.doreshapeframedbox(n)
     texsetdimen("global","framedaveragewidth",averagewidth)
 end
 
-function commands.doanalyzeframedbox(n)
+local function doanalyzeframedbox(n)
     local box         = getbox(n)
     local noflines    = 0
     local firstheight = nil
@@ -156,6 +166,8 @@ function commands.doanalyzeframedbox(n)
     texsetdimen("global","framedlastdepth",lastdepth or 0)
 end
 
+implement { name = "doreshapeframedbox", actions = doreshapeframedbox, arguments = "integer" }
+implement { name = "doanalyzeframedbox", actions = doanalyzeframedbox, arguments = "integer" }
 
 function nodes.maxboxwidth(box)
     local boxwidth = getfield(box,"width")

@@ -190,7 +190,7 @@ end
 
 local function enable()
     if not usedfont then
-        -- we use a narrow monospaced font
+        -- we use a narrow monospaced font -- infofont ?
         visualizers.setfont(fonts.definers.define { name = "lmmonoltcond10regular", size = tex.sp("4pt") })
     end
     for mode, value in next, modes do
@@ -280,13 +280,6 @@ function visualizers.setlayer(n)
     texsetattribute(a_layer,layers[n] or unsetvalue)
 end
 
-commands.setvisual = visualizers.setvisual
-commands.setlayer  = visualizers.setlayer
-
-function commands.visual(n)
-    context(setvisual(n))
-end
-
 local function set(mode,v)
     texsetattribute(a_visual,setvisual(mode,texgetattribute(a_visual),v))
 end
@@ -295,10 +288,13 @@ for mode, value in next, modes do
     trackers.register(formatters["visualizers.%s"](mode), function(v) set(mode,v) end)
 end
 
-trackers.register("visualizers.reset", function(v) set("reset", v) end)
-trackers.register("visualizers.all",   function(v) set("all",   v) end)
-trackers.register("visualizers.makeup",function(v) set("makeup",v) end)
-trackers.register("visualizers.boxes", function(v) set("boxes", v) end)
+local fraction = 10
+
+trackers  .register("visualizers.reset",    function(v) set("reset", v) end)
+trackers  .register("visualizers.all",      function(v) set("all",   v) end)
+trackers  .register("visualizers.makeup",   function(v) set("makeup",v) end)
+trackers  .register("visualizers.boxes",    function(v) set("boxes", v) end)
+directives.register("visualizers.fraction", function(v) fraction = tonumber(v) or fraction end)
 
 local c_positive   = "trace:b"
 local c_negative   = "trace:r"
@@ -308,6 +304,7 @@ local c_space      = "trace:y"
 local c_skip_a     = "trace:c"
 local c_skip_b     = "trace:m"
 local c_glyph      = "trace:o"
+local c_ligature   = "trace:s"
 local c_white      = "trace:w"
 local c_math       = "trace:r"
 
@@ -319,10 +316,11 @@ local c_space_d    = "trace:dy"
 local c_skip_a_d   = "trace:dc"
 local c_skip_b_d   = "trace:dm"
 local c_glyph_d    = "trace:do"
+local c_ligature_d = "trace:ds"
 local c_white_d    = "trace:dw"
 local c_math_d     = "trace:dr"
 
-local function sometext(str,layer,color,textcolor) -- we can just paste verbatim together .. no typesteting needed
+local function sometext(str,layer,color,textcolor,lap) -- we can just paste verbatim together .. no typesteting needed
     local text = fast_hpack_string(str,usedfont)
     local size = getfield(text,"width")
     local rule = new_rule(size,2*exheight,exheight/2)
@@ -336,10 +334,13 @@ local function sometext(str,layer,color,textcolor) -- we can just paste verbatim
     local info = linked_nodes(rule,kern,text)
     setlisttransparency(info,c_zero)
     info = fast_hpack(info)
+    local width = getfield(info,"width")
+    if lap then
+        info = fast_hpack(linked_nodes(new_kern(-width),info))
+    end
     if layer then
         setattr(info,a_layer,layer)
     end
-    local width = getfield(info,"width")
     setfield(info,"width",0)
     setfield(info,"height",0)
     setfield(info,"depth",0)
@@ -355,7 +356,7 @@ local function fontkern(head,current)
         -- print("hit fontkern")
     else
         local text = fast_hpack_string(formatters[" %0.3f"](kern*pt_factor),usedfont)
-        local rule = new_rule(emwidth/10,6*exheight,2*exheight)
+        local rule = new_rule(emwidth/fraction,6*exheight,2*exheight)
         local list = getlist(text)
         if kern > 0 then
             setlistcolor(list,c_positive_d)
@@ -470,11 +471,13 @@ local function ruledbox(head,current,vertical,layer,what,simple,previous)
     if wd ~= 0 then
         local ht = getfield(current,"height")
         local dp = getfield(current,"depth")
+        local shift = getfield(current,"shift")
         local next = getnext(current)
-        local prev = previous -- getprev(current) ... prev can be wrong in math mode < 0.78.3
+        local prev = previous
+     -- local prev = getprev(current) -- prev can be wrong in math mode < 0.78.3
         setfield(current,"next",nil)
         setfield(current,"prev",nil)
-        local linewidth = emwidth/10
+        local linewidth = emwidth/fraction
         local baseline, baseskip
         if dp ~= 0 and ht ~= 0 then
             if wd > 20*linewidth then
@@ -532,7 +535,22 @@ local function ruledbox(head,current,vertical,layer,what,simple,previous)
             new_rule(wd-2*linewidth,ht,-ht+linewidth)
         )
         if baseskip then
-            info = linked_nodes(info,baseskip,baseline)
+            info = linked_nodes(info,baseskip,baseline) -- could be in previous linked
+        end
+        local shft
+        if shift == 0 then
+            shift = nil
+        else
+            local sh = shift > 0 and   shift or 0
+            local sd = shift < 0 and - shift or 0
+            shft = fast_hpack(new_rule(2*emwidth/fraction,sh,sd))
+            setfield(shft,"width",0)
+            if sh > 0 then
+                setfield(shft,"height",0)
+            end
+            if sd > 0 then
+                setfield(shft,"depth",0)
+            end
         end
         setlisttransparency(info,c_text)
         info = fast_hpack(info)
@@ -540,10 +558,17 @@ local function ruledbox(head,current,vertical,layer,what,simple,previous)
         setfield(info,"height",0)
         setfield(info,"depth",0)
         setattr(info,a_layer,layer)
-        local info = linked_nodes(current,new_kern(-wd),info)
+        local info = linked_nodes(shft,current,new_kern(-wd),info)
         info = fast_hpack(info,wd)
         if vertical then
             info = vpack_nodes(info)
+        end
+        if shift then
+            setfield(current,"shift",0)
+            setfield(info,"width",wd)
+            setfield(info,"height",ht)
+            setfield(info,"depth",dp)
+            setfield(info,"shift",shift)
         end
         if next then
             setfield(info,"next",next)
@@ -578,9 +603,10 @@ local function ruledglyph(head,current,previous)
         local prev = previous
         setfield(current,"next",nil)
         setfield(current,"prev",nil)
-        local linewidth = emwidth/20
+        local linewidth = emwidth/(2*fraction)
         local baseline
-        if dp ~= 0 and ht ~= 0 then
+     -- if dp ~= 0 and ht ~= 0 then
+        if (dp >= 0 and ht >= 0) or (dp <= 0 and ht <= 0) then
             baseline = new_rule(wd-2*linewidth,linewidth,0)
         end
         local doublelinewidth = 2*linewidth
@@ -594,8 +620,14 @@ local function ruledglyph(head,current,previous)
             new_kern(-wd+doublelinewidth),
             baseline
         )
+local char = chardata[getfield(current,"font")][getfield(current,"char")]
+if char and char.tounicode and #char.tounicode > 4 then -- hack test
+        setlistcolor(info,c_ligature)
+        setlisttransparency(info,c_ligature_d)
+else
         setlistcolor(info,c_glyph)
         setlisttransparency(info,c_glyph_d)
+end
         info = fast_hpack(info)
         setfield(info,"width",0)
         setfield(info,"height",0)
@@ -740,7 +772,7 @@ local function ruledpenalty(head,current,vertical)
     return head, getnext(current)
 end
 
-local function visualize(head,vertical)
+local function visualize(head,vertical,forced)
     local trace_hbox     = false
     local trace_vbox     = false
     local trace_vtop     = false
@@ -760,7 +792,7 @@ local function visualize(head,vertical)
     local prev_trace_fontkern = nil
     while current do
         local id = getid(current)
-        local a = getattr(current,a_visual) or unsetvalue
+        local a = forced or getattr(current,a_visual) or unsetvalue
         if a ~= attr then
             prev_trace_fontkern = trace_fontkern
             if a == unsetvalue then
@@ -801,19 +833,17 @@ local function visualize(head,vertical)
                 head, current = ruledglyph(head,current,previous)
             end
         elseif id == disc_code then
-            if trace_glyph then
-                local pre = getfield(current,"pre")
-                if pre then
-                    setfield(current,"pre",ruledglyph(pre,pre))
-                end
-                local post = getfield(current,"post")
-                if post then
-                    setfield(current,"post",ruledglyph(post,post))
-                end
-                local replace = getfield(current,"replace")
-                if replace then
-                    setfield(current,"replace",ruledglyph(replace,replace))
-                end
+            local pre = getfield(current,"pre")
+            if pre then
+                setfield(current,"pre",visualize(pre,false,a))
+            end
+            local post = getfield(current,"post")
+            if post then
+                setfield(current,"post",visualize(post,false,a))
+            end
+            local replace = getfield(current,"replace")
+            if replace then
+                setfield(current,"replace",visualize(replace,false,a))
             end
         elseif id == kern_code then
             local subtype = getsubtype(current)
@@ -822,7 +852,7 @@ local function visualize(head,vertical)
                 if trace_fontkern or prev_trace_fontkern then
                     head, current = fontkern(head,current)
                 end
-            elseif subtype == user_kern_code then
+            else -- if subtype == user_kern_code then
                 if trace_kern then
                     head, current = ruledkern(head,current,vertical)
                 end
@@ -838,10 +868,6 @@ local function visualize(head,vertical)
             if trace_penalty then
                 head, current = ruledpenalty(head,current,vertical)
             end
-        elseif id == disc_code then
-            setfield(current,"pre",visualize(getfield(current,"pre")))
-            setfield(current,"post",isualize(getfield(current,"post")))
-            setfield(current,"replace",visualize(getfield(current,"replace")))
         elseif id == hlist_code then
             local content = getlist(current)
             if content then
@@ -967,10 +993,6 @@ function visualizers.markfonts(list)
     markfonts(type(n) == "number" and getlist(getbox(n)) or n)
 end
 
-function commands.markfonts(n)
-    visualizers.markfonts(n)
-end
-
 luatex.registerstopactions(cleanup)
 
 statistics.register("visualization time",function()
@@ -979,3 +1001,14 @@ statistics.register("visualization time",function()
         return format("%s seconds",statistics.elapsedtime(visualizers))
     end
 end)
+
+-- interface
+
+local implement = interfaces.implement
+
+implement { name = "setvisual",       arguments = "string",  actions = visualizers.setvisual }
+implement { name = "getvisual",       arguments = "string",  actions = { setvisual, context } }
+implement { name = "setvisuallayer",  arguments = "string",  actions = visualizers.setlayer }
+implement { name = "markvisualfonts", arguments = "integer", actions = visualizers.markfonts }
+implement { name = "setvisualfont",   arguments = "integer", actions = visualizers.setfont }
+

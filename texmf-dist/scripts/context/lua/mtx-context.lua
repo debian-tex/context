@@ -28,10 +28,13 @@ local fileaddsuffix = file.addsuffix
 local filenewsuffix = file.replacesuffix
 local removesuffix  = file.removesuffix
 local validfile     = lfs.isfile
+local removefile    = os.remove
+local renamefile    = os.rename
+local formatters    = string.formatters
 
 local application = logs.application {
     name     = "mtx-context",
-    banner   = "ConTeXt Process Management 0.60",
+    banner   = "ConTeXt Process Management 0.61",
  -- helpinfo = helpinfo, -- table with { category_a = text_1, category_b = text_2 } or helpstring or xml_blob
     helpinfo = "mtx-context.xml",
 }
@@ -257,7 +260,7 @@ end
 -- multipass control
 
 local multipass_suffixes   = { ".tuc" }
-local multipass_nofruns    = 8 -- or 7 to test oscillation
+local multipass_nofruns    = 9 -- better for tracing oscillation
 local multipass_forcedruns = false
 
 local function multipass_hashfiles(jobname)
@@ -279,11 +282,47 @@ local function multipass_changed(oldhash, newhash)
     return false
 end
 
-local function multipass_copyluafile(jobname)
+local f_tempfile = formatters["%s-%s-%02d.tmp"]
+
+local function backup(run,kind,filename)
+    if run == 1 then
+        for i=1,10 do
+            local tmpname = f_tempfile(jobname,kind,i)
+            if validfile(tmpname) then
+                removefile(tmpname)
+                report("removing %a",tmpname)
+            end
+        end
+    end
+    if validfile(filename) then
+        local tmpname = f_tempfile(jobname,kind,run or 1)
+        report("copying %a into %a",filename,tmpname)
+        file.copy(filename,tmpname)
+    else
+        report("no file %a, nothing kept",filename)
+    end
+end
+
+local function multipass_copyluafile(jobname,run)
     local tuaname, tucname = jobname..".tua", jobname..".tuc"
     if validfile(tuaname) then
-        os.remove(tucname)
-        os.rename(tuaname,tucname)
+        if run then
+            backup(run,"tuc",tucname)
+            report("copying %a into %a",tuaname,tucname)
+            report()
+        end
+        removefile(tucname)
+        renamefile(tuaname,tucname)
+    end
+end
+
+local function multipass_copylogfile(jobname,run)
+    local logname = jobname..".log"
+    if validfile(logname) then
+        if run then
+            backup(run,"log",logname)
+            report()
+        end
     end
 end
 
@@ -348,8 +387,8 @@ local function result_push_purge(oldbase,newbase)
     for _, suffix in next, usedsuffixes.after do
         local oldname = fileaddsuffix(oldbase,suffix)
         local newname = fileaddsuffix(newbase,suffix)
-        os.remove(newname)
-        os.remove(oldname)
+        removefile(newname)
+        removefile(oldname)
     end
 end
 
@@ -358,10 +397,10 @@ local function result_push_keep(oldbase,newbase)
         local oldname = fileaddsuffix(oldbase,suffix)
         local newname = fileaddsuffix(newbase,suffix)
         local tmpname = "keep-"..oldname
-        os.remove(tmpname)
-        os.rename(oldname,tmpname)
-        os.remove(oldname)
-        os.rename(newname,oldname)
+        removefile(tmpname)
+        renamefile(oldname,tmpname)
+        removefile(oldname)
+        renamefile(newname,oldname)
     end
 end
 
@@ -369,8 +408,8 @@ local function result_save_error(oldbase,newbase)
     for _, suffix in next, usedsuffixes.keep do
         local oldname = fileaddsuffix(oldbase,suffix)
         local newname = fileaddsuffix(newbase,suffix)
-        os.remove(newname) -- to be sure
-        os.rename(oldname,newname)
+        removefile(newname) -- to be sure
+        renamefile(oldname,newname)
     end
 end
 
@@ -378,8 +417,8 @@ local function result_save_purge(oldbase,newbase)
     for _, suffix in next, usedsuffixes.after do
         local oldname = fileaddsuffix(oldbase,suffix)
         local newname = fileaddsuffix(newbase,suffix)
-        os.remove(newname) -- to be sure
-        os.rename(oldname,newname)
+        removefile(newname) -- to be sure
+        renamefile(oldname,newname)
     end
 end
 
@@ -388,9 +427,9 @@ local function result_save_keep(oldbase,newbase)
         local oldname = fileaddsuffix(oldbase,suffix)
         local newname = fileaddsuffix(newbase,suffix)
         local tmpname = "keep-"..oldname
-        os.remove(newname)
-        os.rename(oldname,newname)
-        os.rename(tmpname,oldname)
+        removefile(newname)
+        renamefile(oldname,newname)
+        renamefile(tmpname,oldname)
     end
 end
 
@@ -549,6 +588,19 @@ function scripts.context.run(ctxdata,filename)
     local a_jiton       = getargument("jiton")
     local a_jithash     = getargument("jithash")
     local a_texformat   = getargument("texformat")
+    local a_keeptuc     = getargument("keeptuc")
+    local a_keeplog     = getargument("keeplog")
+
+    -- the following flag is not officially supported because i cannot forsee
+    -- side effects (so no bug reports please) .. we provide --sandbox that
+    -- does similar things but tries to ensure that context works as expected
+
+    local a_safer       = getargument("safer")
+
+    if a_safer then
+        report("warning: using the luatex safer options, processing is not guaranteed")
+    end
+
     --
     a_batchmode = (a_batchmode and "batchmode") or (a_nonstopmode and "nonstopmode") or (a_scrollmode and "scrollmode") or nil
     a_synctex   = check_synctex(a_synctex)
@@ -592,6 +644,22 @@ function scripts.context.run(ctxdata,filename)
                 scripts.context.make(formatname,a_engine)
                 formatfile, scriptfile = resolvers.locateformat(formatname)
             end
+            --
+            local function combine(key)
+                local flag = validstring(environment[key])
+                local plus = analysis[key]
+                if flag and plus then
+                    return plus .. "," .. flag -- flag wins
+                else
+                    return flag or plus -- flag wins
+                end
+            end
+            local a_trackers    = analysis.trackers
+            local a_experiments = analysis.experiments
+            local directives    = combine("directives")
+            local trackers      = combine("trackers")
+            local experiments   = combine("experiments")
+            --
             if formatfile and scriptfile then
                 local suffix     = validstring(getargument("suffix"))
                 local resultname = validstring(getargument("result"))
@@ -639,9 +707,9 @@ function scripts.context.run(ctxdata,filename)
                 local maxnofruns = once and 1 or multipass_nofruns
                 --
                 local c_flags = {
-                    directives  = validstring(environment.directives),   -- gets passed via mtxrun
-                    trackers    = validstring(environment.trackers),     -- gets passed via mtxrun
-                    experiments = validstring(environment.experiments),  -- gets passed via mtxrun
+                    directives  = directives,   -- gets passed via mtxrun
+                    trackers    = trackers,     -- gets passed via mtxrun
+                    experiments = experiments,  -- gets passed via mtxrun
                     --
                     result      = validstring(resultname),
                     input       = validstring(getargument("input") or filename), -- alternative input
@@ -662,6 +730,7 @@ function scripts.context.run(ctxdata,filename)
                     ["interaction"]           = a_batchmode,
                     ["synctex"]               = a_synctex,
                     ["no-parse-first-line"]   = true,
+                    ["safer"]                 = a_safer,
                  -- ["no-mktex"]              = true,
                  -- ["file-line-error-style"] = true,
                     ["fmt"]                   = formatfile,
@@ -670,10 +739,6 @@ function scripts.context.run(ctxdata,filename)
                     ["jiton"]                 = a_jiton,
                     ["jithash"]               = a_jithash,
                 }
-                --
-                if a_synctex then
-                    report("warning: synctex is enabled") -- can add upto 5% runtime
-                end
                 --
                 if not a_timing then
                     -- okay
@@ -691,6 +756,15 @@ function scripts.context.run(ctxdata,filename)
                     c_flags.directives = "system.profile"
                 end
                 --
+                if a_synctex then
+                    report("warning: synctex is enabled") -- can add upto 5% runtime
+                    if c_flags.directives then
+                        c_flags.directives = format("system.synctex=%s,%s",a_synctex,c_flags.directives)
+                    else
+                        c_flags.directives = format("system.synctex=%s",a_synctex)
+                    end
+                end
+                --
                 -- kindofrun: 1:first run, 2:successive run, 3:once, 4:last of maxruns
                 --
                 for currentrun=1,maxnofruns do
@@ -704,9 +778,10 @@ function scripts.context.run(ctxdata,filename)
                     --
                     local command = luatex_command(l_flags,c_flags,mainfile,a_engine)
                     --
-                    report("run %s: %s",i,command)
+                    report("run %s: %s",currentrun,command)
                     print("") -- cleaner, else continuation on same line
                     local returncode, errorstring = os.spawn(command)
+                    -- todo: remake format when no proper format is found
                     if not returncode then
                         report("fatal error: no return code, message: %s",errorstring or "?")
                         if resultname then
@@ -715,7 +790,8 @@ function scripts.context.run(ctxdata,filename)
                         os.exit(1)
                         break
                     elseif returncode == 0 then
-                        multipass_copyluafile(jobname)
+                        multipass_copyluafile(jobname,a_keeptuc and currentrun)
+                        multipass_copylogfile(jobname,a_keeplog and currentrun)
                         if not multipass_forcedruns then
                             newhash = multipass_hashfiles(jobname)
                             if multipass_changed(oldhash,newhash) then
@@ -787,6 +863,24 @@ function scripts.context.run(ctxdata,filename)
                     pdf_open(resultname or jobname,pdfview)
                 end
                 --
+                local epub = analysis.epub
+                if epub then
+                    if type(epub) == "string" then
+                        local t = settings_to_array(epub)
+                        for i=1,#t do
+                            t[i] = "--" .. gsub(t[i],"^%-*","")
+                        end
+                        epub = concat(t," ")
+                    else
+                        epub = "--make"
+                    end
+                    local command = "mtxrun --script epub " .. epub .. " " .. jobname
+                    report()
+                    report("making epub file: ",command)
+                    report()
+                    os.execute(command)
+                end
+                --
                 if a_timing then
                     report()
                     report("you can process (timing) statistics with:",jobname)
@@ -852,7 +946,7 @@ function scripts.context.pipe() -- still used?
             scripts.context.purge_job(filename)
         elseif getargument("purgeall") then
             scripts.context.purge_job(filename,true)
-            os.remove(filename)
+            removefile(filename)
         end
     else
         if formatname then
@@ -1046,11 +1140,11 @@ local special_runfiles = {
 
 local function purge_file(dfile,cfile)
     if cfile and validfile(cfile) then
-        if os.remove(dfile) then
+        if removefile(dfile) then
             return filebasename(dfile)
         end
     elseif dfile then
-        if os.remove(dfile) then
+        if removefile(dfile) then
             return filebasename(dfile)
         end
     end
@@ -1144,8 +1238,8 @@ local function touch(path,name,versionpattern,kind,kindpattern)
         end
         if newdata ~= "" and (oldversion ~= newversion or oldkind ~= newkind or newdata ~= olddata) then
             local backup = filenewsuffix(name,"tmp")
-            os.remove(backup)
-            os.rename(name,backup)
+            removefile(backup)
+            renamefile(name,backup)
             io.savedata(name,newdata)
             return name, oldversion, newversion, oldkind, newkind
         end
