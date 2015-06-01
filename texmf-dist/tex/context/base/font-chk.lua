@@ -17,6 +17,8 @@ local fastcopy           = table.fastcopy
 
 local report_fonts       = logs.reporter("fonts","checking")
 
+local allocate           = utilities.storage.allocate
+
 local fonts              = fonts
 
 fonts.checkers           = fonts.checkers or { }
@@ -43,6 +45,8 @@ local chardata           = characters.data
 local tasks              = nodes.tasks
 local enableaction       = tasks.enableaction
 local disableaction      = tasks.disableaction
+
+local implement          = interfaces.implement
 
 local glyph_code         = nodes.nodecodes.glyph
 
@@ -88,7 +92,7 @@ end
 
 fonts.loggers.onetimemessage = onetimemessage
 
-local mapping = { -- this is just an experiment to illustrate some principles elsewhere
+local mapping = allocate { -- this is just an experiment to illustrate some principles elsewhere
     lu = "placeholder uppercase red",
     ll = "placeholder lowercase red",
     lt = "placeholder uppercase red",
@@ -113,9 +117,15 @@ local mapping = { -- this is just an experiment to illustrate some principles el
     so = "placeholder lowercase yellow",
 }
 
-table.setmetatableindex(mapping,function(t,k) v = "placeholder unknown gray" t[k] = v return v end)
+table.setmetatableindex(mapping,
+    function(t,k)
+        v = "placeholder unknown gray"
+        t[k] = v
+        return v
+    end
+)
 
-local fakes = {
+local fakes = allocate {
     {
         name   = "lowercase",
         code   = ".025 -.175 m .425 -.175 l .425 .525 l .025 .525 l .025 -.175 l .025 0 l .425 0 l .025 -.175 m h S",
@@ -153,7 +163,7 @@ local fakes = {
     },
 }
 
-local variants = {
+local variants = allocate {
     { tag = "gray",    r = .6, g = .6, b = .6 },
     { tag = "red",     r = .6, g =  0, b =  0 },
     { tag = "green",   r =  0, g = .6, b =  0 },
@@ -216,6 +226,28 @@ function commands.getplaceholderchar(name)
     context(helpers.getprivatenode(fontdata[id],name))
 end
 
+local function placeholder(font,char)
+    local tfmdata    = fontdata[font]
+    local properties = tfmdata.properties
+    local privates   = properties.privates
+    local category   = chardata[char].category
+    local fakechar   = mapping[category]
+    local p = privates and privates[fakechar]
+    if not p then
+        addmissingsymbols(tfmdata)
+        p = properties.privates[fakechar]
+    end
+    if properties.lateprivates then
+        -- frozen already
+        return "node", getprivatenode(tfmdata,fakechar)
+    else
+        -- good, we have \definefontfeature[default][default][missing=yes]
+        return "char", p
+    end
+end
+
+checkers.placeholder = placeholder
+
 function checkers.missing(head)
     local lastfont, characters, found = nil, nil, nil
     head = tonut(head)
@@ -249,27 +281,15 @@ function checkers.missing(head)
         end
     elseif action == "replace" then
         for i=1,#found do
-            local n = found[i]
-            local font = getfont(n)
-            local char = getchar(n)
-            local tfmdata = fontdata[font]
-            local properties = tfmdata.properties
-            local privates = properties.privates
-            local category = chardata[char].category
-            local fakechar = mapping[category]
-            local p = privates and privates[fakechar]
-            if not p then
-                addmissingsymbols(tfmdata)
-                p = properties.privates[fakechar]
-            end
-            if properties.lateprivates then -- .frozen
-                -- bad, we don't have them at the tex end
-                local fake = getprivatenode(tfmdata,fakechar)
-                insert_node_after(head,n,fake)
-                head = remove_node(head,n,true)
+            local node = found[i]
+            local kind, char = placeholder(getfont(node),getchar(node))
+            if kind == "node" then
+                insert_node_after(head,node,tonut(char))
+                head = remove_node(head,node,true)
+            elseif kind == "char" then
+                setfield(node,"char",char)
             else
-                -- good, we have \definefontfeature[default][default][missing=yes]
-                setfield(n,"char",p)
+                -- error
             end
         end
     else
@@ -278,13 +298,17 @@ function checkers.missing(head)
     return tonode(head), false
 end
 
-local relevant = { "missing (will be deleted)", "missing (will be flagged)", "missing" }
+local relevant = {
+    "missing (will be deleted)",
+    "missing (will be flagged)",
+    "missing"
+}
 
-function checkers.getmissing(id)
+local function getmissing(id)
     if id then
-        local list = checkers.getmissing(font.current())
+        local list = getmissing(font.current())
         if list then
-            local _, list = next(checkers.getmissing(font.current()))
+            local _, list = next(getmissing(font.current()))
             return list
         else
             return { }
@@ -314,6 +338,8 @@ function checkers.getmissing(id)
     end
 end
 
+checkers.getmissing = getmissing
+
 local tracked = false
 
 trackers.register("fonts.missing", function(v)
@@ -328,24 +354,6 @@ trackers.register("fonts.missing", function(v)
     end
     action = v
 end)
-
-function commands.checkcharactersinfont()
-    enableaction("processors","fonts.checkers.missing")
-    tracked = true
-end
-
-function commands.removemissingcharacters()
-    enableaction("processors","fonts.checkers.missing")
-    action = "remove"
-    tracked = true
-end
-
-function commands.replacemissingcharacters()
-    enableaction("processors","fonts.checkers.missing")
-    action = "replace"
-    otffeatures.defaults.missing = true
-    tracked = true
-end
 
 local report_characters = logs.reporter("fonts","characters")
 local report_character  = logs.reporter("missing")

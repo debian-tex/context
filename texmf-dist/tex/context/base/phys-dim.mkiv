@@ -156,7 +156,7 @@
   {\ifmmode
      \expandafter\normalsuperscript
    \else
-     \expandafter\high
+     \expandafter\unitshigh
    \fi}
 
 % we could use a symbolset but how many symbols are there ?
@@ -170,17 +170,21 @@
 % \definesymbol[units][times][\cdots]
 % \definesymbol[units][times][\ifmmode\cdot\else\kern.2\emwidth\cdot\kern.2\emwidth\fi]
 
-\def\digitstimessymbol{\times}
-% \def\digitstimessymbol{\cdot}
-% \def\digitstimessymbol{\ifmmode\cdot\else\kern.2\emwidth\cdot\kern.2\emwidth\fi}
+\unexpanded\def\digitstextbinop#1% assumes preceding
+  {\fourperemspace\nobreak\times\fourperemspace}
+
+%def\digitstimessymbol{\ifmmode\cdot\else\digitstextbinop\cdot\fi}
+\def\digitstimessymbol{\ifmmode\times\else\digitstextbinop\times\fi}
 
 \unexpanded\def\digitszeropadding   {\hphantom{0}}
 \unexpanded\def\digitsnegative      {\phys_digits_normalized{0}{\phys_digits_raised{\textminus}}}
 \unexpanded\def\digitspositive      {\phys_digits_normalized{0}{\phys_digits_raised{\textplus}}}
 \unexpanded\def\digitsnegative      {\phys_digits_normalized{0}{\mathematics{\negative}}}
 \unexpanded\def\digitspositive      {\phys_digits_normalized{0}{\mathematics{\positive}}}
-\unexpanded\def\digitsminus         {\phys_digits_normalized{0}{\mathematics{-}}}
-\unexpanded\def\digitsplus          {\phys_digits_normalized{0}{\mathematics{+}}}
+%unexpanded\def\digitsminus         {\phys_digits_normalized{0}{\mathematics{-}}}
+%unexpanded\def\digitsplus          {\phys_digits_normalized{0}{\mathematics{+}}}
+\unexpanded\def\digitsminus         {\phys_digits_normalized{0}{\mathminus}}
+\unexpanded\def\digitsplus          {\phys_digits_normalized{0}{\mathplus }}
 \unexpanded\def\digitsspace         {\hphantom{0}}
 \unexpanded\def\digitsseparatorspace{\hphantom{.}}
 \unexpanded\def\digitssignspace     {\hphantom{\digitsminus}}
@@ -246,12 +250,12 @@
 \unexpanded\def\phys_digits_indeed#1%
   {\dontleavehmode
    \begingroup
-   \ctxcommand{digits(\!!bs\detokenize{#1}\!!es,"\ifcase\c_phys_digits_order \v!normal\else\v!reverse\fi")}%
+   \ifcase\c_phys_digits_order\expandafter\clf_digits_normal\else\expandafter\clf_digits_reverse\fi{\detokenize{#1}}%
    \endgroup
    \settrue\c_phys_units_dospace}
 
 \unexpanded\def\digits
-  {\doifnextbgroupelse\phys_digits_argument\phys_digits_spaced}
+  {\doifelsenextbgroup\phys_digits_argument\phys_digits_spaced}
 
 \def\phys_digits_argument#1%
   {\phys_digits_indeed{#1}}
@@ -369,6 +373,9 @@
   %\c!color=...,                 % done
   %\c!space=...,                 % (maybe) small medium big
   ]
+
+\definehigh[unitshigh][\c!style=\txx]
+\definelow [unitslow] [\c!style=\txx]
 
 \let\setupunits\setupunit
 
@@ -500,7 +507,8 @@
 \to \everyunits
 
 \unexpanded\def\phys_units_indeed#1%
-  {\ctxcommand{unit(\!!bs\detokenize{#1}\!!es,"\unitparameter\c!order")}}
+  {\edef\p_order{\unitparameter\c!order}%
+   \ifx\p_order\v!reverse\expandafter\clf_unit_reverse\else\expandafter\clf_unit_normal\fi{\detokenize{#1}}}
 
 \unexpanded\def\unitsPUS#1#2#3{\phys_units_next\prefixtext{#1}\unittext{#2}\unitsraise{\suffixtext{#3}}\c_phys_units_state\plusone} % suffix
 \unexpanded\def\unitsPU   #1#2{\phys_units_next\prefixtext{#1}\unittext{#2}\c_phys_units_state\plusthree}                           % unit
@@ -578,7 +586,7 @@
 \let\unitsNstartindeed\unitsNstart
 
 \unexpanded\def\unitsNstart
-  {\doifnextcharelse\unitsNstop\gobbleoneargument\unitsNstartindeed}
+  {\doifelsenextchar\unitsNstop\gobbleoneargument\unitsNstartindeed}
 
 % End of hack.
 
@@ -614,22 +622,22 @@
 
 \def\unitsraise
   {\ifcase\c_phys_units_mode
-     \expandafter\high
+     \expandafter\unitshigh
    \or
      \expandafter\normalsuperscript
    \or
-     \expandafter\high
+     \expandafter\unitshigh
    \or
      \expandafter\normalsuperscript
    \fi}
 
 \def\unitslower
   {\ifcase\c_phys_units_mode
-     \expandafter\low
+     \expandafter\unitslow
    \or
      \expandafter\normalsubscript
    \or
-     \expandafter\low
+     \expandafter\unitslow
    \or
      \expandafter\normalsubscript
    \fi}
@@ -682,10 +690,10 @@
 \definelabelclass [prefix]   [2]
 \definelabelclass [suffix]   [2] % This is only a label because we want to show them in a table.
 
-\ctxcommand{definelabels("prefix",  "prefixes" )}
-\ctxcommand{definelabels("unit",    "units"    )}
-\ctxcommand{definelabels("operator","operators")}
-\ctxcommand{definelabels("suffix",  "suffixes" )}
+\clf_definelabels{prefix}{prefixes}\s!false\relax
+\clf_definelabels{unit}{units}\s!false\relax
+\clf_definelabels{operator}{operators}\s!false\relax
+\clf_definelabels{suffix}{suffixes}\s!false\relax
 
 %D You can define additional units:
 %D
@@ -716,7 +724,7 @@
   {\dodoubleempty\phys_units_register}
 
 \def\phys_units_register[#1][#2]%
-  {\ctxcommand{registerunit(\!!bs#1\!!es,\!!bs#2\!!es)}}
+  {\clf_registerunit{#1}{#2}}
 
 %D You can generate a list as follows:
 %D

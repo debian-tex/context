@@ -40,10 +40,13 @@ local vectors            = collections.vectors or { }
 collections.vectors      = vectors
 
 local fontdata           = fonts.hashes.identifiers
+local chardata           = fonts.hashes.characters
 local glyph_code         = nodes.nodecodes.glyph
 local currentfont        = font.current
 
 local fontpatternhassize = fonts.helpers.fontpatternhassize
+
+local implement          = interfaces.implement
 
 local list               = { }
 local current            = 0
@@ -273,11 +276,58 @@ function collections.process(head) -- this way we keep feature processing
     return head, done
 end
 
+function collections.found(font,char) -- this way we keep feature processing
+    if not char then
+        font, char = currentfont(), font
+    end
+    if chardata[font][char] then
+        return true -- in normal font
+    else
+        local v = vectors[font]
+        return v and v[char] and true or false
+    end
+end
+
 -- interface
 
-commands.fontcollectiondefine   = collections.define
-commands.fontcollectionreset    = collections.reset
-commands.fontcollectionprepare  = collections.prepare
-commands.fontcollectionreport   = collections.report
-commands.fontcollectionregister = collections.registermain
-commands.fontcollectionclone    = collections.clonevector
+implement {
+    name      = "fontcollectiondefine",
+    actions   = collections.define,
+    arguments = { "string", "string", "string", "string" }
+}
+
+implement {
+    name      = "fontcollectionreset",
+    actions   = collections.reset,
+    arguments = { "string", "string" }
+}
+
+implement {
+    name      = "fontcollectionprepare",
+    actions   = collections.prepare,
+    arguments = "string"
+}
+
+implement {
+    name      = "fontcollectionreport",
+    actions   = collections.report,
+    arguments = "string"
+}
+
+implement {
+    name      = "fontcollectionregister",
+    actions   = collections.registermain,
+    arguments = "string"
+}
+
+implement {
+    name      = "fontcollectionclone",
+    actions   = collections.clonevector,
+    arguments = "string"
+}
+
+implement {
+    name      = "doifelsecharinfont",
+    actions   = { collections.found, commands.doifelse },
+    arguments = { "integer" }
+}

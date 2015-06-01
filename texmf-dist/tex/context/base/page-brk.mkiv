@@ -112,13 +112,13 @@
      \endgroup
    \fi}
 
-\def\resetpagebreak % used elsewhere too
+\unexpanded\def\resetpagebreak % used elsewhere too
   {\global\settrue\c_page_breaks_enabled}
 
-\def\simplifypagebreak % to be used grouped !
+\unexpanded\def\simplifypagebreak % to be used grouped !
   {\def\page_breaks_process[##1]{\goodbreak}}
 
-\def\disablepagebreaks % to be used grouped !
+\unexpanded\def\disablepagebreaks % to be used grouped !
   {\def\page_breaks_process[##1]{}}
 
 \installpagebreakmethod \s!dummy
@@ -134,11 +134,11 @@
    \endgroup}
 
 \installpagebreakmethod \s!unknown
-  {\doifinstringelse{+}\page_breaks_current_option
+  {\doifelseinstring{+}\page_breaks_current_option
      {\page_otr_flush_all_floats
       \page_otr_command_next_page
       \dorecurse\page_breaks_current_option\page_otr_insert_dummy_page}
-     {\doifnumberelse\page_breaks_current_option
+     {\doifelsenumber\page_breaks_current_option
         {\page_otr_flush_all_floats
          \page_otr_command_next_page
          \doloop
@@ -177,6 +177,8 @@
   {\ifcase\pageornamentstate
      \global\pageornamentstate\plusone
    \fi}
+
+% also needed: \page \doifoddpageelse\relax{\page[\v!blank,\v!right]
 
 \installpagebreakmethod \v!no
   {\ifconditional\c_page_breaks_enabled
@@ -220,11 +222,11 @@
 
 \installpagebreakmethod \v!even
   {\page
-   \doifoddpageelse\page_reset_marks_and_insert_dummy\donothing}
+   \doifelseoddpage\page_reset_marks_and_insert_dummy\donothing}
 
 \installpagebreakmethod \v!odd
   {\page
-   \doifoddpageelse\donothing\page_reset_marks_and_insert_dummy}
+   \doifelseoddpage\donothing\page_reset_marks_and_insert_dummy}
 
 \installpagebreakmethod \v!quadruple % not yet ok inside columnsets
   {\ifdoublesided

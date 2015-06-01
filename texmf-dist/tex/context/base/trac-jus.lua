@@ -62,9 +62,10 @@ end
 checkers.set   = set
 checkers.reset = reset
 
-function commands.showjustification(n)
-    set(n)
-end
+interfaces.implement {
+    name    = "showjustification",
+    actions = set
+}
 
 trackers.register("visualizers.justification", function(v)
     if v then
@@ -77,7 +78,7 @@ end)
 function checkers.handler(head)
     for current in traverse_id(hlist_code,tonut(head)) do
         if getattr(current,a_justification) == 1 then
-            setattr(current,a_justification,0)
+            setattr(current,a_justification,0) -- kind of reset
             local width = getfield(current,"width")
             if width > 0 then
                 local list = getlist(current)

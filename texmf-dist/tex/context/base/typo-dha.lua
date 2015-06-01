@@ -64,7 +64,6 @@ local getlist            = nuts.getlist
 local getfield           = nuts.getfield
 local setfield           = nuts.setfield
 local getattr            = nuts.getattr
-local setattr            = nuts.setattr
 local getprop            = nuts.getprop
 local setprop            = nuts.setprop
 
@@ -185,9 +184,9 @@ local function process(start)
             finidir  = finish
         end
         if embedded <= 0 then
-            finish, autodir, done = "TRT", -1
+            finish, autodir = "TRT", -1
         else
-            finish, autodir, done = "TLT",  1
+            finish, autodir = "TLT",  1
         end
         done = true
         if finidir == finish then
@@ -347,7 +346,7 @@ local function process(start)
                             top = top - 1
                         end
                         obsolete[#obsolete+1] = current
-                    else
+                    elseif trace_directions then
                         setcolor(current)
                     end
                 else

@@ -86,9 +86,13 @@ if not modules then modules = { } end modules ['node-met'] = {
 -- luatex    3.9 sec / 54 pps
 -- luajittex 2.3 sec / 93 pps
 
+local type, rawget = type, rawget
+
 local nodes               = nodes
 local gonuts              = nodes.gonuts
 local direct              = node.direct
+
+local fastcopy            = table.fastcopy
 
 if type(direct) ~= "table" then
     return
@@ -135,6 +139,20 @@ nuts.getfont              = direct.getfont
 nuts.getsubtype           = direct.getsubtype
 nuts.getlist              = direct.getlist -- only hlist and vlist !
 nuts.getleader            = direct.getleader
+
+-- local function track(name)
+--     local n = 0
+--     local f = nuts[name]
+--     function nuts[name](...)
+--         n = n + 1
+--         if n % 1000 == 0 then
+--             print(name,n)
+--         end
+--         return f(...)
+--     end
+-- end
+
+-- track("getsubtype")
 
 -- local dgf = direct.getfield  function nuts.getlist(n) return dgf(n,"list") end
 
@@ -662,8 +680,14 @@ if propertydata then
         data = propertydata,
     }
 
-    direct.set_properties_mode(true,false)
- -- direct.set_properties_mode(true,true)
+ -- direct.set_properties_mode(true,false) -- shallow copy ... problem: in fonts we then affect the originals too
+    direct.set_properties_mode(true,true)  -- create metatable, slower but needed for font-inj.lua (unless we use an intermediate table)
+
+    -- todo:
+    --
+    -- function direct.set_properties_mode()
+    --     -- we really need the set modes
+    -- end
 
     -- experimental code with respect to copying attributes has been removed
     -- as it doesn't pay of (most attributes are only accessed once anyway)
@@ -700,3 +724,67 @@ else
     nodes.getprop = setattr
 
 end
+
+function nuts.copy_properties(source,target,what)
+    local newprops = propertydata[source]
+    if not newprops then
+        -- nothing to copy
+        return
+    end
+    if what then
+        -- copy one category
+        newprops = rawget(source,what)
+        if newprops then
+            newprops = fastcopy(newprops)
+            local p = rawget(propertydata,target)
+            if p then
+                p[what] = newprops
+            else
+                propertydata[target] = {
+                    [what] = newprops,
+                }
+            end
+        end
+    else
+        -- copy all properties
+        newprops = fastcopy(newprops)
+        propertydata[target] = newprops
+    end
+    return newprops -- for checking
+end
+
+-- a bit special
+
+local getwidth      = { }
+local setwidth      = { }
+local getdimensions = { }
+local setdimensions = { }
+
+nodes.whatsitters = {
+    getters = { width = getwidth, dimensions = getdimensions },
+    setters = { width = setwidth, dimensions = setdimensions },
+}
+
+-- this might move (in fact forms and images will become nodes)
+
+local function get_width(n,dir)
+    n = tonut(n)
+    return getfield(n,"width")
+end
+
+local function get_dimensions(n,dir)
+    n = tonut(n)
+    return getfield(n,"width"), getfield(n,"height"), getfield(n,"depth")
+end
+
+local whatcodes         = nodes.whatcodes
+local pdfrefximage_code = whatcodes.pdfrefximage
+local pdfrefxform_code  = whatcodes.pdfrefxform
+
+getwidth     [pdfrefximage_code] = get_width
+getwidth     [pdfrefxform_code ] = get_width
+
+getdimensions[pdfrefximage_code] = get_dimensions
+getdimensions[pdfrefxform_code ] = get_dimensions
+
+

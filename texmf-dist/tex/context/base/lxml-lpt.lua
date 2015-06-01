@@ -505,6 +505,9 @@ local function apply_expression(list,expression,order)
     return collected
 end
 
+-- this one can be made faster but there are not that many conversions so it doesn't
+-- really pay of
+
 local P, V, C, Cs, Cc, Ct, R, S, Cg, Cb = lpeg.P, lpeg.V, lpeg.C, lpeg.Cs, lpeg.Cc, lpeg.Ct, lpeg.R, lpeg.S, lpeg.Cg, lpeg.Cb
 
 local spaces     = S(" \n\r\t\f")^0
@@ -541,12 +544,11 @@ local lp_builtin = P (
 
 local lp_attribute = (P("@") + P("attribute::")) / "" * Cc("(ll.at and ll.at['") * ((R("az","AZ") + S("-_:"))^1) * Cc("'])")
 
--- lp_fastpos_p = (P("+")^0 * R("09")^1 * P(-1)) / function(s) return "l==" .. s end
--- lp_fastpos_n = (P("-")   * R("09")^1 * P(-1)) / function(s) return "(" .. s .. "<0 and (#list+".. s .. "==l))" end
+----- lp_fastpos_p = (P("+")^0 * R("09")^1 * P(-1)) / function(s) return "l==" .. s end
+----- lp_fastpos_n = (P("-")   * R("09")^1 * P(-1)) / function(s) return "(" .. s .. "<0 and (#list+".. s .. "==l))" end
 
-lp_fastpos_p = P("+")^0 * R("09")^1 * P(-1) / "l==%0"
-lp_fastpos_n = P("-")   * R("09")^1 * P(-1) / "(%0<0 and (#list+%0==l))"
-
+local lp_fastpos_p = P("+")^0 * R("09")^1 * P(-1) / "l==%0"
+local lp_fastpos_n = P("-")   * R("09")^1 * P(-1) / "(%0<0 and (#list+%0==l))"
 local lp_fastpos   = lp_fastpos_n + lp_fastpos_p
 
 local lp_reserved  = C("and") + C("or") + C("not") + C("div") + C("mod") + C("true") + C("false")
@@ -806,7 +808,7 @@ local function nodesettostring(set,nodetest)
         if not ns or ns == "" then ns = "*" end
         if not tg or tg == "" then tg = "*" end
         tg = (tg == "@rt@" and "[root]") or format("%s:%s",ns,tg)
-        t[i] = (directive and tg) or format("not(%s)",tg)
+        t[#t+1] = (directive and tg) or format("not(%s)",tg)
     end
     if nodetest == false then
         return format("not(%s)",concat(t,"|"))
@@ -1132,7 +1134,6 @@ expressions.print = function(...)
     return true
 end
 
-expressions.contains  = find
 expressions.find      = find
 expressions.upper     = upper
 expressions.lower     = lower
@@ -1154,6 +1155,10 @@ function expressions.contains(str,pattern)
         end
     end
     return false
+end
+
+function xml.expressions.idstring(str)
+    return type(str) == "string" and gsub(str,"^#","") or ""
 end
 
 -- user interface

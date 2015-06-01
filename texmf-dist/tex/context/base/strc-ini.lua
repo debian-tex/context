@@ -73,7 +73,7 @@ structures.itemgroups   = structures.itemgroups   or { }
 structures.specials     = structures.specials     or { }
 structures.counters     = structures.counters     or { }
 structures.tags         = structures.tags         or { }
-structures.formulas     = structures.formulas     or { }
+structures.formulas     = structures.formulas     or { } -- not used but reserved
 structures.sets         = structures.sets         or { }
 structures.marks        = structures.marks        or { }
 structures.floats       = structures.floats       or { }
@@ -160,7 +160,7 @@ local function simplify(d,nodefault)
                     t[k] = simplify(v)
                 end
             elseif tv == "string" then
-                if v ~= "" and v ~= "default" then
+                if v ~= "" then
                     t[k] = v
                 end
             elseif tv == "boolean" then
@@ -336,7 +336,8 @@ function sets.getall(namespace,block,name)
     end
 end
 
--- messy (will be another keyword, fixedconversion)
+-- messy (will be another keyword, fixedconversion) .. needs to be documented too
+-- maybe we should cache
 
 local splitter = lpeg.splitat("::")
 
@@ -376,4 +377,8 @@ end
 
 -- interface
 
-commands.definestructureset = sets.define
+interfaces.implement {
+    name      = "definestructureset",
+    actions   = sets.define,
+    arguments = { "string", "string", "string", "string", "boolean" }
+}

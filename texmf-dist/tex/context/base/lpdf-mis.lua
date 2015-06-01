@@ -241,17 +241,25 @@ lpdf.registerdocumentfinalizer(flushjavascripts,"javascripts")
 -- -- --
 
 local pagespecs = {
-    [variables.max]         = { "FullScreen", false, false },
-    [variables.bookmark]    = { "UseOutlines", false, false },
-    [variables.fit]         = { "UseNone", false, true },
-    [variables.doublesided] = { "UseNone", "TwoColumnRight", true },
-    [variables.singlesided] = { "UseNone", false, false },
-    [variables.default]     = { "UseNone", "auto", false },
-    [variables.auto]        = { "UseNone", "auto", false },
-    [variables.none]        = { false, false, false },
+    [variables.max]         = { mode = "FullScreen",  layout = false,            fit = false, fixed = false, duplex = false },
+    [variables.bookmark]    = { mode = "UseOutlines", layout = false,            fit = false, fixed = false, duplex = false },
+    [variables.fit]         = { mode = "UseNone",     layout = false,            fit = true,  fixed = false, duplex = false },
+    [variables.doublesided] = { mode = "UseNone",     layout = "TwoColumnRight", fit = true,  fixed = false, duplex = false },
+    [variables.singlesided] = { mode = "UseNone",     layout = false,            fit = false, fixed = false, duplex = false },
+    [variables.default]     = { mode = "UseNone",     layout = "auto",           fit = false, fixed = false, duplex = false },
+    [variables.auto]        = { mode = "UseNone",     layout = "auto",           fit = false, fixed = false, duplex = false },
+    [variables.none]        = { mode = false,         layout = false,            fit = false, fixed = false, duplex = false },
+    -- new
+    [variables.fixed]       = { mode = "UseNone",     layout = "auto",           fit = false, fixed = true,  duplex = false }, -- noscale
+    [variables.landscape]   = { mode = "UseNone",     layout = "auto",           fit = false, fixed = true,  duplex = "DuplexFlipShortEdge" },
+    [variables.portrait]    = { mode = "UseNone",     layout = "auto",           fit = false, fixed = true,  duplex = "DuplexFlipLongEdge" },
+
 }
 
 local pagespec, topoffset, leftoffset, height, width, doublesided = "default", 0, 0, 0, 0, false
+
+local pdfpaperheight = tex.pdfpageheight
+local pdfpaperwidth  = tex.pdfpagewidth
 
 function codeinjections.setupcanvas(specification)
     local paperheight = specification.paperheight
@@ -259,49 +267,67 @@ function codeinjections.setupcanvas(specification)
     local paperdouble = specification.doublesided
     if paperheight then
         texset('global','pdfpageheight',paperheight)
+        pdfpaperheight = paperheight
     end
     if paperwidth then
         texset('global','pdfpagewidth',paperwidth)
+        pdfpaperwidth = paperwidth
     end
     pagespec    = specification.mode       or pagespec
     topoffset   = specification.topoffset  or 0
     leftoffset  = specification.leftoffset or 0
-    height      = specification.height     or tex.pdfpageheight
-    width       = specification.width      or tex.pdfpagewidth
+    height      = specification.height     or pdfpaperheight
+    width       = specification.width      or pdfpaperwidth
     if paperdouble ~= nil then
         doublesided = paperdouble
     end
 end
 
 local function documentspecification()
-    local spec = pagespecs[pagespec] or pagespecs[variables.default]
-    if spec then
-        local mode, layout, fit = spec[1], spec[2], spec[3]
-        if layout == variables.auto then
-            if doublesided then
-                spec = pagespecs[variables.doublesided] -- to be checked voor interfaces
-                if spec then
-                    mode, layout, fit = spec[1], spec[2], spec[3]
-                end
-            else
-                layout = false
-            end
-        end
-        mode = mode and pdfconstant(mode)
-        layout = layout and pdfconstant(layout)
-        fit = fit and pdfdictionary { FitWindow = true }
-        if layout then
-            addtocatalog("PageLayout",layout)
-        end
-        if mode then
-            addtocatalog("PageMode",mode)
-        end
-        if fit then
-            addtocatalog("ViewerPreferences",fit)
-        end
-        addtoinfo   ("Trapped", pdfconstant("False")) -- '/Trapped' in /Info, 'Trapped' in XMP
-        addtocatalog("Version", pdfconstant(format("1.%s",tex.pdfminorversion)))
+    if not pagespec or pagespec == "" then
+        pagespec = variables.default
     end
+ -- local settings = utilities.parsers.settings_to_array(pagespec)
+ -- local spec     = pagespecs[variables.default]
+ -- for i=1,#settings do
+ --     local s = pagespecs[settings[i]]
+ --     if s then
+ --         for k, v in next, s do
+ --             spec[k] = v
+ --         end
+ --     end
+ -- end
+    local spec = pagespecs[pagespec] or pagespecs[variables.default]
+    if spec.layout == "auto" then
+        if doublesided then
+            local s = pagespecs[variables.doublesided] -- to be checked voor interfaces
+            for k, v in next, s do
+                spec[k] = v
+            end
+        else
+            spec.layout = false
+        end
+    end
+    local layout = spec.layout
+    local mode   = spec.mode
+    local fit    = spec.fit
+    local fixed  = spec.fixed
+    local duplex = spec.duplex
+    if layout then
+        addtocatalog("PageLayout",pdfconstant(layout))
+    end
+    if mode then
+        addtocatalog("PageMode",pdfconstant(mode))
+    end
+    if fit or fixed or duplex then
+        addtocatalog("ViewerPreferences",pdfdictionary {
+            FitWindow    = fit    and true                or nil,
+            PrintScaling = fixed  and pdfconstant("None") or nil,
+            Duplex       = duplex and pdfconstant(duplex) or nil,
+        })
+    end
+    addtoinfo   ("Trapped", pdfconstant("False")) -- '/Trapped' in /Info, 'Trapped' in XMP
+    addtocatalog("Version", pdfconstant(format("1.%s",tex.pdfminorversion)))
 end
 
 -- temp hack: the mediabox is not under our control and has a precision of 4 digits
@@ -313,7 +339,7 @@ local function boxvalue(n) -- we could share them
 end
 
 local function pagespecification()
-    local pageheight = tex.pdfpageheight
+    local pageheight = pdfpaperheight
     local box = pdfarray { -- can be cached
         boxvalue(leftoffset),
         boxvalue(pageheight+topoffset-height),

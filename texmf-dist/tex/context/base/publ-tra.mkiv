@@ -20,16 +20,68 @@
 
 \unprotect
 
-\unexpanded\def\showbtxdatasetfields
-  {\dosingleempty\publ_dataset_show_fields}
+\unexpanded\def\showbtxdatasetfields      {\dosingleempty\publ_show_dataset_fields}
+\unexpanded\def\showbtxdatasetcompleteness{\dosingleempty\publ_show_dataset_completeness}
+\unexpanded\def\showbtxdatasetauthors     {\dosingleempty\publ_show_dataset_authors}
+\unexpanded\def\showbtxhashedauthors      {\dosingleempty\publ_show_hashed_authors}
+\unexpanded\def\showbtxfields             {\dosingleempty\publ_show_fields}
+\unexpanded\def\showbtxtables             {\dosingleempty\publ_show_tables}
 
-\def\publ_dataset_show_fields[#1]%
-  {\ctxcommand{showbtxdatasetfields("\iffirstargument#1\else\currentbtxdataset\fi")}}
+\def\publ_show_dataset_whatever#1[#2]%
+  {\begingroup
+   \letdummyparameter\c!specification\currentbtxspecification
+   \setdummyparameter\c!dataset      {\currentbtxdataset}%
+   \letdummyparameter\c!field        \empty
+   \iffirstargument
+     \doifelseassignment{#2}
+       {\getdummyparameters[#2]}%
+       {\setdummyparameter\c!dataset{#2}}%
+   \else
+     \getdummyparameters[#2]%
+   \fi
+   \ctxcommand{#1{
+      dataset       = "\dummyparameter\c!dataset",
+      specification = "\dummyparameter\c!specification",
+      field         = "\dummyparameter\c!field",
+   }}%
+   \endgroup}
 
-\unexpanded\def\showbtxdatasetcompleteness
-  {\dosingleempty\publ_dataset_show_completeness}
+\def\publ_show_dataset_fields      {\publ_show_dataset_whatever{showbtxdatasetfields}}
+\def\publ_show_dataset_completeness{\publ_show_dataset_whatever{showbtxdatasetcompleteness}}
+\def\publ_show_dataset_authors     {\publ_show_dataset_whatever{showbtxdatasetauthors}}
 
-\def\publ_dataset_show_completeness[#1]%
-  {\ctxcommand{showbtxdatasetcompleteness("\iffirstargument#1\else\currentbtxdataset\fi")}}
+\def\publ_show_fields[#1]%
+  {\begingroup
+   \setdummyparameter\c!rotation{90}%
+   \doifelseassignment{#1}%
+     {\letdummyparameter\c!specification\currentbtxspecification
+      \getdummyparameters[#1]}%
+     {\doifelsenothing{#1}%
+        {\letdummyparameter\c!specification\currentbtxspecification}%
+        {\setdummyparameter\c!specification{#1}}}%
+   \ctxcommand{showbtxfields{
+      rotation      = "\dummyparameter\c!rotation",
+      specification = "\dummyparameter\c!specification"
+   }}%
+   \endgroup}
 
-\protect \endinput
+\def\publ_show_tables[#1]%
+  {\begingroup
+   \ctxcommand{showbtxtables{}}%
+   \endgroup}
+
+\def\publ_show_hashed_authors[#1]%
+  {\ctxcommand{showbtxhashedauthors{}}}
+
+\protect
+
+\continueifinputfile{publ-tra.mkiv}
+
+\starttext
+
+    \showbtxfields[rotation=85] \page
+    \showbtxfields[rotation=90] \page
+
+    \showbtxtables \page
+
+\stoptext

@@ -320,7 +320,6 @@ return {
   },
   {
    category = "mkiv",
-   comment  = "maybe this becomes a runtime module",
    filename = "toks-ini",
    loading  = "always",
    status   = "okay",
@@ -389,6 +388,12 @@ return {
   {
    category = "mkiv",
    filename = "typo-bld",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "typo-sus",
    loading  = "always",
    status   = "okay",
   },
@@ -542,6 +547,12 @@ return {
   },
   {
    category = "mkiv",
+   filename = "lang-hyp",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
    filename = "unic-ini",
    loading  = "always",
    status   = "okay",
@@ -610,6 +621,12 @@ return {
   {
    category = "mkiv",
    filename = "lang-def",
+   loading  = "always",
+   status   = "okay",
+  },
+  {
+   category = "mkiv",
+   filename = "lang-hyp",
    loading  = "always",
    status   = "okay",
   },
@@ -2560,6 +2577,12 @@ return {
   },
   {
    category = "mkiv",
+   filename = "publ-jrn",
+   loading  = "always",
+   status   = "pending",
+  },
+  {
+   category = "mkiv",
    filename = "publ-xml",
    loading  = "always",
    status   = "pending",
@@ -3490,6 +3513,18 @@ return {
   },
   {
    category = "lua",
+   filename = "lang-dis",
+   loading  = "lang-ini",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "lang-hyp",
+   loading  = "lang-hyp",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    filename = "lang-ini",
    loading  = "lang-ini",
    status   = "okay",
@@ -3498,6 +3533,12 @@ return {
    category = "lua",
    filename = "lang-lab",
    loading  = "lang-lab",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "lang-hyp",
+   loading  = "lang-hyp",
    status   = "okay",
   },
   {
@@ -4716,7 +4757,14 @@ return {
   {
    category = "lua",
    filename = "toks-ini",
-   status   = "todo",
+   loading  = "toks-ini",
+   status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "toks-scn",
+   loading  = "toks-ini",
+   status   = "okay",
   },
   {
    category = "lua",
@@ -4820,6 +4868,11 @@ return {
   },
   {
    category = "lua",
+   filename = "typo-sus",
+   status   = "okay",
+  },
+  {
+   category = "lua",
    filename = "typo-brk",
    status   = "todo",
   },
@@ -4904,6 +4957,11 @@ return {
    category = "lua",
    filename = "typo-fln",
    status   = "okay",
+  },
+  {
+   category = "lua",
+   filename = "typo-man",
+   status   = "todo",
   },
   {
    category = "lua",
@@ -5083,6 +5141,12 @@ return {
   {
    category = "lua",
    filename = "publ-oth",
+   loading  = "publ-ini.mkiv",
+   status   = "pending",
+  },
+  {
+   category = "lua",
+   filename = "publ-fnd",
    loading  = "publ-ini.mkiv",
    status   = "pending",
   },

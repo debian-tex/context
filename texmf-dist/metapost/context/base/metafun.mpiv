@@ -15,6 +15,9 @@
 %D prevent dependency problems and in the end even may use a patched version,
 %D we prefer to use a copy.
 
+prologues := 0 ;
+mpprocset := 1 ;
+
 input "mp-base.mpiv" ;
 input "mp-tool.mpiv" ;
 input "mp-mlib.mpiv" ;
@@ -47,6 +50,7 @@ let normalend = end ;
 
 if known mplib :
     def end = ; message "" ; message metafunversion ; message "" ; endinput  ; enddef ;
+    def bye = ; message "" ; message metafunversion ; message "" ; endinput  ; enddef ;
 else :
     def end = ; message "" ; message metafunversion ; message "" ; normalend ; enddef ;
 fi ;

@@ -41,13 +41,15 @@
 
 \let\m_font_fallback_name\empty
 
-\def\font_preloads_reset_nullfont % this is needed because some macro packages (tikz) misuse \nullfont
-  {\dorecurse\plusseven{\fontdimen\recurselevel\nullfont\zeropoint}% keep en eye on this as:
-   \ctxcommand{resetnullfont()}% in luatex 0.70 this will also do the previous
-   \globallet\font_preloads_reset_nullfont\relax}
+% keep as reference:
+%
+% \def\font_preloads_reset_nullfont % this is needed because some macro packages (tikz) misuse \nullfont
+%   {\dorecurse\plusseven{\fontdimen\recurselevel\nullfont\zeropoint}% keep en eye on this as:
+%    \clf_resetnullfont % in luatex 0.70 this will also do the previous
+%    \globallet\font_preloads_reset_nullfont\relax}
 
 \def\font_preload_check_mode
-  {\doifmodeelse{lmmath}
+  {\doifelsemode{lmmath}
      {\def\m_font_fallback_name{modern-designsize-virtual}}% this will stay
      {\def\m_font_fallback_name{modern-designsize}}%       % this might become 'modern'
    \glet\font_preload_check_mode\relax}
@@ -81,7 +83,8 @@
    \glet\fourthstagepreloadfonts      \relax
    \global\everyhbox\emptytoks
    \global\everyvbox\emptytoks
-   \font_preloads_reset_nullfont}
+   % old: \font_preloads_reset_nullfont, new:
+   \clf_resetnullfont}
 
 \appendtoks
     \font_preloads_reset
@@ -90,7 +93,9 @@
 \def\font_preloads_reset_checked
   {\glet\font_preload_default_fonts_tt\relax
    \glet\font_preload_default_fonts_mm\relax
-   \glet\font_preloads_third_stage    \relax}
+   \glet\font_preloads_third_stage    \relax
+%  \glet\font_preloads_fourth_stage   \relax
+  }
 
 \def\font_preloads_zero_stage_indeed
   {\definedfont[\s!file:lmmono10-regular sa 1]}
@@ -101,7 +106,7 @@
    \font_preloads_zero_stage}
 
 \unexpanded\def\font_preloads_first_stage % % *nofonts -> *preloadfonts
-  {\doifmodeelse{*preloadfonts}
+  {\doifelsemode{*preloadfonts}
      {\font_preload_default_fonts
       \writestatus\m!fonts{preloading latin modern fonts (first stage)}}
      {\writestatus\m!fonts{latin modern fonts are not preloaded}}}
@@ -132,7 +137,7 @@
 \unexpanded\def\font_preloads_fourth_stage
   {\begingroup
    %ifzeropt\fontcharwd\font\number`!\relax
-   \setbox\scratchbox\hbox{checking fonts}%
+   \setbox\scratchbox\hbox{c o n t e x t}%
    \ifzeropt\wd\scratchbox
      \writeline
      \writestatus\m!fonts{!! No bodyfont has been defined and no defaults have been}%

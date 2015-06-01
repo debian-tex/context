@@ -91,7 +91,27 @@ function initials.set(specification)
     texsetattribute(a_initial,1)
 end
 
-commands.setinitial = initials.set
+interfaces.implement {
+    name      = "setinitial",
+    actions   = initials.set,
+    arguments = {
+        {
+            { "location" },
+            { "enabled", "boolean" },
+            { "method" },
+            { "distance" ,"dimen" },
+            { "hoffset" ,"dimen" },
+            { "voffset" ,"dimen" },
+            { "font", "integer" },
+            { "dynamic", "integer" },
+            { "ca", "integer" },
+            { "ma", "integer" },
+            { "ta", "integer" },
+            { "n", "integer" },
+            { "m", "integer" },
+        }
+    }
+}
 
 -- dropped caps experiment (will be done properly when luatex
 -- stores the state in the local par node) .. btw, search still
@@ -324,6 +344,15 @@ actions[v_default] = function(head,setting)
                     if dynamic > 0 then
                         setattr(current,0,dynamic)
                     end
+-- apply font
+
+-- local g = nodes.copy(tonode(current))
+-- g.subtype = 0
+-- nodes.handlers.characters(g)
+-- nodes.handlers.protectglyphs(g)
+-- setfield(current,"char",g.char)
+-- nodes.free(g)
+
                     -- can be a helper
                     if ca and ca > 0 then
                         setattr(current,a_colorspace,ma == 0 and 1 or ma)

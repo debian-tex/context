@@ -78,6 +78,7 @@ local localpar_code    = whatcodes.localpar
 local dir_code         = whatcodes.dir
 
 local dimenfactors     = number.dimenfactors
+local fillorders       = nodes.fillcodes
 local formatters       = string.formatters
 
 -- this will be reorganized:
@@ -171,6 +172,7 @@ local function tosequence(start,stop,compact)
 end
 
 nodes.tosequence = tosequence
+nuts .tosequence = tosequence
 
 function nodes.report(t,done)
     report_nodes("output %a, %changed %a, %s nodes",status.output_active,done,count_nodes(tonut(t)))
@@ -318,8 +320,12 @@ local function listtoutf(h,joiner,textonly,last)
 end
 
 function nodes.listtoutf(h,joiner,textonly,last)
-    local joiner = joiner == true and utfchar(0x200C) or joiner -- zwnj
-    return listtoutf(tonut(h),joiner,textonly,last and tonut(last))
+    if h then
+        local joiner = joiner == true and utfchar(0x200C) or joiner -- zwnj
+        return listtoutf(tonut(h),joiner,textonly,last and tonut(last))
+    else
+        return ""
+    end
 end
 
 local what = { [0] = "unknown", "line", "box", "indent", "row", "cell" }
@@ -353,82 +359,175 @@ local stripper = lpeg.patterns.stripzeros
 --
 -- redefined:
 
-local dimenfactors = number.dimenfactors
+-- local function nodetodimen(d,unit,fmt,strip)
+--     d = tonut(d) -- tricky: direct nuts are an issue
+--     if unit == true then
+--         unit = "pt"
+--         fmt  = "%0.5f%s"
+--     else
+--         unit = unit or 'pt'
+--         if not fmt then
+--             fmt = "%s%s"
+--         elseif fmt == true then
+--             fmt = "%0.5f%s"
+--         end
+--     end
+--     local id = getid(d)
+--     if id == kern_code then
+--         local str = formatters[fmt](getfield(d,"width")*dimenfactors[unit],unit)
+--         return strip and lpegmatch(stripper,str) or str
+--     end
+--     if id == glue_code then
+--         d = getfield(d,"spec")
+--     end
+--     if not d or not getid(d) == gluespec_code then
+--         local str = formatters[fmt](0,unit)
+--         return strip and lpegmatch(stripper,str) or str
+--     end
+--     local width   = getfield(d,"width")
+--     local plus    = getfield(d,"stretch_order")
+--     local minus   = getfield(d,"shrink_order")
+--     local stretch = getfield(d,"stretch")
+--     local shrink  = getfield(d,"shrink")
+--     if plus ~= 0 then
+--         plus = " plus " .. stretch/65536 .. fillcodes[plus]
+--     elseif stretch ~= 0 then
+--         plus = formatters[fmt](stretch*dimenfactors[unit],unit)
+--         plus = " plus " .. (strip and lpegmatch(stripper,plus) or plus)
+--     else
+--         plus = ""
+--     end
+--     if minus ~= 0 then
+--         minus = " minus " .. shrink/65536 .. fillcodes[minus]
+--     elseif shrink ~= 0 then
+--         minus = formatters[fmt](shrink*dimenfactors[unit],unit)
+--         minus = " minus " .. (strip and lpegmatch(stripper,minus) or minus)
+--     else
+--         minus = ""
+--     end
+--     local str = formatters[fmt](getfield(d,"width")*dimenfactors[unit],unit)
+--     return (strip and lpegmatch(stripper,str) or str) .. plus .. minus
+-- end
+--
+-- local function numbertodimen(d,unit,fmt,strip)
+--     if not d then
+--         local str = formatters[fmt](0,unit)
+--         return strip and lpegmatch(stripper,str) or str
+--     end
+--     local t = type(d)
+--     if t == 'string' then
+--         return d
+--     elseif t == "number" then
+--         if unit == true then
+--             unit = "pt"
+--             fmt  = "%0.5f%s"
+--         else
+--             unit = unit or 'pt'
+--             if not fmt then
+--                 fmt = "%s%s"
+--             elseif fmt == true then
+--                 fmt = "%0.5f%s"
+--             end
+--         end
+--         local str = formatters[fmt](d*dimenfactors[unit],unit)
+--         return strip and lpegmatch(stripper,str) or str
+--     else
+--         return nodetodimen(d,unit,fmt,strip) -- real node
+--     end
+-- end
 
-local function nodetodimen(d,unit,fmt,strip)
-    d = tonut(d) -- tricky: direct nuts are an issue
-    if unit == true then
-        unit = "pt"
-        fmt  = "%0.5f%s"
-    else
-        unit = unit or 'pt'
-        if not fmt then
-            fmt = "%s%s"
-        elseif fmt == true then
-            fmt = "%0.5f%s"
-        end
-    end
-    local id = getid(d)
+local f_f_f = formatters["%0.5Fpt plus %0.5F%s minus %0.5F%s"]
+local f_f_m = formatters["%0.5Fpt plus %0.5F%s minus %0.5Fpt"]
+local f_p_f = formatters["%0.5Fpt plus %0.5Fpt minus %0.5F%s"]
+local f_p_m = formatters["%0.5Fpt plus %0.5Fpt minus %0.5Fpt"]
+local f_f_z = formatters["%0.5Fpt plus %0.5F%s"]
+local f_p_z = formatters["%0.5Fpt plus %0.5Fpt"]
+local f_z_f = formatters["%0.5Fpt minus %0.5F%s"]
+local f_z_m = formatters["%0.5Fpt minus %0.5Fpt"]
+local f_z_z = formatters["%0.5Fpt"]
+
+local tonut    = nodes.tonut
+local getfield = nodes.nuts.getfield
+
+local function nodetodimen(n)
+    n = tonut(n)
+    local id = getid(n)
     if id == kern_code then
-        local str = formatters[fmt](getfield(d,"width")*dimenfactors[unit],unit)
-        return strip and lpegmatch(stripper,str) or str
+        local width = getfield(n,"width")
+        if width == 0 then
+            return "0pt"
+        else
+            return f_z_z(width)
+        end
     end
     if id == glue_code then
-        d = getfield(d,"spec")
+        n = getfield(n,"spec")
     end
-    if not d or not getid(d) == gluespec_code then
-        local str = formatters[fmt](0,unit)
-        return strip and lpegmatch(stripper,str) or str
+    if not n or not getid(n) == gluespec_code then
+        return "0pt"
     end
-    local width   = getfield(d,"width")
-    local plus    = getfield(d,"stretch_order")
-    local minus   = getfield(d,"shrink_order")
-    local stretch = getfield(d,"stretch")
-    local shrink  = getfield(d,"shrink")
-    if plus ~= 0 then
-        plus = " plus " .. stretch/65536 .. fillcodes[plus]
+    local stretch_order = getfield(n,"stretch_order")
+    local shrink_order  = getfield(n,"shrink_order")
+    local stretch       = getfield(n,"stretch") / 65536
+    local shrink        = getfield(n,"shrink")  / 65536
+    local width         = getfield(n,"width")   / 65536
+    if stretch_order ~= 0 then
+        if shrink_order ~= 0 then
+            return f_f_f(width,stretch,fillorders[stretch_order],shrink,fillorders[shrink_order])
+        elseif shrink ~= 0 then
+            return f_f_m(width,stretch,fillorders[stretch_order],shrink)
+        else
+            return f_f_z(width,stretch,fillorders[stretch_order])
+        end
+    elseif shrink_order ~= 0 then
+        if stretch ~= 0 then
+            return f_p_f(width,stretch,shrink,fillorders[shrink_order])
+        else
+            return f_z_f(width,shrink,fillorders[shrink_order])
+        end
     elseif stretch ~= 0 then
-        plus = formatters[fmt](stretch*dimenfactors[unit],unit)
-        plus = " plus " .. (strip and lpegmatch(stripper,plus) or plus)
-    else
-        plus = ""
-    end
-    if minus ~= 0 then
-        minus = " minus " .. shrink/65536 .. fillcodes[minus]
+        if shrink ~= 0 then
+            return f_p_m(width,stretch,shrink)
+        else
+            return f_p_z(width,stretch)
+        end
     elseif shrink ~= 0 then
-        minus = formatters[fmt](shrink*dimenfactors[unit],unit)
-        minus = " minus " .. (strip and lpegmatch(stripper,minus) or minus)
+        return f_z_m(width,shrink)
+    elseif width == 0 then
+        return "0pt"
     else
-        minus = ""
+        return f_z_z(width)
     end
-    local str = formatters[fmt](getfield(d,"width")*dimenfactors[unit],unit)
-    return (strip and lpegmatch(stripper,str) or str) .. plus .. minus
 end
 
-local function numbertodimen(d,unit,fmt,strip)
-    if not d then
-        local str = formatters[fmt](0,unit)
-        return strip and lpegmatch(stripper,str) or str
-    end
-    local t = type(d)
-    if t == 'string' then
-        return d
-    elseif t == "number" then
-        if unit == true then
-            unit = "pt"
-            fmt  = "%0.5f%s"
+
+-- number.todimen(123)
+-- number.todimen(123,"cm")
+-- number.todimen(123,false,"%F))
+
+local f_pt = formatters["%p"]
+local f_un = formatters["%F%s"]
+
+dimenfactors[""] = dimenfactors.pt
+
+local function numbertodimen(d,unit,fmt)
+    if not d or d == 0 then
+        if not unit or unit == "pt" then
+            return "0pt"
+        elseif fmt then
+            return formatters[fmt](0,unit)
         else
-            unit = unit or 'pt'
-            if not fmt then
-                fmt = "%s%s"
-            elseif fmt == true then
-                fmt = "%0.5f%s"
-            end
+            return 0 .. unit
         end
-        local str = formatters[fmt](d*dimenfactors[unit],unit)
-        return strip and lpegmatch(stripper,str) or str
+    elseif fmt then
+        if not unit then
+            unit = "pt"
+        end
+        return formatters[fmt](d*dimenfactors[unit],unit)
+    elseif not unit or unit == "pt" then
+        return f_pt(d)
     else
-        return nodetodimen(d,unit,fmt,strip) -- real node
+        return f_un(d*dimenfactors[unit],unit)
     end
 end
 
@@ -469,7 +568,7 @@ local points = function(n)
     elseif type(n) == "number" then
         return lpegmatch(stripper,format("%.5fpt",n*ptfactor)) -- faster than formatter
     else
-        return numbertodimen(n,"pt",true,true) -- also deals with nodes
+        return numbertodimen(n,"pt") -- also deals with nodes
     end
 end
 
@@ -479,7 +578,7 @@ local basepoints = function(n)
     elseif type(n) == "number" then
         return lpegmatch(stripper,format("%.5fbp",n*bpfactor)) -- faster than formatter
     else
-        return numbertodimen(n,"bp",true,true) -- also deals with nodes
+        return numbertodimen(n,"bp") -- also deals with nodes
     end
 end
 
@@ -489,7 +588,7 @@ local pts = function(n)
     elseif type(n) == "number" then
         return format("%.5fpt",n*ptfactor) -- faster than formatter
     else
-        return numbertodimen(n,"pt",true) -- also deals with nodes
+        return numbertodimen(n,"pt") -- also deals with nodes
     end
 end
 
@@ -506,10 +605,10 @@ number.basepoints = basepoints
 number.pts        = pts
 number.nopts      = nopts
 
-nodes.points     = function(n) return numbertodimen(n,"pt",true,true) end
-nodes.basepoints = function(n) return numbertodimen(n,"bp",true,true) end
-nodes.pts        = function(n) return numbertodimen(n,"pt",true)      end
-nodes.nopts      = function(n) return format("%.5f",n*ptfactor)       end
+nodes.points     = function(n) return numbertodimen(n,"pt")     end
+nodes.basepoints = function(n) return numbertodimen(n,"bp")     end
+nodes.pts        = function(n) return numbertodimen(n,"pt")     end
+nodes.nopts      = function(n) return format("%.5f",n*ptfactor) end
 
 local colors          = { }
 tracers.colors        = colors

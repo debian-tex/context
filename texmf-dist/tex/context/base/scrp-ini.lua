@@ -27,6 +27,8 @@ local texsetattribute   = tex.setattribute
 local nodecodes         = nodes.nodecodes
 local unsetvalue        = attributes.unsetvalue
 
+local implement         = interfaces.implement
+
 local glyph_code        = nodecodes.glyph
 local glue_code         = nodecodes.glue
 
@@ -475,18 +477,19 @@ function scripts.injectors.handler(head)
                         normal_process = handler.injector
                     end
                     if normal_process then
+                        -- wrong: originals are indices !
                         local f = getfont(start)
                         if f ~= lastfont then
                             originals = fontdata[f].resources
                             if resources then
                                 originals = resources.originals
                             else
-                                -- can't happen
+                                originals = nil -- can't happen
                             end
                             lastfont = f
                         end
                         local c = getchar(start)
-                        if originals then
+                        if originals and type(originals) == "number" then
                             c = originals[c] or c
                         end
                         local h = hash[c]
@@ -937,5 +940,22 @@ function autofontfeature.disable()
     disableaction("processors","scripts.autofontfeature.handler")
 end
 
-commands.enableautofontscript  = autofontfeature.enable
-commands.disableautofontscript = autofontfeature.disable
+implement {
+    name      = "enableautofontscript",
+    actions   = autofontfeature.enable
+}
+
+implement {
+    name      = "disableautofontscript",
+    actions   = autofontfeature.disable }
+
+implement {
+    name      = "setscript",
+    actions   = scripts.set,
+    arguments = { "string", "string", "string" }
+}
+
+implement {
+    name      = "resetscript",
+    actions   = scripts.reset
+}

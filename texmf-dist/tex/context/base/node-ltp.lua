@@ -406,22 +406,8 @@ end
 
 -- resolvers --
 
-local whatsiters = {
-    get_width      = { },
-    get_dimensions = { },
-}
-
-local get_whatsit_width      = whatsiters.get_width
-local get_whatsit_dimensions = whatsiters.get_dimensions
-
-local function get_width     (n,dir) return getfield(n,"width") end
-local function get_dimensions(n,dir) return getfield(n,"width"), getfield(n,"height"), getfield(n,"depth") end
-
-get_whatsit_width[pdfrefximage_code] = get_width
-get_whatsit_width[pdfrefxform_code ] = get_width
-
-get_whatsit_dimensions[pdfrefximage_code] = get_dimensions
-get_whatsit_dimensions[pdfrefxform_code ] = get_dimensions
+local get_whatsit_width      = nodes.whatsitters.getters.width
+local get_whatsit_dimensions = nodes.whatsitters.getters.dimensions
 
 -- expansion etc --
 
@@ -1243,6 +1229,7 @@ local function post_line_break(par)
                         setfield(prevlast,"post",nil)
                     end
                 elseif subtype == first_disc_code then
+                    -- what is v ... next probably
                     if not (getid(v) == disc_code and getsubtype(v) == second_disc_code) then
                         report_parbuilders('unsupported disc at location %a',4)
                     end
@@ -2547,10 +2534,10 @@ function diagnostics.feasible_break(par, current, r, b, pi, d, artificial_demeri
             par.font_in_short_display = short_display("log",getnext(printed_node),par.font_in_short_display)
         else
             local save_link = getnext(current)
-            setfield(cur_p,"next",nil)
+            setfield(current,"next",nil)
             write_nl("log","")
             par.font_in_short_display = short_display("log",getnext(printed_node),par.font_in_short_display)
-            setfield(cur_p,"next",save_link)
+            setfield(current,"next",save_link)
         end
         par.printed_node = current
     end
@@ -3145,7 +3132,7 @@ local function hpack(head,width,method,direction,firstline,line) -- fast version
                 end
                 diagnostics.overfull_hbox(hlist,line,-delta)
             end
-        elseif order == 0 and hlist.list and last_badness > tex.hbadness then
+        elseif order == 0 and getlist(hlist) and last_badness > tex.hbadness then
             diagnostics.bad_hbox(hlist,line,last_badness)
         end
     end
@@ -3153,6 +3140,8 @@ local function hpack(head,width,method,direction,firstline,line) -- fast version
 end
 
 xpack_nodes = hpack -- comment this for old fashioned expansion (we need to fix float mess)
+
+constructors.methods.hpack = hpack
 
 local function common_message(hlist,line,str)
     write_nl("")

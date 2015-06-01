@@ -33,7 +33,6 @@ local getid              = nuts.getid
 local getlist            = nuts.getlist
 local setfield           = nuts.setfield
 local getattr            = nuts.getattr
-local setattr            = nuts.setattr
 
 local insert_node_before = nuts.insert_before
 local insert_node_after  = nuts.insert_after
@@ -163,4 +162,8 @@ function directions.setmath(n)
     end
 end
 
-commands.setmathdirection = directions.setmath
+interfaces.implement {
+    name      = "setmathdirection",
+    actions   = directions.setmath,
+    arguments = "integer"
+}

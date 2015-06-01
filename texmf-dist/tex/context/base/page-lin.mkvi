@@ -73,38 +73,48 @@
 \unexpanded\def\page_postprocessors_linenumbers_deepbox#tag{\page_lines_add_numbers_to_box{#tag}\plusone      \plusone   \plusone  }
 \unexpanded\def\page_postprocessors_linenumbers_column #tag{\page_lines_add_numbers_to_box{#tag}\currentcolumn\nofcolumns\zerocount}
 
-\def\page_lines_parameters_regular
-  {continue = "\ifnum\c_page_lines_mode=\zerocount\v!yes\else\v!no\fi",
-   start    = \number\linenumberingparameter\c!start,
-   step     = \number\linenumberingparameter\c!step,
-   method   = "\linenumberingparameter\c!method",
-   tag      = "\currentlinenumbering"}
-
-\def\page_lines_parameters_update
-  {continue = "\ifnum\c_page_lines_mode=\zerocount\v!yes\else\v!no\fi"}
-
 \def\page_lines_start_define
-  {\setxvalue{\??linenumberinginstance\currentlinenumbering}{\ctxcommand{registerlinenumbering({\page_lines_parameters_regular})}}}
+  {\setxvalue{\??linenumberinginstance\currentlinenumbering}%
+     {\clf_registerlinenumbering
+        continue {\ifnum\c_page_lines_mode=\zerocount\v!yes\else\v!no\fi}%
+        start    \linenumberingparameter\c!start
+        step     \linenumberingparameter\c!step
+        method   {\linenumberingparameter\c!method}%
+        tag      {\currentlinenumbering}%
+     }}
 
 \def\page_lines_start_update
-  {\ctxcommand{setuplinenumbering(\csname\??linenumberinginstance\currentlinenumbering\endcsname,{\page_lines_parameters_update})}}
+  {\clf_setuplinenumbering
+     \csname\??linenumberinginstance\currentlinenumbering\endcsname
+     {%
+        continue {\ifnum\c_page_lines_mode=\zerocount\v!yes\else\v!no\fi}%
+     }%
+   \relax}
 
 \def\page_lines_setup
   {\ifcsname \??linenumberinginstance\currentlinenumbering\endcsname
-     \ctxcommand{setuplinenumbering(\csname\??linenumberinginstance\currentlinenumbering\endcsname,{\page_lines_parameters_regular})}%
+     \clf_setuplinenumbering
+       \csname\??linenumberinginstance\currentlinenumbering\endcsname
+       {%
+            continue {\ifnum\c_page_lines_mode=\zerocount\v!yes\else\v!no\fi}%
+            start    \linenumberingparameter\c!start
+            step     \linenumberingparameter\c!step
+            method   {\linenumberingparameter\c!method}%
+            tag      {\currentlinenumbering}%
+       }%
+     \relax
    \fi}
 
 % we could make this a bit more efficient by putting the end reference
 % in the same table as the start one but why make things complex ...
 
-\let\dofinishlinereference\dofinishfullreference % at lua end
-
 \unexpanded\def\page_lines_some_reference#1#2#3%
   {\dontleavehmode\begingroup
    \global\advance\c_page_lines_reference\plusone
    \attribute\linereferenceattribute\c_page_lines_reference
-   #3%
+   #3% todo: #3{#1} as there is no need to pass #1 as part of #3
    % for the moment we use a simple system i.e. no prefixes etc .. todo: store as number
+   \c_strc_references_bind_state\zerocount % we don't want the prewordbreak and manage it here
    \normalexpanded{\strc_references_set_named_reference{line}{#2}{conversion=\linenumberingparameter\c!conversion}{\the\c_page_lines_reference}}% kind labels userdata text
    \endgroup}
 
@@ -195,10 +205,10 @@
      \ifx\m_argument\v!empty
        \let\currentlinenumbering\empty
      \else
-       \doifassignmentelse{#1}
+       \doifelseassignment{#1}
          {\let\currentlinenumbering\empty
           \setupcurrentlinenumbering[#1]}
-         {\doifnumberelse\m_argument
+         {\doifelsenumber\m_argument
             {\let\currentlinenumbering\empty
              \letlinenumberingparameter\c!start\m_argument}
             {\let\currentlinenumbering\m_argument}}%
@@ -218,7 +228,7 @@
    \else
      \c_page_lines_mode\plusone
      \ifx\m_argument\v!empty \else
-       \doifassignmentelse{#2}
+       \doifelseassignment{#2}
          {\setupcurrentlinenumbering[#2]}
          {\doifnumber\m_argument
             {\letlinenumberingparameter\c!start\m_argument}}%
@@ -301,8 +311,14 @@
    \setbox\b_page_lines_scratch\vbox
      {\forgetall
       \offinterlineskip
-      \ctxcommand{linenumbersstageone(\number\b_page_lines_number,\ifcase\c_page_lines_nesting false\else true\fi)}}%
-   \ctxcommand{linenumbersstagetwo(\number\b_page_lines_number,\number\b_page_lines_scratch)}% can move to lua code
+      \clf_linenumbersstageone
+        \b_page_lines_number
+        \ifcase\c_page_lines_nesting false\else true\fi
+      \relax}%
+   \clf_linenumbersstagetwo
+     \b_page_lines_number
+     \b_page_lines_scratch
+   \fi
    \egroup}
 
 \let\page_lines_make_number_indeed\relax
@@ -321,8 +337,14 @@
    \setbox\b_page_lines_scratch\vbox
      {\forgetall
       \offinterlineskip
-      \ctxcommand{linenumbersstageone(\number\b_page_lines_number,\ifcase\c_page_lines_nesting false\else true\fi)}}%
-   \ctxcommand{linenumbersstagetwo(\number\b_page_lines_number,\number\b_page_lines_scratch)}% can move to lua code
+      \clf_linenumbersstageone
+        \b_page_lines_number
+        \ifcase\c_page_lines_nesting false\else true\fi
+      \relax}%
+   \clf_linenumbersstagetwo
+     \b_page_lines_number
+     \b_page_lines_scratch
+   \relax
    \egroup}
 
 \def\page_lines_make_number#tag#mode#linenumber#shift#width#leftskip#dir% beware, one needs so compensate for this in the \hsize
@@ -534,20 +556,22 @@
 
 % eventually we will do this in lua
 
-\def\currentreferencelinenumber{\ctxcommand{filterreference("linenumber")}}
+\def\currentreferencelinenumber{\clf_filterreference{linenumber}}
 
 \let\m_page_lines_from\empty
 \let\m_page_lines_to  \empty
 
 \unexpanded\def\doifelsesamelinereference#1#2#3%
-  {\doifreferencefoundelse{lr:b:#1}
+  {\doifelsereferencefound{lr:b:#1}
      {\edef\m_page_lines_from{\currentreferencelinenumber}%
-      \doifreferencefoundelse{lr:e:#1}
+      \doifelsereferencefound{lr:e:#1}
         {\edef\m_page_lines_to{\currentreferencelinenumber}%
          %[\m_page_lines_from,\m_page_lines_to]
          \ifx\m_page_lines_from\m_page_lines_to#2\else#3\fi}
         {#2}}
      {#2}}
+
+\let\doifsamelinereferenceelse\doifelsesamelinereference
 
 \unexpanded\def\inline#1[#2]%
   {\doifelsenothing{#1}
