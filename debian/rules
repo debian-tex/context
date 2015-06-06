@@ -63,6 +63,7 @@ binary-indep: build-indep
 	install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)
 
 	dh_installmenu
+	dh_lintian
 	dh_installchangelogs
 	dh_compress
 	dh_fixperms
