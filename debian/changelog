@@ -6,7 +6,7 @@ context (2015.05.18.20150601-1) experimental; urgency=medium
   * bump standards version to 3.9.6, no changes necessary
   * remove old fmt.d conffile
 
- -- Norbert Preining <preining@debian.org>  Mon, 01 Jun 2015 09:18:32 +0900
+ -- Norbert Preining <preining@debian.org>  Sat, 06 Jun 2015 15:33:38 +0900
 
 context (2014.05.21.20140528-2) unstable; urgency=medium
 
