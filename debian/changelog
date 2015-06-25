@@ -1,3 +1,9 @@
+context (2015.05.18.20150601-2) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Norbert Preining <preining@debian.org>  Thu, 25 Jun 2015 14:43:23 +0900
+
 context (2015.05.18.20150601-1) experimental; urgency=medium
 
   * update make-orig-tar for new context release
