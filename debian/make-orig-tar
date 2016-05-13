@@ -1,7 +1,7 @@
 
 tlnet=${1:-/var/www/norbert/tlpretest}
 
-basever=2015.05.18
+basever=2016.05.10
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
@@ -28,6 +28,12 @@ echo "installing from $tlnet"
 mkdir $pkg
 cd $pkg
 unpackone context
+#
+# remove non-free files for the moment
+rm -rf texmf-dist/doc/context/sources/general/manuals/swiglib
+rm -rf texmf-dist/doc/context/sources/general/manuals/tools
+rm -rf texmf-dist/doc/context/sources/general/manuals/xtables
+
 cd ..
 
 GZIP=-9 tar -czf $orig $pkg
