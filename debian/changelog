@@ -1,8 +1,9 @@
-context (2016.05.10.20160513-1) UNRELEASED; urgency=medium
+context (2016.05.10.20160513-1) unstable; urgency=medium
 
-  * context to accompany TL 2016
+  * new upstream release(s) -- context to accompany TL 2016
+    - remove cc-nc-sa licensed files (for now) (Closes: #823143)
 
- -- Norbert Preining <preining@debian.org>  Fri, 13 May 2016 20:20:47 +0900
+ -- Norbert Preining <preining@debian.org>  Fri, 13 May 2016 20:26:04 +0900
 
 context (2015.05.18.20150601-2) unstable; urgency=medium
 
