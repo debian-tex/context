@@ -105,7 +105,7 @@ scripts.patterns.list = {
  -- { "gr",  "hyph-el-polyton",    "greek" },
     { "agr", "hyph-grc",           "ancient greek", ignored_ancient_greek },
     { "gb",  "hyph-en-gb",         "british english" },
-    { "us",  "hyph-en-us",	       "american english" },
+    { "us",  "hyph-en-us",         "american english" },
  -- { "eo",  "hyph-eo",            "esperanto" },
     { "es",  "hyph-es",            "spanish" },
     { "et",  "hyph-et",            "estonian" },
@@ -128,6 +128,7 @@ scripts.patterns.list = {
  -- { "??",  "hyph-kmr",           "kurmanji" },
  -- { "kn",  "hyph-kn",            "kannada" },
     { "la",  "hyph-la",            "latin" },
+    { "ala", "hyph-la-x-classic",  "ancient latin" },
  -- { "lo",  "hyph-lo",            "lao" },
     { "lt",  "hyph-lt",            "lithuanian" },
     { "lv",  "hyph-lv",            "latvian" },
@@ -440,13 +441,13 @@ function scripts.patterns.save(destination,mnemonic,name,patternsnew,hyphenation
         if nofpatternsnew > 0 then
             local data = concat(patternsnew," ")
             patterndata = {
-                n            = nofpatternsnew,
-                compression  = compression,
-                length       = #data,
-                data         = compression and zlib.compress(data,9) or data,
-                characters   = concat(table.sortedkeys(pusednew),""),
-                minhyphenmin = 1, -- determined by pattern author
-                minhyphenmax = 1, -- determined by pattern author
+                n              = nofpatternsnew,
+                compression    = compression,
+                length         = #data,
+                data           = compression and zlib.compress(data,9) or data,
+                characters     = concat(table.sortedkeys(pusednew),""),
+                lefthyphenmin  = 1, -- determined by pattern author
+                righthyphenmax = 1, -- determined by pattern author
             }
         else
             patterndata = {
