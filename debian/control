@@ -12,7 +12,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=debian-tex/context.git
 Package: context
 Section: tex
 Architecture: all
-Depends: ruby | ruby-interpreter, texlive-binaries (>= 2014.20140512.33982), texlive-base (>= 2014), texlive-metapost (>= 2014), lmodern (>= 2.004.4), tex-gyre, ${misc:Depends}
+Depends: ruby | ruby-interpreter, texlive-binaries (>= 2016), texlive-base (>= 2016), texlive-metapost (>= 2016), lmodern (>= 2.004.4), tex-gyre, ${misc:Depends}
 Recommends: fonts-gfs-artemisia, fonts-gfs-baskerville, fonts-gfs-bodoni-classic, fonts-gfs-didot-classic, fonts-gfs-didot, fonts-gfs-olga, fonts-gfs-porson, fonts-gfs-gazis, fonts-gfs-neohellenic, fonts-gfs-solomos, fonts-gfs-theokritos, fonts-freefont, fonts-sil-gentium, context-modules
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007), texlive-xetex (<< 2009)

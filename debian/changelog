@@ -3,8 +3,9 @@ context (2016.05.10.20160513-1) unstable; urgency=medium
   * new upstream release(s) -- context to accompany TL 2016
     - remove cc-nc-sa licensed files (for now) (Closes: #823143)
   * bump standards version, no changes necessary
+  * bump depends onto 2016 version of TL packages
 
- -- Norbert Preining <preining@debian.org>  Fri, 13 May 2016 20:27:07 +0900
+ -- Norbert Preining <preining@debian.org>  Fri, 13 May 2016 20:27:54 +0900
 
 context (2015.05.18.20150601-2) unstable; urgency=medium
 
