@@ -1139,7 +1139,7 @@
 % when enabled, sigstruts will remove themselves if nothing
 % goes inbetween
 
-%D For poractical reasons we define some boundary characters here.
+%D For practical reasons we define some boundary characters here.
 
 \unexpanded\def\leftboundary   {\protrusionboundary\plusone}
 \unexpanded\def\rightboundary  {\protrusionboundary\plustwo}
@@ -1962,6 +1962,12 @@
    \else\ifconditional\c_spac_packed_blank
      \clf_vspacing{\currentvspacing}%
    \fi\fi}
+
+\unexpanded\def\useblankparameter#1% faster local variant
+  {\edef\m_spac_blank_asked{#1\c!blank}%
+   \ifx\m_spac_blank_asked\empty\else
+     \clf_vspacing{\m_spac_blank_asked}
+   \fi}
 
 % handy (and faster):
 
