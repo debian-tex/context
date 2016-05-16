@@ -1,8 +1,8 @@
 name context.doc
 category Package
-revision 41045
+revision 41152
 shortdesc doc files of context
-docfiles size=5227
+docfiles size=5246
  texmf-dist/doc/context/documents/general/columnsets/columnsets.pdf
  texmf-dist/doc/context/documents/general/manuals/epub-mkiv-demo.epub
  texmf-dist/doc/context/documents/general/manuals/epub-mkiv-demo.pdf
@@ -338,6 +338,9 @@ docfiles size=5227
  texmf-dist/doc/context/sources/general/manuals/start/ma-cb-screen.tex
  texmf-dist/doc/context/sources/general/manuals/start/ma-cb-style.tex
  texmf-dist/doc/context/sources/general/manuals/start/ma-cb.tex
+ texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv-gm-1.jpg
+ texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv-gm-1.pdf
+ texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv-gm-1.png
  texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/templates/templates-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/tiptrick/tiptrick.tex

@@ -1,6 +1,6 @@
 name context
 category Package
-revision 41045
+revision 41152
 shortdesc The ConTeXt macro package
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
@@ -24,7 +24,7 @@ execute AddFormat name=cont-it mode=disabled engine=pdftex         patterns=cont
 execute AddFormat name=cont-nl mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-nl.mkii" fmttriggers=context
 execute AddFormat name=cont-ro mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-ro.mkii" fmttriggers=context
 execute addMap original-context-symbol.map
-runfiles size=14177
+runfiles size=14180
  texmf-dist/bibtex/bst/context/mkii/cont-ab.bst
  texmf-dist/bibtex/bst/context/mkii/cont-au.bst
  texmf-dist/bibtex/bst/context/mkii/cont-no.bst
@@ -1019,6 +1019,7 @@ runfiles size=14177
  texmf-dist/tex/context/base/mkiv/font-odv.lua
  texmf-dist/tex/context/base/mkiv/font-off.lua
  texmf-dist/tex/context/base/mkiv/font-one.lua
+ texmf-dist/tex/context/base/mkiv/font-onr.lua
  texmf-dist/tex/context/base/mkiv/font-osd.lua
  texmf-dist/tex/context/base/mkiv/font-ota.lua
  texmf-dist/tex/context/base/mkiv/font-otb.lua
