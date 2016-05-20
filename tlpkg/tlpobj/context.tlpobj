@@ -1,6 +1,6 @@
 name context
 category Package
-revision 41152
+revision 41222
 shortdesc The ConTeXt macro package
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
@@ -24,7 +24,7 @@ execute AddFormat name=cont-it mode=disabled engine=pdftex         patterns=cont
 execute AddFormat name=cont-nl mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-nl.mkii" fmttriggers=context
 execute AddFormat name=cont-ro mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-ro.mkii" fmttriggers=context
 execute addMap original-context-symbol.map
-runfiles size=14180
+runfiles size=13285
  texmf-dist/bibtex/bst/context/mkii/cont-ab.bst
  texmf-dist/bibtex/bst/context/mkii/cont-au.bst
  texmf-dist/bibtex/bst/context/mkii/cont-no.bst
@@ -1542,6 +1542,7 @@ runfiles size=14180
  texmf-dist/tex/context/base/mkiv/symb-imp-cc.mkiv
  texmf-dist/tex/context/base/mkiv/symb-imp-cow.mkiv
  texmf-dist/tex/context/base/mkiv/symb-imp-eur.mkiv
+ texmf-dist/tex/context/base/mkiv/symb-imp-fontawesome.mkiv
  texmf-dist/tex/context/base/mkiv/symb-imp-jmn.mkiv
  texmf-dist/tex/context/base/mkiv/symb-imp-mis.mkiv
  texmf-dist/tex/context/base/mkiv/symb-imp-mvs.mkiv
@@ -1716,12 +1717,6 @@ runfiles size=14180
  texmf-dist/tex/context/bib/mkii/bibl-ssa.tex
  texmf-dist/tex/context/colors/icc/context/colorprofiles.lua
  texmf-dist/tex/context/colors/icc/context/colorprofiles.xml
- texmf-dist/tex/context/colors/icc/profiles/ecirgb_v2.icc
- texmf-dist/tex/context/colors/icc/profiles/ecirgb_v2_iccv4.icc
- texmf-dist/tex/context/colors/icc/profiles/isocoated_v2_300_eci.icc
- texmf-dist/tex/context/colors/icc/profiles/isocoated_v2_eci.icc
- texmf-dist/tex/context/colors/icc/profiles/srgb.icc
- texmf-dist/tex/context/colors/icc/profiles/srgb_v4_icc_preference.icc
  texmf-dist/tex/context/fonts/mkii/type-buy.mkii
  texmf-dist/tex/context/fonts/mkii/type-cbg.mkii
  texmf-dist/tex/context/fonts/mkii/type-cow.mkii
