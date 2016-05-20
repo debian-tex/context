@@ -1,7 +1,7 @@
 
 tlnet=${1:-/var/www/norbert/tlpretest}
 
-basever=2016.05.14
+basever=2016.05.17
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
@@ -30,8 +30,8 @@ cd $pkg
 unpackone context
 #
 # remove non-free files for the moment
-# should probably replaced by some other profiles
-rm -rf texmf-dist/tex/context/colors/icc/profiles/*
+# replaced in TL already
+#rm -rf texmf-dist/tex/context/colors/icc/profiles/*
 
 cd ..
 
