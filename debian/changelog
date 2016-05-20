@@ -1,3 +1,10 @@
+context (2016.05.17.20160520-1) unstable; urgency=medium
+
+  * update make-orig-tar
+  * Imported Upstream version 2016.05.17.20160520 (TL2016)
+
+ -- Norbert Preining <preining@debian.org>  Fri, 20 May 2016 11:24:46 +0900
+
 context (2016.05.14.20160516-1) unstable; urgency=medium
 
   * new upstream release(s) -- context to accompany TL 2016
