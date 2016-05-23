@@ -1,6 +1,6 @@
 name context
 category Package
-revision 41222
+revision 41282
 shortdesc The ConTeXt macro package
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
@@ -24,7 +24,7 @@ execute AddFormat name=cont-it mode=disabled engine=pdftex         patterns=cont
 execute AddFormat name=cont-nl mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-nl.mkii" fmttriggers=context
 execute AddFormat name=cont-ro mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-ro.mkii" fmttriggers=context
 execute addMap original-context-symbol.map
-runfiles size=13285
+runfiles size=13248
  texmf-dist/bibtex/bst/context/mkii/cont-ab.bst
  texmf-dist/bibtex/bst/context/mkii/cont-au.bst
  texmf-dist/bibtex/bst/context/mkii/cont-no.bst
@@ -653,15 +653,12 @@ runfiles size=13285
  texmf-dist/tex/context/base/mkii/supp-fun.mkii
  texmf-dist/tex/context/base/mkii/supp-lat.mkii
  texmf-dist/tex/context/base/mkii/supp-mat.mkii
- texmf-dist/tex/context/base/mkii/supp-mis.mkii
  texmf-dist/tex/context/base/mkii/supp-mis.tex
- texmf-dist/tex/context/base/mkii/supp-mpe.mkii
  texmf-dist/tex/context/base/mkii/supp-mpe.tex
  texmf-dist/tex/context/base/mkii/supp-mps.mkii
  texmf-dist/tex/context/base/mkii/supp-mrk.mkii
  texmf-dist/tex/context/base/mkii/supp-num.mkii
  texmf-dist/tex/context/base/mkii/supp-pat.mkii
- texmf-dist/tex/context/base/mkii/supp-pdf.mkii
  texmf-dist/tex/context/base/mkii/supp-pdf.tex
  texmf-dist/tex/context/base/mkii/supp-ran.mkii
  texmf-dist/tex/context/base/mkii/supp-spe.mkii
@@ -688,7 +685,6 @@ runfiles size=13285
  texmf-dist/tex/context/base/mkii/syst-rtp.mkii
  texmf-dist/tex/context/base/mkii/syst-rtp.mkiv
  texmf-dist/tex/context/base/mkii/syst-str.mkii
- texmf-dist/tex/context/base/mkii/syst-tex.mkii
  texmf-dist/tex/context/base/mkii/tabl-com.mkii
  texmf-dist/tex/context/base/mkii/tabl-ltb.mkii
  texmf-dist/tex/context/base/mkii/tabl-ntb.mkii
