@@ -1,5 +1,5 @@
 
-tlnet=${1:-/var/www/norbert/tlpretest}
+tlnet=${1:-/home/norbert/public_html/tlnet}
 
 basever=2016.05.17
 
