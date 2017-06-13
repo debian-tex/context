@@ -9,72 +9,10 @@ if not modules then modules = { } end modules ['typo-mar'] = {
 -- todo:
 --
 -- * autoleft/right depending on available space (or distance to margin)
--- * stack across paragraphs, but that is messy and one should reconsider
---   using margin data then as also vertical spacing kicks in
 -- * floating margin data, with close-to-call anchoring
 
--- -- experiment (does not work, too much interference)
---
--- local pdfprint = pdf.print
--- local format = string.format
---
--- anchors = anchors or { }
---
--- local whatever = { }
--- local factor   = (7200/7227)/65536
---
--- function anchors.set(tag)
---     whatever[tag] = { pdf.h, pdf.v }
--- end
---
--- function anchors.reset(tag)
---     whatever[tag] = nil
--- end
---
--- function anchors.startmove(tag,how) -- save/restore nodes but they don't support moves
---     local w = whatever[tag]
---     if not w then
---         -- error
---     elseif how == "horizontal" or how == "h" then
---         pdfprint("page",format(" q 1 0 0 1 %f 0 cm ", (w[1] - pdf.h) * factor))
---     elseif how == "vertical" or how == "v" then
---         pdfprint("page",format(" q 1 0 0 1 0 %f cm ", (w[2] - pdf.v) * factor))
---     else
---         pdfprint("page",format(" q 1 0 0 1 %f %f cm ", (w[1] - pdf.h) * factor, (w[2] - pdf.v) * factor))
---     end
--- end
---
--- function anchors.stopmove(tag)
---     local w = whatever[tag]
---     if not w then
---         -- error
---     else
---         pdfprint("page"," Q ")
---     end
--- end
---
--- local latelua = nodes.pool.latelua
---
--- function anchors.node_set(tag)
---     return latelua(formatters["anchors.set(%q)"](tag))
--- end
---
--- function anchors.node_reset(tag)
---     return latelua(formatters["anchors.reset(%q)"](tag))
--- end
---
--- function anchors.node_start_move(tag,how)
---     return latelua(formatters["anchors.startmove(%q,%q)](tag,how))
--- end
---
--- function anchors.node_stop_move(tag)
---     return latelua(formatters["anchors.stopmove(%q)"](tag))
--- end
-
--- so far
-
 local format, validstring = string.format, string.valid
-local insert, remove, sortedkeys = table.insert, table.remove, table.sortedkeys
+local insert, remove, sortedkeys, fastcopy = table.insert, table.remove, table.sortedkeys, table.fastcopy
 local setmetatable, next = setmetatable, next
 local formatters = string.formatters
 local toboolean = toboolean
@@ -86,7 +24,7 @@ local trace_margindata  = false  trackers.register("typesetters.margindata",    
 local trace_marginstack = false  trackers.register("typesetters.margindata.stack", function(v) trace_marginstack = v end)
 local trace_margingroup = false  trackers.register("typesetters.margindata.group", function(v) trace_margingroup = v end)
 
-local report_margindata = logs.reporter("typesetters","margindata")
+local report_margindata = logs.reporter("margindata")
 
 local tasks              = nodes.tasks
 local prependaction      = tasks.prependaction
@@ -104,8 +42,6 @@ local v_local            = variables["local"]
 local v_global           = variables["global"]
 local v_left             = variables.left
 local v_right            = variables.right
-local v_flushleft        = variables.flushleft
-local v_flushright       = variables.flushright
 local v_inner            = variables.inner
 local v_outer            = variables.outer
 local v_margin           = variables.margin
@@ -117,9 +53,7 @@ local v_continue         = variables.continue
 local v_first            = variables.first
 local v_text             = variables.text
 local v_paragraph        = variables.paragraph
-local v_column           = variables.column
 local v_line             = variables.line
-local v_hanging          = variables.hanging
 
 local nuts               = nodes.nuts
 local nodepool           = nuts.pool
@@ -127,13 +61,9 @@ local nodepool           = nuts.pool
 local tonode             = nuts.tonode
 local tonut              = nuts.tonut
 
-local copy_node_list     = nuts.copy_list
 local hpack_nodes        = nuts.hpack
 local traverse_id        = nuts.traverse_id
-local free_node_list     = nuts.flush_list
-local insert_node_after  = nuts.insert_after
-local insert_node_before = nuts.insert_before
-local linked_nodes       = nuts.linked
+local flush_node_list    = nuts.flush_list
 
 local getfield           = nuts.getfield
 local setfield           = nuts.setfield
@@ -143,9 +73,21 @@ local getid              = nuts.getid
 local getattr            = nuts.getattr
 local setattr            = nuts.setattr
 local getsubtype         = nuts.getsubtype
-local getbox             = nuts.getbox
 local getlist            = nuts.getlist
+local getwhd             = nuts.getwhd
 local setlist            = nuts.setlist
+local setlink            = nuts.setlink
+local getshift           = nuts.getshift
+local setshift           = nuts.setshift
+local getwidth           = nuts.getwidth
+local setwidth           = nuts.setwidth
+local getheight          = nuts.getheight
+
+local getbox             = nuts.getbox
+local takebox            = nuts.takebox
+
+local setprop            = nuts.setprop
+local getprop            = nuts.getprop
 
 local nodecodes          = nodes.nodecodes
 local listcodes          = nodes.listcodes
@@ -154,25 +96,18 @@ local whatsitcodes       = nodes.whatsitcodes
 
 local hlist_code         = nodecodes.hlist
 local vlist_code         = nodecodes.vlist
-local glue_code          = nodecodes.glue
-local kern_code          = nodecodes.kern
-local penalty_code       = nodecodes.penalty
 local whatsit_code       = nodecodes.whatsit
-local line_code          = listcodes.line
-local cell_code          = listcodes.cell
-local alignment_code     = listcodes.alignment
 local userdefined_code   = whatsitcodes.userdefined
 
 local nodepool           = nuts.pool
 
-local new_kern           = nodepool.kern
 local new_usernumber     = nodepool.usernumber
-local new_latelua        = nodepool.latelua
+local new_hlist          = nodepool.hlist
 
 local lateluafunction    = nodepool.lateluafunction
 
-local texgetcount        = tex.getcount
 local texgetdimen        = tex.getdimen
+local texgetcount        = tex.getcount
 local texget             = tex.get
 
 local isleftpage         = layouts.status.isleftpage
@@ -183,8 +118,6 @@ local addtoline          = paragraphs.addtoline
 local moveinline         = paragraphs.moveinline
 local calculatedelta     = paragraphs.calculatedelta
 
-local a_margindata       = attributes.private("margindata")
-local a_specialcontent   = attributes.private("specialcontent")
 local a_linenumber       = attributes.private('linenumber')
 
 local inline_mark        = nodepool.userids["margins.inline"]
@@ -205,6 +138,7 @@ local nofsaved           = 0
 local nofstored          = 0
 local nofinlined         = 0
 local nofdelayed         = 0
+local nofinjected        = 0
 local h_anchors          = 0
 local v_anchors          = 0
 
@@ -267,8 +201,8 @@ end
 
 function margins.save(t)
     setmetatable(t,defaults)
-    local content  = getbox(t.number)
-setattr(content,a_specialcontent,1) -- todo: a property
+    local content  = takebox(t.number)
+    setprop(content,"specialcontent","margindata")
     local location = t.location
     local category = t.category
     local inline   = t.inline
@@ -276,10 +210,6 @@ setattr(content,a_specialcontent,1) -- todo: a property
     local name     = t.name
     local option   = t.option
     local stack    = t.stack
-    if stack == v_yes or stack == v_continue then
-        inline   = false
-        t.inline = false
-    end
     if option then
         option   = settings_to_hash(option)
         t.option = option
@@ -317,12 +247,13 @@ setattr(content,a_specialcontent,1) -- todo: a property
         showstore(store,"before",location)
     end
     if name and name ~= "" then
+        -- this can be used to overload
         if inlinestore then -- todo: inline store has to be done differently (not sparse)
             local t = sortedkeys(store) for j=#t,1,-1 do local i = t[j]
                 local si = store[i]
                 if si.name == name then
                     local s = remove(store,i)
-                    free_node_list(s.box)
+                    flush_node_list(s.box)
                 end
             end
         else
@@ -330,7 +261,7 @@ setattr(content,a_specialcontent,1) -- todo: a property
                 local si = store[i]
                 if si.name == name then
                     local s = remove(store,i)
-                    free_node_list(s.box)
+                    flush_node_list(s.box)
                 end
             end
         end
@@ -342,16 +273,17 @@ setattr(content,a_specialcontent,1) -- todo: a property
         local leftmargindistance  = texgetdimen("naturalleftmargindistance")
         local rightmargindistance = texgetdimen("naturalrightmargindistance")
         local strutbox            = getbox("strutbox")
+        local _, strutht, strutdp = getwhd(strutbox)
         -- better make a new table and make t entry in t
-        t.box                 = copy_node_list(content)
+        t.box                 = content
         t.n                   = nofsaved
         -- used later (we will clean up this natural mess later)
         -- nice is to make a special status table mechanism
-        t.strutdepth          = getfield(strutbox,"depth")
-        t.strutheight         = getfield(strutbox,"height")
-        -- beware: can be different from the applied one
-        t.leftskip            = getfield(texget("leftskip"),"width")  -- we're not in forgetall
-        t.rightskip           = getfield(texget("rightskip"),"width") -- we're not in forgetall
+        t.strutheight         = strutht
+        t.strutdepth          = strutdp
+        -- beware: can be different from the applied one (we're not in forgetall)
+        t.leftskip            = texget("leftskip",false)
+        t.rightskip           = texget("rightskip",false)
         --
         t.leftmargindistance  = leftmargindistance -- todo:layoutstatus table
         t.rightmargindistance = rightmargindistance
@@ -388,21 +320,6 @@ end
 -- When the prototype inner/outer code that was part of this proved to be
 -- okay it was moved elsewhere.
 
-local status, nofstatus = { }, 0
-
--- local f_anchor = formatters["_plib_.set('md:h',%i,{x=true,c=true})"]
--- local s_anchor = 'md:h'
---
--- local function setanchor(h_anchor)
---     return new_latelua(f_anchor(h_anchor))
--- end
-
--- local t_anchor = { x = true, c = true }
---
--- local function setanchor(h_anchor)
---      return lateluafunction(function() setposition("md:h",h_anchor,t_anchor) end)
--- end
-
 local function realign(current,candidate)
     local location      = candidate.location
     local margin        = candidate.margin
@@ -420,8 +337,7 @@ local function realign(current,candidate)
     local atleft        = true
     local hmove         = 0
     local delta         = 0
- -- local realpageno    = candidate.realpageno
-    local leftpage      = isleftpage(false,true)
+    local leftpage      = isleftpage()
     local leftdelta     = 0
     local rightdelta    = 0
     local leftdistance  = distance
@@ -455,6 +371,8 @@ local function realign(current,candidate)
         if not leftpage then
             atleft = false
         end
+    else
+        -- v_left
     end
 
     local islocal = scope == v_local
@@ -489,11 +407,10 @@ local function realign(current,candidate)
     moveinline(hook,candidate.node,delta)
 end
 
-local function realigned(current,a)
-    local candidate = status[a]
+local function realigned(current,candidate)
     realign(current,candidate)
     nofdelayed = nofdelayed - 1
-    status[a] = nil
+    setprop(current,"margindata",false)
     return true
 end
 
@@ -507,78 +424,89 @@ end
 -- table gets saved when the v_continue case is active. We use a special variant
 -- of position tracking, after all we only need the page number and vertical position.
 
-local stacked = { } -- left/right keys depending on location
+local validstacknames = {
+    [v_left ] = v_left ,
+    [v_right] = v_right,
+    [v_inner] = v_inner,
+    [v_outer] = v_outer,
+}
+
 local cache   = { }
+local stacked = { [v_yes] = { }, [v_continue] = { } }
+local anchors = { [v_yes] = { }, [v_continue] = { } }
 
-local function resetstacked()
-    stacked = { }
+local function resetstacked(all)
+    stacked[v_yes] = { }
+    anchors[v_yes] = { }
+    if all then
+        stacked[v_continue] = { }
+        anchors[v_continue] = { }
+    end
 end
 
--- resetstacked()
+-- anchors are only set for lines that have a note
 
-local function ha(tag) -- maybe l/r keys ipv left/right keys
+local function sa(tag) -- maybe l/r keys ipv left/right keys
     local p = cache[tag]
-    p.p = true
-    p.y = true
-    setposition('md:v',tag,p)
-    cache[tag] = nil
+    if p then
+        if trace_marginstack then
+            report_margindata("updating anchor %a",tag)
+        end
+        p.p = true
+        p.y = true
+        setposition('md:v',tag,p)
+        cache[tag] = nil -- do this later, per page a cleanup
+    end
 end
 
-margins.ha = ha
-
-local f_anchor = formatters["typesetters.margins.ha(%s)"]
-
-local function setanchor(v_anchor)
-    return new_latelua(f_anchor(v_anchor))
+local function setanchor(v_anchor) -- freezes the global here
+    return lateluafunction(function() sa(v_anchor) end)
 end
 
--- local function setanchor(v_anchor) -- freezes the global here
---     return lateluafunction(function() ha(v_anchor) end)
--- end
+local function aa(tag,n) -- maybe l/r keys ipv left/right keys
+    local p = jobpositions.gettobesaved('md:v',tag)
+    if p then
+        if trace_marginstack then
+            report_margindata("updating injected %a",tag)
+        end
+        local pages = p.pages
+        if not pages then
+            pages = { }
+            p.pages = pages
+        end
+        pages[n] = texgetcount("realpageno")
+    elseif trace_marginstack then
+        report_margindata("not updating injected %a",tag)
+    end
+end
+
+local function addtoanchor(v_anchor,n) -- freezes the global here
+    return lateluafunction(function() aa(v_anchor,n) end)
+end
 
 local function markovershoot(current) -- todo: alleen als offset > line
     v_anchors = v_anchors + 1
-    cache[v_anchors] = stacked
+    cache[v_anchors] = fastcopy(stacked)
     local anchor = setanchor(v_anchors)
- -- local list = hpack_nodes(linked_nodes(anchor,getlist(current))) -- not ok, we need to retain width
-    local list = hpack_nodes(linked_nodes(anchor,getlist(current)),getfield(current,"width"),"exactly")--
- -- why not:
- -- local list = linked_nodes(anchor,getlist(current))
+ -- local list = hpack_nodes(setlink(anchor,getlist(current))) -- not ok, we need to retain width
+ -- local list = setlink(anchor,getlist(current)) -- why not this ... better play safe
+    local list = hpack_nodes(setlink(anchor,getlist(current)),getwidth(current),"exactly")--
     if trace_marginstack then
         report_margindata("marking anchor %a",v_anchors)
     end
     setlist(current,list)
 end
 
-local function getovershoot(location)
-    local p = getposition("md:v",v_anchors)
-    local c = getposition("md:v",v_anchors+1)
-    if p and c and p.p and p.p == c.p then
-        local distance  = p.y - c.y
-        local offset    = p[location] or 0
-        local overshoot = offset - distance
-        if trace_marginstack then
-            report_margindata("location %a, anchor %a, distance %p, offset %p, overshoot %p",location,v_anchors,distance,offset,overshoot)
-        end
-        if overshoot > 0 then
-            return overshoot
-        end
-    elseif trace_marginstack then
-        report_margindata("location %a, anchor %a, nothing to correct",location,v_anchors)
-    end
-    return 0
-end
-
 local function inject(parent,head,candidate)
-    local box          = candidate.box
+    local box = candidate.box
     if not box then
         return head, nil, false -- we can have empty texts
     end
-    local width        = getfield(box,"width")
-    local height       = getfield(box,"height")
-    local depth        = getfield(box,"depth")
-    local shift        = getfield(box,"shift")
+    local width, height, depth
+                       = getwhd(box)
+    local shift        = getshift(box)
     local stack        = candidate.stack
+    local stackname    = candidate.stackname
     local location     = candidate.location
     local method       = candidate.method
     local voffset      = candidate.voffset
@@ -586,12 +514,21 @@ local function inject(parent,head,candidate)
     local baseline     = candidate.baseline
     local strutheight  = candidate.strutheight
     local strutdepth   = candidate.strutdepth
+    local inline       = candidate.inline
     local psubtype     = getsubtype(parent)
-    local offset       = stacked[location]
+    -- This stackname is experimental and therefore undocumented and basically
+    -- unsupported. It was introduced when we needed to support overlapping
+    -- of different anchors.
+    if not stackname or stackname == "" then
+        stackname = location
+    else
+        stackname = validstacknames[stackname] or location
+    end
+    local isstacked    = stack == v_continue or stack == v_yes
+    local offset       = isstacked and stacked[stack][stackname]
     local firstonstack = offset == false or offset == nil
-    nofstatus          = nofstatus  + 1
+    nofinjected        = nofinjected + 1
     nofdelayed         = nofdelayed + 1
-    status[nofstatus]  = candidate
     -- yet untested
     baseline = tonumber(baseline)
     if not baseline then
@@ -607,35 +544,81 @@ local function inject(parent,head,candidate)
             baseline = false -- strutheight -- actually a hack
         end
     end
-    candidate.width = width
-    candidate.hsize = getfield(parent,"width") -- we can also pass textwidth
-    candidate.psubtype = psubtype
+    candidate.width     = width
+    candidate.hsize     = getwidth(parent) -- we can also pass textwidth
+    candidate.psubtype  = psubtype
+    candidate.stackname = stackname
     if trace_margindata then
         report_margindata("processing, index %s, height %p, depth %p, parent %a, method %a",candidate.n,height,depth,listcodes[psubtype],method)
     end
-    if firstonstack then
-        offset = 0
-    else
-     -- offset = offset + height
-    end
-    if stack == v_yes then
+    -- Overlap detection is somewhat complex because we have display and inline
+    -- notes mixed as well as inner and outer positioning. We do need to
+    -- handle it in the stream because we also keep lines together so we keep
+    -- track of page numbers of notes.
+
+    if isstacked then
+        firstonstack = true
+        local anchor = getposition("md:v")
+        if anchor and (location == v_inner or location == v_outer) then
+            local pages = anchor.pages
+            if pages then
+                local page = pages[nofinjected]
+                if page then
+                    if isleftpage(page) then
+                        stackname = location == v_inner and v_right or v_left
+                    else
+                        stackname = location == v_inner and v_left or v_right
+                    end
+                    candidate.stackname = stackname
+                    offset              = stack and stack ~= "" and stacked[stack][stackname]
+                end
+            end
+        end
+        local current  = v_anchors + 1
+        local previous = anchors[stack][stackname]
+        if trace_margindata then
+            report_margindata("anchor %i, offset so far %p",current,offset or 0)
+        end
+        local ap = anchor and anchor[previous]
+        local ac = anchor and anchor[current]
+        if not previous then
+        elseif previous == current then
+            firstonstack = false
+        elseif ap and ac and ap.p == ac.p then
+            local distance = ap.y - ac.y
+            if trace_margindata then
+                report_margindata("distance %p",distance)
+            end
+            if offset > distance then
+                -- we already overflow
+                offset = offset - distance
+                firstonstack = false
+            else
+                offset = 0
+            end
+        else
+            -- what to do
+        end
+        anchors[v_yes]     [stackname] = current
+        anchors[v_continue][stackname] = current
+        if firstonstack then
+            offset = 0
+        end
         offset = offset + candidate.dy -- always
         shift  = shift + offset
-    elseif stack == v_continue then
-        offset = offset + candidate.dy -- always
+    else
         if firstonstack then
-            offset = offset + getovershoot(location)
+            offset = 0
         end
-        shift = shift + offset
+        offset = offset + candidate.dy -- always
+        shift  = shift + offset
     end
-    -- -- --
     -- Maybe we also need to patch offset when we apply methods, but how ...
     -- This needs a bit of playing as it depends on the stack setting of the
     -- following which we don't know yet ... so, consider stacking partially
     -- experimental.
-    -- -- --
     if method == v_top then
-        local delta = height - getfield(parent,"height")
+        local delta = height - getheight(parent)
         if trace_margindata then
             report_margindata("top aligned by %p",delta)
         end
@@ -643,8 +626,9 @@ local function inject(parent,head,candidate)
             shift = shift + voffset + delta
         end
     elseif method == v_line then
-        if getfield(parent,"depth") == 0 then
-            local delta = height - getfield(parent,"height")
+        local _, ph, pd = getwhd(parent)
+        if pd == 0 then
+            local delta = height - ph
             if trace_margindata then
                 report_margindata("top aligned by %p (no depth)",delta)
             end
@@ -688,14 +672,20 @@ local function inject(parent,head,candidate)
         shift  = shift + delta
         offset = offset + delta
     end
-    setfield(box,"shift",shift)
-    setfield(box,"width",0)
+    setshift(box,shift)
+    setwidth(box,0) -- not needed when wrapped
+    --
+    if isstacked then
+        setlink(box,addtoanchor(v_anchor,nofinjected))
+        box = new_hlist(box)
+        -- set height / depth ?
+    end
     --
     candidate.hook, candidate.node = addtoline(parent,box)
     --
-    setattr(box,a_margindata,nofstatus)
+    setprop(box,"margindata",candidate)
     if trace_margindata then
-        report_margindata("injected, location %a, shift %p",location,shift)
+        report_margindata("injected, location %a, stack %a, shift %p",location,stackname,shift)
     end
     -- we need to add line etc to offset as well
     offset = offset + depth
@@ -704,14 +694,17 @@ local function inject(parent,head,candidate)
         depth      = offset,
         slack      = candidate.bottomspace, -- todo: 'depth' => strutdepth
         lineheight = candidate.lineheight,  -- only for tracing
+        stacked    = inline and isstacked,
     }
     offset = offset + height
-    stacked[location] = offset -- weird, no table ?
+    -- we need a restart ... when there is no overlap at all
+    stacked[v_yes]     [stackname] = offset
+    stacked[v_continue][stackname] = offset
     -- todo: if no real depth then zero
     if trace_margindata then
         report_margindata("status, offset %s",offset)
     end
-    return getlist(parent), room, stack == v_continue
+    return getlist(parent), room, inline and isstacked or (stack == v_continue)
 end
 
 local function flushinline(parent,head)
@@ -729,9 +722,15 @@ local function flushinline(parent,head)
                     inlinestore[n] = nil
                     nofinlined = nofinlined - 1
                     head, room, con = inject(parent,head,candidate) -- maybe return applied offset
-                    continue = continue or con
-                    done = true
+                    done      = true
+                    continue  = continue or con
                     nofstored = nofstored - 1
+                    if room and room.stacked then
+                        -- for now we also check for inline+yes/continue, maybe someday no such check
+                        -- will happen; we can assume most inlines are one line heigh; also this
+                        -- together feature can become optional
+                        registertogether(tonode(parent),room) -- !! tonode
+                    end
                 end
             end
         elseif id == hlist_code or id == vlist_code then
@@ -761,8 +760,8 @@ local function flushed(scope,parent) -- current is hlist
                     local candidate = remove(store,1) -- brr, local stores are sparse
                     if candidate then -- no vpack, as we want to realign
                         head, room, con = inject(parent,head,candidate)
-                        done = true
-                        continue = continue or con
+                        done      = true
+                        continue  = continue or con
                         nofstored = nofstored - 1
                         if room then
                             registertogether(tonode(parent),room) -- !! tonode
@@ -787,7 +786,7 @@ local function flushed(scope,parent) -- current is hlist
     if done then
         local a = getattr(head,a_linenumber) -- hack .. we need a more decent critical attribute inheritance mechanism
         if false then
-            local l = hpack_nodes(head,getfield(parent,"width"),"exactly")
+            local l = hpack_nodes(head,getwidth(parent),"exactly")
             setlist(parent,l)
             if a then
                 setattr(l,a_linenumber,a)
@@ -799,7 +798,6 @@ local function flushed(scope,parent) -- current is hlist
                 setattr(parent,a_linenumber,a)
             end
         end
-     -- resetstacked()
     end
     return done, continue
 end
@@ -817,11 +815,11 @@ local function handler(scope,head,group)
         local done = false
         while current do
             local id = getid(current)
-            if (id == vlist_code or id == hlist_code) and not getattr(current,a_margindata) then
+            if (id == vlist_code or id == hlist_code) and getprop(current,"margindata") == nil then
                 local don, continue = flushed(scope,current)
                 if don then
                     done = true
-                    setattr(current,a_margindata,0) -- signal to prevent duplicate processing
+                    setprop(current,"margindata",false) -- signal to prevent duplicate processing
                     if continue then
                         markovershoot(current)
                     end
@@ -839,9 +837,7 @@ local function handler(scope,head,group)
                 report_margindata("flushing stage one, nothing done, %s left",nofstored)
             end
         end
-     -- if done then
-        resetstacked() -- why doesn't done work ok here?
-     -- end
+resetstacked()
         return tonode(head), done
     else
         return head, false
@@ -849,6 +845,9 @@ local function handler(scope,head,group)
 end
 
 local trialtypesetting = context.trialtypesetting
+
+-- maybe change this to an action applied to the to be shipped out box (that is
+-- the mvl list in there so that we don't need to traverse global
 
 function margins.localhandler(head,group) -- sometimes group is "" which is weird
 
@@ -909,8 +908,8 @@ local function finalhandler(head)
         while current and nofdelayed > 0 do
             local id = getid(current)
             if id == hlist_code then -- only lines?
-                local a = getattr(current,a_margindata)
-                if not a or a == 0 then
+                local a = getprop(current,"margindata")
+                if not a then
                     finalhandler(getlist(current))
                 elseif realigned(current,a) then
                     done = true
@@ -936,9 +935,12 @@ function margins.finalhandler(head)
         end
         head = tonut(head)
         local head, done = finalhandler(head)
+--         resetstacked(true)
+resetstacked(nofdelayed==0)
         head = tonode(head)
         return head, done
     else
+        resetstacked()
         return head, false
     end
 end
@@ -946,26 +948,15 @@ end
 -- Somehow the vbox builder (in combinations) gets pretty confused and decides to
 -- go horizontal. So this needs more testing.
 
-prependaction("finalizers",   "lists",       "typesetters.margins.localhandler")
---           ("vboxbuilders", "normalizers", "typesetters.margins.localhandler")
-prependaction("mvlbuilders",  "normalizers", "typesetters.margins.globalhandler")
-prependaction("shipouts",     "normalizers", "typesetters.margins.finalhandler")
-
-disableaction("finalizers",   "typesetters.margins.localhandler")
---           ("vboxbuilders", "typesetters.margins.localhandler")
-disableaction("mvlbuilders",  "typesetters.margins.globalhandler")
-disableaction("shipouts",     "typesetters.margins.finalhandler")
-
 enablelocal = function()
-    enableaction("finalizers",   "typesetters.margins.localhandler")
- -- enableaction("vboxbuilders", "typesetters.margins.localhandler")
-    enableaction("shipouts",     "typesetters.margins.finalhandler")
+    enableaction("finalizers", "typesetters.margins.localhandler")
+    enableaction("shipouts",   "typesetters.margins.finalhandler")
     enablelocal = nil
 end
 
 enableglobal = function()
-    enableaction("mvlbuilders",  "typesetters.margins.globalhandler")
-    enableaction("shipouts",     "typesetters.margins.finalhandler")
+    enableaction("mvlbuilders", "typesetters.margins.globalhandler")
+    enableaction("shipouts",    "typesetters.margins.finalhandler")
     enableglobal = nil
 end
 
@@ -1003,6 +994,7 @@ interfaces.implement {
            { "align" },
            { "option" },
            { "line", "integer" },
+           { "stackname" },
            { "stack" },
         }
     }
