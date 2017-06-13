@@ -12,6 +12,8 @@ modules.</p>
 --ldx]]--
 
 -- this module is being reconstructed
+--
+-- todo: datatype table per node type
 
 -- todo: query names with new node.subtypes
 
@@ -89,6 +91,13 @@ local listcodes = mark(getsubtypes("list"))
 -- }
 
 local rulecodes = mark(getsubtypes("rule"))
+
+if not rulecodes[5] then
+    rulecodes[5] = "over"
+    rulecodes[6] = "under"
+    rulecodes[7] = "fraction"
+    rulecodes[8] = "radical"
+end
 
 -- local glyphcodes = allocate {
 --     [0] = "character",
@@ -248,6 +257,7 @@ local accentcodes = mark(getsubtypes("accent"))
 --     [1] = "left",
 --     [2] = "middle",
 --     [3] = "right",
+--     [4] = "no",
 -- }
 
 local fencecodes = mark(getsubtypes("fence"))
@@ -264,6 +274,27 @@ end
 
 local nodecodes = simplified(node.types())
 local whatcodes = simplified(node.whatsits())
+
+local usercodes = allocate {
+    [ 97] = "attributes", -- a
+    [100] = "number",     -- d
+    [108] = "lua",        -- l
+    [110] = "nodes",      -- n
+    [115] = "string",     -- s
+    [116] = "tokens"      -- t
+}
+
+local noadoptions = allocate {
+    set      =        0x08,
+    unused_1 = 0x00 + 0x08,
+    unused_2 = 0x01 + 0x08,
+    axis     = 0x02 + 0x08,
+    no_axis  = 0x04 + 0x08,
+    exact    = 0x10 + 0x08,
+    left     = 0x11 + 0x08,
+    middle   = 0x12 + 0x08,
+    right    = 0x14 + 0x08,
+}
 
 skipcodes     = allocate(swapped(skipcodes,skipcodes))
 boundarycodes = allocate(swapped(boundarycodes,boundarycodes))
@@ -283,25 +314,34 @@ accentcodes   = allocate(swapped(accentcodes,accentcodes))
 fencecodes    = allocate(swapped(fencecodes,fencecodes))
 rulecodes     = allocate(swapped(rulecodes,rulecodes))
 leadercodes   = allocate(swapped(leadercodes,leadercodes))
+usercodes     = allocate(swapped(usercodes,usercodes))
+noadoptions   = allocate(swapped(noadoptions,noadoptions))
 
-nodes.skipcodes     = skipcodes     nodes.gluecodes    = skipcodes -- more official
+nodes.skipcodes     = skipcodes
 nodes.boundarycodes = boundarycodes
 nodes.noadcodes     = noadcodes
 nodes.nodecodes     = nodecodes
-nodes.whatcodes     = whatcodes     nodes.whatsitcodes = whatcodes -- more official
+nodes.whatcodes     = whatcodes
 nodes.listcodes     = listcodes
 nodes.glyphcodes    = glyphcodes
 nodes.kerncodes     = kerncodes
 nodes.penaltycodes  = penaltycodes
 nodes.mathcodes     = mathcodes
 nodes.fillcodes     = fillcodes
-nodes.margincodes   = margincodes   nodes.marginkerncodes    = margincodes
-nodes.disccodes     = disccodes     nodes.discretionarycodes = disccodes
+nodes.margincodes   = margincodes
+nodes.disccodes     = disccodes
 nodes.accentcodes   = accentcodes
 nodes.radicalcodes  = radicalcodes
 nodes.fencecodes    = fencecodes
 nodes.rulecodes     = rulecodes
 nodes.leadercodes   = leadercodes
+nodes.usercodes     = usercodes
+nodes.noadoptions   = noadoptions
+
+nodes.gluecodes          = skipcodes -- more official
+nodes.whatsitcodes       = whatcodes -- more official
+nodes.marginkerncodes    = margincodes
+nodes.discretionarycodes = disccodes
 
 listcodes.row              = listcodes.alignment
 listcodes.column           = listcodes.alignment
@@ -311,22 +351,38 @@ kerncodes.kerning          = kerncodes.fontkern
 kerncodes.italiccorrection = kerncodes.italiccorrection or 1 -- new
 
 nodes.codes = allocate { -- mostly for listing
-    glue     = skipcodes,
-    boundary = boundarycodes,
-    noad     = noadcodes,
-    node     = nodecodes,
-    hlist    = listcodes,
-    vlist    = listcodes,
-    glyph    = glyphcodes,
-    kern     = kerncodes,
-    penalty  = penaltycodes,
-    math     = mathnodes,
-    fill     = fillcodes,
-    margin   = margincodes,
-    disc     = disccodes,
-    whatsit  = whatcodes,
-    accent   = accentcodes,
-    fence    = fencecodes,
+    glue        = skipcodes,
+    boundary    = boundarycodes,
+    noad        = noadcodes,
+    node        = nodecodes,
+    hlist       = listcodes,
+    vlist       = listcodes,
+    glyph       = glyphcodes,
+    kern        = kerncodes,
+    penalty     = penaltycodes,
+    math        = mathnodes,
+    fill        = fillcodes,
+    margin      = margincodes,
+    disc        = disccodes,
+    whatsit     = whatcodes,
+    accent      = accentcodes,
+    fence       = fencecodes,
+    rule        = rulecodes,
+    leader      = leadercodes,
+    user        = usercodes,
+    noadoptions = noadoptions,
+}
+
+nodes.noadoptions = {
+    set      =        0x08,
+    unused_1 = 0x00 + 0x08,
+    unused_2 = 0x01 + 0x08,
+    axis     = 0x02 + 0x08,
+    no_axis  = 0x04 + 0x08,
+    exact    = 0x10 + 0x08,
+    left     = 0x11 + 0x08,
+    middle   = 0x12 + 0x08,
+    right    = 0x14 + 0x08,
 }
 
 local report_codes = logs.reporter("nodes","codes")
@@ -354,3 +410,11 @@ if not nodecodes.dir then
     report_codes("use a newer version of luatex")
     os.exit()
 end
+
+-- We don't need this sanitize-after-callback in ConTeXt and by disabling it we
+-- also have a way to check if LuaTeX itself does the right thing.
+
+if node.fix_node_lists then
+    node.fix_node_lists(false)
+end
+
