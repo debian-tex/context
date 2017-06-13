@@ -2,8 +2,9 @@ context (2017.05.15.20170613-1) experimental; urgency=medium
 
   * New upstream version 2017.05.15.20170613
   * new dh compat level 9 
+  * bump deps to TL 2017 
 
- -- Norbert Preining <preining@debian.org>  Tue, 13 Jun 2017 09:29:36 +0900
+ -- Norbert Preining <preining@debian.org>  Tue, 13 Jun 2017 09:30:28 +0900
 
 context (2016.05.17.20160523-1) unstable; urgency=medium
 
