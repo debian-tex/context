@@ -1,6 +1,6 @@
 name context
 category Package
-revision 44436
+revision 47272
 shortdesc The ConTeXt macro package
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
@@ -18,14 +18,14 @@ depend stmaryrd
 depend mptopdf
 depend context
 depend context.ARCH
-execute AddFormat name=cont-en engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-en.mkii" fmttriggers=context
-execute AddFormat name=cont-en engine=xetex         patterns=cont-usr.tex options="-8bit *cont-en.mkii" fmttriggers=context
+execute AddFormat name=cont-en engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-en.mkii"
+execute AddFormat name=cont-en engine=xetex         patterns=cont-usr.tex options="-8bit *cont-en.mkii"
 execute AddFormat name=cont-fr mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-fr.mkii" fmttriggers=context
 execute AddFormat name=cont-it mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-it.mkii" fmttriggers=context
 execute AddFormat name=cont-nl mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-nl.mkii" fmttriggers=context
 execute AddFormat name=cont-ro mode=disabled engine=pdftex         patterns=cont-usr.tex options="-8bit *cont-ro.mkii" fmttriggers=context
 execute addMap original-context-symbol.map
-runfiles size=14345
+runfiles size=14258
  texmf-dist/bibtex/bst/context/mkii/cont-ab.bst
  texmf-dist/bibtex/bst/context/mkii/cont-au.bst
  texmf-dist/bibtex/bst/context/mkii/cont-no.bst
@@ -35,6 +35,7 @@ runfiles size=14345
  texmf-dist/context/data/scite/context/documents/scite-context-readme.tex
  texmf-dist/context/data/scite/context/documents/scite-context-visual.pdf
  texmf-dist/context/data/scite/context/documents/scite-context-visual.png
+ texmf-dist/context/data/scite/context/lexers/data/scite-context-data-bidi.lua
  texmf-dist/context/data/scite/context/lexers/data/scite-context-data-context.lua
  texmf-dist/context/data/scite/context/lexers/data/scite-context-data-interfaces.lua
  texmf-dist/context/data/scite/context/lexers/data/scite-context-data-metafun.lua
@@ -42,6 +43,7 @@ runfiles size=14345
  texmf-dist/context/data/scite/context/lexers/data/scite-context-data-tex.lua
  texmf-dist/context/data/scite/context/lexers/lexer.lua
  texmf-dist/context/data/scite/context/lexers/scite-context-lexer-bibtex.lua
+ texmf-dist/context/data/scite/context/lexers/scite-context-lexer-bnf.lua
  texmf-dist/context/data/scite/context/lexers/scite-context-lexer-cld.lua
  texmf-dist/context/data/scite/context/lexers/scite-context-lexer-cpp-web.lua
  texmf-dist/context/data/scite/context/lexers/scite-context-lexer-cpp.lua
@@ -73,6 +75,7 @@ runfiles size=14345
  texmf-dist/context/data/scite/context/scite-context-internal.properties
  texmf-dist/context/data/scite/context/scite-context-user.properties
  texmf-dist/context/data/scite/context/scite-context.properties
+ texmf-dist/context/data/scite/context/scite-ctx-bidi.lua
  texmf-dist/context/data/scite/context/scite-ctx-context.properties
  texmf-dist/context/data/scite/context/scite-ctx-example.properties
  texmf-dist/context/data/scite/context/scite-ctx.lua
@@ -92,6 +95,7 @@ runfiles size=14345
  texmf-dist/context/data/textadept/context/init.lua
  texmf-dist/context/data/textadept/context/lexers/lexer.rme
  texmf-dist/context/data/textadept/context/lexers/scite-context-lexer-bibtex.lua
+ texmf-dist/context/data/textadept/context/lexers/scite-context-lexer-bidi.lua
  texmf-dist/context/data/textadept/context/lexers/scite-context-lexer-cld.lua
  texmf-dist/context/data/textadept/context/lexers/scite-context-lexer-cpp-web.lua
  texmf-dist/context/data/textadept/context/lexers/scite-context-lexer-cpp.lua
@@ -238,6 +242,7 @@ runfiles size=14345
  texmf-dist/metapost/context/base/mpiv/mp-symb.mpiv
  texmf-dist/metapost/context/base/mpiv/mp-text.mpiv
  texmf-dist/metapost/context/base/mpiv/mp-tool.mpiv
+ texmf-dist/metapost/context/base/mpiv/mp-tres.mpiv
  texmf-dist/metapost/context/fonts/mpiv/bidi-symbols.mp
  texmf-dist/metapost/context/fonts/mpiv/bidi-symbols.tex
  texmf-dist/metapost/context/fonts/mpiv/demo-symbols.mp
@@ -260,6 +265,7 @@ runfiles size=14345
  texmf-dist/scripts/context/lua/mtx-convert.lua
  texmf-dist/scripts/context/lua/mtx-dvi.lua
  texmf-dist/scripts/context/lua/mtx-epub.lua
+ texmf-dist/scripts/context/lua/mtx-evohome.lua
  texmf-dist/scripts/context/lua/mtx-fcd.lua
  texmf-dist/scripts/context/lua/mtx-flac.lua
  texmf-dist/scripts/context/lua/mtx-fonts.lua
@@ -280,6 +286,7 @@ runfiles size=14345
  texmf-dist/scripts/context/lua/mtx-server-ctx-help.lua
  texmf-dist/scripts/context/lua/mtx-server-ctx-startup.lua
  texmf-dist/scripts/context/lua/mtx-server.lua
+ texmf-dist/scripts/context/lua/mtx-synctex.lua
  texmf-dist/scripts/context/lua/mtx-texworks.lua
  texmf-dist/scripts/context/lua/mtx-timing.lua
  texmf-dist/scripts/context/lua/mtx-tools.lua
@@ -891,7 +898,7 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/char-ini.lua
  texmf-dist/tex/context/base/mkiv/char-ini.mkiv
  texmf-dist/tex/context/base/mkiv/char-map.lua
- texmf-dist/tex/context/base/mkiv/char-obs.lua
+ texmf-dist/tex/context/base/mkiv/char-prv.lua
  texmf-dist/tex/context/base/mkiv/char-tex.lua
  texmf-dist/tex/context/base/mkiv/char-utf.lua
  texmf-dist/tex/context/base/mkiv/char-utf.mkiv
@@ -1016,7 +1023,6 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/file-syn.lua
  texmf-dist/tex/context/base/mkiv/file-syn.mkvi
  texmf-dist/tex/context/base/mkiv/font-afk.lua
- texmf-dist/tex/context/base/mkiv/font-afm.lua
  texmf-dist/tex/context/base/mkiv/font-age.lua
  texmf-dist/tex/context/base/mkiv/font-agl.lua
  texmf-dist/tex/context/base/mkiv/font-aux.lua
@@ -1044,8 +1050,6 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/font-hsh.lua
  texmf-dist/tex/context/base/mkiv/font-ini.lua
  texmf-dist/tex/context/base/mkiv/font-ini.mkvi
- texmf-dist/tex/context/base/mkiv/font-inj.lua
- texmf-dist/tex/context/base/mkiv/font-ldr.lua
  texmf-dist/tex/context/base/mkiv/font-lib.mkvi
  texmf-dist/tex/context/base/mkiv/font-lig.lua
  texmf-dist/tex/context/base/mkiv/font-log.lua
@@ -1056,24 +1060,18 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/font-mps.lua
  texmf-dist/tex/context/base/mkiv/font-nod.lua
  texmf-dist/tex/context/base/mkiv/font-ocl.lua
- texmf-dist/tex/context/base/mkiv/font-odk.lua
- texmf-dist/tex/context/base/mkiv/font-odv.lua
  texmf-dist/tex/context/base/mkiv/font-off.lua
  texmf-dist/tex/context/base/mkiv/font-one.lua
  texmf-dist/tex/context/base/mkiv/font-onr.lua
  texmf-dist/tex/context/base/mkiv/font-osd.lua
  texmf-dist/tex/context/base/mkiv/font-ota.lua
- texmf-dist/tex/context/base/mkiv/font-otb.lua
  texmf-dist/tex/context/base/mkiv/font-otc.lua
  texmf-dist/tex/context/base/mkiv/font-otd.lua
- texmf-dist/tex/context/base/mkiv/font-otf.lua
  texmf-dist/tex/context/base/mkiv/font-oth.lua
  texmf-dist/tex/context/base/mkiv/font-oti.lua
  texmf-dist/tex/context/base/mkiv/font-otj.lua
  texmf-dist/tex/context/base/mkiv/font-otl.lua
- texmf-dist/tex/context/base/mkiv/font-otn.lua
  texmf-dist/tex/context/base/mkiv/font-oto.lua
- texmf-dist/tex/context/base/mkiv/font-otp.lua
  texmf-dist/tex/context/base/mkiv/font-otr.lua
  texmf-dist/tex/context/base/mkiv/font-ots.lua
  texmf-dist/tex/context/base/mkiv/font-ott.lua
@@ -1097,7 +1095,7 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/font-uni.mkiv
  texmf-dist/tex/context/base/mkiv/font-unk.mkiv
  texmf-dist/tex/context/base/mkiv/font-var.mkvi
- texmf-dist/tex/context/base/mkiv/font-vf.lua
+ texmf-dist/tex/context/base/mkiv/font-vir.lua
  texmf-dist/tex/context/base/mkiv/font-web.lua
  texmf-dist/tex/context/base/mkiv/font-xtx.lua
  texmf-dist/tex/context/base/mkiv/good-ctx.lua
@@ -1130,6 +1128,7 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/java-imp-stp.mkiv
  texmf-dist/tex/context/base/mkiv/java-ini.lua
  texmf-dist/tex/context/base/mkiv/java-ini.mkiv
+ texmf-dist/tex/context/base/mkiv/l-bit32.lua
  texmf-dist/tex/context/base/mkiv/l-boolean.lua
  texmf-dist/tex/context/base/mkiv/l-dir.lua
  texmf-dist/tex/context/base/mkiv/l-file.lua
@@ -1138,6 +1137,8 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/l-io.lua
  texmf-dist/tex/context/base/mkiv/l-lpeg.lua
  texmf-dist/tex/context/base/mkiv/l-lua.lua
+ texmf-dist/tex/context/base/mkiv/l-macro-imp-optimize.lua
+ texmf-dist/tex/context/base/mkiv/l-macro.lua
  texmf-dist/tex/context/base/mkiv/l-math.lua
  texmf-dist/tex/context/base/mkiv/l-md5.lua
  texmf-dist/tex/context/base/mkiv/l-number.lua
@@ -1155,6 +1156,8 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/lang-def.lua
  texmf-dist/tex/context/base/mkiv/lang-def.mkiv
  texmf-dist/tex/context/base/mkiv/lang-dis.lua
+ texmf-dist/tex/context/base/mkiv/lang-exc.lua
+ texmf-dist/tex/context/base/mkiv/lang-exp.lua
  texmf-dist/tex/context/base/mkiv/lang-frd.mkiv
  texmf-dist/tex/context/base/mkiv/lang-frq-de.lua
  texmf-dist/tex/context/base/mkiv/lang-frq-en.lua
@@ -1242,7 +1245,6 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/m-fonts-plugins.mkiv
  texmf-dist/tex/context/base/mkiv/m-newcolumnsets.mkiv
  texmf-dist/tex/context/base/mkiv/m-oldbibtex.mkiv
- texmf-dist/tex/context/base/mkiv/m-oldotf.mkiv
  texmf-dist/tex/context/base/mkiv/math-acc.mkvi
  texmf-dist/tex/context/base/mkiv/math-act.lua
  texmf-dist/tex/context/base/mkiv/math-ali.mkiv
@@ -1269,6 +1271,7 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/math-rad.mkvi
  texmf-dist/tex/context/base/mkiv/math-ren.lua
  texmf-dist/tex/context/base/mkiv/math-scr.mkiv
+ texmf-dist/tex/context/base/mkiv/math-spa.lua
  texmf-dist/tex/context/base/mkiv/math-stc.mkvi
  texmf-dist/tex/context/base/mkiv/math-tag.lua
  texmf-dist/tex/context/base/mkiv/math-ttv.lua
@@ -1286,13 +1289,15 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/meta-imp-mat.mkiv
  texmf-dist/tex/context/base/mkiv/meta-imp-mis.mkiv
  texmf-dist/tex/context/base/mkiv/meta-imp-nav.mkiv
- texmf-dist/tex/context/base/mkiv/meta-imp-nodes.mkiv
  texmf-dist/tex/context/base/mkiv/meta-imp-outlines.mkiv
  texmf-dist/tex/context/base/mkiv/meta-imp-pre.mkiv
  texmf-dist/tex/context/base/mkiv/meta-imp-tab.mkiv
  texmf-dist/tex/context/base/mkiv/meta-imp-txt.mkiv
  texmf-dist/tex/context/base/mkiv/meta-ini.lua
  texmf-dist/tex/context/base/mkiv/meta-ini.mkiv
+ texmf-dist/tex/context/base/mkiv/meta-lua.lua
+ texmf-dist/tex/context/base/mkiv/meta-lua.mkiv
+ texmf-dist/tex/context/base/mkiv/meta-nod.mkiv
  texmf-dist/tex/context/base/mkiv/meta-pag.mkiv
  texmf-dist/tex/context/base/mkiv/meta-pdf.lua
  texmf-dist/tex/context/base/mkiv/meta-pdf.mkiv
@@ -1301,7 +1306,6 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/meta-tex.lua
  texmf-dist/tex/context/base/mkiv/meta-tex.mkiv
  texmf-dist/tex/context/base/mkiv/meta-xml.mkiv
- texmf-dist/tex/context/base/mkiv/metatex.lus
  texmf-dist/tex/context/base/mkiv/metatex.tex
  texmf-dist/tex/context/base/mkiv/mlib-ctx.lua
  texmf-dist/tex/context/base/mkiv/mlib-ctx.mkiv
@@ -1315,11 +1319,14 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/mtx-context-arrange.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-combine.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-common.tex
+ texmf-dist/tex/context/base/mkiv/mtx-context-compare.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-copy.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-domotica.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-ideas.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-listing.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-markdown.tex
+ texmf-dist/tex/context/base/mkiv/mtx-context-meaning.tex
+ texmf-dist/tex/context/base/mkiv/mtx-context-module.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-precache.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-select.tex
  texmf-dist/tex/context/base/mkiv/mtx-context-setups.tex
@@ -1401,12 +1408,13 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/page-cst.lua
  texmf-dist/tex/context/base/mkiv/page-cst.mkiv
  texmf-dist/tex/context/base/mkiv/page-fac.mkiv
+ texmf-dist/tex/context/base/mkiv/page-ffl.mkiv
  texmf-dist/tex/context/base/mkiv/page-flt.lua
  texmf-dist/tex/context/base/mkiv/page-flt.mkiv
  texmf-dist/tex/context/base/mkiv/page-flw.mkiv
- texmf-dist/tex/context/base/mkiv/page-grd.mkiv
  texmf-dist/tex/context/base/mkiv/page-imp.mkiv
  texmf-dist/tex/context/base/mkiv/page-inf.mkiv
+ texmf-dist/tex/context/base/mkiv/page-ini.lua
  texmf-dist/tex/context/base/mkiv/page-ini.mkiv
  texmf-dist/tex/context/base/mkiv/page-inj.lua
  texmf-dist/tex/context/base/mkiv/page-inj.mkvi
@@ -1426,9 +1434,11 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/page-otr.lua
  texmf-dist/tex/context/base/mkiv/page-otr.mkvi
  texmf-dist/tex/context/base/mkiv/page-par.mkiv
+ texmf-dist/tex/context/base/mkiv/page-pcl.mkiv
  texmf-dist/tex/context/base/mkiv/page-plg.mkiv
  texmf-dist/tex/context/base/mkiv/page-pst.lua
  texmf-dist/tex/context/base/mkiv/page-pst.mkiv
+ texmf-dist/tex/context/base/mkiv/page-run.lua
  texmf-dist/tex/context/base/mkiv/page-run.mkiv
  texmf-dist/tex/context/base/mkiv/page-sel.mkvi
  texmf-dist/tex/context/base/mkiv/page-set.mkiv
@@ -1542,8 +1552,6 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/spac-ver.mkiv
  texmf-dist/tex/context/base/mkiv/status-files.pdf
  texmf-dist/tex/context/base/mkiv/status-lua.pdf
- texmf-dist/tex/context/base/mkiv/status-mkiv.lua
- texmf-dist/tex/context/base/mkiv/status-mkiv.tex
  texmf-dist/tex/context/base/mkiv/strc-bkm.lua
  texmf-dist/tex/context/base/mkiv/strc-bkm.mkiv
  texmf-dist/tex/context/base/mkiv/strc-blk.lua
@@ -1716,9 +1724,13 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/typo-man.lua
  texmf-dist/tex/context/base/mkiv/typo-mar.lua
  texmf-dist/tex/context/base/mkiv/typo-mar.mkiv
+ texmf-dist/tex/context/base/mkiv/typo-ovl.lua
+ texmf-dist/tex/context/base/mkiv/typo-ovl.mkiv
  texmf-dist/tex/context/base/mkiv/typo-pag.lua
  texmf-dist/tex/context/base/mkiv/typo-pag.mkiv
  texmf-dist/tex/context/base/mkiv/typo-par.mkiv
+ texmf-dist/tex/context/base/mkiv/typo-pnc.lua
+ texmf-dist/tex/context/base/mkiv/typo-pnc.mkiv
  texmf-dist/tex/context/base/mkiv/typo-prc.lua
  texmf-dist/tex/context/base/mkiv/typo-prc.mkvi
  texmf-dist/tex/context/base/mkiv/typo-rep.lua
@@ -1740,6 +1752,8 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/util-deb.lua
  texmf-dist/tex/context/base/mkiv/util-dim.lua
  texmf-dist/tex/context/base/mkiv/util-env.lua
+ texmf-dist/tex/context/base/mkiv/util-evo-imp-server.lua
+ texmf-dist/tex/context/base/mkiv/util-evo.lua
  texmf-dist/tex/context/base/mkiv/util-fil.lua
  texmf-dist/tex/context/base/mkiv/util-fmt.lua
  texmf-dist/tex/context/base/mkiv/util-jsn.lua
@@ -1755,12 +1769,15 @@ runfiles size=14345
  texmf-dist/tex/context/base/mkiv/util-sbx.lua
  texmf-dist/tex/context/base/mkiv/util-sci.lua
  texmf-dist/tex/context/base/mkiv/util-seq.lua
+ texmf-dist/tex/context/base/mkiv/util-sha.lua
  texmf-dist/tex/context/base/mkiv/util-soc.lua
  texmf-dist/tex/context/base/mkiv/util-sql-imp-client.lua
+ texmf-dist/tex/context/base/mkiv/util-sql-imp-ffi.lua
  texmf-dist/tex/context/base/mkiv/util-sql-imp-library.lua
  texmf-dist/tex/context/base/mkiv/util-sql-imp-sqlite.lua
  texmf-dist/tex/context/base/mkiv/util-sql-imp-swiglib.lua
  texmf-dist/tex/context/base/mkiv/util-sql-loggers.lua
+ texmf-dist/tex/context/base/mkiv/util-sql-logins.lua
  texmf-dist/tex/context/base/mkiv/util-sql-sessions.lua
  texmf-dist/tex/context/base/mkiv/util-sql-tickets.lua
  texmf-dist/tex/context/base/mkiv/util-sql-tracers.lua
@@ -1851,6 +1868,7 @@ runfiles size=14345
  texmf-dist/tex/context/fonts/mkiv/type-imp-euler.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-gentium.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-ghz.mkiv
+ texmf-dist/tex/context/fonts/mkiv/type-imp-gofonts.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-hgz.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-husayni.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-hvmath.mkiv
@@ -1872,6 +1890,7 @@ runfiles size=14345
  texmf-dist/tex/context/fonts/mkiv/type-imp-mathdigits.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-mathtimes.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-minion.mkiv
+ texmf-dist/tex/context/fonts/mkiv/type-imp-modernlatin.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-mscore.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-opendyslexic.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-osx.mkiv
@@ -1941,10 +1960,12 @@ runfiles size=14345
  texmf-dist/tex/context/interface/mkiv/i-common-keyword.xml
  texmf-dist/tex/context/interface/mkiv/i-common-string.xml
  texmf-dist/tex/context/interface/mkiv/i-common-value.xml
+ texmf-dist/tex/context/interface/mkiv/i-context-modules.xml
  texmf-dist/tex/context/interface/mkiv/i-context.pdf
  texmf-dist/tex/context/interface/mkiv/i-context.xml
  texmf-dist/tex/context/interface/mkiv/i-conversion.xml
  texmf-dist/tex/context/interface/mkiv/i-counter.xml
+ texmf-dist/tex/context/interface/mkiv/i-database.xml
  texmf-dist/tex/context/interface/mkiv/i-dataset.xml
  texmf-dist/tex/context/interface/mkiv/i-define.xml
  texmf-dist/tex/context/interface/mkiv/i-delimitedtext.xml
@@ -1972,9 +1993,11 @@ runfiles size=14345
  texmf-dist/tex/context/interface/mkiv/i-formula.xml
  texmf-dist/tex/context/interface/mkiv/i-fraction.xml
  texmf-dist/tex/context/interface/mkiv/i-framed.xml
+ texmf-dist/tex/context/interface/mkiv/i-framedtable.xml
  texmf-dist/tex/context/interface/mkiv/i-graphics.xml
  texmf-dist/tex/context/interface/mkiv/i-grid.xml
  texmf-dist/tex/context/interface/mkiv/i-help.xml
+ texmf-dist/tex/context/interface/mkiv/i-hemistich.xml
  texmf-dist/tex/context/interface/mkiv/i-highlight.xml
  texmf-dist/tex/context/interface/mkiv/i-hspace.xml
  texmf-dist/tex/context/interface/mkiv/i-hyphenation.xml
@@ -2041,6 +2064,7 @@ runfiles size=14345
  texmf-dist/tex/context/interface/mkiv/i-pagegrid.xml
  texmf-dist/tex/context/interface/mkiv/i-pageinjection.xml
  texmf-dist/tex/context/interface/mkiv/i-pagelayout.xml
+ texmf-dist/tex/context/interface/mkiv/i-pagemarks.xml
  texmf-dist/tex/context/interface/mkiv/i-pagenumber.xml
  texmf-dist/tex/context/interface/mkiv/i-pageselection.xml
  texmf-dist/tex/context/interface/mkiv/i-pageshift.xml
@@ -2095,17 +2119,20 @@ runfiles size=14345
  texmf-dist/tex/context/interface/mkiv/i-string.xml
  texmf-dist/tex/context/interface/mkiv/i-strut.xml
  texmf-dist/tex/context/interface/mkiv/i-symbol.xml
+ texmf-dist/tex/context/interface/mkiv/i-synctex.xml
  texmf-dist/tex/context/interface/mkiv/i-synonym.xml
  texmf-dist/tex/context/interface/mkiv/i-system.xml
  texmf-dist/tex/context/interface/mkiv/i-systemlog.xml
  texmf-dist/tex/context/interface/mkiv/i-table.xml
  texmf-dist/tex/context/interface/mkiv/i-tabulation.xml
  texmf-dist/tex/context/interface/mkiv/i-tagging.xml
+ texmf-dist/tex/context/interface/mkiv/i-tex.xml
  texmf-dist/tex/context/interface/mkiv/i-textbackground.xml
  texmf-dist/tex/context/interface/mkiv/i-textflow.xml
  texmf-dist/tex/context/interface/mkiv/i-textrule.xml
  texmf-dist/tex/context/interface/mkiv/i-texts.xml
  texmf-dist/tex/context/interface/mkiv/i-thinrule.xml
+ texmf-dist/tex/context/interface/mkiv/i-todo.xml
  texmf-dist/tex/context/interface/mkiv/i-token.xml
  texmf-dist/tex/context/interface/mkiv/i-tolerance.xml
  texmf-dist/tex/context/interface/mkiv/i-tooltip.xml
@@ -2125,10 +2152,12 @@ runfiles size=14345
  texmf-dist/tex/context/interface/mkiv/i-whitespace.xml
  texmf-dist/tex/context/interface/mkiv/i-xml.xml
  texmf-dist/tex/context/interface/mkiv/i-xtable.xml
- texmf-dist/tex/context/modules/common/s-abr-01.tex
- texmf-dist/tex/context/modules/common/s-abr-02.tex
- texmf-dist/tex/context/modules/common/s-abr-03.tex
- texmf-dist/tex/context/modules/common/s-abr-04.tex
+ texmf-dist/tex/context/modules/common/s-abbreviations-extras.tex
+ texmf-dist/tex/context/modules/common/s-abbreviations-logos.tex
+ texmf-dist/tex/context/modules/common/s-abbreviations-mixed.mkiv
+ texmf-dist/tex/context/modules/common/s-abbreviations-pseudocaps.mkiv
+ texmf-dist/tex/context/modules/common/s-abbreviations-smallcaps.mkiv
+ texmf-dist/tex/context/modules/common/s-abbreviations-words.mkiv
  texmf-dist/tex/context/modules/common/s-cdr-01.tex
  texmf-dist/tex/context/modules/common/s-faq-00.tex
  texmf-dist/tex/context/modules/common/s-faq-01.tex
@@ -2180,6 +2209,8 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkii/ppchtex.mkii
  texmf-dist/tex/context/modules/mkii/rlxcache.rlx
  texmf-dist/tex/context/modules/mkii/rlxtools.rlx
+ texmf-dist/tex/context/modules/mkii/s-abr-01.mkii
+ texmf-dist/tex/context/modules/mkii/s-abr-02.mkii
  texmf-dist/tex/context/modules/mkii/s-chi-00.mkii
  texmf-dist/tex/context/modules/mkii/s-fnt-01.mkii
  texmf-dist/tex/context/modules/mkii/s-fnt-02.mkii
@@ -2273,6 +2304,7 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/m-chart.lua
  texmf-dist/tex/context/modules/mkiv/m-chart.mkvi
  texmf-dist/tex/context/modules/mkiv/m-chemic.mkiv
+ texmf-dist/tex/context/modules/mkiv/m-compatible.mkiv
  texmf-dist/tex/context/modules/mkiv/m-cweb.mkiv
  texmf-dist/tex/context/modules/mkiv/m-database.lua
  texmf-dist/tex/context/modules/mkiv/m-database.mkiv
@@ -2292,6 +2324,7 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/m-markdown.mkiv
  texmf-dist/tex/context/modules/mkiv/m-mathcrap.mkiv
  texmf-dist/tex/context/modules/mkiv/m-matrix.mkiv
+ texmf-dist/tex/context/modules/mkiv/m-media.mkiv
  texmf-dist/tex/context/modules/mkiv/m-mkii.mkiv
  texmf-dist/tex/context/modules/mkiv/m-mkivhacks.mkiv
  texmf-dist/tex/context/modules/mkiv/m-morse.mkvi
@@ -2314,37 +2347,46 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/m-steps.lua
  texmf-dist/tex/context/modules/mkiv/m-steps.mkvi
  texmf-dist/tex/context/modules/mkiv/m-subsub.mkiv
+ texmf-dist/tex/context/modules/mkiv/m-three.mkiv
  texmf-dist/tex/context/modules/mkiv/m-timing.mkiv
  texmf-dist/tex/context/modules/mkiv/m-trackers.mkiv
  texmf-dist/tex/context/modules/mkiv/m-translate.mkiv
+ texmf-dist/tex/context/modules/mkiv/m-typesetting.mkiv
  texmf-dist/tex/context/modules/mkiv/m-units.mkiv
  texmf-dist/tex/context/modules/mkiv/m-visual.mkiv
  texmf-dist/tex/context/modules/mkiv/m-zint.mkiv
  texmf-dist/tex/context/modules/mkiv/ppchtex.mkiv
- texmf-dist/tex/context/modules/mkiv/s-art-01.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-abbreviations-mixed.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-abbreviations-pseudocaps.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-abbreviations-smallcaps.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-abbreviations-words.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-article-basic.mkiv
  texmf-dist/tex/context/modules/mkiv/s-characters-properties.lua
  texmf-dist/tex/context/modules/mkiv/s-characters-properties.mkiv
- texmf-dist/tex/context/modules/mkiv/s-def-01.mkiv
  texmf-dist/tex/context/modules/mkiv/s-domotica-settings.lua
  texmf-dist/tex/context/modules/mkiv/s-domotica-settings.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-evohome.mkiv
  texmf-dist/tex/context/modules/mkiv/s-figures-names.mkiv
- texmf-dist/tex/context/modules/mkiv/s-fnt-10.mkiv
- texmf-dist/tex/context/modules/mkiv/s-fnt-20.mkiv
- texmf-dist/tex/context/modules/mkiv/s-fnt-21.mkiv
- texmf-dist/tex/context/modules/mkiv/s-fnt-24.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-basics.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-charts.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-cjk.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-complete.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-coverage.lua
  texmf-dist/tex/context/modules/mkiv/s-fonts-coverage.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-emoji.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-engines.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-features.lua
  texmf-dist/tex/context/modules/mkiv/s-fonts-features.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-goodies.lua
  texmf-dist/tex/context/modules/mkiv/s-fonts-goodies.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-kerns.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-ligatures.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-missing.lua
  texmf-dist/tex/context/modules/mkiv/s-fonts-missing.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-overlay.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-shapes.lua
  texmf-dist/tex/context/modules/mkiv/s-fonts-shapes.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-fonts-steps.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-system.lua
  texmf-dist/tex/context/modules/mkiv/s-fonts-system.mkiv
  texmf-dist/tex/context/modules/mkiv/s-fonts-tables.lua
@@ -2370,23 +2412,21 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/s-languages-words.lua
  texmf-dist/tex/context/modules/mkiv/s-languages-words.mkiv
  texmf-dist/tex/context/modules/mkiv/s-lingual-de.mkiv
- texmf-dist/tex/context/modules/mkiv/s-mag-01.mkiv
- texmf-dist/tex/context/modules/mkiv/s-map-10.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-magazine-basic.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-maps.mkiv
  texmf-dist/tex/context/modules/mkiv/s-math-characters.lua
  texmf-dist/tex/context/modules/mkiv/s-math-characters.mkiv
  texmf-dist/tex/context/modules/mkiv/s-math-coverage.lua
  texmf-dist/tex/context/modules/mkiv/s-math-coverage.mkiv
  texmf-dist/tex/context/modules/mkiv/s-math-extensibles.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-math-ligatures.lua
+ texmf-dist/tex/context/modules/mkiv/s-math-ligatures.mkiv
  texmf-dist/tex/context/modules/mkiv/s-math-parameters.lua
  texmf-dist/tex/context/modules/mkiv/s-math-parameters.mkiv
  texmf-dist/tex/context/modules/mkiv/s-math-repertoire.mkiv
- texmf-dist/tex/context/modules/mkiv/s-mod-00.mkiv
- texmf-dist/tex/context/modules/mkiv/s-mod-01.mkiv
- texmf-dist/tex/context/modules/mkiv/s-mod-02.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-module-basic.mkiv
  texmf-dist/tex/context/modules/mkiv/s-pages-statistics.mkiv
  texmf-dist/tex/context/modules/mkiv/s-physics-units.mkiv
- texmf-dist/tex/context/modules/mkiv/s-pre-17.mkiv
- texmf-dist/tex/context/modules/mkiv/s-pre-30.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-balls.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-banner.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-bars.mkiv
@@ -2397,6 +2437,7 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/s-present-fuzzy.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-green.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-grow.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-present-lines.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-organic.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-original.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-ovals.mkiv
@@ -2413,16 +2454,19 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/s-present-stepper.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-stepwise.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-tiles.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-present-weird.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-windows.mkiv
  texmf-dist/tex/context/modules/mkiv/s-present-wobbling.mkiv
  texmf-dist/tex/context/modules/mkiv/s-references-show.mkiv
- texmf-dist/tex/context/modules/mkiv/s-reg-01.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-regimes-list.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-setups-macros.mkiv
  texmf-dist/tex/context/modules/mkiv/s-setups-missing.mkiv
  texmf-dist/tex/context/modules/mkiv/s-sql-tables.lua
  texmf-dist/tex/context/modules/mkiv/s-sql-tables.mkiv
  texmf-dist/tex/context/modules/mkiv/s-structure-sections.mkiv
  texmf-dist/tex/context/modules/mkiv/s-syntax.mkiv
  texmf-dist/tex/context/modules/mkiv/s-tugboat-columns.mkiv
+ texmf-dist/tex/context/modules/mkiv/s-tugboat.mkiv
  texmf-dist/tex/context/modules/mkiv/s-typesetting-kerning.mkiv
  texmf-dist/tex/context/modules/mkiv/s-xml-analyzers.lua
  texmf-dist/tex/context/modules/mkiv/s-xml-analyzers.mkiv
@@ -2443,6 +2487,8 @@ runfiles size=14345
  texmf-dist/tex/context/modules/mkiv/x-ldx.ctx
  texmf-dist/tex/context/modules/mkiv/x-ldx.lua
  texmf-dist/tex/context/modules/mkiv/x-ldx.mkiv
+ texmf-dist/tex/context/modules/mkiv/x-lmx-demo.mkiv
+ texmf-dist/tex/context/modules/mkiv/x-lmx-html.mkiv
  texmf-dist/tex/context/modules/mkiv/x-math-svg.lua
  texmf-dist/tex/context/modules/mkiv/x-math-svg.mkvi
  texmf-dist/tex/context/modules/mkiv/x-mathml-basics.mkiv
@@ -2651,14 +2697,18 @@ runfiles size=14345
  texmf-dist/tex/context/sample/common/demo-tex.tex
  texmf-dist/tex/context/sample/common/demo-xml.tex
  texmf-dist/tex/context/sample/common/douglas.tex
+ texmf-dist/tex/context/sample/common/greenfield.tex
  texmf-dist/tex/context/sample/common/hacker.jpg
  texmf-dist/tex/context/sample/common/hawking.tex
+ texmf-dist/tex/context/sample/common/jojomayer.tex
  texmf-dist/tex/context/sample/common/khatt-ar.tex
  texmf-dist/tex/context/sample/common/khatt-en.tex
+ texmf-dist/tex/context/sample/common/klein.tex
  texmf-dist/tex/context/sample/common/knuth.tex
  texmf-dist/tex/context/sample/common/linden.tex
  texmf-dist/tex/context/sample/common/lorem.tex
  texmf-dist/tex/context/sample/common/materie.tex
+ texmf-dist/tex/context/sample/common/mcnish.tex
  texmf-dist/tex/context/sample/common/mill.png
  texmf-dist/tex/context/sample/common/montgomery.tex
  texmf-dist/tex/context/sample/common/quevedo-es.tex
@@ -2695,12 +2745,14 @@ runfiles size=14345
  texmf-dist/tex/generic/context/luatex/luatex-basics.tex
  texmf-dist/tex/generic/context/luatex/luatex-core.lua
  texmf-dist/tex/generic/context/luatex/luatex-core.tex
+ texmf-dist/tex/generic/context/luatex/luatex-fonts-demo-tt.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-demo-vf-1.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-demo-vf-4.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-enc.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-ext.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-lig.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-merged.lua
+ texmf-dist/tex/generic/context/luatex/luatex-fonts-mis.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts-syn.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts.lua
  texmf-dist/tex/generic/context/luatex/luatex-fonts.tex

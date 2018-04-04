@@ -6,6 +6,7 @@ if not modules then modules = { } end modules ['buff-par'] = {
     license   = "see context related readme files"
 }
 
+local tonumber = tonumber
 local insert, remove, find, gmatch, match = table.insert, table.remove, string.find, string.gmatch, string.match
 local fullstrip, formatters = string.fullstrip, string.formatters
 
@@ -202,7 +203,7 @@ end
 implement {
     name      = "defineparallel",
     actions   = parallel.define,
-    arguments = { "string", "string" }
+    arguments = "2 strings",
 }
 
 implement {
@@ -235,11 +236,11 @@ implement {
 implement {
     name      = "resetparallel",
     actions   = parallel.reset,
-    arguments = { "string", "string" }
+    arguments = "2 strings",
 }
 
 implement {
     name      = "doifelseparallel",
     actions   = { parallel.hassomecontent, commands.doifelse } ,
-    arguments = { "string", "string" }
+    arguments = "2 strings",
 }

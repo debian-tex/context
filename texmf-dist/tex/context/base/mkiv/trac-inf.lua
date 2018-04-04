@@ -84,7 +84,7 @@ local seconds = function(n) return n or 0 end
 
 local function starttiming(instance)
     local timer = timers[instance or "notimer"]
-    local it = timer.timing or 0
+    local it = timer.timing
     if it == 0 then
         timer.starttime = ticks()
         if not timer.loadtime then
@@ -116,7 +116,7 @@ end
 
 local function elapsed(instance)
     if type(instance) == "number" then
-        return instance or 0
+        return instance
     else
         local timer = timers[instance or "notimer"]
         return timer and seconds(timer.loadtime) or 0
@@ -167,16 +167,17 @@ function statistics.show()
             return format("%s, type: %s, binary subtree: %s",
                 os.platform or "unknown",os.type or "unknown", environment.texos or "unknown")
         end)
-        register("luatex banner", function()
-            return lower(status.banner)
+     -- register("luatex banner", function()
+     --     return lower(status.banner)
+     -- end)
+        register("used engine", function()
+            return format("%s version %s with functionality level %s, banner: %s",
+                LUATEXENGINE, LUATEXVERSION, LUATEXFUNCTIONALITY, lower(status.banner))
         end)
         register("control sequences", function()
             return format("%s of %s + %s", status.cs_count, status.hash_size,status.hash_extra)
         end)
-        register("callbacks", function()
-            local total, indirect = status.callbacks or 0, status.indirect_callbacks or 0
-            return format("%s direct, %s indirect, %s total", total-indirect, indirect, total)
-        end)
+        register("callbacks", statistics.callbacks)
         if TEXENGINE == "luajittex" and JITSUPPORTED then
             local jitstatus = jit.status
             if jitstatus then
@@ -192,8 +193,9 @@ function statistics.show()
             local hashchar = tonumber(status.luatex_hashchars)
             local hashtype = status.luatex_hashtype
             local mask = lua.mask or "ascii"
-            return format("engine: %s, used memory: %s, hash type: %s, hash chars: min(%s,40), symbol mask: %s (%s)",
+            return format("engine: %s %s, used memory: %s, hash type: %s, hash chars: min(%i,40), symbol mask: %s (%s)",
                 jit and "luajit" or "lua",
+                LUAVERSION,
                 statistics.memused(),
                 hashtype or "default",
                 hashchar and 2^hashchar or "unknown",
