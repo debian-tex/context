@@ -32,6 +32,7 @@ local directive_strictindex = false  directives.register("chemistry.strictindex"
 
 local report_chemistry = logs.reporter("chemistry")
 
+local tonumber = tonumber
 local format, gmatch, match, lower, gsub = string.format, string.gmatch, string.match, string.lower, string.gsub
 local concat, insert, remove, unique, sorted = table.concat, table.insert, table.remove, table.unique, table.sorted
 local processor_tostring = typesetters and typesetters.processors.tostring
@@ -807,7 +808,7 @@ implement {
 implement {
     name      = "definechemical",
     actions   = chemistry.define,
-    arguments = { "string", "string", "string" }
+    arguments = "3 strings",
 }
 
 implement {
@@ -842,7 +843,7 @@ implement {
 implement {
     name      = "chemicalcomponent",
     actions   = chemistry.component,
-    arguments = { "string", "string", "string", "string" }
+    arguments = "4 strings",
 }
 
 -- todo: top / bottom

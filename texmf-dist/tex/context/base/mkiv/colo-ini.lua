@@ -6,7 +6,7 @@ if not modules then modules = { } end modules ['colo-ini'] = {
     license   = "see context related readme files"
 }
 
-local type, tonumber = type, tonumber
+local type, tonumber, tostring = type, tonumber, tostring
 local concat, insert, remove = table.concat, table.insert, table.remove
 local format, gmatch, gsub, lower, match, find = string.format, string.gmatch, string.gsub, string.lower, string.match, string.find
 local P, R, C, Cc = lpeg.P, lpeg.R, lpeg.C, lpeg.Cc
@@ -1058,12 +1058,12 @@ implement {
 implement {
     name      = "synccolorclone",
     actions   = synccolorclone,
-    arguments = { "string", "string" },
+    arguments = "2 strings",
 }
 
 implement {
     name      = "setcolormodel",
-    arguments = { "string", "string" },
+    arguments = "2 strings",
     actions   = function(model,weight)
         texsetattribute(a_colormodel,setcolormodel(model,weight))
     end
@@ -1072,7 +1072,7 @@ implement {
 implement {
     name      = "setpagecolormodel",
     actions   = colors.setpagecolormodel,
-    arguments = { "string" },
+    arguments = "string",
 }
 
 implement {
@@ -1110,13 +1110,13 @@ implement {
     actions   = function(main)
         colors.main = main
     end,
-    arguments = { "integer" }
+    arguments = "integer"
 }
 
 implement {
     name      = "definetransparency",
     actions   = definetransparency,
-    arguments = { "string", "string" }
+    arguments = "2 strings"
 }
 
 implement {

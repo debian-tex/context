@@ -6,6 +6,7 @@ if not modules then modules = { } end modules ['core-two'] = {
     license   = "see context related readme files"
 }
 
+local next = next
 local remove, concat = table.remove, table.concat
 local allocate = utilities.storage.allocate
 
@@ -149,7 +150,7 @@ local implement = interfaces.implement
 implement { name = "gettwopassdata",     actions = { get  , context }, arguments = "string" }
 implement { name = "getfirsttwopassdata",actions = { first, context }, arguments = "string" }
 implement { name = "getlasttwopassdata", actions = { last , context }, arguments = "string" }
-implement { name = "findtwopassdata",    actions = { find , context }, arguments = { "string", "string" } }
+implement { name = "findtwopassdata",    actions = { find , context }, arguments = "2 strings" }
 implement { name = "gettwopassdatalist", actions = { list , context }, arguments = "string" }
 implement { name = "counttwopassdata",   actions = { count, context }, arguments = "string" }
 implement { name = "checktwopassdata",   actions = { check, context }, arguments = "string" }
@@ -163,17 +164,17 @@ implement {
 implement {
     name      = "savetwopassdata",
     actions   = jobpasses.save,
-    arguments = { "string", "string" }
+    arguments = "2 strings",
 }
 
 implement {
     name      = "savetaggedtwopassdata",
     actions   = jobpasses.savetagged,
-    arguments = { "string", "string", "string" }
+    arguments = "3 strings",
 }
 
 implement {
     name      = "doifelseintwopassdata",
     actions   = { inlist, commands.doifelse },
-    arguments = { "string", "string" }
+    arguments = "2 strings",
 }

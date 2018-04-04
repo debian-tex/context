@@ -75,8 +75,7 @@ statistics.register("result saved in file", function()
     local outputfilename = environment.outputfilename or environment.jobname or tex.jobname or "<unset>"
     if (tex.pdfoutput or tex.outputmode) > 0 then
         return format("%s.%s, compresslevel %s, objectcompresslevel %s",outputfilename,"pdf",
-            pdf.getcompresslevel(),
-            pdf.getobjcompresslevel()
+            lpdf.getcompression()
         )
     else
         return format("%s.%s",outputfilename,"dvi") -- hard to imagine
@@ -85,7 +84,7 @@ end)
 
 implement {
     name      = "systemlog",
-    arguments = { "string", "string", "string" },
+    arguments = "3 strings",
     actions   = function(whereto,category,text)
         logs.system(whereto,"context",tex.jobname,category,text)
     end,

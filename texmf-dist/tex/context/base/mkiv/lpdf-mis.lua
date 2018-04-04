@@ -15,8 +15,9 @@ if not modules then modules = { } end modules ['lpdf-mis'] = {
 -- referencing and references had to be tracked in multiple passes. Of
 -- course there are a couple of more changes.
 
-local next, tostring = next, tostring
+local next, tostring, type = next, tostring, type
 local format, gsub, formatters = string.format, string.gsub, string.formatters
+local flattened = table.flattened
 local texset, texget = tex.set, tex.get
 
 local backends, lpdf, nodes = backends, lpdf, nodes
@@ -25,10 +26,11 @@ local nodeinjections       = backends.pdf.nodeinjections
 local codeinjections       = backends.pdf.codeinjections
 local registrations        = backends.pdf.registrations
 
-local copy_node            = node.copy
+local nuts                 = nodes.nuts
+local copy_node            = nuts.copy
 
-local nodepool             = nodes.pool
-local pdfliteral           = nodepool.pdfliteral
+local nodepool             = nuts.pool
+local pdfpageliteral       = nodepool.pdfpageliteral
 local register             = nodepool.register
 
 local pdfdictionary        = lpdf.dictionary
@@ -41,6 +43,7 @@ local pdfstring            = lpdf.string
 local pdfflushobject       = lpdf.flushobject
 local pdfflushstreamobject = lpdf.flushstreamobject
 local pdfaction            = lpdf.action
+local pdfminorversion      = lpdf.minorversion
 
 local formattedtimestamp   = lpdf.pdftimestamp
 local adddocumentextgstate = lpdf.adddocumentextgstate
@@ -48,6 +51,8 @@ local addtocatalog         = lpdf.addtocatalog
 local addtoinfo            = lpdf.addtoinfo
 local addtopageattributes  = lpdf.addtopageattributes
 local addtonames           = lpdf.addtonames
+
+local pdfgetmetadata       = lpdf.getmetadata
 
 local variables            = interfaces.variables
 
@@ -65,11 +70,13 @@ local v_landscape          = variables.landscape
 local v_portrait           = variables.portrait
 local v_page               = variables.page
 local v_paper              = variables.paper
+local v_attachment         = variables.attachment
+local v_layer              = variables.layer
 
-local positive             = register(pdfliteral("/GSpositive gs"))
-local negative             = register(pdfliteral("/GSnegative gs"))
-local overprint            = register(pdfliteral("/GSoverprint gs"))
-local knockout             = register(pdfliteral("/GSknockout gs"))
+local positive             = register(pdfpageliteral("/GSpositive gs"))
+local negative             = register(pdfpageliteral("/GSnegative gs"))
+local overprint            = register(pdfpageliteral("/GSoverprint gs"))
+local knockout             = register(pdfpageliteral("/GSknockout gs"))
 
 local function initializenegative()
     local a = pdfarray { 0, 1 }
@@ -184,6 +191,12 @@ local done = false  -- using "setupidentity = function() end" fails as the meani
 
 local function setupidentity()
     if not done then
+        local metadata = pdfgetmetadata()
+        local creator  = metadata.creator
+        local version  = metadata.contextversion
+        local time     = metadata.time
+        local jobname  = environment.jobname or tex.jobname or "unknown"
+        --
         local title = identity.title
         if not title or title == "" then
             title = tex.jobname
@@ -197,21 +210,16 @@ local function setupidentity()
         if author ~= "" then
             addtoinfo("Author",  pdfunicode(author), author) -- '/Author' in /Info, 'Creator' in XMP
         end
-     -- local creator = identity.creator or ""
-        local creator = "LuaTeX + ConTeXt MkIV" -- has to be the same in CreatorTool
-        if creator ~= "" then
-            addtoinfo("Creator", pdfunicode(creator), creator) -- '/Creator' in /Info, 'CreatorTool' in XMP
-        end
-        local currenttimestamp = lpdf.timestamp()
-        addtoinfo("CreationDate", pdfstring(formattedtimestamp(currenttimestamp)))
+        addtoinfo("Creator", pdfunicode(creator), creator)
+        addtoinfo("CreationDate", pdfstring(formattedtimestamp(time)))
         local date = identity.date or ""
-        local pdfdate = formattedtimestamp(date)
+        local pdfdate = date and formattedtimestamp(date)
         if pdfdate then
             addtoinfo("ModDate", pdfstring(pdfdate), date)
         else
             -- users should enter the date in 2010-01-19T23:27:50+01:00 format
             -- and if not provided that way we use the creation time instead
-            addtoinfo("ModDate", pdfstring(formattedtimestamp(currenttimestamp)), currenttimestamp)
+            addtoinfo("ModDate", pdfstring(formattedtimestamp(time)),time)
         end
         local keywords = identity.keywords or ""
         if keywords ~= "" then
@@ -221,11 +229,12 @@ local function setupidentity()
         local id = lpdf.id()
         addtoinfo("ID", pdfstring(id), id) -- needed for pdf/x
         --
-        addtoinfo("ConTeXt.Version", environment.version)
-        addtoinfo("ConTeXt.Time",    os.date("%Y-%m-%d %H:%M"))
-        addtoinfo("ConTeXt.Jobname", environment.jobname or tex.jobname)
-        addtoinfo("ConTeXt.Url",     "www.pragma-ade.com")
-        addtoinfo("ConTeXt.Support", "contextgarden.net")
+        addtoinfo("ConTeXt.Version",version)
+        addtoinfo("ConTeXt.Time",os.date("%Y-%m-%d %H:%M"))
+        addtoinfo("ConTeXt.Jobname",jobname)
+        addtoinfo("ConTeXt.Url","www.pragma-ade.com")
+        addtoinfo("ConTeXt.Support","contextgarden.net")
+        addtoinfo("TeX.Support","tug.org")
         --
         done = true
     else
@@ -261,14 +270,50 @@ lpdf.registerdocumentfinalizer(flushjavascripts,"javascripts")
 
 -- -- --
 
-local pagespecs = {
-    [v_none] = {
-    },
+local plusspecs = {
     [v_max] = {
         mode = "FullScreen",
     },
     [v_bookmark] = {
         mode = "UseOutlines",
+    },
+    [v_attachment] = {
+        mode = "UseAttachments",
+    },
+    [v_layer] = {
+        mode = "UseOC",
+    },
+    [v_fit] = {
+        fit  = true,
+    },
+    [v_doublesided] = {
+        layout = "TwoColumnRight",
+    },
+    [v_fixed] = {
+        fixed  = true,
+    },
+    [v_landscape] = {
+        duplex = "DuplexFlipShortEdge",
+    },
+    [v_portrait] = {
+        duplex = "DuplexFlipLongEdge",
+    },
+    [v_page] = {
+        duplex = "Simplex" ,
+    },
+    [v_paper] = {
+        paper  = true,
+    },
+}
+
+local pagespecs = {
+    --
+    [v_max]        = plusspecs[v_max],
+    [v_bookmark]   = plusspecs[v_bookmark],
+    [v_attachment] = plusspecs[v_attachment],
+    [v_layer]      = plusspecs[v_layer],
+    --
+    [v_none] = {
     },
     [v_fit] = {
         mode = "UseNone",
@@ -322,38 +367,9 @@ local pagespecs = {
     },
 }
 
-local plusspecs = {
-    [v_max] = {
-        mode = "FullScreen",
-    },
-    [v_bookmark] = {
-        mode = "UseOutlines",
-    },
-    [v_fit] = {
-        fit  = true,
-    },
-    [v_doublesided] = {
-        layout = "TwoColumnRight",
-    },
-    [v_fixed] = {
-        fixed  = true,
-    },
-    [v_landscape] = {
-        duplex = "DuplexFlipShortEdge",
-    },
-    [v_portrait] = {
-        duplex = "DuplexFlipLongEdge",
-    },
-    [v_page] = {
-        duplex = "Simplex" ,
-    },
-    [v_paper] = {
-        paper  = true,
-    },
-}
-
 local pagespec, topoffset, leftoffset, height, width, doublesided = "default", 0, 0, 0, 0, false
 local cropoffset, bleedoffset, trimoffset, artoffset = 0, 0, 0, 0
+local marked = false
 local copies = false
 
 function codeinjections.setupcanvas(specification)
@@ -371,6 +387,7 @@ function codeinjections.setupcanvas(specification)
     leftoffset  = specification.leftoffset or 0
     height      = specification.height     or texget("pageheight")
     width       = specification.width      or texget("pagewidth")
+    marked      = specification.print
     --
     copies      = specification.copies
     if copies and copies < 2 then
@@ -429,23 +446,36 @@ local function documentspecification()
     if mode then
         addtocatalog("PageMode",pdfconstant(mode))
     end
-    if fit or fixed or duplex or copies or paper then
+    local prints = nil
+    if marked then
+        local pages     = structures.pages
+        local marked    = pages.allmarked(marked)
+        local nofmarked = marked and #marked or 0
+        if nofmarked > 0 then
+            -- the spec is wrong in saying that numbering starts at 1 which of course makes
+            -- sense as most real documents start with page 0 .. sigh
+            for i=1,#marked do marked[i] = marked[i] - 1 end
+            prints = pdfarray(flattened(pages.toranges(marked)))
+        end
+    end
+    if fit or fixed or duplex or copies or paper or prints then
         addtocatalog("ViewerPreferences",pdfdictionary {
             FitWindow         = fit    and true                or nil,
             PrintScaling      = fixed  and pdfconstant("None") or nil,
             Duplex            = duplex and pdfconstant(duplex) or nil,
             NumCopies         = copies and copies              or nil,
             PickTrayByPDFSize = paper  and true                or nil,
+            PrintPageRange    = prints                         or nil,
         })
     end
     addtoinfo   ("Trapped", pdfconstant("False")) -- '/Trapped' in /Info, 'Trapped' in XMP
-    addtocatalog("Version", pdfconstant(format("1.%s",pdf.getminorversion())))
+    addtocatalog("Version", pdfconstant(format("1.%s",pdfminorversion())))
 end
 
 -- temp hack: the mediabox is not under our control and has a precision of 5 digits
 
 local factor  = number.dimenfactors.bp
-local f_value = formatters["%0.5F"]
+local f_value = formatters["%0.6F"]
 
 local function boxvalue(n) -- we could share them
     return pdfverbose(f_value(factor * n))

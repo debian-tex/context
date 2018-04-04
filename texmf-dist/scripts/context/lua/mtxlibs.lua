@@ -49,10 +49,10 @@ if not modules then modules = { } end modules ['mtxlibs'] = {
 -- the for context handy option to expose them in the normal ones. I might make the dependencies
 -- less but it probably makes no sense to waste time on them.
 
-xpcall(function() local _, t = require("lpeg")      return  end,function() end) if t then lpeg     = t end
-xpcall(function() local _, t = require("md5")       return  end,function() end) if t then md5      = t end
-xpcall(function() local _, t = require("lfs")       return  end,function() end) if t then lfs      = t end
-xpcall(function() local _, t = require("slunicode") return  end,function() end) if t then unicode  = t end
+xpcall(function() local _, t = require("lpeg")      if t then lpeg     = t end return  end,function() end)
+xpcall(function() local _, t = require("md5")       if t then md5      = t end return  end,function() end)
+xpcall(function() local _, t = require("lfs")       if t then lfs      = t end return  end,function() end)
+xpcall(function() local _, t = require("slunicode") if t then unicode  = t end return  end,function() end)
 
 -- begin library merge
 
@@ -68,6 +68,7 @@ local owntree = ownpath
 local ownlibs = {
 
     "l-lua.lua",
+    "l-macro.lua",
     "l-sandbox.lua",
     "l-package.lua",
     "l-lpeg.lua",
@@ -195,15 +196,13 @@ end
 local arguments = environment.arguments
 local files     = environment.files
 
-if file.basename(environment.ownname) ~= "mtxlibs.lua" then
-    return
-end
+local ownname   = file.basename(environment.ownname)
 
 local helpinfo = [[
 usage: mtxlibs [options]
 
---merge
---merge targetfile extralibs
+--selfmerge
+--selfmerge targetfile extralibs
 --selfclean
 
 and in a lua file:
@@ -217,7 +216,19 @@ local application = logs.application {
     helpinfo = helpinfo,
 }
 
-local report    = application.report
+local report = application.report
+
+if ownname == "mtxrun" or ownname == "mtxrun.lua" then
+    -- we're using mtxrun
+    ownname = "mtxlibs.lua"
+elseif ownname == "mtxlibs" or ownname == "mtxlibs.lua" then
+    -- we're using lua
+    ownname = "mtxlibs.lua"
+else
+    report("usage : lua mtxlibs.lua ...")
+    report("      : mtxrun --script mtxlibs.lua ...")
+    return
+end
 
 if arguments.selfmerge then
 
@@ -246,7 +257,7 @@ elseif arguments.selfclean then
     merger.selfclean(ownname)
     report("done")
 
-elseif arguments.help or files[1] == "help" then
+else -- if arguments.help or files[1] == "help" then
 
     application.help()
 
