@@ -6,8 +6,8 @@ Uploaders: Norbert Preining <preining@debian.org>
 Build-Depends: debhelper (>= 7.0.50~)
 Build-Depends-Indep: tex-common (>= 6)
 Standards-Version: 4.1.2
-Vcs-Git: git://anonscm.debian.org/debian-tex/context.git
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=debian-tex/context.git
+Vcs-Git: https://salsa.debian.org/tex-team/context.git
+Vcs-Browser: https://salsa.debian.org/tex-team/context
 
 Package: context
 Section: tex

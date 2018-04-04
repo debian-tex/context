@@ -3,8 +3,9 @@ context (2018.04.02.20180404-1) experimental; urgency=medium
   * New upstream version 2018.04.02.20180404
   * bump standards version, no changes necessary
   * depend on TL2018
+  * adjust VCS fields for salsa
 
- -- Norbert Preining <preining@debian.org>  Wed, 04 Apr 2018 12:09:53 +0900
+ -- Norbert Preining <preining@debian.org>  Wed, 04 Apr 2018 12:11:47 +0900
 
 context (2017.05.15.20170613-2) unstable; urgency=medium
 
