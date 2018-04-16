@@ -13,10 +13,9 @@ local context, commands, trackers, logs = context, commands, trackers, logs
 local node, nodes, fonts, characters = node, nodes, fonts, characters
 local file, lpeg, table, string = file, lpeg, table, string
 
-local type, next, tonumber, toboolean = type, next, tonumber, toboolean
+local type, next, toboolean = type, next, toboolean
 local gmatch = string.gmatch
 local fastcopy = table.fastcopy
-local formatters = string.formatters
 
 local nuts               = nodes.nuts
 local tonut              = nuts.tonut
@@ -24,6 +23,7 @@ local tonut              = nuts.tonut
 local getfont            = nuts.getfont
 local getchar            = nuts.getchar
 
+local setfield           = nuts.setfield
 local setfont            = nuts.setfont
 
 local traverse_id        = nuts.traverse_id
@@ -47,19 +47,9 @@ collections.definitions  = definitions
 local vectors            = collections.vectors or { }
 collections.vectors      = vectors
 
-local fonthashes         = fonts.hashes
-local fonthelpers        = fonts.helpers
-
-local fontdata           = fonthashes.identifiers
-local fontquads          = fonthashes.quads
-local chardata           = fonthashes.characters
-local propdata           = fonthashes.properties
-
-local addprivate         = fonthelpers.addprivate
-local hasprivate         = fonthelpers.hasprivate
-
+local fontdata           = fonts.hashes.identifiers
+local chardata           = fonts.hashes.characters
 local currentfont        = font.current
-local addcharacters      = font.addcharacters
 
 local fontpatternhassize = fonts.helpers.fontpatternhassize
 
@@ -143,7 +133,6 @@ function collections.define(name,font,ranges,details)
                 rscale   = tonumber (details.rscale) or 1,
                 force    = toboolean(details.force,true),
                 check    = toboolean(details.check,true),
-                factor   = tonumber(details.factor),
                 features = details.features,
             }
         end
@@ -183,10 +172,6 @@ function collections.clonevector(name)
         local cloneid    = list[i]
         local oldchars   = fontdata[current].characters
         local newchars   = fontdata[cloneid].characters
-        local factor     = definition.factor
-        if factor then
-            vector.factor = factor
-        end
         if trace_collecting then
             report_fonts("remapping font %a to %a for range %U - %U",current,cloneid,start,stop)
         end
@@ -235,15 +220,13 @@ function collections.prepare(name) -- we can do this in lua now .. todo
     if vectors[current] then
         return
     end
-    local properties = propdata[current]
-    local mathsize   = properties.mathsize
-    if mathsize == 1 or mathsize == 2 or mathsize == 3 then
+    if fontdata[current].mathparameters then
         return
     end
     local d = definitions[name]
     if d then
         if trace_collecting then
-            local filename = file.basename(properties.filename or "?")
+            local filename = file.basename(fontdata[current].properties.filename or "?")
             report_fonts("applying collection %a to %a, file %a",name,current,filename)
         end
         list = { }
@@ -263,47 +246,15 @@ function collections.prepare(name) -- we can do this in lua now .. todo
         context.font_fallbacks_prepare_clone_vectors(name)
         context.font_fallbacks_stop_cloning()
         context.popcatcodes() -- context.protect()
+    elseif trace_collecting then
+        local filename = file.basename(fontdata[current].properties.filename or "?")
+        report_fonts("error while applying collection %a to %a, file %a",name,current,filename)
     end
 end
 
 function collections.report(message)
     if trace_collecting then
         report_fonts("tex: %s",message)
-    end
-end
-
-local function monoslot(font,char,parent,factor)
-    local tfmdata     = fontdata[font]
-    local privatename = formatters["faked mono %s"](char)
-    local privateslot = hasprivate(tfmdata,privatename)
-    if privateslot then
-        return privateslot
-    else
-        local characters = tfmdata.characters
-        local properties = tfmdata.properties
-        local width      = factor * fontquads[parent]
-        local character  = characters[char]
-        if character then
-            local data = {
-                width    = width,
-                height   = character.height,
-                depth    = character.depth,
-                commands = {
-                    { "right", (width - character.width or 0)/2 },
-                    { "slot", 0, char }
-                }
-            }
-            local u = addprivate(tfmdata, privatename, data)
-            addcharacters(properties.id, {
-                type       = "real",
-                characters = {
-                    [u] = data
-                },
-            } )
-            return u
-        else
-            return char
-        end
     end
 end
 
@@ -328,17 +279,12 @@ function collections.process(head) -- this way we keep feature processing
                 setfont(n,newfont,newchar)
                 done = true
             else
-                local fakemono = vector.factor
                 if trace_collecting then
                     report_fonts("remapping font %a to %a for character %C%s",
                         font,vect,char,not chardata[vect][char] and " (missing)" or ""
                     )
                 end
-                if fakemono then
-                    setfont(n,vect,monoslot(vect,char,font,fakemono))
-                else
-                    setfont(n,vect)
-                end
+                setfont(n,vect)
                 done = true
             end
         end
@@ -363,13 +309,13 @@ end
 implement {
     name      = "fontcollectiondefine",
     actions   = collections.define,
-    arguments = "4 strings",
+    arguments = { "string", "string", "string", "string" }
 }
 
 implement {
     name      = "fontcollectionreset",
     actions   = collections.reset,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {

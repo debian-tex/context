@@ -8,8 +8,7 @@ if not modules then modules = { } end modules ['lpdf-mov'] = {
 
 local format = string.format
 
-local lpdf               = lpdf
-local context            = context
+local lpdf = lpdf
 
 local nodeinjections     = backends.pdf.nodeinjections
 local pdfconstant        = lpdf.constant
@@ -45,7 +44,7 @@ function nodeinjections.insertmovie(specification)
 end
 
 function nodeinjections.insertsound(specification)
-    -- managed in interaction: repeat, label, foundname
+    -- rmanaged in interaction: repeat, label, foundname
     local soundclip = interactions.soundclips.soundclip(specification.label)
     if soundclip then
         local controldict = pdfdictionary {

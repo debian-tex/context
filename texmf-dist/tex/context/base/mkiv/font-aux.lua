@@ -6,7 +6,7 @@ if not modules then modules = { } end modules ['font-aux'] = {
     license   = "see context related readme files"
 }
 
-local tonumber, type, next = tonumber, type, next
+local tonumber, type = tonumber, type
 ----- wrap, yield = coroutine.wrap, coroutine.yield
 
 local fonts, font = fonts, font

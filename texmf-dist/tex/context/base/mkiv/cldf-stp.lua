@@ -18,8 +18,8 @@ if not modules then modules = { } end modules ['cldf-stp'] = {
 --         ...
 --         context.step(nil|...)
 --         ...
---         context.step(nil|...)
---         ...
+--     context.step(nil|...)
+--     ...
 --     end)
 --     ...
 --     context.step(nil|...)
@@ -27,8 +27,6 @@ if not modules then modules = { } end modules ['cldf-stp'] = {
 --     context.step(nil|...)
 --     ...
 -- end)
-
-local context = context
 
 local create  = coroutine.create
 local yield   = coroutine.yield
@@ -55,50 +53,17 @@ interfaces.implement {
 
 local ctx_resume = context.protected.cs.clf_step
 
-local closeinput  = texio.closeinput -- experiment
-local closeindeed = true
-local stepsindeed = true
-
-directives.register("context.steps.nosteps",function(v) stepsindeed = not v end)
-directives.register("context.steps.noclose",function(v) closeindeed = not v end)
-
-if closeinput then
-
-    function context.step(first,...)
-        if first ~= nil then
-            context(first,...)
-        end
-if stepper then
-        ctx_resume()
-        yield()
-        if closeindeed then
-            closeinput()
-        end
-end
+function context.step(first,...)
+    if first ~= nil then
+        context(first,...)
     end
-
-else
-
-    function context.step(first,...)
-        if first ~= nil then
-            context(first,...)
-        end
-if stepper then
-        ctx_resume()
-        yield()
-end
-    end
-
+    ctx_resume()
+    yield()
 end
 
 function context.stepwise(f)
-    if stepsindeed then
-        depth = depth + 1
-        stack[depth] = stepper
-        stepper = create(f)
-     -- ctx_resume(stepper)
-        ctx_resume()
-    else
-        f()
-    end
+    depth = depth + 1
+    stack[depth] = stepper
+    stepper = create(f)
+    ctx_resume(stepper)
 end

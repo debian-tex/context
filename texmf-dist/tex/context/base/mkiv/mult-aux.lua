@@ -7,7 +7,6 @@ if not modules then modules = { } end modules ['mult-aux'] = {
 }
 
 local find = string.find
-local next = next
 
 interfaces.namespaces = interfaces.namespaces or { }
 local namespaces      = interfaces.namespaces
@@ -159,7 +158,7 @@ end
 
 interfaces.implement {
     name      = "definenamespace",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = namespaces.define
 }
 

@@ -82,12 +82,9 @@
     }
 \stopsetups
 
-\definecolor[system:page:otr:statistics][t=.8,a=1]
-
 \defineoverlay
   [system:page:otr:statistics]
-  [{\starttransparent[system:page:otr:statistics]%
-    \framed
+  [{\framed
       [\c!offset=\bodyfontsize,
        \c!background=\v!color,
        \c!strut=\v!no,
@@ -99,8 +96,7 @@
        \c!align=\v!middle]
       {\forgetall
        \insidefloattrue
-       \setups{system:page:otr:statistics}}%
-   \stoptransparent}]
+       \setups{system:page:otr:statistics}}}]
 
 \unexpanded\def\page_one_command_package_show_state_indeed
   {\scratchheight\ht\b_page_one_contents

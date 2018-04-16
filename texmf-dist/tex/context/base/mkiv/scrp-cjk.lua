@@ -32,6 +32,7 @@ local getid              = nuts.getid
 local getattr            = nuts.getattr
 local getsubtype         = nuts.getsubtype
 local getwidth           = nuts.getwidth
+local getfield           = nuts.getfield
 
 local setchar            = nuts.setchar
 

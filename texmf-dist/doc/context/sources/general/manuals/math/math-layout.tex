@@ -1,17 +1,10 @@
 \startenvironment math-layout
 
-\enabledirectives[fontgoodies.mathkerning]
-
-\usebodyfont   [modern]
-\usebodyfont  [cambria]
-\usebodyfont [lucidaot]
-\usebodyfont     [xits]
-\usebodyfont  [stixtwo]
-\usebodyfont   [dejavu]
-\usebodyfont  [pagella]
-\usebodyfont   [termes]
-\usebodyfont    [bonum]
-\usebodyfont   [schola]
+\switchtobodyfont  [modern]
+\switchtobodyfont  [dejavu]
+\switchtobodyfont [cambria]
+\switchtobodyfont[lucidaot]
+\switchtobodyfont    [xits]
 
 \setupbodyfont
   [pagella]
@@ -39,24 +32,21 @@
    height=middle,
    width=middle]
 
-\definecolor[maincolor] [darkmagenta]
-\definecolor[extracolor][darkyellow]
-
 \setuphead
   [chapter]
   [header=high,
    style=\bfc,
-   color=maincolor]
+   color=darkmagenta]
 
 \setuphead
   [section]
   [style=\bfb,
-   color=maincolor]
+   color=darkmagenta]
 
 \setuphead
   [subsection]
   [style=\bfa,
-   color=maincolor]
+   color=darkmagenta]
 
 \usemodule[abr-02]
 

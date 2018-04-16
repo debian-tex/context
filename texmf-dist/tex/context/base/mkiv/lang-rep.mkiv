@@ -19,7 +19,7 @@
 
 \unprotect
 
-\registerctxluafile{lang-rep}{}
+\registerctxluafile{lang-rep}{1.001}
 
 \definesystemattribute[replacements][public,global]
 
@@ -57,14 +57,12 @@
   {\attribute\replacementsattribute\attributeunsetvalue}
 
 \unexpanded\def\replaceword
-  {\dotripleempty\languages_replacements_replace}
+  {\dotripleargument\languages_replacements_replace}
 
 \unexpanded\def\languages_replacements_replace[#1][#2][#3]%
   {\ifthirdargument
      \clf_addreplacements{#1}{#2}{#3}%
-   \else\ifsecondargument
-     \clf_addreplacementslist{#1}{#2}%
-   \fi\fi}
+   \fi}
 
 \appendtoks
     \resetreplacements

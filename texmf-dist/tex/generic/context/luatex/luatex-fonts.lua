@@ -219,19 +219,33 @@ if non_generic_context.luatex_fonts.skip_loading ~= true then
         -- --reload --force --simple option).
 
         loadmodule('font-ini.lua')
-        loadmodule('luatex-fonts-mis.lua')
         loadmodule('font-con.lua')
         loadmodule('luatex-fonts-enc.lua') -- will load font-age on demand
         loadmodule('font-cid.lua')
         loadmodule('font-map.lua')         -- for loading lum file (will be stripped)
 
         -- We use a bit simpler database because using the context one demands loading more helper
-        -- code and although it is more flexible (more ways to resolve and so) it will never be
+        -- code and although it is more flexible (more wauys to resolve and so) it will never be
         -- uses in plain/latex anyway, so let's stick to a simple approach.
 
         loadmodule('luatex-fonts-syn.lua')
 
         loadmodule('font-oti.lua')
+
+        -- These are the old loader and processing modules. These use the built-in font loader and
+        -- will stay around (but not be extended), only fixed.
+
+        -- font-otf.lua
+        -- font-otb.lua
+        -- font-inj.lua
+        -- font-ota.lua
+        -- font-otn.lua
+        -- font-otp.lua
+
+        -- Here come the new loader and processing modules. The loader is written in Lua and although
+        -- initial loading is somewhat slower, identifying is faster, cached files can be slightly
+        -- more efficient, and processing is somewhat faster (only measureable on complex fonts).
+
         loadmodule('font-otr.lua')
         loadmodule('font-cff.lua')
         loadmodule('font-ttf.lua')
@@ -244,6 +258,7 @@ if non_generic_context.luatex_fonts.skip_loading ~= true then
         loadmodule('font-ots.lua')
         loadmodule('font-osd.lua')
         loadmodule('font-ocl.lua') -- svg needs 0.97 (for fix in memstreams)
+
         loadmodule('font-otc.lua')
 
         -- type one code
@@ -262,7 +277,7 @@ if non_generic_context.luatex_fonts.skip_loading ~= true then
         loadmodule('font-def.lua')
         loadmodule('font-xtx.lua')         -- xetex compatible specifiers (plain/latex only)
         loadmodule('luatex-fonts-ext.lua') -- some extensions
-        loadmodule('luatex-fonts-lig.lua') -- and another one
+     -- loadmodule('luatex-fonts-lig.lua') -- and another one
 
         -- We need to plug into a callback and the following module implements the handlers. Actual
         -- plugging in happens later.

@@ -19,7 +19,7 @@ saves much runtime but at the cost of more memory usage.</p>
 
 local math = math
 local format, match = string.format, string.match
-local next, type, tostring, tonumber = next, type, tostring, tonumber
+local next, type, tostring = next, type, tostring
 local concat = table.concat
 
 local definetable    = utilities.tables.definetable
@@ -297,16 +297,14 @@ function job.load(filename)
             local target      = list[1]
             local initializer = list[3]
             local result      = accesstable(target,utilitydata)
-            if result then
-                local done = packers.unpack(result,jobpacker,true)
-                if done then
-                    migratetable(target,mark(result))
-                    if type(initializer) == "function" then
-                        handlers[#handlers+1] = { initializer, result }
-                    end
-                else
-                    report_passes("pack version mismatch")
+            local done        = packers.unpack(result,jobpacker,true)
+            if done then
+                migratetable(target,mark(result))
+                if type(initializer) == "function" then
+                    handlers[#handlers+1] = { initializer, result }
                 end
+            else
+                report_passes("pack version mismatch")
             end
         end
         -- so we have all tables available (unpacked)
@@ -384,37 +382,15 @@ statistics.register("jobdata time",function()
     end
 end)
 
--- statistics.register("callbacks", function()
---     local total, indirect = status.callbacks or 0, status.indirect_callbacks or 0
---     local pages = texgetcount('realpageno') - 1
---     if pages > 1 then
---         return format("direct: %s, indirect: %s, total: %s (%i per page)", total-indirect, indirect, total, total/pages)
---     else
---         return format("direct: %s, indirect: %s, total: %s", total-indirect, indirect, total)
---     end
--- end)
-
-function statistics.callbacks()
-    local c_internal = status.callbacks or 0
-    local c_file     = status.indirect_callbacks or 0
-    local c_direct   = status.direct_callbacks or 0
-    local c_late     = status.late_callbacks or 0
-    local c_function = status.function_callbacks or 0
-    local c_total    = c_internal + c_file + c_direct + c_late + c_function
-    local n_pages    = texgetcount('realpageno') - 1
-    local c_average  = n_pages > 0 and math.round(c_total/n_pages) or 0
-    local s_result   = format (
-        c_average > 0 and "internal: %s, file: %s, direct: %s, late: %s, function %s, total: %s (%s per page)"
-                       or "internal: %s, file: %s, direct: %s, late: %s, function %s, total: %s",
-        c_internal, c_file, c_direct, c_late, c_function, c_total, c_average
-    )
-    statistics.callbacks = function()
-        return s_result
+statistics.register("callbacks", function()
+    local total, indirect = status.callbacks or 0, status.indirect_callbacks or 0
+    local pages = texgetcount('realpageno') - 1
+    if pages > 1 then
+        return format("direct: %s, indirect: %s, total: %s (%i per page)", total-indirect, indirect, total, total/pages)
+    else
+        return format("direct: %s, indirect: %s, total: %s", total-indirect, indirect, total)
     end
-    return s_result
-end
-
-statistics.register("callbacks", statistics.callbacks)
+end)
 
 statistics.register("randomizer", function()
     if rmethod and rvalue then
@@ -458,7 +434,7 @@ end
 implement {
     name      = "savevariable",
     actions   = job.variables.save,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {

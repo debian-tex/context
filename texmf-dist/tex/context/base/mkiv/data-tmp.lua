@@ -28,7 +28,6 @@ local concat = table.concat
 local mkdirs, isdir, isfile = dir.mkdirs, lfs.isdir, lfs.isfile
 local addsuffix, is_writable, is_readable = file.addsuffix, file.is_writable, file.is_readable
 local formatters = string.formatters
-local next, type = next, type
 
 local trace_locating = false  trackers.register("resolvers.locating", function(v) trace_locating = v end)
 local trace_cache    = false  trackers.register("resolvers.cache",    function(v) trace_cache    = v end)
@@ -191,7 +190,7 @@ function caches.usedpaths(separator)
 end
 
 function caches.configfiles()
-    return concat(resolvers.configurationfiles(),";")
+    return concat(resolvers.instance.specification,";")
 end
 
 function caches.hashed(tree)

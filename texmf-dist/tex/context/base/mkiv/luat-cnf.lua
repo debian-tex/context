@@ -19,7 +19,7 @@ texconfig.shell_escape = 't'
 luatex       = luatex or { }
 local luatex = luatex
 
-texconfig.error_line      =     79 -- frozen / large values can crash
+texconfig.error_line      =     79 -- frozen
 texconfig.expand_depth    =  10000
 texconfig.half_error_line =     50 -- frozen
 texconfig.hash_extra      = 100000
@@ -67,7 +67,7 @@ function texconfig.init()
             "gzip",  "zip", "zlib", "lfs", "ltn12", "mime", "socket", "md5", "fio", "unicode", "utf",
         },
         extratex = {
-            "epdf", "kpse", "mplib", -- "fontloader",
+            "epdf", "fontloader", "kpse", "mplib",
         },
         obsolete = {
             "fontloader", -- can be filled by luat-log
@@ -119,21 +119,16 @@ function texconfig.init()
 
     -- shortcut and helper
 
-    local setbytecode = lua.setbytecode
-    local getbytecode = lua.getbytecode
+    local bytecode = lua.bytecode
 
     local function init(start)
         local i = start
         local t = os.clock()
-        while true do
-            local b = getbytecode(i)
-            if b then
-                b() ;
-                setbytecode(i,nil) ;
-                i = i + 1
-            else
-                break
-            end
+        while bytecode[i] do
+            bytecode[i]() ;
+            bytecode[i] = nil ;
+            i = i + 1
+         -- collectgarbage('step')
         end
         return i - start, os.clock() - t
     end

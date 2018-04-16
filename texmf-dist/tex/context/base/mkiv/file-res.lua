@@ -6,7 +6,6 @@ if not modules then modules = { } end modules ['file-res'] = {
     license   = "see context related readme files"
 }
 
-local tonumber = tonumber
 local format, find = string.format, string.find
 local isfile = lfs.isfile
 local is_qualified_path = file.is_qualified_path
@@ -79,7 +78,7 @@ local function readfilename(specification,backtrack,treetoo)
             end
         end
         if not fnd then
-            local paths = resolvers.getextrapaths()
+            local paths = resolvers.instance.extra_paths
             if paths then
                 for i=1,#paths do
                     for i=1,#names do
@@ -161,7 +160,7 @@ local implement = interfaces.implement
 implement {
     name      = "getreadfilename",
     actions   = { getreadfilename, context },
-    arguments = "3 strings",
+    arguments = { "string", "string", "string" }
 }
 
 implement {

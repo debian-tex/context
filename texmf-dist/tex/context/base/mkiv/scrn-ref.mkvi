@@ -13,7 +13,7 @@
 
 \writestatus{loading}{ConTeXt Screen Macros / References}
 
-\registerctxluafile{scrn-ref}{}
+\registerctxluafile{scrn-ref}{1.001}
 
 \unprotect
 
@@ -29,7 +29,7 @@
 \to \everysetupinteraction
 
 \def\scrn_reference_enable_page_destinations % no reset
-  {\clf_setreferencelinkmethod{\interactionparameter\c!page}}
+  {\clf_setinnerreferencemethod{\interactionparameter\c!page}}
 
 \setupinteraction % start fit page and reset form
   [\c!page=\v!no,

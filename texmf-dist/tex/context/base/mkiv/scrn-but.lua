@@ -22,5 +22,5 @@ end
 interfaces.implement {
     name      = "registerbuttons",
     actions   = registerbuttons,
-    arguments = "3 strings",
+    arguments = { "string", "string", "string" }
 }

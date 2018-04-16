@@ -1,6 +1,6 @@
 if not modules then modules = { } end modules ['font-ota'] = {
     version   = 1.001,
-    comment   = "companion to font-ini.mkiv",
+    comment   = "companion to font-otf.lua (analysing)",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
     license   = "see context related readme files"
@@ -71,7 +71,7 @@ local s_isol = 4    local s_blwf = 10
 local s_mark = 5    local s_pstf = 11
 local s_rest = 6
 
-local states = allocate {
+local states = {
     init = s_init,
     medi = s_medi,
     med2 = s_medi,
@@ -88,7 +88,7 @@ local states = allocate {
     pstf = s_pstf,
 }
 
-local features = allocate {
+local features = {
     init = s_init,
     medi = s_medi,
     med2 = s_medi,
@@ -247,12 +247,12 @@ local function warning(current,what)
     end
 end
 
-local mappers = allocate {
-    l = s_init, -- left
-    d = s_medi, -- double
-    c = s_medi, -- joiner
-    r = s_fina, -- right
-    u = s_isol, -- nonjoiner
+local mappers = {
+    l = s_init,  -- left
+    d = s_medi,  -- double
+    c = s_medi,  -- joiner
+    r = s_fina,  -- right
+    u = s_isol,  -- nonjoiner
 }
 
 -- we can also use this trick for devanagari

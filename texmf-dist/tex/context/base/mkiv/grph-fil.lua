@@ -101,6 +101,6 @@ end
 
 interfaces.implement {
     name      = "runcontextjob",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = { jobfiles.context, context }
 }

@@ -8,7 +8,7 @@ if not modules then modules = { } end modules ['strc-blk'] = {
 
 -- this one runs on top of buffers and structure
 
-local type, next = type, next
+local type = type
 local find, format, validstring = string.find, string.format, string.valid
 local settings_to_set, settings_to_array = utilities.parsers.settings_to_set, utilities.parsers.settings_to_array
 local allocate = utilities.storage.allocate
@@ -157,6 +157,6 @@ end
 -- interface
 
 implement { name = "definestructureblock",   actions = blocks.define,   arguments = "string" }
-implement { name = "savestructureblock",     actions = blocks.save,     arguments = "3 strings" }
-implement { name = "selectstructureblock",   actions = blocks.select,   arguments = "4 strings" }
-implement { name = "setstructureblockstate", actions = blocks.setstate, arguments = "3 strings" }
+implement { name = "savestructureblock",     actions = blocks.save,     arguments = { "string", "string" ,"string" } }
+implement { name = "selectstructureblock",   actions = blocks.select,   arguments = { "string", "string" ,"string", "string" } }
+implement { name = "setstructureblockstate", actions = blocks.setstate, arguments = { "string", "string" ,"string" } }

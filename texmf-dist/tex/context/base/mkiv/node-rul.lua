@@ -17,9 +17,6 @@ if not modules then modules = { } end modules ['node-rul'] = {
 -- fill s withcolor .5white ;
 -- draw boundingbox s withcolor yellow;
 
-local tonumber           = tonumber
-
-local context            = context
 local attributes         = attributes
 local nodes              = nodes
 local properties         = nodes.properties
@@ -31,13 +28,13 @@ local tonode             = nuts.tonode
 local tonut              = nuts.tonut
 
 local getfield           = nuts.getfield
+local setfield           = nuts.setfield
 local setnext            = nuts.setnext
 local setprev            = nuts.setprev
 local setlink            = nuts.setlink
 local getnext            = nuts.getnext
 local getprev            = nuts.getprev
 local getid              = nuts.getid
-local getdir             = nuts.getdir
 local getattr            = nuts.getattr
 local setattr            = nuts.setattr
 local getfont            = nuts.getfont
@@ -60,7 +57,6 @@ local traverse_id        = nuts.traverse_id
 local list_dimensions    = nuts.rangedimensions
 local hpack_nodes        = nuts.hpack
 local current_attr       = nuts.current_attr
-local copy_list          = nuts.copy_list
 
 local nodecodes          = nodes.nodecodes
 local rulecodes          = nodes.rulecodes
@@ -86,7 +82,6 @@ local nodepool           = nuts.pool
 local new_rule           = nodepool.rule
 local new_userrule       = nodepool.userrule
 local new_kern           = nodepool.kern
-local new_leader         = nodepool.leader
 
 local n_tostring         = nodes.idstostring
 local n_tosequence       = nodes.tosequence
@@ -130,16 +125,13 @@ local rules = nodes.rules or { }
 nodes.rules = rules
 rules.data  = rules.data  or { }
 
-local nutrules = nuts.rules or { }
-nuts.rules     = nutrules -- not that many
-
 storage.register("nodes/rules/data", rules.data, "nodes.rules.data")
 
 local data = rules.data
 
 -- we implement user rules here as it takes less code this way
 
-local function usernutrule(t,noattributes)
+local function userrule(t,noattributes)
     local r = new_userrule(t.width or 0,t.height or 0,t.depth or 0)
     if noattributes == false or noattributes == nil then
         -- avoid fuzzy ones
@@ -147,13 +139,7 @@ local function usernutrule(t,noattributes)
         setattrlist(r,current_attr())
     end
     properties[r] = t
-    return r
-end
-
-nutrules.userrule = usernutrule
-
-local function userrule(t,noattributes)
-    return tonode(usernutrule(t,noattributes))
+    return tonode(r)
 end
 
 rules.userrule    = userrule
@@ -222,19 +208,8 @@ local trace_ruled   = false  trackers.register("nodes.rules", function(v) trace_
 local report_ruled  = logs.reporter("nodes","rules")
 
 function rules.define(settings)
-    local nofdata = #data+1
-    data[nofdata] = settings
-    local text = settings.text
-    if text then
-        local b = nuts.takebox(text)
-        if b then
-            nodepool.register(b)
-            settings.text = getlist(b)
-        else
-            settings.text = nil
-        end
-    end
-    context(nofdata)
+    data[#data+1] = settings
+    context(#data)
 end
 
 local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but acceptable for this purpose
@@ -267,6 +242,7 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
     local method        = d.method
     local empty         = d.empty == v_yes
     local offset        = d.offset
+    local continue      = d.continue
     local dy            = d.dy
     local order         = d.order
     local max           = d.max
@@ -346,28 +322,18 @@ local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but a
         }
         inject(tonut(r),w,ht,dp)
     else
-        local tx = d.text
-        if tx then
-            tx = copy_list(tx)
-            if d["repeat"] == v_yes then
-                tx = new_leader(w,tx)
+        for i=1,level do
+            local ht =  (offset+(i-1)*dy)*e + rulethickness - m
+            local dp = -(offset+(i-1)*dy)*e + rulethickness + m
+            local r = new_rule(w,ht,dp)
+            if color then
+                setattr(r,a_colormodel,colorspace)
+                setattr(r,a_color,color)
             end
-            local r = hpack_nodes(tx,w,"exactly")
+            if transparency then
+                setattr(r,a_transparency,transparency)
+            end
             inject(r,w,ht,dp)
-        else
-            for i=1,level do
-                local ht =  (offset+(i-1)*dy)*e + rulethickness - m
-                local dp = -(offset+(i-1)*dy)*e + rulethickness + m
-                local r = new_rule(w,ht,dp)
-                if color then
-                    setattr(r,a_colormodel,colorspace)
-                    setattr(r,a_color,color)
-                end
-                if transparency then
-                    setattr(r,a_transparency,transparency)
-                end
-                inject(r,w,ht,dp)
-            end
         end
     end
     return head
@@ -651,8 +617,6 @@ implement {
             { "ta", "integer" },
             { "mp" },
             { "empty" },
-            { "text", "integer" },
-            { "repeat" },
         }
     }
 }

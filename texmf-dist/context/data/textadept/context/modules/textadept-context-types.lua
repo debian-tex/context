@@ -54,6 +54,9 @@ install {
     end,
 }
 
+
+
+
 install {
     lexer    = "scite-context-lexer-xml",
     suffixes = {

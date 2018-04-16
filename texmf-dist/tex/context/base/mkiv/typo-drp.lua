@@ -36,9 +36,11 @@ local getprev           = nuts.getprev
 local getchar           = nuts.getchar
 local getid             = nuts.getid
 local getsubtype        = nuts.getsubtype
+local getfield          = nuts.getfield
 local getattr           = nuts.getattr
 local getwhd            = nuts.getwhd
 
+local setfield          = nuts.setfield
 local setattr           = nuts.setattr
 local setlink           = nuts.setlink
 local setprev           = nuts.setprev

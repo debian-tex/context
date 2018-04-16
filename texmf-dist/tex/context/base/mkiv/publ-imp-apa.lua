@@ -84,11 +84,11 @@ local categories = specification.categories
 
 categories.article = {
     sets = {
-        author = { "author", "organization", "editor", "title" },
+        author = { "author", "editor", "title" },
         doi    = generic.doi,
     },
     required = {
-        "author", -- a set
+        "author"
     },
     optional = {
         "withauthor", "translator",
@@ -96,13 +96,6 @@ categories.article = {
         "subtitle", "type", "file",
         "journal", "volume", "number", "pages",
         "doi", "note",
-     -- APA ignores this: 
-     -- 
-     -- "month",
-     -- 
-     -- fields defined in jabref but presently ignored:
-     -- 
-     -- "issn",
     },
 }
 
@@ -130,7 +123,7 @@ categories.newspaper = categories.magazine
 
 categories.periodical = {
     sets = {
-        author = { "editor", "publisher", "organization", },
+        author = { "editor", "publisher" },
         doi    = generic.doi,
     },
     required = {
@@ -182,7 +175,6 @@ categories.book = {
         "editionset", "series",
         "address",
         "doi", "note",
-        "abstract",
     },
 }
 
@@ -190,7 +182,7 @@ categories.book = {
 
 categories.inbook = {
     sets = {
-        author     = { "author", "organization", "editor", "publisher", "title", },
+        author     = { "author", "editor", "publisher", "title", },
         ineditor   = { "editor" },
         editionset = generic.editionset,
         doi        = generic.doi,
@@ -444,7 +436,6 @@ categories.unpublished = {
 categories.electronic = {
     sets = {
         doi = generic.doi,
-        author = { "author", "organization", },
     },
     required = {
         "title"

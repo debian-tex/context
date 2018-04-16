@@ -235,13 +235,9 @@ vardef OnOddPage            = lua.mp.OnOddPage           () enddef ;
 vardef InPageBody           = lua.mp.InPageBody          () enddef ;
 
 vardef RealPageNumber       = lua.mp.RealPageNumber      () enddef ;
-vardef LastPageNumber       = lua.mp.LastPageNumber      () enddef ; % duplicates
-
 vardef PageNumber           = lua.mp.PageNumber          () enddef ;
 vardef NOfPages             = lua.mp.NOfPages            () enddef ;
-
-vardef SubPageNumber        = lua.mp.SubPageNumber       () enddef ;
-vardef NOfSubPages          = lua.mp.NOfSubPages         () enddef ;
+vardef LastPageNumber       = lua.mp.LastPageNumber      () enddef ; % duplicates
 
 vardef CurrentColumn        = lua.mp.CurrentColumn       () enddef ;
 vardef NOfColumns           = lua.mp.NOfColumns          () enddef ;

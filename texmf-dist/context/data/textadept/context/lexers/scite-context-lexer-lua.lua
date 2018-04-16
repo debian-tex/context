@@ -13,6 +13,7 @@ local P, R, S, C, Cmt, Cp = lpeg.P, lpeg.R, lpeg.S, lpeg.C, lpeg.Cmt, lpeg.Cp
 local match, find = string.match, string.find
 local setmetatable = setmetatable
 
+-- local lexer       = require("lexer")
 local lexer       = require("scite-context-lexer")
 local context     = lexer.context
 local patterns    = context.patterns
@@ -46,7 +47,7 @@ local functions = {
     "pcall", "print", "rawequal", "rawget", "rawset", "require",
     "setmetatable", "tonumber", "tostring", "type", "unpack", "xpcall", "select",
 
-    "string", "table", "coroutine", "debug", "file", "io", "lpeg", "math", "os", "package", "bit32", "utf8",
+    "string", "table", "coroutine", "debug", "file", "io", "lpeg", "math", "os", "package", "bit32",
 }
 
 local constants = {

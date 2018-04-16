@@ -28,7 +28,6 @@ local concat         = string.concat
 local unquoted       = string.unquoted
 local optionalquoted = string.optionalquoted
 local basename       = file.basename
-local nameonly       = file.nameonly
 
 local sandbox        = sandbox
 local validroots     = { }
@@ -123,9 +122,9 @@ local function registerlibrary(name)
             return
         end
         if validlibraries == true then
-            validlibraries = { [nameonly(name)] = true }
+            validlibraries = { [name] = true }
         else
-            validlibraries[nameonly(name)] = true
+            validlibraries[name] = true
         end
     elseif name == true then
         validlibraries = { }
@@ -462,7 +461,7 @@ function sandbox.getrunner(name)
 end
 
 local function suspicious(str)
-    return (find(str,"[/\\]") or find(command,"..",1,true)) and true or false
+    return (find(str,"[/\\]") or find(command,"%.%.")) and true or false
 end
 
 local function binaryrunner(action,command,...)
@@ -563,9 +562,9 @@ if FFISUPPORTED and ffi then
         end
     end
 
-    local fiiload = ffi.load
+    local load = ffi.load
 
-    if fiiload then
+    if load then
 
         local reported = { }
 
@@ -574,10 +573,10 @@ if FFISUPPORTED and ffi then
                 -- all blocked
             elseif validlibraries == true then
                 -- all permitted
-                return fiiload(name,...)
-            elseif validlibraries[nameonly(name)] then
+                return load(name,...)
+            elseif validlibraries[name] then
                 -- 'name' permitted
-                return fiiload(name,...)
+                return load(name,...)
             else
                 -- 'name' not permitted
             end

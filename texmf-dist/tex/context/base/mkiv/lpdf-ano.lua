@@ -13,7 +13,7 @@ if not modules then modules = { } end modules ['lpdf-ano'] = {
 -- internal references are indicated by a number (and turned into <autoprefix><number>)
 -- we only flush internal destinations that are referred
 
-local next, tostring, tonumber, rawget, type = next, tostring, tonumber, rawget, type
+local next, tostring, tonumber, rawget = next, tostring, tonumber, rawget
 local rep, format, find = string.rep, string.format, string.find
 local min = math.min
 local lpegmatch = lpeg.match
@@ -28,9 +28,9 @@ local trace_bookmarks         = false  trackers.register("references.bookmarks",
 local log_destinations        = false  directives.register("destinations.log",     function(v) log_destinations = v end)
 local untex_urls              = true   directives.register("references.untexurls", function(v) untex_urls       = v end)
 
-local report_references       = logs.reporter("backend","references")
-local report_destinations     = logs.reporter("backend","destinations")
-local report_bookmarks        = logs.reporter("backend","bookmarks")
+local report_reference        = logs.reporter("backend","references")
+local report_destination      = logs.reporter("backend","destinations")
+local report_bookmark         = logs.reporter("backend","bookmarks")
 
 local variables               = interfaces.variables
 local v_auto                  = variables.auto
@@ -160,7 +160,7 @@ local pagedestinations = setmetatableindex(function(t,k)
     end
     local v = rawget(t,k)
     if v then
-     -- report_references("page number expected, got %s: %a",type(k),k)
+     -- report_reference("page number expected, got %s: %a",type(k),k)
         return v
     end
     local v = k > 0 and pdfarray {
@@ -197,7 +197,7 @@ local destinations = { } -- to be used soon
 local function pdfregisterdestination(name,reference)
     local d = destinations[name]
     if d then
-        report_destinations("ignoring duplicate destination %a with reference %a",name,reference)
+        report_destination("ignoring duplicate destination %a with reference %a",name,reference)
     else
         destinations[name] = reference
     end
@@ -207,16 +207,25 @@ lpdf.registerdestination = pdfregisterdestination
 
 local maxslice = 32 -- could be made configureable ... 64 is also ok
 
-logs.registerfinalactions(function()
+luatex.registerstopactions(function()
     if log_destinations and next(destinations) then
-        local report = logs.startfilelogging("references","used destinations")
+        local logsnewline      = logs.newline
+        local log_destinations = logs.reporter("system","references")
+        local log_destination  = logs.reporter("destination")
+        logs.pushtarget("logfile")
+        logsnewline()
+        log_destinations("start used destinations")
+        logsnewline()
         local n = 0
         for destination, pagenumber in table.sortedhash(destinations) do
-            report("% 4i : %-5s : %s",pagenumber,usedviews[destination] or defaultview,destination)
+            log_destination("% 4i : %-5s : %s",pagenumber,usedviews[destination] or defaultview,destination)
             n = n + 1
         end
-        logs.stopfilelogging()
-        report_destinations("%s destinations saved in log file",n)
+        logsnewline()
+        log_destinations("stop used destinations")
+        logsnewline()
+        logs.poptarget()
+        report_destination("%s destinations saved in log file",n)
     end
 end)
 
@@ -424,7 +433,7 @@ function nodeinjections.destination(width,height,depth,names,view)
     -- todo check if begin end node / was comment
     view = view and mapping[view] or defaultview
     if trace_destinations then
-        report_destinations("width %p, height %p, depth %p, names %|t, view %a",width,height,depth,names,view)
+        report_destination("width %p, height %p, depth %p, names %|t, view %a",width,height,depth,names,view)
     end
     local method = references.innermethod
     local noview = view == defaultview
@@ -558,13 +567,13 @@ local function pdffilelink(filename,destination,page,actions)
         return false
     end
     filename = file.addsuffix(filename,"pdf")
-    if (not destination or destination == "") or (references.outermethod == v_page) then
+    if not destination or destination == "" then
         destination = pdfarray { (page or 0) - 1, pdf_fit }
     end
     return pdfdictionary {
         S = pdf_gotor, -- can also be pdf_launch
         F = filename,
-        D = destination or defaultdestination,
+        D = destination or defaultdestination, -- D is mandate
         NewWindow = actions.newwindow and true or nil,
     }
 end
@@ -665,7 +674,7 @@ end
 --     local function reference(width,height,depth,prerolled) -- keep this one
 --         if prerolled then
 --             if trace_references then
---                 report_references("width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
+--                 report_reference("width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
 --             end
 --             return pdfannotation_node(width,height,depth,prerolled)
 --         end
@@ -706,9 +715,6 @@ local function finishreference(width,height,depth,prerolled) -- %0.2f looks okay
 end
 
 local function finishannotation(width,height,depth,prerolled,r)
-    if type(prerolled) == "function" then
-        prerolled = prerolled()
-    end
     local annot = f_annot(prerolled,pdfrectangle(width,height,depth))
     if r then
         pdfdelayedobject(annot,r)
@@ -722,7 +728,7 @@ end
 function nodeinjections.reference(width,height,depth,prerolled)
     if prerolled then
         if trace_references then
-            report_references("link: width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
+            report_reference("link: width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
         end
         return new_latelua(function() finishreference(width,height,depth,prerolled) end)
     end
@@ -731,8 +737,7 @@ end
 function nodeinjections.annotation(width,height,depth,prerolled,r)
     if prerolled then
         if trace_references then
-            report_references("special: width %p, height %p, depth %p, prerolled %a",width,height,depth,
-                type(prerolled) == "string" and prerolled or "-")
+            report_reference("special: width %p, height %p, depth %p, prerolled %a",width,height,depth,prerolled)
         end
         return new_latelua(function() finishannotation(width,height,depth,prerolled,r or false) end)
     end
@@ -817,7 +822,7 @@ runners["inner"] = function(var,actions)
 end
 
 runners["inner with arguments"] = function(var,actions)
-    report_references("todo: inner with arguments")
+    report_reference("todo: inner with arguments")
     return false
 end
 
@@ -840,7 +845,7 @@ runners["special outer with operation"] = function(var,actions)
 end
 
 runners["special outer"] = function(var,actions)
-    report_references("todo: special outer")
+    report_reference("todo: special outer")
     return false
 end
 
@@ -850,22 +855,22 @@ runners["special"] = function(var,actions)
 end
 
 runners["outer with inner with arguments"] = function(var,actions)
-    report_references("todo: outer with inner with arguments")
+    report_reference("todo: outer with inner with arguments")
     return false
 end
 
 runners["outer with special and operation and arguments"] = function(var,actions)
-    report_references("todo: outer with special and operation and arguments")
+    report_reference("todo: outer with special and operation and arguments")
     return false
 end
 
 runners["outer with special"] = function(var,actions)
-    report_references("todo: outer with special")
+    report_reference("todo: outer with special")
     return false
 end
 
 runners["outer with special and operation"] = function(var,actions)
-    report_references("todo: outer with special and operation")
+    report_reference("todo: outer with special and operation")
     return false
 end
 
@@ -877,7 +882,7 @@ function specials.internal(var,actions) -- better resolve in strc-ref
     local v = i and references.internals[i]
     if not v then
         -- error
-        report_references("no internal reference %a",i or "<unset>")
+        report_reference("no internal reference %a",i or "<unset>")
     else
         flaginternals[i] = true
         return pdflinkinternal(i,v.references.realpage)
@@ -1177,17 +1182,17 @@ local function build(levels,start,parent,method,nested)
                     if entry then
                         pdfflushobject(child,entry)
                     else
-                        report_bookmarks("error 1")
+                        report_bookmark("error 1")
                     end
                     return i, n, first, last
                 else
-                    report_bookmarks("confusing level change at level %a around %a",level,title)
+                    report_bookmark("confusing level change at level %a around %a",level,title)
                     startlevel = level
                 end
             end
             if level == startlevel then
                 if trace_bookmarks then
-                    report_bookmarks("%3i %w%s %s",realpage,(level-1)*2,(opened and "+") or "-",title)
+                    report_bookmark("%3i %w%s %s",realpage,(level-1)*2,(opened and "+") or "-",title)
                 end
                 local prev = child
                 child = pdfreserveobject()
@@ -1226,7 +1231,7 @@ local function build(levels,start,parent,method,nested)
                         entry.Last  = pdfreference(l)
                     end
                 else
-                    report_bookmarks("error 2")
+                    report_bookmark("error 2")
                 end
             else
                 -- missing intermediate level but ok
@@ -1239,7 +1244,7 @@ local function build(levels,start,parent,method,nested)
                     end
                     pdfflushobject(child,entry)
                 else
-                    report_bookmarks("error 3")
+                    report_bookmark("error 3")
                 end
                 return i, n, first, last
             end

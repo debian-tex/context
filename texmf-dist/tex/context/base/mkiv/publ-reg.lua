@@ -121,7 +121,7 @@ implement {
 implement {
     name      = "btxtoregister",
     actions   = btxtoregister,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 -- context.setregisterentry (
@@ -221,5 +221,5 @@ publications.authortoregister = authortoregister
 implement {
     name      = "btxauthortoregister",
     actions   = authortoregister,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }

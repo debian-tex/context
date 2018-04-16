@@ -16,7 +16,7 @@
 
 \writestatus{loading}{ConTeXt Screen Macros / Buttons}
 
-\registerctxluafile{scrn-but}{}
+\registerctxluafile{scrn-but}{1.001}
 
 \unprotect
 
@@ -75,17 +75,13 @@
   {\iffirstargument
      \setupcurrentbutton[#settings]%
    \fi
-   % no \dontleavehmode as it will force a vbox to \hsize which then
-   % spoils a tight box
-   \hpack\bgroup
-     \scrn_button_make
-       \buttonparameter
-       \inheritedbuttonframed
-       \letbuttonparameter
-       \setbuttonparameter
-       {#text}%
-       {#action}%
-   \egroup
+   \scrn_button_make
+     \buttonparameter
+     \inheritedbuttonframed
+     \letbuttonparameter
+     \setbuttonparameter
+     {#text}%
+     {#action}%
    \endgroup}
 
 \def\scrn_button_direct_ignore[#settings]#text[#destination]%
@@ -554,7 +550,7 @@
    \setbox\b_scrn_menu\hbox to \d_scrn_menu_used_width
      {\ifx\currentinteractionmenustate\v!empty \else
         \interactionmenuparameter\c!left
-        \scrn_menu_package_vertical{\directinteractionmenuparameter\c!menu}%
+        \scrn_menu_package_vertical{\strictinteractionmenuparameter\c!menu}%
         \interactionmenuparameter\c!right
       \fi}%
    \edef\currentinteractionmenudistance{\interactionmenuparameter\c!distance}%
@@ -575,7 +571,7 @@
      {\ifx\currentinteractionmenustate\v!none \else
         \scrn_menu_top_align
         \interactionmenuparameter\c!before
-        \scrn_menu_package_horizontal{\directinteractionmenuparameter\c!menu}%
+        \scrn_menu_package_horizontal{\strictinteractionmenuparameter\c!menu}%
         \interactionmenuparameter\c!after
         \scrn_menu_bottom_align
       \fi}%
@@ -788,7 +784,7 @@
    \edef\currentinteractionmenu{#tag}%
    \doif{\interactionmenuparameter\c!state}\v!local
      {\letinteractionmenuparameter\c!state\v!start
-      \directinteractionmenuparameter\c!menu}%
+      \strictinteractionmenuparameter\c!menu}%
    \endgroup}
 
 %D Direct call (todo):

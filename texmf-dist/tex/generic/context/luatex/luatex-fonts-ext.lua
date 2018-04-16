@@ -13,7 +13,6 @@ end
 
 local fonts       = fonts
 local otffeatures = fonts.constructors.features.otf
-local getprivate  = fonts.constructors.getprivate
 
 -- A few generic extensions.
 
@@ -291,13 +290,15 @@ local setmetatableindex = table.setmetatableindex
 
 local function additalictowidth(tfmdata,key,value)
     local characters = tfmdata.characters
+    local resources  = tfmdata.resources
     local additions  = { }
+    local private    = resources.private
     for unicode, old_c in next, characters do
         -- maybe check for math
         local oldwidth  = old_c.width
         local olditalic = old_c.italic
         if olditalic and olditalic ~= 0 then
-            local private = getprivate(tfmdata)
+            private = private + 1
             local new_c = {
                 width    = oldwidth + olditalic,
                 height   = old_c.height,
@@ -315,6 +316,7 @@ local function additalictowidth(tfmdata,key,value)
     for k, v in next, additions do
         characters[k] = v
     end
+    resources.private = private
 end
 
 otffeatures.register {

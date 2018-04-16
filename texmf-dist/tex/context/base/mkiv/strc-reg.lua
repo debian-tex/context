@@ -6,7 +6,7 @@ if not modules then modules = { } end modules ['strc-reg'] = {
     license   = "see context related readme files"
 }
 
-local next, type, tonumber = next, type, tonumber
+local next, type = next, type
 local format, gmatch = string.format, string.gmatch
 local equal, concat, remove = table.are_equal, table.concat, table.remove
 local lpegmatch, P, C, Ct = lpeg.match, lpeg.P, lpeg.C, lpeg.Ct
@@ -387,7 +387,6 @@ local function initializer()
             end
         end
     end
- -- references.sortedinternals = sortedkeys(internalreferences) -- todo: when we need it more than once
 end
 
 local function finalizer()
@@ -428,13 +427,13 @@ registers.setmethod        = defineregister -- and we might have a difference so
 implement {
     name      = "defineregister",
     actions   = defineregister,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {
     name      = "setregistermethod",
     actions   = defineregister, -- duplicate use
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 
@@ -643,13 +642,13 @@ end
 implement {
     name      = "enhanceregister",
     actions   = registers.enhance,
-    arguments = { "string", "integer" },
+    arguments = { "string", "integer" }
 }
 
 implement {
     name      = "extendregister",
     actions   = registers.extend,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {

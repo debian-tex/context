@@ -30,17 +30,16 @@ local nuts               = nodes.nuts
 local tonode             = nuts.tonode
 local tonut              = nuts.tonut
 
+local getfield           = nuts.getfield
+local setfield           = nuts.setfield
 local getnext            = nuts.getnext
 local getprev            = nuts.getprev
 local getattr            = nuts.getattr
 local setattr            = nuts.setattr
-local getlang            = nuts.getlang
-local setchar            = nuts.setchar
 local setattrlist        = nuts.setattrlist
 local getfont            = nuts.getfont
 local getchar            = nuts.getchar
 local setsubtype         = nuts.setsubtype
-local setdisc            = nuts.setdisc
 local isglyph            = nuts.isglyph
 
 local setcolor           = nodes.tracers.colors.set
@@ -49,9 +48,6 @@ local insert_node_before = nuts.insert_before
 local insert_node_after  = nuts.insert_after
 local remove_node        = nuts.remove
 local traverse_id        = nuts.traverse_id
-local traverse_char      = nuts.traverse_char
-
-local copy_node          = nuts.copy
 
 local tasks              = nodes.tasks
 
@@ -60,15 +56,12 @@ local new_penalty        = nodepool.penalty
 local new_glue           = nodepool.glue
 local new_kern           = nodepool.kern
 local new_rule           = nodepool.rule
-local new_disc           = nodepool.disc
 
 local nodecodes          = nodes.nodecodes
 local skipcodes          = nodes.skipcodes
-local disccodes          = nodes.disccodes
-
 local glyph_code         = nodecodes.glyph
-local space_skip_code    = skipcodes.spaceskip
-local explicit_code      = disccodes.explicit
+
+local space_skip_code    = skipcodes["spaceskip"]
 
 local chardata           = characters.data
 local is_punctuation     = characters.is_punctuation
@@ -143,7 +136,6 @@ local function nbsp(head,current)
         setsubtype(current,space_skip_code)
     else
         head, current = inject_nobreak_space(0x00A0,head,current,para.space,para.spacestretch,para.spaceshrink)
-        setsubtype(current,space_skip_code)
     end
     return head, current
 end
@@ -156,37 +148,16 @@ function characters.replacenbsp(head,original)
     return head, current
 end
 
--- function characters.replacenbspaces(head)
---     for current in traverse_id(glyph_code,head) do
---         if getchar(current) == 0x00A0 then
---             local h = nbsp(head,current)
---             if h then
---                 head = remove_node(h,current,true)
---             end
---         end
---     end
---     return head
--- end
-
 function characters.replacenbspaces(head)
-    local head = tonut(head)
-    local wipe = false
-    for current in traverse_id(glyph_code,head) do -- can be anytiem so no traverse_char
+    for current in traverse_id(glyph_code,head) do
         if getchar(current) == 0x00A0 then
-            if wipe then
-                head = remove_node(h,current,true)
-                wipe = false
-            end
             local h = nbsp(head,current)
             if h then
-                wipe = current
+                head = remove_node(h,current,true)
             end
         end
     end
-    if wipe then
-        head = remove_node(h,current,true)
-    end
-    return tonode(head)
+    return head
 end
 
 -- This initialization might move someplace else if we need more of it. The problem is that
@@ -248,10 +219,6 @@ local methods = {
         return nbsp(head,current)
     end,
 
-    [0x00AD] = function(head,current) -- softhyphen
-        return insert_node_after(head,current,languages.explicithyphen(current))
-    end,
-
     [0x2000] = function(head,current) -- enquad
         return inject_quad_space(0x2000,head,current,1/2)
     end,
@@ -305,10 +272,8 @@ local methods = {
     end,
 
     [0x205F] = function(head,current) -- math thinspace
-        return inject_nobreak_space(0x205F,head,current,4*fontquads[getfont(current)]/18)
+        return inject_nobreak_space(0x205F,head,current,fontparameters[getfont(current)].space/8)
     end,
-
-    -- The next one is also a bom so maybe only when we have glyphs around it
 
  -- [0xFEFF] = function(head,current) -- zerowidthnobreakspace
  --     return head, current
@@ -318,64 +283,29 @@ local methods = {
 
 characters.methods = methods
 
--- function characters.handler(head) -- todo: use traverse_id
---     head = tonut(head)
---     local current = head
---     local done = false
---     while current do
---         local char, id = isglyph(current)
---         if char then
---             local next   = getnext(current)
---             local method = methods[char]
---             if method then
---                 if trace_characters then
---                     report_characters("replacing character %C, description %a",char,lower(chardata[char].description))
---                 end
---                 local h = method(head,current)
---                 if h then
---                     head = remove_node(h,current,true)
---                 end
---                 done = true
---             end
---             current = next
---         else
---             current = getnext(current)
---         end
---     end
---     return tonode(head), done
--- end
-
--- for current, char, font in traverse_char_data(head) will save 0.015 on a 300 page doc
-
--- this also works ok in math as we run over glyphs and these stay glyphs ... not sure
--- about scripts and such but that is not important anyway ... some day we can consider
--- special definitions in math
-
-function characters.handler(head)
-    local head = tonut(head)
-    local wipe = false
-    for current in traverse_char(head) do
-        local char = getchar(current)
+function characters.handler(head) -- todo: use traverse_id
+    head = tonut(head)
+    local current = head
+    local done = false
+    while current do
+        local char, id = isglyph(current)
         if char then
+            local next   = getnext(current)
             local method = methods[char]
             if method then
-                if wipe then
-                    head = remove_node(head,wipe,true)
-                    wipe = false
-                end
                 if trace_characters then
                     report_characters("replacing character %C, description %a",char,lower(chardata[char].description))
                 end
                 local h = method(head,current)
                 if h then
-                    wipe = current
+                    head = remove_node(h,current,true)
                 end
                 done = true
             end
+            current = next
+        else
+            current = getnext(current)
         end
-    end
-    if wipe then
-        head = remove_node(head,wipe,true)
     end
     return tonode(head), done
 end

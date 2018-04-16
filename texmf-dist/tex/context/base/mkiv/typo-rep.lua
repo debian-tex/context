@@ -51,9 +51,11 @@ nodes.stripping  = nodes.stripping  or { } local stripping  = nodes.stripping
 stripping.glyphs = stripping.glyphs or { } local glyphs     = stripping.glyphs
 
 local function initialize()
-    for k, v in next, chardata do
-        if v.category == "cf" and not v.visible and not glyphs[k] then
-            glyphs[k] = true
+    for k,v in next, chardata do
+        if v.category == "cf" and v.visible ~= "yes" then
+            if not glyphs[k]  then
+                glyphs[k] = true
+            end
         end
     end
     initialize = nil

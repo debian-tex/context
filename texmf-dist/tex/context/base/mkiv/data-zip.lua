@@ -203,16 +203,17 @@ function resolvers.usezipfile(archive)
     if archive and not registeredfiles[archive] then
         local z = zip.openarchive(archive)
         if z then
+            local instance = resolvers.instance
             local tree = url.query(specification.query).tree or ""
             if trace_locating then
                 report_zip("registering: archive %a",archive)
             end
-            resolvers.starttiming()
+            statistics.starttiming(instance)
             resolvers.prependhash('zip',archive)
             resolvers.extendtexmfvariable(archive) -- resets hashes too
             registeredfiles[archive] = z
-            resolvers.registerfilehash(archive,resolvers.registerzipfile(z,tree))
-            resolvers.stoptiming()
+            instance.files[archive] = resolvers.registerzipfile(z,tree)
+            statistics.stoptiming(instance)
         elseif trace_locating then
             report_zip("registering: unknown archive %a",archive)
         end

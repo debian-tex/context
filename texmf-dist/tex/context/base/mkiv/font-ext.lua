@@ -7,9 +7,9 @@ if not modules then modules = { } end modules ['font-ext'] = {
 }
 
 local next, type, tonumber = next, type, tonumber
-local byte, find, formatters = string.byte, string.find, string.formatters
+local formatters = string.formatters
+local byte = string.byte
 local utfchar = utf.char
-local sortedhash, sortedkeys, sort = table.sortedhash, table.sortedkeys, table.sort
 
 local context            = context
 local fonts              = fonts
@@ -30,20 +30,15 @@ of neutral.</p>
 local handlers           = fonts.handlers
 local hashes             = fonts.hashes
 local otf                = handlers.otf
-local afm                = handlers.afm
 
-local registerotffeature = otf.features.register
-local registerafmfeature = afm.features.register
+local registerotffeature = handlers.otf.features.register
+local registerafmfeature = handlers.afm.features.register
 
 local fontdata           = hashes.identifiers
 local fontproperties     = hashes.properties
 
-local constructors       = fonts.constructors
-local getprivate         = constructors.getprivate
-
 local allocate           = utilities.storage.allocate
 local settings_to_array  = utilities.parsers.settings_to_array
-local settings_to_hash   = utilities.parsers.settings_to_hash
 local getparameters      = utilities.parsers.getparameters
 local gettexdimen        = tex.getdimen
 local family_font        = node.family_font
@@ -51,13 +46,6 @@ local family_font        = node.family_font
 local setmetatableindex  = table.setmetatableindex
 
 local implement          = interfaces.implement
-local variables          = interfaces.variables
-
-
-local v_background       = variables.background
-local v_frame            = variables.frame
-local v_empty            = variables.empty
-local v_none             = variables.none
 
 -- -- -- -- -- --
 -- shared
@@ -134,6 +122,7 @@ local function initializeexpansion(tfmdata,value)
                     shrink  = 10 * shrink,
                     step    = 10 * step,
                     factor  = factor,
+                    auto    = true,
                 }
                 local data = characters and characters.data
                 for i, chr in next, tfmdata.characters do
@@ -182,7 +171,7 @@ fonts.goodies.register("expansions",  function(...) return fonts.goodies.report(
 
 implement {
     name      = "setupfontexpansion",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(class,settings) getparameters(classes,class,'preset',settings) end
 }
 
@@ -408,6 +397,15 @@ local function map_opbd_onto_protrusion(tfmdata,value,opbd)
             end
         end
     end
+    local parameters = tfmdata.parameters
+    local protrusion = tfmdata.protrusion
+    if not protrusion then
+        parameters.protrusion = {
+            auto = true
+        }
+    else
+        protrusion.auto = true
+    end
 end
 
 -- The opbd test is just there because it was discussed on the context development list. However,
@@ -437,6 +435,7 @@ local function initializeprotrusion(tfmdata,value)
                         factor = factor,
                         left   = left,
                         right  = right,
+                        auto   = true,
                     }
                     for i, chr in next, tfmdata.characters do
                         local v, pl, pr = vector[i], nil, nil
@@ -493,7 +492,7 @@ fonts.goodies.register("protrusions", function(...) return fonts.goodies.report(
 
 implement {
     name      = "setupfontprotrusion",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(class,settings) getparameters(classes,class,'preset',settings) end
 }
 
@@ -646,41 +645,32 @@ local function manipulatedimensions(tfmdata,key,value)
         local parameters = tfmdata.parameters
         local emwidth    = parameters.quad
         local exheight   = parameters.xheight
-        local newwidth   = false
-        local newheight  = false
-        local newdepth   = false
+        local width      = 0
+        local height     = 0
+        local depth      = 0
         if value == "strut" then
-            newheight = gettexdimen("strutht")
-            newdepth  = gettexdimen("strutdp")
-        elseif value == "mono" then
-            newwidth  = emwidth
+            height = gettexdimen("strutht")
+            depth  = gettexdimen("strutdp")
         else
             local spec = settings_to_array(value)
-            newwidth  = tonumber(spec[1])
-            newheight = tonumber(spec[2])
-            newdepth  = tonumber(spec[3])
-            if newwidth  then newwidth  = newwidth  * emwidth  end
-            if newheight then newheight = newheight * exheight end
-            if newdepth  then newdepth  = newdepth  * exheight end
+            width  = (spec[1] or 0) * emwidth
+            height = (spec[2] or 0) * exheight
+            depth  = (spec[3] or 0) * exheight
         end
-        if newwidth or newheight or newdepth then
+        if width > 0 then
+            local resources = tfmdata.resources
             local additions = { }
+            local private = resources.private
             for unicode, old_c in next, characters do
-                local oldwidth  = old_c.width
-                local oldheight = old_c.height
-                local olddepth  = old_c.depth
-                local width  = newwidth  or oldwidth  or 0
-                local height = newheight or oldheight or 0
-                local depth  = newdepth  or olddepth  or 0
-                if oldwidth ~= width or oldheight ~= height or olddepth ~= depth then
-                    local private = getprivate(tfmdata)
-                    local newslot = { "slot", 1, private } -- { "slot", 0, private }
+                local oldwidth = old_c.width
+                if oldwidth ~= width then
+                    -- Defining the tables in one step is more efficient
+                    -- than adding fields later.
+                    private = private + 1
                     local new_c
-                    local commands = oldwidth ~= width and {
+                    local commands = {
                         { "right", (width - oldwidth) / 2 },
-                        newslot,
-                    } or {
-                        newslot,
+                        { "slot", 1, private },
                     }
                     if height > 0 then
                         if depth > 0 then
@@ -713,25 +703,26 @@ local function manipulatedimensions(tfmdata,key,value)
                     end
                     setmetatableindex(new_c,old_c)
                     characters[unicode] = new_c
-                    additions[private]  = old_c
+                    additions[private] = old_c
                 end
             end
             for k, v in next, additions do
                 characters[k] = v
             end
-     -- elseif height > 0 and depth > 0 then
-     --     for unicode, old_c in next, characters do
-     --         old_c.height = height
-     --         old_c.depth  = depth
-     --     end
-     -- elseif height > 0 then
-     --     for unicode, old_c in next, characters do
-     --         old_c.height = height
-     --     end
-     -- elseif depth > 0 then
-     --     for unicode, old_c in next, characters do
-     --         old_c.depth = depth
-     --     end
+            resources.private = private
+        elseif height > 0 and depth > 0 then
+            for unicode, old_c in next, characters do
+                old_c.height = height
+                old_c.depth  = depth
+            end
+        elseif height > 0 then
+            for unicode, old_c in next, characters do
+                old_c.height = height
+            end
+        elseif depth > 0 then
+            for unicode, old_c in next, characters do
+                old_c.depth = depth
+            end
         end
     end
 end
@@ -748,53 +739,6 @@ local dimensions_specification = {
 registerotffeature(dimensions_specification)
 registerafmfeature(dimensions_specification)
 
---------------------------------------------------------------------------------------------------------------
-
--- local function fakemonospace(tfmdata)
---     local resources    = tfmdata.resources
---     local gposfeatures = resources.features.gpos
---     local characters   = tfmdata.characters
---     local descriptions = tfmdata.descriptions
---     local sequences    = resources.sequences
---     local coverage     = { }
---     local units        = tfmdata.shared.rawdata.metadata.units
---     for k, v in next, characters do
---         local w = descriptions[k].width
---         local d = units - w
---         coverage[k] = { -d/2, 0, units, 0 }
---     end
---     local f = { dflt = { dflt = true } }
---     local s = #sequences + 1
---     local t = {
---         features = { fakemono = f },
---         flags    = { false, false, false, false },
---         index    = s,
---         name     = "p_s_" .. s,
---         nofsteps = 1,
---         order    = { "fakemono" },
---         skiphash = false,
---         type     = "gpos_single",
---         steps    = {
---             {
---                 format   = "single",
---                 coverage = coverage,
---             }
---         }
---     }
---     gposfeatures["fakemono"] = f
---     sequences[s] = t
--- end
---
--- fonts.constructors.features.otf.register {
---     name         = "fakemono",
---     description  = "fake monospaced",
---     initializers = {
---         node     = fakemonospace,
---     },
--- }
-
---------------------------------------------------------------------------------------------------------------
-
 -- for zhichu chen (see mailing list archive): we might add a few more variants
 -- in due time
 --
@@ -804,175 +748,79 @@ registerafmfeature(dimensions_specification)
 --
 -- \definecolor[DummyColor][s=.75,t=.5,a=1] {\DummyColor test} \nopdfcompression
 --
--- local gray  = { "pdf", "origin", "/Tr1 gs .75 g" }
--- local black = { "pdf", "origin", "/Tr0 gs 0 g" }
+-- local gray  = { "special", "pdf: /Tr1 gs .75 g" }
+-- local black = { "special", "pdf: /Tr0 gs 0 g" }
 
-
--- boundingbox={yes|background|frame|empty|<color>}
+-- sort of obsolete as we now have \showglyphs
 
 local push  = { "push" }
 local pop   = { "pop" }
+local gray  = { "special", "pdf: .75 g" }
+local black = { "special", "pdf: 0 g"   }
 
------ gray  = { "pdf", "origin", ".75 g .75 G" }
------ black = { "pdf", "origin", "0 g 0 G" }
------ gray  = { "pdf", ".75 g" }
------ black = { "pdf", "0 g"   }
+local downcache = { } -- handy for huge cjk fonts
+local rulecache = { } -- handy for huge cjk fonts
 
--- local bp = number.dimenfactors.bp
---
--- local downcache = setmetatableindex(function(t,d)
---     local v = { "down", d }
---     t[d] = v
---     return v
--- end)
---
--- local backcache = setmetatableindex(function(t,h)
---     local h = h * bp
---     local v = setmetatableindex(function(t,w)
---      -- local v = { "rule", h, w }
---         local v = { "pdf", "origin", formatters["0 0 %.6F %.6F re F"](w*bp,h) }
---         t[w] = v
---         return v
---     end)
---     t[h] = v
---     return v
--- end)
---
--- local forecache = setmetatableindex(function(t,h)
---     local h = h * bp
---     local v = setmetatableindex(function(t,w)
---         local v = { "pdf", "origin", formatters["%.6F w 0 0 %.6F %.6F re S"](0.25*65536*bp,w*bp,h) }
---         t[w] = v
---         return v
---     end)
---     t[h] = v
---     return v
--- end)
-
-local bp = number.dimenfactors.bp
-local r  = 16384 * bp -- 65536 // 4
-
-local backcache = setmetatableindex(function(t,h)
-    local h = h * bp
-    local v = setmetatableindex(function(t,d)
-        local d = d * bp
-        local v = setmetatableindex(function(t,w)
-            local v = { "pdf", "origin", formatters["%.6F w 0 %.6F %.6F %.6F re f"](r,-d,w*bp,h+d) }
-            t[w] = v
-            return v
-        end)
-        t[d] = v
-        return v
-    end)
-    t[h] = v
+setmetatableindex(downcache,function(t,d)
+    local v = { "down", d }
+    t[d] = v
     return v
 end)
 
-local forecache = setmetatableindex(function(t,h)
-    local h = h * bp
-    local v = setmetatableindex(function(t,d)
-        local d = d * bp
-        local v = setmetatableindex(function(t,w)
-            -- the frame goes through the boundingbox
-         -- local v = { "pdf", "origin", formatters["[] 0 d 0 J %.6F w %.6F %.6F %.6F re S"](r,-d,w*bp,h+d) }
-            local v = { "pdf", "origin", formatters["[] 0 d 0 J %.6F w %.6F %.6F %.6F %.6F re S"](r,r/2,-d+r/2,w*bp-r,h+d-r) }
-            t[w] = v
-            return v
-        end)
-        t[d] = v
+setmetatableindex(rulecache,function(t,h)
+    local v = { }
+    t[h] = v
+    setmetatableindex(v,function(t,w)
+        local v = { "rule", h, w }
+        t[w] = v
         return v
     end)
-    t[h] = v
     return v
 end)
-
-local startcolor = nil
-local stopcolor  = nil
 
 local function showboundingbox(tfmdata,key,value)
     if value then
-        if not backcolors then
-            local vfspecials = backends.pdf.tables.vfspecials
-            startcolor = vfspecials.startcolor
-            stopcolor  = vfspecials.stopcolor
-        end
+        local vfspecials = backends.pdf.tables.vfspecials
+        local gray       = vfspecials and (vfspecials.rulecolors[value] or vfspecials.rulecolors.palegray) or gray
         local characters = tfmdata.characters
+        local resources  = tfmdata.resources
         local additions  = { }
-        local rulecache  = backcache
-        local showchar   = true
-        local color      = "palegray"
-        if type(value) == "string" then
-            value = settings_to_array(value)
-            for i=1,#value do
-                local v = value[i]
-                if v == v_frame then
-                    rulecache = forecache
-                elseif v == v_background then
-                    rulecache = backcache
-                elseif v == v_empty then
-                    showchar = false
-                elseif v == v_none then
-                    color = nil
-                else
-                    color = v
-                end
-            end
-        end
-        local gray  = color and startcolor(color) or nil
-        local black = gray and stopcolor or nil
+        local private = resources.private
         for unicode, old_c in next, characters do
-            local private = getprivate(tfmdata)
-            local width   = old_c.width  or 0
-            local height  = old_c.height or 0
-            local depth   = old_c.depth  or 0
-            local char    = showchar and { "slot", 1, private } or nil -- { "slot", 0, private }
-         -- local new_c
-         -- if depth == 0 then
-         --     new_c = {
-         --         width    = width,
-         --         height   = height,
-         --         commands = {
-         --             push,
-         --             gray,
-         --             rulecache[height][width],
-         --             black,
-         --             pop,
-         --             char,
-         --         }
-         --     }
-         -- else
-         --     new_c = {
-         --         width    = width,
-         --         height   = height,
-         --         depth    = depth,
-         --         commands = {
-         --             push,
-         --             downcache[depth],
-         --             gray,
-         --             rulecache[height+depth][width],
-         --             black,
-         --             pop,
-         --             char,
-         --         }
-         --     }
-         -- end
-            local rule  = rulecache[height][depth][width]
-            local new_c = {
-                width    = width,
-                height   = height,
-                depth    = depth,
-                commands = gray and {
-                 -- push,
-                    gray,
-                    rule,
-                    black,
-                 -- pop,
-                    char,
-                } or {
-                    rule,
-                    char,
+            private = private + 1
+            local width  = old_c.width  or 0
+            local height = old_c.height or 0
+            local depth  = old_c.depth  or 0
+            local new_c
+            if depth == 0 then
+                new_c = {
+                    width    = width,
+                    height   = height,
+                    commands = {
+                        push,
+                        gray,
+                        rulecache[height][width],
+                        black,
+                        pop,
+                        { "slot", 1, private },
+                    }
                 }
-            }
+            else
+                new_c = {
+                    width    = width,
+                    height   = height,
+                    depth    = depth,
+                    commands = {
+                        push,
+                        downcache[depth],
+                        gray,
+                        rulecache[height+depth][width],
+                        black,
+                        pop,
+                        { "slot", 1, private },
+                    }
+                }
+            end
             setmetatableindex(new_c,old_c)
             characters[unicode] = new_c
             additions[private] = old_c
@@ -980,6 +828,7 @@ local function showboundingbox(tfmdata,key,value)
         for k, v in next, additions do
             characters[k] = v
         end
+        resources.private = private
     end
 end
 
@@ -1034,58 +883,6 @@ registerotffeature {
 --     }
 --
 -- end
-
-do
-
-    local P, lpegpatterns, lpegmatch  = lpeg.P, lpeg.patterns, lpeg.match
-
-    local amount, stretch, shrink, extra
-
-    local factor  = lpegpatterns.unsigned
-    local space   = lpegpatterns.space
-    local pattern = (
-                                            (factor / function(n) amount  = tonumber(n) or amount  end)
-        + (P("+") + P("plus" )) * space^0 * (factor / function(n) stretch = tonumber(n) or stretch end)
-        + (P("-") + P("minus")) * space^0 * (factor / function(n) shrink  = tonumber(n) or shrink  end)
-        + (         P("extra")) * space^0 * (factor / function(n) extra   = tonumber(n) or extra   end)
-        + space^1
-    )^1
-
-    local function initialize(tfmdata,key,value)
-        local characters = tfmdata.characters
-        local parameters = tfmdata.parameters
-        if type(value) == "string" then
-            local emwidth = parameters.quad
-            amount, stretch, shrink, extra = 0, 0, 0, false
-            lpegmatch(pattern,value)
-            if not extra then
-                if shrink ~= 0 then
-                    extra = shrink
-                elseif stretch ~= 0 then
-                    extra = stretch
-                else
-                    extra = amount
-                end
-            end
-            parameters.space         = amount  * emwidth
-            parameters.space_stretch = stretch * emwidth
-            parameters.space_shrink  = shrink  * emwidth
-            parameters.extra_space   = extra   * emwidth
-        end
-    end
-
-    -- 1.1 + 1.2 - 1.3 minus 1.4 plus 1.1 extra 1.4 -- last one wins
-
-    registerotffeature {
-        name        = "spacing",
-        description = "space settings",
-        manipulators = {
-            base = initialize,
-            node = initialize,
-        }
-    }
-
-end
 
 -- -- historic stuff, move from font-ota (handled differently, typo-rep)
 --
@@ -1272,7 +1069,7 @@ local function getprivatecharornode(tfmdata,name)
     local font = properties.id
     local slot = getprivateslot(font,name)
     if slot then
-        -- todo: set current attributes
+        -- todo: set current attribibutes
         local char   = tfmdata.characters[slot]
         local tonode = char.tonode
         if tonode then
@@ -1324,7 +1121,7 @@ do
         end
     end
 
-    constructors.newfeatures.otf.register {
+    fonts.constructors.newfeatures.otf.register {
         name        = "extraprivates",
         description = "extra privates",
         default     = true,
@@ -1460,21 +1257,21 @@ do -- another hack for a crappy font
 
     local function additalictowidth(tfmdata,key,value)
         local characters = tfmdata.characters
+        local resources  = tfmdata.resources
         local additions  = { }
+        local private    = resources.private
         for unicode, old_c in next, characters do
             -- maybe check for math
             local oldwidth  = old_c.width
             local olditalic = old_c.italic
             if olditalic and olditalic ~= 0 then
-                local private = getprivate(tfmdata)
+                private = private + 1
                 local new_c = {
                     width    = oldwidth + olditalic,
                     height   = old_c.height,
                     depth    = old_c.depth,
                     commands = {
-                     -- { "slot", 1, private },
-                     -- { "slot", 0, private },
-                        { "char", private },
+                        { "slot", 1, private },
                         { "right", olditalic },
                     },
                 }
@@ -1486,6 +1283,7 @@ do -- another hack for a crappy font
         for k, v in next, additions do
             characters[k] = v
         end
+        resources.private = private
     end
 
     registerotffeature {
@@ -1547,310 +1345,3 @@ do
     }
 
 end
-
-do
-
-    -- This is a rather special test-only feature that I added for the sake of testing
-    -- Idris's husayni. We wanted to know if uniscribe obeys the order of lookups in a
-    -- font, in spite of what the description of handling arabic suggests. And indeed,
-    -- mixed-in lookups of other features (like all these ss* in husayni) are handled
-    -- the same in context as in uniscribe. If one sets reorderlookups=arab then we sort
-    -- according to the "assumed" order so e.g. the ss* move to after the standard
-    -- features. The observed difference in rendering is an indication that uniscribe is
-    -- quite faithful to the font (while e.g. tests with the hb plugin demonstrate some
-    -- interference, apart from some hard coded init etc expectations). Anyway, it means
-    -- that we're okay with the (generic) node processor. A pitfall is that in context
-    -- we can actually control more, so we can trigger an analyze pass with e.g.
-    -- dflt/dflt while the libraries depend on the script settings for that. Uniscribe
-    -- probably also parses the string and when seeing arabic will follow a different
-    -- code path, although it seems to treat all features equal.
-
-    local trace_reorder  = trackers.register("fonts.reorderlookups",function(v) trace_reorder = v end)
-    local report_reorder = logs.reporter("fonts","reorder")
-
-    local vectors = { }
-
-    vectors.arab = {
-        gsub = {
-            ccmp =  1,
-            isol =  2,
-            fina =  3,
-            medi =  4,
-            init =  5,
-            rlig =  6,
-            rclt =  7,
-            calt =  8,
-            liga =  9,
-            dlig = 10,
-            cswh = 11,
-            mset = 12,
-        },
-        gpos = {
-            curs =  1,
-            kern =  2,
-            mark =  3,
-            mkmk =  4,
-        },
-    }
-
-    function otf.reorderlookups(tfmdata,vector)
-        local order = vectors[vector]
-        if not order then
-            return
-        end
-        local oldsequences = tfmdata.resources.sequences
-        if oldsequences then
-            local sequences = { }
-            for i=1,#oldsequences do
-                sequences[i] = oldsequences[i]
-            end
-            for i=1,#sequences do
-                local s = sequences[i]
-                local features = s.features
-                local kind     = s.type
-                local index    = s.index
-                if features then
-                    local when
-                    local what
-                    for feature in sortedhash(features) do
-                        if not what then
-                            what = find(kind,"^gsub") and "gsub" or "gpos"
-                        end
-                        local newwhen = order[what][feature]
-                        if not newwhen then
-                            -- skip
-                        elseif not when then
-                            when = newwhen
-                        elseif newwhen < when then
-                            when = newwhen
-                        end
-                    end
-                    s.ondex = s.index
-                    s.index = i
-                    s.what  = what == "gsub" and 1 or 2
-                    s.when  = when or 99
-                else
-                    s.ondex = s.index
-                    s.index = i
-                    s.what  = 1
-                    s.when  = 99
-                end
-            end
-            sort(sequences,function(a,b)
-                local what_a = a.what
-                local what_b = b.what
-                if what_a ~= what_b then
-                    return a.index < b.index
-                end
-                local when_a = a.when
-                local when_b = b.when
-                if when_a == when_b then
-                    return a.index < b.index
-                else
-                    return when_a < when_b
-                end
-            end)
-            local swapped = 0
-            for i=1,#sequences do
-                local sequence = sequences[i]
-                local features = sequence.features
-                if features then
-                    local index = sequence.index
-                    if index ~= i then
-                        swapped = swapped + 1
-                    end
-                    if trace_reorder then
-                        if swapped == 1 then
-                            report_reorder()
-                            report_reorder("start swapping lookups in font %!font:name!",tfmdata)
-                            report_reorder()
-                            report_reorder("gsub order: % t",table.swapped(order.gsub))
-                            report_reorder("gpos order: % t",table.swapped(order.gpos))
-                            report_reorder()
-                        end
-                        report_reorder("%03i : lookup %03i, type %s, sorted %2i, moved %s, % t",
-                            i,index,sequence.what == 1 and "gsub" or "gpos",sequence.when or 99,
-                            (index > i and "-") or (index < i and "+") or "=",sortedkeys(features))
-                    end
-                end
-                sequence.what  = nil
-                sequence.when  = nil
-                sequence.index = sequence.ondex
-            end
-            if swapped > 0 then
-                if trace_reorder then
-                    report_reorder()
-                    report_reorder("stop swapping lookups, %i lookups swapped",swapped)
-                    report_reorder()
-                end
---                 tfmdata.resources.sequences = sequences
-                tfmdata.shared.reorderedsequences = sequences
-            end
-        end
-    end
-
-    -- maybe delay till ra is filled
-
-    local function reorderlookups(tfmdata,key,value)
-        if value then
-            otf.reorderlookups(tfmdata,value)
-        end
-    end
-
-    registerotffeature {
-        name        = "reorderlookups",
-        description = "reorder lookups",
-        manipulators = {
-            base = reorderlookups,
-            node = reorderlookups,
-        }
-    }
-
-end
-
--- maybe useful
-
-local function initializeoutline(tfmdata,value)
-    value = tonumber(value)
-    if not value then
-        value =  0
-    else
-        value = tonumber(value) or 0
-    end
-    if value then
-        value = value * 1000
-    end
-    tfmdata.parameters.mode  = 1
-    tfmdata.parameters.width = value
-end
-
-local outline_specification = {
-    name        = "outline",
-    description = "outline glyphs",
-    initializers = {
-        base = initializeoutline,
-        node = initializeoutline,
-    }
-}
-
-registerotffeature(outline_specification)
-registerafmfeature(outline_specification)
-
--- definitely ugly
-
-local report_effect = logs.reporter("fonts","effect")
-local trace_effect  = false
-
-trackers.register("fonts.effect", function(v) trace_effect = v end)
-
-local effects = {
-    inner   = 0,
-    normal  = 0,
-    outer   = 1,
-    outline = 1,
-    both    = 2,
-    hidden  = 3,
-}
-
-local function initializeeffect(tfmdata,value)
-    local spec
-    if type(value) == "number" then
-        spec = { width = value }
-    else
-        spec = settings_to_hash(value)
-    end
-    local effect = spec.effect or "both"
-    local width  = tonumber(spec.width) or 0
-    local mode   = effects[effect]
-    if not mode then
-        report_effect("invalid effect %a",effect)
-    elseif width == 0 and mode == 0 then
-        report_effect("invalid width %a for effect %a",width,effect)
-    else
-        local parameters = tfmdata.parameters
-        local properties = tfmdata.properties
-        parameters.mode   = mode
-        parameters.width  = width * 1000
-        local factor  = tonumber(spec.factor) or 0
-        local hfactor = tonumber(spec.vfactor) or factor
-        local vfactor = tonumber(spec.hfactor) or factor
-        local delta   = tonumber(spec.delta) or 1
-        local wdelta  = tonumber(spec.wdelta) or delta
-        local hdelta  = tonumber(spec.hdelta) or delta
-        local ddelta  = tonumber(spec.ddelta) or hdelta
-        properties.effect = {
-            effect  = effect,
-            width   = width,
-            factor  = factor,
-            hfactor = hfactor,
-            vfactor = vfactor,
-            wdelta  = wdelta,
-            hdelta  = hdelta,
-            ddelta  = ddelta,
-        }
-    end
-end
-
-local function manipulateeffect(tfmdata)
-    local effect = tfmdata.properties.effect
-    if effect then
-        local characters = tfmdata.characters
-        local parameters = tfmdata.parameters
-        local multiplier = effect.width * 100
-        local wdelta = effect.wdelta * parameters.hfactor * multiplier
-        local hdelta = effect.hdelta * parameters.vfactor * multiplier
-        local ddelta = effect.ddelta * parameters.vfactor * multiplier
-        local hshift = wdelta / 2
-        local factor  = (1 + effect.factor)  * parameters.factor
-        local hfactor = (1 + effect.hfactor) * parameters.hfactor
-        local vfactor = (1 + effect.vfactor) * parameters.vfactor
-        for unicode, old_c in next, characters do
-            local oldwidth  = old_c.width
-            local oldheight = old_c.height
-            local olddepth  = old_c.depth
-            if oldwidth and oldwidth > 0 then
-                old_c.width = oldwidth + wdelta
-                old_c.commands = {
-                    { "right", hshift },
-                    { "char", unicode },
-                }
-            end
-            if oldheight and oldheight > 0 then
-                old_c.height = oldheight + hdelta
-            end
-            if olddepth and olddepth > 0 then
-                old_c.depth = olddepth + ddelta
-            end
-        end
-        parameters.factor  = factor
-        parameters.hfactor = hfactor
-        parameters.vfactor = vfactor
-        if trace_effect then
-            report_effect("applying effect")
-            report_effect("  effect  : %s", effect.effect)
-            report_effect("  width   : %s => %s", effect.width,  multiplier)
-            report_effect("  factor  : %s => %s", effect.factor, factor )
-            report_effect("  hfactor : %s => %s", effect.hfactor,hfactor)
-            report_effect("  vfactor : %s => %s", effect.vfactor,vfactor)
-            report_effect("  wdelta  : %s => %s", effect.wdelta, wdelta)
-            report_effect("  hdelta  : %s => %s", effect.hdelta, hdelta)
-            report_effect("  ddelta  : %s => %s", effect.ddelta, ddelta)
-        end
-    end
-end
-
-local effect_specification = {
-    name        = "effect",
-    description = "apply effects to glyphs",
-    initializers = {
-        base = initializeeffect,
-        node = initializeeffect,
-    },
-    manipulators = {
-        base = manipulateeffect,
-        node = manipulateeffect,
-    },
-}
-
-registerotffeature(effect_specification)
-registerafmfeature(effect_specification)

@@ -20,8 +20,6 @@ if not modules then modules = { } end modules ['pack-rul'] = {
 
 local type = type
 
-local context         = context
-
 local hlist_code      = nodes.nodecodes.hlist
 local vlist_code      = nodes.nodecodes.vlist
 local box_code        = nodes.listcodes.box
@@ -35,6 +33,8 @@ local implement       = interfaces.implement
 
 local nuts            = nodes.nuts
 
+local getfield        = nuts.getfield
+local setfield        = nuts.setfield
 local getnext         = nuts.getnext
 local getprev         = nuts.getprev
 local getlist         = nuts.getlist
@@ -47,8 +47,6 @@ local getdir          = nuts.getdir
 local setshift        = nuts.setshift
 local setwidth        = nuts.setwidth
 local getwidth        = nuts.getwidth
-local setboxglue      = nuts.setboxglue
-local getboxglue      = nuts.getboxglue
 
 local hpack           = nuts.hpack
 local traverse_id     = nuts.traverse_id
@@ -127,8 +125,9 @@ local function doreshapeframedbox(n)
                             local subtype = getsubtype(h)
                             if subtype == box_code or subtype == line_code then
                                 local p = hpack(l,maxwidth,'exactly',getdir(h)) -- multiple return value
-                                local set, order, sign = getboxglue(p)
-                                setboxglue(h,set,order,sign)
+                                setfield(h,"glue_set",getfield(p,"glue_set"))
+                                setfield(h,"glue_order",getfield(p,"glue_order"))
+                                setfield(h,"glue_sign",getfield(p,"glue_sign"))
                                 setlist(p)
                                 flush_node(p)
                             elseif checkformath and subtype == equation_code then

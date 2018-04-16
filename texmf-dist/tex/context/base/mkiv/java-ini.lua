@@ -246,13 +246,13 @@ implement {
 implement {
     name      = "setjavascriptpreamble",
     actions   = javascripts.setpreamble,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {
     name      = "addtojavascriptpreamble",
     actions   = javascripts.addtopreamble,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {

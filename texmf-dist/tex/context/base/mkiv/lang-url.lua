@@ -8,7 +8,6 @@ if not modules then modules = { } end modules ['lang-url'] = {
 
 local utfcharacters, utfvalues, utfbyte, utfchar = utf.characters, utf.values, utf.byte, utf.char
 local min, max = math.min, math.max
-local concat = table.concat
 
 local context   = context
 
@@ -81,67 +80,13 @@ directives.register("hyphenators.urls.packslashes",function(v)
     urls.packslashes = v
 end)
 
--- local ctx_a = context.a
--- local ctx_b = context.b
--- local ctx_d = context.d
--- local ctx_c = context.c
--- local ctx_l = context.l
--- local ctx_C = context.C
--- local ctx_L = context.L
-
--- local function action(hyphenatedurl,str,left,right,disc)
---     --
---     left  = max(      left  or urls.lefthyphenmin,    2)
---     right = min(#str-(right or urls.righthyphenmin)+2,#str)
---     disc  = disc or urls.discretionary
---     --
---     local word   = nil
---     local prev   = nil
---     local pack   = urls.packslashes
---     local length = 0
---     --
---     for char in utfcharacters(str) do
---         length  = length + 1
---         char    = mapping[char] or char
---         local b = utfbyte(char)
---         if prev == char and prev == "/" then
---             ctx_c(b)
---         elseif char == disc then
---             ctx_d()
---         else
---             if prev == "/" then
---                 ctx_d()
---             end
---             local how = characters[char]
---             if how == v_before then
---                 word = false
---                 ctx_b(b)
---             elseif how == v_after then
---                 word = false
---                 ctx_a(b)
---             else
---                 local letter = is_letter[char]
---                 if length <= left or length >= right then
---                     if word and letter then
---                         ctx_L(b)
---                     else
---                         ctx_C(b)
---                     end
---                 elseif word and letter then
---                     ctx_l(b)
---                 else
---                     ctx_c(b)
---                 end
---                 word = letter
---             end
---         end
---         if pack then
---             prev = char
---         else
---             prev = nil
---         end
---     end
--- end
+local ctx_a = context.a
+local ctx_b = context.b
+local ctx_d = context.d
+local ctx_c = context.c
+local ctx_l = context.l
+local ctx_C = context.C
+local ctx_L = context.L
 
 local function action(hyphenatedurl,str,left,right,disc)
     --
@@ -150,51 +95,48 @@ local function action(hyphenatedurl,str,left,right,disc)
     disc  = disc or urls.discretionary
     --
     local word   = nil
+    local prev   = nil
     local pack   = urls.packslashes
     local length = 0
-    local list   = utf.split(str)
-
-    for i=1,#list do
-        local what = nil
-        local dodi = false
-        local char = list[i]
-        length     = length + 1
-        char       = mapping[char] or char
-        if char == disc then
-            dodi = true
-        elseif pack and char == "/" and list[i+1] == "/" then
-            what = "c"
+    --
+    for char in utfcharacters(str) do
+        length = length + 1
+        char   = mapping[char] or char
+        if prev == char and prev == "/" then
+            ctx_c(utfbyte(char))
+        elseif char == disc then
+            ctx_d()
         else
+            if prev == "/" then
+                ctx_d()
+            end
             local how = characters[char]
             if how == v_before then
-                what = "b"
+                word = false
+                ctx_b(utfbyte(char))
             elseif how == v_after then
                 word = false
-                what = "a"
+                ctx_a(utfbyte(char))
             else
                 local letter = is_letter[char]
                 if length <= left or length >= right then
                     if word and letter then
-                        what = "L"
+                        ctx_L(utfbyte(char))
                     else
-                        what = "C"
+                        ctx_C(utfbyte(char))
                     end
                 elseif word and letter then
-                    what = "l"
+                    ctx_l(utfbyte(char))
                 else
-                    what = "c"
+                    ctx_c(utfbyte(char))
                 end
                 word = letter
             end
         end
-        if dodi then
-            list[i] = "\\d"
-        else
-            list[i] = "\\" .. what .. "{" .. utfbyte(char) .. "}"
+        if pack then
+            prev = char
         end
     end
-    list = concat(list)
-    context(list)
 end
 
 -- urls.action = function(_,...) action(...) end -- sort of obsolete
@@ -214,7 +156,7 @@ end
 implement {
     name      = "sethyphenatedurlcharacters",
     actions   = urls.setcharacters,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {

@@ -156,7 +156,7 @@ if implement then
 
     implement {
         name      = "btxaddjournal",
-        arguments = "2 strings",
+        arguments = { "string", "string" },
         actions   = { journals.add, context }
     }
 

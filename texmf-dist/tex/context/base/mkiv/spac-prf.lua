@@ -57,8 +57,8 @@ local getshift          = nuts.getshift
 local getwidth          = nuts.getwidth
 local getheight         = nuts.getheight
 local getdepth          = nuts.getdepth
-local getboxglue        = nuts.getboxglue
 
+local setfield          = nuts.setfield
 local setlink           = nuts.setlink
 local setlist           = nuts.setlist
 local setattr           = nuts.setattr
@@ -118,7 +118,9 @@ local function getprofile(line,step)
         return
     end
 
-    local glue_set, glue_order, glue_sign  = getboxglue(line)
+    local glue_sign  = getfield(line,"glue_sign")
+    local glue_order = getfield(line,"glue_order")
+    local glue_set   = getfield(line,"glue_set")
 
     local heights  = { }
     local depths   = { }
@@ -472,7 +474,8 @@ local function inject(top,bot,amount) -- todo: look at penalties
     setattr(glue,a_profilemethod,0)
     setattr(glue,a_visual,getattr(top,a_visual))
     --
-    setlink(top,glue,bot)
+    setlink(glue,bot)
+    setlink(top,glue)
 end
 
 methods[v_none] = function()

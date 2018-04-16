@@ -27,8 +27,6 @@ local pdfconstant          = lpdf.constant
 local pdfreference         = lpdf.reference
 local pdfflushstreamobject = lpdf.flushstreamobject
 
-local pdfgetmetadata       = lpdf.getmetadata
-
 -- The XMP packet wrapper is kind of fixed, see page 10 of XMPSpecificationsPart1.pdf from
 -- XMP-Toolkit-SDK-CC201607.zip. So we hardcode the id.
 
@@ -41,52 +39,47 @@ local xpacket = format ( [[
 
 local mapping = {
     -- user defined keys (pdfx:)
-    ["ConTeXt.Jobname"]      = { "context", "rdf:Description/pdfx:ConTeXt.Jobname" },
-    ["ConTeXt.Time"]         = { "date",    "rdf:Description/pdfx:ConTeXt.Time" },
-    ["ConTeXt.Url"]          = { "context", "rdf:Description/pdfx:ConTeXt.Url" },
-    ["ConTeXt.Support"]      = { "context", "rdf:Description/pdfx:ConTeXt.Support" },
-    ["ConTeXt.Version"]      = { "context", "rdf:Description/pdfx:ConTeXt.Version" },
-    ["TeX.Support"]          = { "metadata", "rdf:Description/pdfx:TeX.Support" },
-    ["LuaTeX.Version"]       = { "metadata","rdf:Description/pdfx:LuaTeX.Version" },
-    ["LuaTeX.Functionality"] = { "metadata","rdf:Description/pdfx:LuaTeX.Functionality" },
-    ["LuaTeX.LuaVersion"]    = { "metadata","rdf:Description/pdfx:LuaTeX.LuaVersion" },
-    ["LuaTeX.Platform"]      = { "metadata","rdf:Description/pdfx:LuaTeX.Platform" },
-    ["ID"]                   = { "id",      "rdf:Description/pdfx:ID" },                         -- has date
+    ["ConTeXt.Jobname"] = { "context", "rdf:Description/pdfx:ConTeXt.Jobname" },
+    ["ConTeXt.Time"]    = { "date",    "rdf:Description/pdfx:ConTeXt.Time" },
+    ["ConTeXt.Url"]     = { "context", "rdf:Description/pdfx:ConTeXt.Url" },
+    ["ConTeXt.Version"] = { "context", "rdf:Description/pdfx:ConTeXt.Version" },
+    ["ID"]              = { "id",      "rdf:Description/pdfx:ID" },                         -- has date
+    ["PTEX.Fullbanner"] = { "metadata","rdf:Description/pdfx:PTEX.Fullbanner" },
     -- Adobe PDF schema
-    ["Keywords"]             = { "metadata","rdf:Description/pdf:Keywords" },
-    ["Producer"]             = { "metadata","rdf:Description/pdf:Producer" },
- -- ["Trapped"]              = { "pdf",     "rdf:Description/pdf:Trapped" },                     -- '/False' in /Info, but 'False' in XMP
+    ["Keywords"]        = { "metadata","rdf:Description/pdf:Keywords" },
+    ["Producer"]        = { "metadata","rdf:Description/pdf:Producer" },
+ -- ["Trapped"]         = { "pdf",     "rdf:Description/pdf:Trapped" },                     -- '/False' in /Info, but 'False' in XMP
     -- Dublin Core schema
-    ["Author"]               = { "metadata","rdf:Description/dc:creator/rdf:Seq/rdf:li" },
-    ["Format"]               = { "metadata","rdf:Description/dc:format" },                       -- optional, but nice to have
-    ["Subject"]              = { "metadata","rdf:Description/dc:description/rdf:Alt/rdf:li" },
-    ["Title"]                = { "metadata","rdf:Description/dc:title/rdf:Alt/rdf:li" },
+    ["Author"]          = { "metadata","rdf:Description/dc:creator/rdf:Seq/rdf:li" },
+    ["Format"]          = { "metadata","rdf:Description/dc:format" },                       -- optional, but nice to have
+    ["Subject"]         = { "metadata","rdf:Description/dc:description/rdf:Alt/rdf:li" },
+    ["Title"]           = { "metadata","rdf:Description/dc:title/rdf:Alt/rdf:li" },
     -- XMP Basic schema
-    ["CreateDate"]           = { "date",    "rdf:Description/xmp:CreateDate" },
-    ["CreationDate"]         = { "date",    "rdf:Description/xmp:CreationDate" },                -- dummy
-    ["Creator"]              = { "metadata","rdf:Description/xmp:CreatorTool" },
-    ["MetadataDate"]         = { "date",    "rdf:Description/xmp:MetadataDate" },
-    ["ModDate"]              = { "date",    "rdf:Description/xmp:ModDate" },                     -- dummy
-    ["ModifyDate"]           = { "date",    "rdf:Description/xmp:ModifyDate" },
+    ["CreateDate"]      = { "date",    "rdf:Description/xmp:CreateDate" },
+    ["CreationDate"]    = { "date",    "rdf:Description/xmp:CreationDate" },                -- dummy
+    ["Creator"]         = { "metadata","rdf:Description/xmp:CreatorTool" },
+    ["MetadataDate"]    = { "date",    "rdf:Description/xmp:MetadataDate" },
+    ["ModDate"]         = { "date",    "rdf:Description/xmp:ModDate" },                     -- dummy
+    ["ModifyDate"]      = { "date",    "rdf:Description/xmp:ModifyDate" },
     -- XMP Media Management schema
-    ["DocumentID"]           = { "id",      "rdf:Description/xmpMM:DocumentID" },                -- uuid
-    ["InstanceID"]           = { "id",      "rdf:Description/xmpMM:InstanceID" },                -- uuid
-    ["RenditionClass"]       = { "pdf",     "rdf:Description/xmpMM:RenditionClass" },            -- PDF/X-4
-    ["VersionID"]            = { "pdf",     "rdf:Description/xmpMM:VersionID" },                 -- PDF/X-4
+    ["DocumentID"]      = { "id",      "rdf:Description/xmpMM:DocumentID" },                -- uuid
+    ["InstanceID"]      = { "id",      "rdf:Description/xmpMM:InstanceID" },                -- uuid
+    ["RenditionClass"]  = { "pdf",     "rdf:Description/xmpMM:RenditionClass" },            -- PDF/X-4
+    ["VersionID"]       = { "pdf",     "rdf:Description/xmpMM:VersionID" },                 -- PDF/X-4
     -- additional entries
     -- PDF/X
-    ["GTS_PDFXVersion"]      = { "pdf",     "rdf:Description/pdfxid:GTS_PDFXVersion" },
+    ["GTS_PDFXVersion"] = { "pdf",     "rdf:Description/pdfxid:GTS_PDFXVersion" },
     -- optional entries
     -- all what is visible in the 'document properties --> additional metadata' window
     -- XMP Rights Management schema (optional)
-    ["Marked"]               = { "pdf",      "rdf:Description/xmpRights:Marked" },
- -- ["Owner"]                = { "metadata", "rdf:Description/xmpRights:Owner/rdf:Bag/rdf:li" }, -- maybe useful (not visible)
- -- ["UsageTerms"]           = { "metadata", "rdf:Description/xmpRights:UsageTerms" },           -- maybe useful (not visible)
-    ["WebStatement"]         = { "metadata", "rdf:Description/xmpRights:WebStatement" },
+    ["Marked"]          = { "pdf",      "rdf:Description/xmpRights:Marked" },
+ -- ["Owner"]           = { "metadata", "rdf:Description/xmpRights:Owner/rdf:Bag/rdf:li" }, -- maybe useful (not visible)
+ -- ["UsageTerms"]      = { "metadata", "rdf:Description/xmpRights:UsageTerms" },           -- maybe useful (not visible)
+    ["WebStatement"]    = { "metadata", "rdf:Description/xmpRights:WebStatement" },
     -- Photoshop PDF schema (optional)
-    ["AuthorsPosition"]      = { "metadata", "rdf:Description/photoshop:AuthorsPosition" },
-    ["Copyright"]            = { "metadata", "rdf:Description/photoshop:Copyright" },
-    ["CaptionWriter"]        = { "metadata", "rdf:Description/photoshop:CaptionWriter" },
+    ["AuthorsPosition"] = { "metadata", "rdf:Description/photoshop:AuthorsPosition" },
+    ["Copyright"]       = { "metadata", "rdf:Description/photoshop:Copyright" },
+    ["CaptionWriter"]   = { "metadata", "rdf:Description/photoshop:CaptionWriter" },
 }
 
 pdf.setsuppressoptionalinfo(
@@ -105,16 +98,6 @@ pdf.setsuppressoptionalinfo(
 
 local included = backends.included
 
-local pdfsettrailerid = pdf.settrailerid
-
-local lpdfid = lpdf.id
-
-function lpdf.id() -- overload of ini
-    return lpdfid(included.date)
-end
-
-pdf.disablecommand("settrailerid")
-
 function lpdf.settrailerid(v)
     if v then
         local b = toboolean(v) or v == ""
@@ -129,7 +112,7 @@ function lpdf.settrailerid(v)
         else
             report_info("using hashed trailer id %a (%a)",v,h)
         end
-        pdfsettrailerid(format("[<%s> <%s>]",h,h))
+        pdf.settrailerid(format("[<%s> <%s>]",h,h))
     end
 end
 
@@ -157,6 +140,14 @@ function lpdf.setdates(v)
     end
 end
 
+function lpdf.id() -- overload of ini
+    local banner = tex.jobname
+    if included.date then
+        return format("%s.%s",banner,lpdf.timestamp())
+    else
+        return banner
+    end
+end
 
 directives.register("backend.trailerid", lpdf.settrailerid)
 directives.register("backend.date",      lpdf.setdates)
@@ -250,65 +241,61 @@ end
 
 -- flushing
 
-local add_xmp_blob = true  directives.register("backend.xmp",function(v) add_xmp_blob = v end)
-
 local function flushxmpinfo()
     commands.pushrandomseed()
     commands.setrandomseed(os.time())
 
+    local version    = status.luatex_version
+    local revision   = status.luatex_revision
+
     local documentid = "no unique document id here"
     local instanceid = "no unique instance id here"
-    local metadata   = pdfgetmetadata()
-    local time       = metadata.time
-    local producer   = metadata.producer
-    local creator    = metadata.creator
+    local producer   = format("LuaTeX-%i.%i.%s",math.div(version,100),math.mod(version,100),revision)
+    local creator    = "LuaTeX + ConTeXt MkIV"
+    local time       = lpdf.timestamp()
+    local fullbanner = status.banner
 
     if included.id ~= "fake" then
         documentid = "uuid:" .. os.uuid()
         instanceid = "uuid:" .. os.uuid()
     end
 
-    pdfaddtoinfo("Producer",producer)
-    pdfaddtoinfo("Creator",creator)
-    pdfaddtoinfo("CreationDate",time)
-    pdfaddtoinfo("ModDate",time)
+    pdfaddxmpinfo("DocumentID",      documentid)
+    pdfaddxmpinfo("InstanceID",      instanceid)
+    pdfaddxmpinfo("Producer",        producer)
+    pdfaddxmpinfo("CreatorTool",     creator)
+    pdfaddxmpinfo("CreateDate",      time)
+    pdfaddxmpinfo("ModifyDate",      time)
+    pdfaddxmpinfo("MetadataDate",    time)
+    pdfaddxmpinfo("PTEX.Fullbanner", fullbanner)
 
-    if add_xmp_blob then
+    pdfaddtoinfo("Producer",         producer)
+    pdfaddtoinfo("Creator",          creator)
+    pdfaddtoinfo("CreationDate",     time)
+    pdfaddtoinfo("ModDate",          time)
+ -- pdfaddtoinfo("PTEX.Fullbanner",  fullbanner) -- no checking done on existence
 
-        pdfaddxmpinfo("DocumentID",documentid)
-        pdfaddxmpinfo("InstanceID",instanceid)
-        pdfaddxmpinfo("Producer",producer)
-        pdfaddxmpinfo("CreatorTool",creator)
-        pdfaddxmpinfo("CreateDate",time)
-        pdfaddxmpinfo("ModifyDate",time)
-        pdfaddxmpinfo("MetadataDate",time)
-        pdfaddxmpinfo("LuaTeX.Version",metadata.luatexversion)
-        pdfaddxmpinfo("LuaTeX.Functionality",metadata.luatexfunctionality)
-        pdfaddxmpinfo("LuaTeX.LuaVersion",metadata.luaversion)
-        pdfaddxmpinfo("LuaTeX.Platform",metadata.platform)
-
-        local blob = xml.tostring(xml.first(xmp or valid_xmp(),"/x:xmpmeta"))
-        local md = pdfdictionary {
-            Subtype = pdfconstant("XML"),
-            Type    = pdfconstant("Metadata"),
-        }
-        if trace_xmp then
-            report_xmp("data flushed, see log file")
-            logs.pushtarget("logfile")
-            report_xmp("start xmp blob")
-            logs.newline()
-            logs.writer(blob)
-            logs.newline()
-            report_xmp("stop xmp blob")
-            logs.poptarget()
-        end
-        blob = format(xpacket,blob)
-        if not verbose and lpdf.compresslevel() > 0 then
-            blob = gsub(blob,">%s+<","><")
-        end
-        local r = pdfflushstreamobject(blob,md,false) -- uncompressed
-        lpdf.addtocatalog("Metadata",pdfreference(r))
+    local blob = xml.tostring(xml.first(xmp or valid_xmp(),"/x:xmpmeta"))
+    local md = pdfdictionary {
+        Subtype = pdfconstant("XML"),
+        Type    = pdfconstant("Metadata"),
+    }
+    if trace_xmp then
+        report_xmp("data flushed, see log file")
+        logs.pushtarget("logfile")
+        report_xmp("start xmp blob")
+        logs.newline()
+        logs.writer(blob)
+        logs.newline()
+        report_xmp("stop xmp blob")
+        logs.poptarget()
     end
+    blob = format(xpacket,blob)
+    if not verbose and pdf.getcompresslevel() > 0 then
+        blob = gsub(blob,">%s+<","><")
+    end
+    local r = pdfflushstreamobject(blob,md,false) -- uncompressed
+    lpdf.addtocatalog("Metadata",pdfreference(r))
 
     commands.poprandomseed() -- hack
 end

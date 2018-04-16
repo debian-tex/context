@@ -68,13 +68,6 @@ local txtcatcodes       = catcodenumbers.txtcatcodes
 local setdata           = job.datasets.setdata
 local getdata           = job.datasets.getdata
 
-local ctx_viafile          = context.viafile
-local ctx_getbuffer        = context.getbuffer
-local ctx_pushcatcodetable = context.pushcatcodetable
-local ctx_popcatcodetable  = context.popcatcodetable
-local ctx_setcatcodetable  = context.setcatcodetable
-local ctx_printlines       = context.printlines
-
 buffers       = buffers or { }
 local buffers = buffers
 
@@ -216,21 +209,21 @@ implement {
     arguments = "string"
 }
 
--- local anything      = patterns.anything
--- local alwaysmatched = patterns.alwaysmatched
--- local utf8character = patterns.utf8character
---
--- local function countnesting(b,e)
---     local n
---     local g = P(b) / function() n = n + 1 end
---             + P(e) / function() n = n - 1 end
---          -- + anything
---             + utf8character
---     local p = alwaysmatched / function() n = 0 end
---             * g^0
---             * alwaysmatched / function() return n end
---     return p
--- end
+local anything      = patterns.anything
+local alwaysmatched = patterns.alwaysmatched
+local utf8character = patterns.utf8character
+
+local function countnesting(b,e)
+    local n
+    local g = P(b) / function() n = n + 1 end
+            + P(e) / function() n = n - 1 end
+         -- + anything
+            + utf8character
+    local p = alwaysmatched / function() n = 0 end
+            * g^0
+            * alwaysmatched / function() return n end
+    return p
+end
 
 local counters   = { }
 local nesting    = 0
@@ -293,7 +286,7 @@ local getmargin = (emptyline + normalline)^1
 local function undent(str) -- new version, needs testing: todo: not always needed, like in xtables
     nofspaces = #str
     local margin = lpegmatch(getmargin,str)
-    if nofspaces == #str or nofspaces == 0 then
+    if nofspaces == #str or nofspaces ==0 then
         return str
     end
     local stripper = strippers[nofspaces]
@@ -492,7 +485,7 @@ end
 implement {
     name      = "savebuffer",
     actions   = savebuffer,
-    arguments = "3 strings",
+    arguments = { "string", "string", "string" }
 }
 
 -- we can consider adding a size to avoid unlikely clashes
@@ -616,32 +609,30 @@ local function runbuffer(name,encapsulate,runnername,suffixes)
     return resultname -- first result
 end
 
-local f_getbuffer = formatters["buffer.%s"]
-
 local function getbuffer(name)
     local str = getcontent(name)
     if str ~= "" then
      -- characters.showstring(str)
-        ctx_viafile(str,f_getbuffer(validstring(name,"noname")))
+        context.viafile(str,formatters["buffer.%s"](validstring(name,"noname")))
     end
 end
 
 local function getbuffermkvi(name) -- rather direct !
-    ctx_viafile(resolvers.macros.preprocessed(getcontent(name)),formatters["buffer.%s.mkiv"](validstring(name,"noname")))
+    context.viafile(resolvers.macros.preprocessed(getcontent(name)),formatters["buffer.%s.mkiv"](validstring(name,"noname")))
 end
 
 local function gettexbuffer(name)
     local buffer = name and cache[name]
     if buffer and buffer.data ~= "" then
-        ctx_pushcatcodetable()
+        context.pushcatcodetable()
         if buffer.catcodes == txtcatcodes then
-            ctx_setcatcodetable(txtcatcodes)
+            context.setcatcodetable(txtcatcodes)
         else
-            ctx_setcatcodetable(ctxcatcodes)
+            context.setcatcodetable(ctxcatcodes)
         end
-     -- context(function() ctx_viafile(buffer.data) end)
-        ctx_getbuffer { name } -- viafile flushes too soon
-        ctx_popcatcodetable()
+     -- context(function() context.viafile(buffer.data) end)
+        context.getbuffer { name } -- viafile flushes too soon
+        context.popcatcodetable()
     end
 end
 
@@ -651,12 +642,6 @@ implement { name = "getbufferctxlua", actions = loadcontent,   arguments = "stri
 implement { name = "getbuffer",       actions = getbuffer,     arguments = "string" }
 implement { name = "getbuffermkvi",   actions = getbuffermkvi, arguments = "string" }
 implement { name = "gettexbuffer",    actions = gettexbuffer,  arguments = "string" }
-
-interfaces.implement {
-    name      = "getbuffercontent",
-    arguments = "string",
-    actions   = { getcontent, context },
-}
 
 implement {
     name      = "typesetbuffer",
@@ -682,29 +667,29 @@ implement {
 
 implement {
     name      = "feedback", -- bad name, maybe rename to injectbuffercontent
-    actions   = { collectcontent, ctx_printlines },
+    actions   = { collectcontent, context.printlines },
     arguments = "string"
 }
 
 do
 
-    local context             = context
-    local ctxcore             = context.core
+    local context         = context
+    local ctxcore         = context.core
 
-    local ctx_startbuffer     = ctxcore.startbuffer
-    local ctx_stopbuffer      = ctxcore.stopbuffer
+    local startbuffer     = ctxcore.startbuffer
+    local stopbuffer      = ctxcore.stopbuffer
 
-    local ctx_startcollecting = context.startcollecting
-    local ctx_stopcollecting  = context.stopcollecting
+    local startcollecting = context.startcollecting
+    local stopcollecting  = context.stopcollecting
 
     function ctxcore.startbuffer(...)
-        ctx_startcollecting()
-        ctx_startbuffer(...)
+        startcollecting()
+        startbuffer(...)
     end
 
     function ctxcore.stopbuffer()
-        ctx_stopbuffer()
-        ctx_stopcollecting()
+        stopbuffer()
+        stopcollecting()
     end
 
 end

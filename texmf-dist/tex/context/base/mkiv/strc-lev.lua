@@ -83,7 +83,7 @@ end
 implement {
     name      = "definesectionlevels",
     actions   = definesectionlevels,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 implement {

@@ -8,7 +8,6 @@ if not modules then modules = { } end modules ['lxml-inf'] = {
 
 -- This file will be loaded runtime by x-pending.tex.
 
-local next, tostring, type = next, tostring, type
 local concat = table.concat
 
 local xmlwithelements = xml.withelements

@@ -13,9 +13,6 @@ local match, gmatch, gsub = string.match, string.gmatch, string.gsub
 
 local setmetatableindex = table.setmetatableindex
 
-local allocate          = utilities.storage.allocate
-local mark              = utilities.storage.mark
-
 --[[ldx--
 <p>Because encodings are going to disappear, we don't bother defining
 them in tables. But we may do so some day, for consistency.</p>
@@ -28,7 +25,7 @@ fonts.encodings = encodings
 
 encodings.version = 1.03
 encodings.cache   = containers.define("fonts", "enc", fonts.encodings.version, true)
-encodings.known   = allocate { -- sort of obsolete
+encodings.known   = utilities.storage.allocate { -- sort of obsolete
     texnansi = true,
     ec       = true,
     qx       = true,
@@ -155,7 +152,7 @@ if not encodings.agl then
     -- font is loaded for caching. Once we're further along the route we can also
     -- delay it in the generic version (which doesn't use this file).
 
-    encodings.agl = allocate { }
+    encodings.agl = { }
 
     setmetatableindex(encodings.agl, function(t,k)
         report_encoding("loading (extended) adobe glyph list")

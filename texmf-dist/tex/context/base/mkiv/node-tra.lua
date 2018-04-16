@@ -11,7 +11,6 @@ if not modules then modules = { } end modules ['node-tra'] = {
 might become a runtime module instead. This module will be cleaned up!</p>
 --ldx]]--
 
-local next = next
 local utfchar = utf.char
 local format, match, gmatch, concat, rep = string.format, string.match, string.gmatch, table.concat, string.rep
 local lpegmatch = lpeg.match
@@ -39,6 +38,7 @@ local nuts             = nodes.nuts
 local tonut            = nuts.tonut
 local tonode           = nuts.tonode
 
+local getfield         = nuts.getfield
 local getnext          = nuts.getnext
 local getprev          = nuts.getprev
 local getid            = nuts.getid
@@ -298,38 +298,34 @@ nodes.showsimplelist = function(h,depth) showsimplelist(h,depth,0) end
 
 local function listtoutf(h,joiner,textonly,last,nodisc)
     local w = { }
-    local n = 0
     while h do
         local c, id = isglyph(h)
         if c then
-            n = n + 1 ; w[n] = c >= 0 and utfchar(c) or formatters["<%i>"](c)
+            w[#w+1] = c >= 0 and utfchar(c) or formatters["<%i>"](c)
             if joiner then
-                n = n + 1 ; w[n] = joiner
+                w[#w+1] = joiner
             end
         elseif id == disc_code then
             local pre, pos, rep = getdisc(h)
             if not nodisc then
-                n = n + 1 ; w[n] = formatters["[%s|%s|%s]"] (
+                w[#w+1] = formatters["[%s|%s|%s]"] (
                     pre and listtoutf(pre,joiner,textonly) or "",
                     pos and listtoutf(pos,joiner,textonly) or "",
                     rep and listtoutf(rep,joiner,textonly) or ""
                 )
             elseif rep then
-                n = n + 1 ; w[n] = listtoutf(rep,joiner,textonly) or ""
-            end
-            if joiner then
-                n = n + 1 ; w[n] = joiner
+                w[#w+1] = listtoutf(rep,joiner,textonly) or ""
             end
         elseif textonly then
             if id == glue_code then
                 if getwidth(h) > 0 then
-                    n = n + 1 ; w[n] = " "
+                    w[#w+1] = " "
                 end
             elseif id == hlist_code or id == vlist_code then
-                n = n + 1 ; w[n] = "[]"
+                w[#w+1] = "[]"
             end
         else
-            n = n + 1 ; w[n] = "[-]"
+            w[#w+1] = "[-]"
         end
         if h == last then
             break
@@ -337,7 +333,7 @@ local function listtoutf(h,joiner,textonly,last,nodisc)
             h = getnext(h)
         end
     end
-    return concat(w,"",1,(w[n] == joiner) and (n-1) or n)
+    return concat(w)
 end
 
 function nodes.listtoutf(h,joiner,textonly,last,nodisc)
@@ -380,7 +376,8 @@ local f_z_f = formatters["%0.5Fpt minus %0.5F%s"]
 local f_z_m = formatters["%0.5Fpt minus %0.5Fpt"]
 local f_z_z = formatters["%0.5Fpt"]
 
-local tonut = nodes.tonut
+local tonut    = nodes.tonut
+local getfield = nodes.nuts.getfield
 
 local function nodetodimen(n)
     n = tonut(n)

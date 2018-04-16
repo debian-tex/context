@@ -57,36 +57,24 @@ do -- todo: only once, store in global
     local definitions = context.loaddefinitions("scite-context-data-interfaces")
 
     if definitions then
-        local used = { }
+        local list = { }
         for interface, list in next, definitions do
-            if interface ~= "common" then
-                used[#used+1] = interface
-                local c = { }
-                -- these are shared
-                local list = definitions.common
-                if list then
-                    for i=1,#list do
-                        c[list[i]] = true
-                    end
-                end
-                -- normally this one is empty
+            list[#list+1] = interface
+            local c = { }
+            for i=1,#list do
+                c[list[i]] = true
+            end
+            if interface ~= "en" then
                 list = definitions.en
                 if list then
                     for i=1,#list do
                         c[list[i]] = true
                     end
                 end
-                -- these are interface specific
-                if interface ~= "en" then
-                    for i=1,#list do
-                        c[list[i]] = true
-                    end
-                end
-                commands[interface] = c
             end
+            commands[interface] = c
         end
-        table.sort(used)
-        inform("context user interfaces '%s' supported",table.concat(used," "))
+        inform("context user interfaces '%s' supported",table.concat(list," "))
     end
 
     local definitions = context.loaddefinitions("scite-context-data-context")
@@ -234,12 +222,10 @@ local p_comment              = commentline
 ----- p_helper               = backslash * exact_match(helpers)
 ----- p_primitive            = backslash * exact_match(primitives)
 
-local p_csdone               = #(1-cstoken) + P(-1)
-
-local p_command              = backslash * lexer.helpers.utfchartabletopattern(currentcommands) * p_csdone
-local p_constant             = backslash * lexer.helpers.utfchartabletopattern(constants)       * p_csdone
-local p_helper               = backslash * lexer.helpers.utfchartabletopattern(helpers)         * p_csdone
-local p_primitive            = backslash * lexer.helpers.utfchartabletopattern(primitives)      * p_csdone
+local p_command              = backslash * lexer.helpers.utfchartabletopattern(currentcommands) * #(1-cstoken)
+local p_constant             = backslash * lexer.helpers.utfchartabletopattern(constants)       * #(1-cstoken)
+local p_helper               = backslash * lexer.helpers.utfchartabletopattern(helpers)         * #(1-cstoken)
+local p_primitive            = backslash * lexer.helpers.utfchartabletopattern(primitives)      * #(1-cstoken)
 
 local p_ifprimitive          = P("\\if") * cstoken^1
 local p_csname               = backslash * (cstoken^1 + P(1))
@@ -417,7 +403,7 @@ local luaenvironment         = P("lua") * (P("setups") + P("code") + P(true))
 local inlinelua              = P("\\") * (
                                     P("ctx") * (P("lua") + P("command") + P("late") * (P("lua") + P("command")) + P("function"))
                                   + P("cld") * (P("command") + P("context"))
-                                  + P("lua") * (P("expr") + P("script") + P("thread"))
+                                  + P("luaexpr")
                                   + (P("direct") + P("late")) * P("lua")
                                )
 
@@ -462,17 +448,12 @@ local stopmetafuncode        = token("embedded", stopmetafun)
 local callers                = token("embedded", P("\\") * metafuncall) * metafunarguments
                              + token("embedded", P("\\") * luacall)
 
-lexer.embed_lexer(contextlexer, mpslexer, startmetafuncode, stopmetafuncode)
 lexer.embed_lexer(contextlexer, cldlexer, startluacode,     stopluacode)
-
--- preamble is inefficient as it probably gets called each time (so some day I really need to
--- patch the plugin)
-
-contextlexer._preamble = preamble
+lexer.embed_lexer(contextlexer, mpslexer, startmetafuncode, stopmetafuncode)
 
 contextlexer._rules = {
     { "whitespace",  spacing     },
- -- { "preamble",    preamble    },
+    { "preamble",    preamble    },
     { "word",        word        },
     { "text",        text        }, -- non words
     { "comment",     comment     },
@@ -480,10 +461,10 @@ contextlexer._rules = {
  -- { "subsystem",   subsystem   },
     { "callers",     callers     },
     { "subsystem",   subsystem   },
-    { "ifprimitive", ifprimitive },
     { "helper",      helper      },
     { "command",     command     },
     { "primitive",   primitive   },
+    { "ifprimitive", ifprimitive },
  -- { "subsystem",   subsystem   },
     { "reserved",    reserved    },
     { "csname",      csname      },
@@ -511,10 +492,10 @@ if web then
         { "comment",     comment     },
         { "constant",    constant    },
         { "callers",     callers     },
-        { "ifprimitive", ifprimitive },
         { "helper",      helper      },
         { "command",     command     },
         { "primitive",   primitive   },
+        { "ifprimitive", ifprimitive },
         { "reserved",    reserved    },
         { "csname",      csname      },
         { "grouping",    grouping    },
@@ -535,10 +516,10 @@ else
         { "comment",     comment     },
         { "constant",    constant    },
         { "callers",     callers     },
-        { "ifprimitive", ifprimitive },
         { "helper",      helper      },
         { "command",     command     },
         { "primitive",   primitive   },
+        { "ifprimitive", ifprimitive },
         { "reserved",    reserved    },
         { "csname",      csname      },
         { "grouping",    grouping    },

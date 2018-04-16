@@ -34,7 +34,7 @@ local formatters    = string.formatters
 
 local application = logs.application {
     name     = "mtx-context",
-    banner   = "ConTeXt Process Management 1.02",
+    banner   = "ConTeXt Process Management 1.01",
  -- helpinfo = helpinfo, -- table with { category_a = text_1, category_b = text_2 } or helpstring or xml_blob
     helpinfo = "mtx-context.xml",
 }
@@ -192,7 +192,6 @@ local temporary_runfiles = {
 local temporary_suffixes = {
     "prep",                            -- context preprocessed
 }
-
 local synctex_runfiles = {
     "synctex", "synctex.gz", "syncctx" -- synctex
 }
@@ -436,22 +435,13 @@ local function pdf_open(name,method)
     pdfview = pdfview or dofile(resolvers.findfile("l-pdfview.lua","tex"))
     pdfview.setmethod(method)
     report(pdfview.status())
-    local pdfname = filenewsuffix(name,"pdf")
-    if not lfs.isfile(pdfname) then
-        pdfname = name .. ".pdf" -- agressive
-    end
-    pdfview.open(pdfname)
+    pdfview.open(filenewsuffix(name,"pdf"))
 end
 
 local function pdf_close(name,method)
     pdfview = pdfview or dofile(resolvers.findfile("l-pdfview.lua","tex"))
     pdfview.setmethod(method)
-    local pdfname = filenewsuffix(name,"pdf")
-    if lfs.isfile(pdfname) then
-        pdfview.close(pdfname)
-    end
-    pdfname = name .. ".pdf" -- agressive
-    pdfview.close(pdfname)
+    pdfview.close(filenewsuffix(name,"pdf"))
 end
 
 -- result file handling
@@ -591,6 +581,17 @@ local function run_texexec(filename,a_purge,a_purgeall)
     end
 end
 
+-- context mode will become the only method some day
+
+local function check_synctex(a_synctex) -- context is intercepted elsewhere
+    return a_synctex and (
+        tonumber(a_synctex) or
+        (toboolean(a_synctex,true) and 1) or
+        (a_synctex == "zipped" and 1) or
+        (a_synctex == "unzipped" and -1)
+    ) or nil
+end
+
 function scripts.context.run(ctxdata,filename)
     --
     local a_nofile = getargument("nofile")
@@ -648,6 +649,7 @@ function scripts.context.run(ctxdata,filename)
     local a_nonstopmode   = getargument("nonstopmode")
     local a_scollmode     = getargument("scrollmode")
     local a_once          = getargument("once")
+    local a_synctex       = getargument("syncctx") and "context" or getargument("synctex")
     local a_backend       = getargument("backend")
     local a_arrange       = getargument("arrange")
     local a_noarrange     = getargument("noarrange")
@@ -673,6 +675,7 @@ function scripts.context.run(ctxdata,filename)
 
     --
     a_batchmode = (a_batchmode and "batchmode") or (a_nonstopmode and "nonstopmode") or (a_scrollmode and "scrollmode") or nil
+ -- a_synctex   = check_synctex(a_synctex)
     --
     for i=1,#filelist do
         --
@@ -698,6 +701,8 @@ function scripts.context.run(ctxdata,filename)
         local ctxname  = ctxdata and ctxdata.ctxname
         --
         local analysis = preamble_analyze(filename)
+        --
+        a_synctex = a_synctex or analysis.synctex
         --
         if a_mkii or analysis.engine == 'pdftex' or analysis.engine == 'xetex' then
             run_texexec(filename,a_purge,a_purgeall)
@@ -736,10 +741,7 @@ function scripts.context.run(ctxdata,filename)
             if formatfile and scriptfile then
                 local suffix     = validstring(getargument("suffix"))
                 local resultname = validstring(getargument("result"))
-                local resultpath = file.pathpart(resultname)
-                if resultpath ~= "" then
-                    resultname  = nil
-                elseif suffix then
+                if suffix then
                     resultname = removesuffix(jobname) .. suffix
                 end
                 local oldbase = ""
@@ -808,9 +810,9 @@ function scripts.context.run(ctxdata,filename)
                 --
                 local l_flags = {
                     ["interaction"]           = a_batchmode,
-                 -- ["synctex"]               = false,       -- context has its own way
-                    ["no-parse-first-line"]   = true,        -- obsolete
-                    ["safer"]                 = a_safer,     -- better use --sandbox
+                    ["synctex"]               = check_synctex(a_synctex), -- otherwise not working
+                    ["no-parse-first-line"]   = true,           -- obsolete
+                    ["safer"]                 = a_safer,        -- better use --sandbox
                  -- ["no-mktex"]              = true,
                  -- ["file-line-error-style"] = true,
                     ["fmt"]                   = formatfile,
@@ -834,7 +836,7 @@ function scripts.context.run(ctxdata,filename)
                     directives[#directives+1] = format("backend.date=%s",type(a_nodates) == "string" and a_nodates or " no")
                 end
                 --
-                if type(a_trailerid) == "string" then
+                if a_trailerid then
                     directives[#directives+1] = format("backend.trailerid=%s",a_trailerid)
                 end
                 --
@@ -844,6 +846,9 @@ function scripts.context.run(ctxdata,filename)
                 --
                 for i=1,#synctex_runfiles do
                     removefile(fileaddsuffix(jobname,synctex_runfiles[i]))
+                end
+                if a_synctex then
+                    directives[#directives+1] = format("system.synctex=%s",a_synctex)
                 end
                 --
                 if #directives > 0 then
@@ -900,13 +905,9 @@ function scripts.context.run(ctxdata,filename)
                     --
                 end
                 --
-                --  this will go away after we update luatex
-                --
-                local syncctx = fileaddsuffix(jobname,"syncctx")
-                if validfile(syncctx) then
-                    renamefile(syncctx,fileaddsuffix(jobname,"synctex"))
+                if a_synctex == "context" then
+                    renamefile(fileaddsuffix(jobname,"syncctx"),fileaddsuffix(jobname,"synctex"))
                 end
-                --
                 if a_arrange then
                     --
                     c_flags.final      = true
@@ -943,10 +944,6 @@ function scripts.context.run(ctxdata,filename)
                         result_save_keep(oldbase,newbase)
                     end
                     report("result renamed to: %s",newbase)
-                elseif resultpath ~= "" then
-                    report()
-                    report("results are to be on the running path, not on %a, ignoring --result",resultpath)
-                    report()
                 end
                 --
              -- -- needs checking
@@ -1176,7 +1173,7 @@ do -- more or less copied from mtx-plain.lua:
 end
 
 function scripts.context.generate()
-    resolvers.renewcache()
+    resolvers.instance.renewcache = true
     trackers.enable("resolvers.locating")
     resolvers.load()
 end
@@ -1317,6 +1314,12 @@ function scripts.context.purge_job(jobname,all,mkiitoo,fulljobname)
             if fulljobname and fulljobname ~= jobname then
                 for i=1,#temporary_suffixes do
                     deleted[#deleted+1] = purge_file(fileaddsuffix(fulljobname,temporary_suffixes[i],true))
+                end
+            end
+            if not environment.argument("synctex") then
+                -- special case: not deleted when --synctex is given, but what if given in preamble
+                for i=1,#synctex_runfiles do
+                    deleted[#deleted+1] = purge_file(fileaddsuffix(filebase,synctex_runfiles[i]))
                 end
             end
             if all then
@@ -1750,13 +1753,6 @@ do
         directives.enable(format("logs.blocked={%s}",silent))
     elseif silent then
         directives.enable("logs.blocked")
-    end
-
-    local errors = getargument("errors")
-    if type(errors) == "errors" then
-        directives.enable(format("logs.errors={%s}",silent))
-    elseif errors then
-        directives.enable("logs.errors")
     end
 
 end

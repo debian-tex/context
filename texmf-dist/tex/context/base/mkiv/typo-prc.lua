@@ -41,9 +41,9 @@ local becomes    = P('->')
 local processor  = (1-becomes)^1
 local splitter   = C(processor) * becomes * Cs(patterns.argument + patterns.content)
 
-function processors.split(str,nocheck)
+function processors.split(str)
     local p, s = lpegmatch(splitter,str)
-    if p and (nocheck or registered[p]) then
+    if registered[p] then
         return p, s
     else
         return false, str

@@ -103,21 +103,17 @@ local defaults     = { __index =
         variables      = { },
         username       = "default",
         password       = "default",
-        host           = "localhost", -- 127.0.0.1 is sometimes more reliable
+        host           = "localhost",
         port           = 3306,
         database       = "default",
     },
 }
 
 setmetatableindex(sql.methods,function(t,k)
-    if type(k) == "string" then
-        report_state("start loading method %a",k)
-        require("util-sql-imp-"..k)
-        report_state("loading method %a done",k)
-        return rawget(t,k)
-    else
-        report_state("invalid method %a",tostring(k))
-    end
+    report_state("start loading method %a",k)
+    require("util-sql-imp-"..k)
+    report_state("loading method %a done",k)
+    return rawget(t,k)
 end)
 
 -- converters
@@ -289,13 +285,7 @@ local currentmethod
 local currentserver
 
 local function firstexecute(...)
-    local method = methods[currentmethod]
-    if not method then
-        report_state("invalid sql method")
-        sql.execute = function() end
-        return nil
-    end
-    local execute = method.execute
+    local execute = methods[currentmethod].execute
     sql.execute = execute
     return execute(...)
 end
@@ -336,10 +326,6 @@ function sql.usedatabase(presets,datatable)
         if not method then
             usedmethod = sql.methods.client
             method     = usedmethod and sqlmethods[usedmethod]
-            if not method then
-                report_state("invalid method")
-                return
-            end
         end
         local base      = presets.database or "test"
         local basename  = format("`%s`.`%s`",base,name)

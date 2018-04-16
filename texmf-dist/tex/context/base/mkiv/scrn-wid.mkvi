@@ -13,7 +13,7 @@
 
 \writestatus{loading}{ConTeXt Interaction Macros / Widgets}
 
-\registerctxluafile{scrn-wid}{}
+\registerctxluafile{scrn-wid}{1.001}
 
 % todo: expansion in comments (default is expanded)
 % todo: check renderings ... acrobat crashes too easily on missing one
@@ -86,7 +86,7 @@
   %\c!method=, % \v!hidden = not in menu
   %\c!buffer=
    \c!symbol=,
-   \c!distance=\emwidth,
+   \c!distance=1em,
    \c!width=\v!fit,
    \c!height=\v!fit,
    \c!depth=\v!fit,
@@ -223,12 +223,6 @@
      tag        {\currentattachment}%
      registered {\currentattachmentregistered}%
      method     {\v!hidden}%
-     title      {\attachmentparameter\c!title}%
-     subtitle   {\attachmentparameter\c!subtitle}%
-     author     {\attachmentparameter\c!author}%
-     file       {\attachmentparameter\c!file}%
-     name       {\attachmentparameter\c!name}%
-     buffer     {\attachmentparameter\c!buffer}%
    \relax}
 
 \def\scrn_attachment_place
@@ -249,7 +243,7 @@
   {\global\setbox\b_scrn_attachment_collect\hbox\bgroup
      \ifvoid\b_scrn_attachment_collect\else
        \box\b_scrn_attachment_collect
-       \hskip\attachmentparameter\c!distance\relax
+       \hskip\attachmentparameter\c!distance
      \fi
      #content%
    \egroup}
@@ -372,7 +366,7 @@
 
 \setupcomment
   [\c!state=\v!start,
-   \c!distance=\emwidth,
+   \c!distance=1em,
    \c!color=\interactionparameter\c!color,
    \c!space=\v!no,
    \c!symbol=,
@@ -505,7 +499,7 @@
   {\global\setbox\b_scrn_comment_collect\hbox\bgroup
      \ifvoid\b_scrn_comment_collect\else
        \box\b_scrn_comment_collect
-       \hskip\commentparameter\c!distance\relax
+       \hskip\commentparameter\c!distance
      \fi
      \box\b_scrn_comment_link
    \egroup}
@@ -598,7 +592,7 @@
          option   {#option}%
       \relax
       \let\objectoffset\zeropoint
-      \setobject{IRO}{#tag}\hpack{\box\nextbox}%
+      \setobject{IRO}{#tag}\hbox{\box\nextbox}%
       \egroup}%
      \hbox}
 
@@ -655,8 +649,7 @@
  % \handlereferenceactions{\renderingwindowparameter\c!closepageaction}\dosetuprenderingclosepageaction
    \letrenderingwindowparameter\c!offset\v!overlay
    \inheritedrenderingwindowframed
-     {\vfilll
-      \dontleavehmode
+     {\vfill
       \clf_insertrenderingwindow
         label  {\currentrendering}%
         width  \d_scrn_rendering_width
@@ -703,7 +696,7 @@
 %    \iflocation
 %      \edef\currentlinkedlist{#1}%
 %      \ifcsname\??lk\currentlinkedlist\s!parent\endcsname
-%        \hskip\linkedlistparameter\c!distance\relax
+%        \hskip\linkedlistparameter\c!distance
 %        \clf_addlinklistelement{\currentlinkedlist}%
 %        \expanded{\ctxlatecommand{enhancelinkedlist("\currentlinkedlist",\currentlink)}}% can also be done at the lua end
 %        \dogotosomepage  {\??lk\currentlinkedlist}\gotobegincharacter \firstlink

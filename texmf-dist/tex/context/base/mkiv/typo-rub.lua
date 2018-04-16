@@ -39,6 +39,8 @@ local getid           = nuts.getid
 local getsubtype      = nuts.getsubtype
 local getattr         = nuts.getattr
 local setattr         = nuts.setattr
+local getfield        = nuts.getfield
+local setfield        = nuts.setfield
 local getnext         = nuts.getnext
 local setnext         = nuts.setnext
 local getprev         = nuts.getprev
@@ -298,6 +300,9 @@ local function whatever(current)
             else
                 local left  = new_kern(delta/2)
                 local right = new_kern(delta/2)
+--                 setlink(left,start)
+--                 setlink(stop,right)
+--                 setlink(text,left)
                 setlink(text,left,start)
                 setlink(stop,right)
             end
@@ -349,11 +354,17 @@ local function whatever(current)
             elseif align == v_flushright then
                 local left  = new_kern(-delta)
                 local right = new_kern(delta)
-                setlink(left,text,right,start)
-                setlist(current,left)
+--                 setlink(left,text)
+--                 setlink(text,right)
+--                 setlink(right,start)
+                    setlink(left,text,right,start)
+                    setlist(current,left)
             else
                 local left  = new_kern(-delta/2)
                 local right = new_kern(delta/2)
+--                 setlink(left,text)
+--                 setlink(text,right)
+--                 setlink(right,start)
                 setlink(left,text,right,start)
                 setlist(current,left)
             end

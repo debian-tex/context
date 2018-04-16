@@ -283,10 +283,6 @@
   [aps:\s!cite]
 
 \definebtx
-  [aps:\s!cite:organization]
-  [aps:\s!cite]
-
-\definebtx
   [aps:\s!cite:authoryear]
   [aps:\s!cite:author]
   [\c!left={(},
@@ -555,9 +551,9 @@
 
 \startsetups [btx:aps:list:page-or-pages]
     \ifx\currentbtxlastpage\empty
-        \btxlabeltext{p}
+        \btxlabeltext{p}.
     \else
-        \btxlabeltext{pp}
+        \btxlabeltext{pp}.
     \fi
     \btxnbsp
 \stopsetups
@@ -653,16 +649,6 @@
 \starttexdefinition unexpanded btx:aps:author
     \btxflush{author}
     \btxcomma
-\stoptexdefinition
-
-\starttexdefinition unexpanded btx:aps:organization-if-not-author
-    \btxdoif {organization} {
-        \doifnot {\btxfoundname{author}} {organization} {
-            \btxspace
-            \btxflush{organization}
-            \btxcomma
-        }
-    }
 \stoptexdefinition
 
 \starttexdefinition unexpanded btx:aps:editor-in
@@ -917,7 +903,6 @@
     \texdefinition{btx:aps:title}
     \texdefinition{btx:aps:editor-in}
     \texdefinition{btx:aps:editionset}
-   %\texdefination{btx:aps:organization-if-not-author}% first check publ-imp-aps.lua
     \btxdoif {organization} {
         \btxspace
         \btxflush{organization}
@@ -1050,7 +1035,11 @@
 \startsetups btx:aps:list:electronic
     \texdefinition{btx:aps:author}
     \texdefinition{btx:aps:title}
-    \texdefinition{btx:aps:organization-if-not-author}
+    \btxdoif {organization} {
+        \btxspace
+        \btxflush{organization}
+        \btxcomma
+    }
     \btxdoif {howpublished} {
         \texdefinition{btx:aps:doi-url} {\btxspace\btxflush{howpublished}}
     }

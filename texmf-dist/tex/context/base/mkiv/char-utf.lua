@@ -22,7 +22,6 @@ over a string.</p>
 educational purposes.</p>
 --ldx]]--
 
-local next, type = next, type
 local gsub, find = string.gsub, string.find
 local concat, sortedhash, keys, sort = table.concat, table.sortedhash, table.keys, table.sort
 local utfchar, utfbyte, utfcharacters, utfvalues = utf.char, utf.byte, utf.characters, utf.values
@@ -40,7 +39,6 @@ local utfchartabletopattern = lpeg.utfchartabletopattern
 local formatters            = string.formatters
 
 local allocate              = utilities.storage.allocate or function() return { } end
-local mark                  = utilities.storage.mark     or allocate
 
 local charfromnumber        = characters.fromnumber
 
@@ -86,23 +84,17 @@ characters.decomposed = decomposed
 
 local graphemes = characters.graphemes
 local collapsed = characters.collapsed
-local mathlists = characters.mathlists
+local mathpairs = characters.mathpairs
 
-if graphemes then
-
-    mark(graphemes)
-    mark(collapsed)
-    mark(mathlists)
-
-else
+if not graphemes then
 
     graphemes = allocate()
     collapsed = allocate()
-    mathlists = allocate()
+    mathpairs = allocate()
 
     characters.graphemes = graphemes
     characters.collapsed = collapsed
-    characters.mathlists = mathlists
+    characters.mathpairs = mathpairs
 
     local function backtrack(v,last,target)
         local vs = v.specials
@@ -114,70 +106,57 @@ else
         end
     end
 
-    local function setlist(unicode,list,start,category)
-        if list[start] ~= 0x20 then
-            local t = mathlists
-            for i=start,#list do
-                local l = list[i]
-                local f = t[l]
-                if f then
-                    t = f
-                else
-                    f = { }
-                    t[l] = f
-                    t = f
-                end
-            end
-            t[category] = unicode
+    local function setpair(one,two,unicode,first,second,combination)
+        local mps = mathpairs[one]
+        if not mps then
+            mps = { [two] = unicode }
+            mathpairs[one] = mps
+        else
+            mps[two] = unicode
+        end
+        local mps = mathpairs[first]
+        if not mps then
+            mps = { [second] = combination }
+            mathpairs[first] = mps
+        else
+            mps[second] = combination
         end
     end
-
-    local mlists = { }
 
     for unicode, v in next, data do
         local vs = v.specials
-        if vs then
-            local kind = vs[1]
-            local size = #vs
-            if kind == "char" and size == 3 then -- what if more than 3
-                --
-                local one, two = vs[2], vs[3]
-                local first, second, combination = utfchar(one), utfchar(two), utfchar(unicode)
-                --
-                collapsed[first..second] = combination
-                backtrack(data[one],second,combination)
-                -- sort of obsolete:
-                local cgf = graphemes[first]
-                if not cgf then
-                    cgf = { [second] = combination }
-                    graphemes[first] = cgf
-                else
-                    cgf[second] = combination
-                end
-                --
+        if vs and #vs == 3 and vs[1] == "char" then
+            --
+            local one, two = vs[2], vs[3]
+            local first, second, combination = utfchar(one), utfchar(two), utfchar(unicode)
+            --
+            collapsed[first..second] = combination
+            backtrack(data[one],second,combination)
+            -- sort of obsolete:
+            local cgf = graphemes[first]
+            if not cgf then
+                cgf = { [second] = combination }
+                graphemes[first] = cgf
+            else
+                cgf[second] = combination
             end
-            if (kind == "char" or kind == "compat") and (size > 2) and (v.mathclass or v.mathspec) then
-                setlist(unicode,vs,2,"specials")
+            --
+            if v.mathclass or v.mathspec then
+                setpair(two,one,unicode,second,first,combination) -- watch order
             end
         end
-        local ml = v.mathlist
-        if ml then
-            mlists[unicode] = ml
+        local mp = v.mathpair
+        if mp then
+            local one, two = mp[1], mp[2]
+            local first, second, combination = utfchar(one), utfchar(two), utfchar(unicode)
+            setpair(one,two,unicode,first,second,combination)
         end
     end
-
-    -- these win:
-
-    for unicode, ml in next, mlists do
-        setlist(unicode,ml,1,"mathlist")
-    end
-
-    mlists = nil
 
     if storage then
-        storage.register("characters/graphemes", graphemes, "characters.graphemes")
-        storage.register("characters/collapsed", collapsed, "characters.collapsed")
-        storage.register("characters/mathlists", mathlists, "characters.mathlists")
+        storage.register("characters/graphemes", characters.graphemes, "characters.graphemes")
+        storage.register("characters/collapsed", characters.collapsed, "characters.collapsed")
+        storage.register("characters/mathpairs", characters.mathpairs, "characters.mathpairs")
     end
 
 end
@@ -204,15 +183,14 @@ local p_collapse = nil -- so we can reset if needed
 
 local function prepare()
     local tree = utfchartabletopattern(collapsed)
- -- p_collapse = Cs((tree/collapsed + p_utf8character)^0 * P(-1))
-    p_collapse = Cs((tree/collapsed + p_utf8character)^0)
+    p_collapse = Cs((tree/collapsed + p_utf8character)^0 * P(-1)) -- the P(1) is needed in order to accept non utf
 end
 
 function utffilters.collapse(str,filename)
     if not p_collapse then
         prepare()
     end
-    if not str or str == "" or #str == 1 then
+    if not str or #str == "" or #str == 1 then
         return str
     elseif filename and skippable[filesuffix(filename)] then -- we could hash the collapsables or do a quicker test
         return str
@@ -235,7 +213,7 @@ function utffilters.decompose(str,filename) -- 3 to 4 times faster than the abov
     if str and str ~= "" and #str > 1 then
         return lpegmatch(p_decompose,str)
     end
-    if not str or str == "" or #str < 2 then
+    if not str or #str == "" or #str < 2 then
         return str
     elseif filename and skippable[filesuffix(filename)] then
         return str
@@ -269,7 +247,7 @@ if interfaces then -- eventually this goes to char-ctx.lua
     interfaces.implement {
         name      = "addgrapheme",
         actions   = utffilters.addgrapheme,
-        arguments = "3 strings",
+        arguments = { "string", "string", "string" }
     }
 
 end
@@ -360,7 +338,7 @@ function utffilters.reorder(str,filename)
     if not p_reorder then
         prepare()
     end
-    if not str or str == "" or #str < 2 then
+    if not str or #str == "" or #str < 2 then
         return str
     elseif filename and skippable[filesuffix(filename)] then
         return str

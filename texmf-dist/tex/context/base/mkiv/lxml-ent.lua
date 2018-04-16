@@ -6,7 +6,7 @@ if not modules then modules = { } end modules ['lxml-ent'] = {
     license   = "see context related readme files"
 }
 
-local next = next
+local type, next, tonumber =  type, next, tonumber
 local byte, format = string.byte, string.format
 local setmetatableindex = table.setmetatableindex
 
