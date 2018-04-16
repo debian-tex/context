@@ -154,7 +154,7 @@ function stacker.new(name)
     local function resolve_step(ti) -- keep track of changes outside function !
         -- todo: optimize for n=1 etc
         local result = nil
-        local noftop = top and #top or 0
+        local noftop = #top
         if ti > 0 then
             local current = list[ti]
             if current then
@@ -289,24 +289,24 @@ end
 --
 -- local concat = table.concat
 --
--- local pdfpageliteral = nodes.pool.pdfpageliteral
+-- local pdfliteral = nodes.pool.pdfliteral
 --
 -- function demostacker.start(s,t,first,last)
 --     local n = whatever[t[last]]
 --  -- s.report("start: %s",n)
---     return pdfpageliteral(n)
+--     return pdfliteral(n)
 -- end
 --
 -- function demostacker.stop(s,t,first,last)
 --     local n = whatever[false]
 --  -- s.report("stop: %s",n)
---     return pdfpageliteral(n)
+--     return pdfliteral(n)
 -- end
 --
 -- function demostacker.change(s,t1,first1,last1,t2,first2,last2)
 --     local n = whatever[t2[last2]]
 --  -- s.report("change: %s",n)
---     return pdfpageliteral(n)
+--     return pdfliteral(n)
 -- end
 --
 -- demostacker.mode = "switch"
@@ -325,7 +325,7 @@ end
 --         r[#r+1] = whatever[t[i]]
 --     end
 --  -- s.report("start: %s",concat(r," "))
---     return pdfpageliteral(concat(r," "))
+--     return pdfliteral(concat(r," "))
 -- end
 --
 -- function demostacker.stop(s,t,first,last)
@@ -334,7 +334,7 @@ end
 --         r[#r+1] = whatever[false]
 --     end
 --  -- s.report("stop: %s",concat(r," "))
---     return pdfpageliteral(concat(r," "))
+--     return pdfliteral(concat(r," "))
 -- end
 --
 -- function demostacker.change(s,t1,first1,last1,t2,first2,last2)
@@ -346,7 +346,7 @@ end
 --         r[#r+1] = whatever[t2[i]]
 --     end
 --  -- s.report("change: %s",concat(r," "))
---     return pdfpageliteral(concat(r," "))
+--     return pdfliteral(concat(r," "))
 -- end
 --
 -- demostacker.mode = "stack"

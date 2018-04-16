@@ -19,33 +19,7 @@
 
 % beware, base mode + dynamics can give weird effects
 
-% frac : with numr dnom
-%
-% vkrn valt vert vrt2 vpal : when vertical
-%
-% rtlm rtla : in r2l runs
-% ltrm ltra : in l2r runs
-%
-% rvrn : variable fonts
-%
-% rtbd lfbd : opbd
-%
-% rkrf rphf vatu vjmo tjmo rclt psts pstf ljmo haln
-% pres pref nukt
-% abvs abvm blwm blws cjct blwf akhn (indic)
-% half
-% abvf cfar (khmer)
-%
-% ccmp locl calt clig liga rlig
-%
-% mkmk mark kern (palt pwid) curs (by choice but some fonts need it)
-%
-% init medi isol fina (unicode)
-% fin3 fin2 med2 : syriac
-%
-% cpsp : percentage spacing (todo)
-%
-% dtls flac :math
+% rlig ccmp
 
 \definefontfeature
   [always]
@@ -53,10 +27,7 @@
    script=auto,  % on speed; 'base' just doesn't play well with dynamics; some day we can even
    autoscript=position,
    autolanguage=position,
-% ccmp=yes,
    kern=yes,     % consider skipping the base passes when no base mode is used
-% palt=yes,
-% pwid=yes,
    mark=yes,
    mkmk=yes,
    curs=yes]
@@ -65,11 +36,6 @@
   [default]
   [always]
   [liga=yes,
-% ccmp=yes, % maybe too
-% locl=yes, % maybe too
-% calt=yes, % maybe too
-% clig=yes, % maybe too
-% rlig=yes, % maybe too
    tlig=yes,
    trep=yes] % texligatures=yes,texquotes=yes
 
@@ -135,11 +101,6 @@
   [always]
   [compose=yes,
    liga=yes,
-% ccmp=yes,
-% locl=yes,
-% calt=yes,
-% clig=yes,
-% rlig=yes,
    tlig=yes,
    trep=yes]
 
@@ -153,7 +114,6 @@
   [mode=node,analyze=yes,language=dflt,ccmp=yes,
    autoscript=position,autolanguage=position,
    init=yes,medi=yes,fina=yes,isol=yes,
- % fin2=yes,fin3=yes,med2=yes,
    mark=yes,mkmk=yes,kern=yes,curs=yes,
    liga=yes,dlig=yes,rlig=yes,clig=yes,calt=yes]
 
@@ -162,7 +122,6 @@
   [mode=node,analyze=yes,language=dflt,ccmp=yes,
    autoscript=position,autolanguage=position,
    init=yes,medi=yes,fina=yes,isol=yes,
- % fin2=yes,fin3=yes,med2=yes,
    mark=yes,mkmk=yes,kern=yes,curs=yes,
    rlig=yes,calt=yes]
 
@@ -191,145 +150,67 @@
   [semitic-simple]
   [script=hebr]
 
-% indic
+% \definefont [DevaOne] [file:chandas.ttf*devanagari-one at 12pt]
+% \definefont [DevaTwo] [file:kokila.ttf*devanagari-two  at 18pt]
 
 \definefontfeature
-  [indic-common]
+  [devanagari-one]
   [mode=node,
    language=dflt,
-   % localized
-   locl=yes,
-   % positioning
-   kern=yes,
-   dist=yes,
-   % above/below base marks
-   abvm=yes,
-   blwm=yes,
-   % basic shaping
+   script=deva,
    nukt=yes,
    akhn=yes,
    rphf=yes,
-   % presentation
+   blwf=yes,
+   half=yes,
+   vatu=yes,
    pres=yes,
    abvs=yes,
    blws=yes,
    psts=yes,
    haln=yes,
-   calt=yes]
+   abvm=yes,
+   blwm=yes,
+   dist=yes]
 
 \definefontfeature
+  [devanagari-two]
   [devanagari-one]
-  [indic-common]
-  [script=deva,
-   % basic shaping
-   rkrf=yes,
-   blwf=yes,
-   half=yes,
-   vatu=yes,
-   cjct=yes]
-
-\definefontfeature
-  [bengali-one]
-  [indic-common]
-  [script=beng,
-   % basic shaping
-   blwf=yes,
-   half=yes,
-   pstf=yes,
-   vatu=yes,
-   cjct=yes,
-   % presentation
-   init=yes]
-
-\definefontfeature
-  [gujarati-one]
-  [indic-common]
-  [script=gujr,
-   % basic shaping
-   rkrf=yes,
-   blwf=yes,
-   half=yes,
-   vatu=yes,
-   cjct=yes]
-
-\definefontfeature
-  [gurmukhi-one]
-  [indic-common]
-  [script=guru,
-   % basic shaping
-   blwf=yes,
-   half=yes,
-   pstf=yes,
-   vatu=yes,
-   cjct=yes]
-
-\definefontfeature
-  [kannada-one]
-  [indic-common]
-  [script=knda,
-   % basic shaping
+  [script=dev2,
+   locl=yes,
    pref=yes,
-   blwf=yes,
-   half=yes,
+   rkrf=yes,
    pstf=yes,
-   cjct=yes]
+   cjct=yes,
+   init=yes,
+   calt=yes,
+   kern=yes]
 
 \definefontfeature
   [malayalam-one]
-  [indic-common]
-  [script=mlym,
-   % basic shaping
-   pref=yes,
+  [mode=node,
+   language=dflt,
+   script=mlym,
+   akhn=yes,
    blwf=yes,
    half=yes,
-   pstf=yes,
-   cjct=yes]
+   pres=yes,
+   blws=yes,
+   psts=yes,
+   haln=no]
 
 \definefontfeature
-  [oriya-one]
-  [indic-common]
-  [script=orya,
-   % basic shaping
-   blwf=yes,
-   pstf=yes,
-   cjct=yes]
-
-\definefontfeature
-  [tamil-one]
-  [indic-common]
-  [script=taml,
-   % basic shaping
-   pref=yes,
-   half=yes]
-
-\definefontfeature
-  [telugu-one]
-  [indic-common]
-  [script=telu,
-   % basic shaping
-   pref=yes,
-   blwf=yes,
-   half=yes,
-   pstf=yes,
-   cjct=yes]
-
-\definefontfeature [devanagari-two] [devanagari-one] [script=dev2]
-\definefontfeature [bengali-two]    [bengali-one]    [script=bng2]
-\definefontfeature [gujarati-two]   [gujarati-one]   [script=gjr2]
-\definefontfeature [gurmukhi-two]   [gurmukhi-one]   [script=gur2]
-\definefontfeature [kannada-two]    [kannada-one]    [script=knd2]
-\definefontfeature [malayalam-two]  [malayalam-one]  [script=mlm2]
-\definefontfeature [oriya-two]      [oriya-one]      [script=ory2]
-\definefontfeature [tamil-two]      [tamil-one]      [script=tml2]
-\definefontfeature [telugu-two]     [telugu-one]     [script=tel2]
-
-% cjk
+  [malayalam-two]
+  [malayalam-one]
+  [script=mlm2]
 
 \definefontfeature
   [jamoforms]
   [ljmo=yes,
    tjmo=yes,
    vjmo=yes]
+
+% cjk
 
 % \definefontfeature
 %   [japanese]
@@ -385,8 +266,7 @@
 \fi
 
 \ifdefined\mathitalicsmode
-     \mathitalicsmode\plusone   % simple noads become zero
-   % \mathitalicsmode\plustwo   % idem but inner is kept (for testing)
+    \mathitalicsmode\plusone % experiment
 \fi
 
 % \adaptfontfeature[*math*][mathnolimitsmode=1000] % only subscript
@@ -468,12 +348,43 @@
 %D We define some colors that are used in tracing (for instance \OPENTYPE\
 %D features). We cannot yet inherit because no colors are predefined.
 
+\definecolor[trace:0][s=.4]
+\definecolor[trace:1][r=.6]
+\definecolor[trace:2][g=.6]
+\definecolor[trace:3][b=.6]
+\definecolor[trace:4][r=.6,g=.6]
+\definecolor[trace:5][r=.6,b=.6]
+\definecolor[trace:6][g=.6,b=.6]
+\definecolor[trace:7][r=.8,g=.4]
+\definecolor[trace:8][r=.8,b=.4]
+\definecolor[trace:9][g=.4,b=.8]
+
 \definecolor[font:init][r=.75]
 \definecolor[font:medi][g=.75]
 \definecolor[font:fina][b=.75]
 \definecolor[font:isol][r=.75,g=.75] % [y=.75]
 \definecolor[font:mark][r=.75,b=.75] % [m=.75]
 \definecolor[font:rest][b=.75,g=.75] % [c=.75]
+
+\definecolor[trace:w][s=1]
+\definecolor[trace:r][r=.75,t=.5,a=1]
+\definecolor[trace:g][g=.75,t=.5,a=1]
+\definecolor[trace:b][b=.75,t=.5,a=1]
+\definecolor[trace:c][c=.75,t=.5,a=1]
+\definecolor[trace:m][m=.75,t=.5,a=1]
+\definecolor[trace:y][y=.75,t=.5,a=1]
+\definecolor[trace:s][s=.75,t=.5,a=1]
+\definecolor[trace:o][r=1,g=.6,b=.1,t=.5,a=1]
+
+\definecolor[trace:dw][s=1]
+\definecolor[trace:dr][r=.75,t=.75,a=1]
+\definecolor[trace:dg][g=.75,t=.75,a=1]
+\definecolor[trace:db][b=.75,t=.75,a=1]
+\definecolor[trace:dc][c=.75,t=.75,a=1]
+\definecolor[trace:dm][m=.75,t=.75,a=1]
+\definecolor[trace:dy][y=.75,t=.75,a=1]
+\definecolor[trace:ds][s=.75,t=.75,a=1]
+\definecolor[trace:do][r=1,g=.6,b=.1,t=.75,a=1]
 
 \definecolor[font:0] [s=1]
 \definecolor[font:1] [r=.75]
@@ -696,7 +607,7 @@
 \definealternativestyle [\v!bigger]                                 [\setbigbodyfont  \tf] []
 \definealternativestyle [\v!smaller]                                [\setsmallbodyfont\tf] []
 
-\definealternativestyle [\v!sans,\v!sansserif]                      [\ss]
+\definealternativestyle [\v!sans,\v!sansserif]                      [\ss]    []
 \definealternativestyle [\v!roman,\v!serif,\v!regular]              [\rm]
 \definealternativestyle [\v!handwritten]                            [\hw]
 \definealternativestyle [\v!calligraphic]                           [\cg]
@@ -707,12 +618,6 @@
 \definealternativestyle [\v!serifbold]   [\rm\bf] []
 \definealternativestyle [\v!mononormal]  [\tt\tf] []
 \definealternativestyle [\v!monobold]    [\tt\bf] []
-
-\definealternativestyle [typeface]    [\typeface]    [] % no translation here (quite basic)
-\definealternativestyle [boldface]    [\boldface]    []
-\definealternativestyle [slantedface] [\slantedface] []
-\definealternativestyle [italicface]  [\italicface]  []
-\definealternativestyle [swapface]    [\swapface]    []
 
 % For Alan:
 
@@ -784,7 +689,6 @@
 \definefontfeature[f:oldstyle] [onum=yes]
 \definefontfeature[f:tabular]  [tnum=yes]
 \definefontfeature[f:superiors][sups=yes]
-\definefontfeature[f:inferiors][subs=yes]
 \definefontfeature[f:fractions][frac=yes]
 \definefontfeature[f:kern]     [kern=yes]
 \definefontfeature[f:kerns]    [kern=yes]
@@ -828,15 +732,11 @@
 %D don't want huge switches to the main bodyfont and style, so
 %D here too we use a direct method.
 
-\let\infofont         \relax
-\let\infofontbold     \relax
-\let\smallinfofont    \relax
-\let\smallinfofontbold\relax
+\let\infofont    \relax % satisfy dep checker
+\let\infofontbold\relax % satisfy dep checker
 
-\definefont[infofont]         [file:dejavusansmono*none      at 6pt]
-\definefont[infofontbold]     [file:dejavusansmono-bold*none at 6pt]
-\definefont[smallinfofont]    [file:dejavusansmono*none      at 3pt]
-\definefont[smallinfofontbold][file:dejavusansmono-bold*none at 3pt]
+\definefont[infofont]    [file:dejavusansmono      at 6pt] % todo \the\everybodyfont
+\definefont[infofontbold][file:dejavusansmono-bold at 6pt] % todo \the\everybodyfont
 
 %D Optimization (later we overload in math). Also needed in order to get \type {\ss}
 %D properly defined.

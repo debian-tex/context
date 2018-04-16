@@ -48,6 +48,7 @@ end
 -- Nodes (a subset of context so that we don't get too much unused code):
 
 nodes              = { }
+nodes.pool         = { }
 nodes.handlers     = { }
 
 local nodecodes    = { }
@@ -72,6 +73,7 @@ nodes.disccodes    = disccodes
 
 local flush_node   = node.flush_node
 local remove_node  = node.remove
+local new_node     = node.new
 local traverse_id  = node.traverse_id
 
 nodes.handlers.protectglyphs   = node.protect_glyphs
@@ -104,6 +106,12 @@ end
 
 function nodes.delete(head,current)
     return nodes.remove(head,current,true)
+end
+
+function nodes.pool.kern(k)
+    local n = new_node("kern",1)
+    n.kern = k
+    return n
 end
 
 local getfield = node.getfield
@@ -201,7 +209,6 @@ nuts.setchar             = direct.setchar
 nuts.getdisc             = direct.getdisc
 nuts.setdisc             = direct.setdisc
 nuts.setlink             = direct.setlink
-nuts.setsplit            = direct.setsplit
 nuts.getlist             = direct.getlist
 nuts.setlist             = direct.setlist
 
@@ -287,10 +294,19 @@ nuts.traverse_id         = direct.traverse_id
 nuts.traverse_char       = direct.traverse_char
 nuts.ligaturing          = direct.ligaturing
 nuts.kerning             = direct.kerning
-nuts.new                 = direct.new
 
 nuts.getprop             = nuts.getattr
 nuts.setprop             = nuts.setattr
+
+local new_nut            = direct.new
+nuts.new                 = new_nut
+nuts.pool                = { }
+
+function nuts.pool.kern(k)
+    local n = new_nut("kern",1)
+    setfield(n,"kern",k)
+    return n
+end
 
 -- properties as used in the (new) injector:
 
@@ -446,37 +462,3 @@ function nuts.copy_only_glyphs(current)
     end
     return head
 end
-
-nuts.uses_font = direct.uses_font
-
-if not nuts.uses_font then
-    local getdisc = nuts.getdisc
-    local getfont = nuts.getfont
-    function nuts.uses_font(n,font)
-        local pre, post, replace = getdisc(n)
-        if pre then
-            -- traverse_char
-            for n in traverse_id(glyph_code,pre) do
-                if getfont(n) == font then
-                    return true
-                end
-            end
-        end
-        if post then
-            for n in traverse_id(glyph_code,post) do
-                if getfont(n) == font then
-                    return true
-                end
-            end
-        end
-        if replace then
-            for n in traverse_id(glyph_code,replace) do
-                if getfont(n) == font then
-                    return true
-                end
-            end
-        end
-        return false
-    end
-end
-

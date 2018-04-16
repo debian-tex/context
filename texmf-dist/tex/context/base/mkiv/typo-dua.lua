@@ -57,8 +57,7 @@ if not modules then modules = { } end modules ['typo-dua'] = {
 -- tood: combine some sweeps
 --
 -- This one wil get frozen (or if needed in sync with basic t-bidi) and I will explore more options
--- in typo-dub.lua. There I might also be able to improve performance a bit. Derived and improved
--- versions will also be sped up
+-- in typo-dub.lua. There I might also be able to improve performance a bit.
 
 local insert, remove, unpack, concat = table.insert, table.remove, table.unpack, table.concat
 local utfchar = utf.char
@@ -76,9 +75,11 @@ local getid               = nuts.getid
 local getsubtype          = nuts.getsubtype
 local getlist             = nuts.getlist
 local getchar             = nuts.getchar
+local getfield            = nuts.getfield
 local getprop             = nuts.getprop
 local getdir              = nuts.getdir
 
+local setfield            = nuts.setfield
 local setprop             = nuts.setprop
 local setchar             = nuts.setchar
 local setdir              = nuts.setdir
@@ -678,8 +679,6 @@ local function resolve_levels(list,size,baselevel)
         end
     end
 end
-
--- This is not ok but we keep it as-is:
 
 local function insert_dir_points(list,size)
     -- L2, but no actual reversion is done, we simply annotate where

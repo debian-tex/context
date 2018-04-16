@@ -523,5 +523,5 @@ implement {
 implement {
     name      = "overloadbookmark",
     actions   = bookmarks.overload,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }

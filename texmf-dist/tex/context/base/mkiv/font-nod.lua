@@ -11,6 +11,7 @@ if not modules then modules = { } end modules ['font-nod'] = {
 might become a runtime module instead. This module will be cleaned up!</p>
 --ldx]]--
 
+local tonumber, tostring, rawget = tonumber, tostring, rawget
 local utfchar = utf.char
 local concat, fastcopy = table.concat, table.fastcopy
 local match, rep = string.match, string.rep
@@ -18,10 +19,7 @@ local match, rep = string.match, string.rep
 fonts = fonts or { }
 nodes = nodes or { }
 
-
-local fonts            = fonts
-local nodes            = nodes
-local context          = context
+local fonts, nodes, node, context = fonts, nodes, node, context
 
 local tracers          = nodes.tracers or { }
 nodes.tracers          = tracers
@@ -71,6 +69,7 @@ local getkern          = nuts.getkern
 local getdir           = nuts.getdir
 local getwidth         = nuts.getwidth
 
+local setfield         = nuts.setfield
 local setbox           = nuts.setbox
 local setchar          = nuts.setchar
 local setsubtype       = nuts.setsubtype
@@ -79,7 +78,7 @@ local copy_node_list   = nuts.copy_list
 local hpack_node_list  = nuts.hpack
 local flush_node_list  = nuts.flush_list
 local traverse_nodes   = nuts.traverse
------ traverse_id      = nuts.traverse_id
+local traverse_id      = nuts.traverse_id
 local protect_glyphs   = nuts.protect_glyphs
 
 local nodepool         = nuts.pool
@@ -136,22 +135,22 @@ function char_tracers.collect(head,list,tag,n)
             l[#l+1] = { c, f }
         elseif id == disc_code then
             -- skip
-         -- local pre, post, replace = getdisc(head)
-         -- if replace then
-         --     for n in traverse_id(glyph_code,replace) do
-         --         l[#l+1] = { c, f }
-         --     end
-         -- end
-         -- if pre then
-         --     for n in traverse_id(glyph_code,pre) do
-         --         l[#l+1] = { c, f }
-         --     end
-         -- end
-         -- if post then
-         --     for n in traverse_id(glyph_code,post) do
-         --         l[#l+1] = { c, f }
-         --     end
-         -- end
+--             local pre, post, replace = getdisc(head)
+--             if replace then
+--                 for n in traverse_id(glyph_code,replace) do
+--                     l[#l+1] = { c, f }
+--                 end
+--             end
+--             if pre then
+--                 for n in traverse_id(glyph_code,pre) do
+--                     l[#l+1] = { c, f }
+--                 end
+--             end
+--             if post then
+--                 for n in traverse_id(glyph_code,post) do
+--                     l[#l+1] = { c, f }
+--                 end
+--             end
         else
             ok = false
         end
@@ -299,41 +298,24 @@ function step_tracers.features()
     local f = collection[1]
     while f do
         if getid(f) == glyph_code then
-            local tfmdata  = fontidentifiers[getfont(f)]
-            local features = tfmdata.resources.features
-            local result_1 = { }
-            local result_2 = { }
-            local gpos = features and features.gpos or { }
-            local gsub = features and features.gsub or { }
+            local tfmdata, t = fontidentifiers[getfont(f)], { }
             for feature, value in table.sortedhash(tfmdata.shared.features) do
                 if feature == "number" or feature == "features" then
-                    value = false
+                    -- private
                 elseif type(value) == "boolean" then
                     if value then
-                        value = "yes"
+                        t[#t+1] = formatters["%s=yes"](feature)
                     else
-                        value = false
+                        -- skip
                     end
                 else
-                    -- use value
-                end
-                if value then
-                    if gpos[feature] or gsub[feature] or feature == "language" or feature == "script" then
-                        result_1[#result_1+1] = formatters["%s=%s"](feature,value)
-                    else
-                        result_2[#result_2+1] = formatters["%s=%s"](feature,value)
-                    end
+                    t[#t+1] = formatters["%s=%s"](feature,value)
                 end
             end
-            if #result_1 > 0 then
-                context("{\\bf[basic:} %, t{\\bf]} ",result_1)
+            if #t > 0 then
+                context(concat(t,", "))
             else
-                context("{\\bf[}no basic features{\\bf]} ")
-            end
-            if #result_2 > 0 then
-                context("{\\bf[extra:} %, t{\\bf]}",result_2)
-            else
-                context("{\\bf[}no extra features{\\bf]}")
+                context("no features")
             end
             return
         end
@@ -384,7 +366,7 @@ function step_tracers.codes(i,command,space)
             local d = d and d[c]
             context[command](f,c,d and d.class or "")
         else
-            context("[%s:U+%X]",f,c)
+            context("[%s:U+%05X]",f,c)
         end
     end
 

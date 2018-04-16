@@ -15,7 +15,7 @@ if not modules then modules = { } end modules ['strc-lst'] = {
 --
 -- move more to commands
 
-local tonumber, type, next = tonumber, type, next
+local tonumber, type = tonumber, type
 local concat, insert, remove, sort = table.concat, table.insert, table.remove, table.sort
 local lpegmatch = lpeg.match
 
@@ -1159,7 +1159,7 @@ implement { name = "listsize",       actions = { lists.size, context } }
 implement { name = "listlocation",   actions = { lists.location, context }, arguments = "integer" }
 implement { name = "listlabel",      actions = { lists.label, context }, arguments = { "integer", "string" } }
 implement { name = "listrealpage",   actions = { lists.realpage, context }, arguments = { "string", "integer" } }
-implement { name = "listgroupindex", actions = { lists.groupindex, context }, arguments = "2 strings", }
+implement { name = "listgroupindex", actions = { lists.groupindex, context }, arguments = { "string", "string" } }
 
 implement {
     name    = "currentsectiontolist",

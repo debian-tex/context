@@ -13,12 +13,11 @@ if not modules then modules = { } end modules ['mlib-lua'] = {
 local type, tostring, select, loadstring = type, tostring, select, loadstring
 local find, match, gsub, gmatch = string.find, string.match, string.gsub, string.gmatch
 
-local formatters   = string.formatters
-local concat       = table.concat
-local lpegmatch    = lpeg.match
-local lpegpatterns = lpeg.patterns
+local formatters = string.formatters
+local concat     = table.concat
+local lpegmatch  = lpeg.match
 
-local P, S, Ct, Cs, Cc, C = lpeg.P, lpeg.S, lpeg.Ct, lpeg.Cs, lpeg.Cc, lpeg.C
+local P, S, Ct = lpeg.P, lpeg.S, lpeg.Ct
 
 local report_luarun  = logs.reporter("metapost","lua")
 local report_message = logs.reporter("metapost")
@@ -68,7 +67,7 @@ local f_pair      = formatters["(%.16f,%.16f)"]
 local f_triplet   = formatters["(%.16f,%.16f,%.16f)"]
 local f_quadruple = formatters["(%.16f,%.16f,%.16f,%.16f)"]
 
-local function mpprint(...) -- we can optimize for n=1
+local function mpprint(...)
     for i=1,select("#",...) do
         local value = select(i,...)
         if value ~= nil then
@@ -87,44 +86,7 @@ local function mpprint(...) -- we can optimize for n=1
     end
 end
 
-local r = P('%')  / "percent"
-        + P('"')  / "dquote"
-        + P('\n') / "crlf"
-     -- + P(' ')  / "space"
-local a = Cc("&")
-local q = Cc('"')
-local p = Cs(q * (r * a)^-1 * (a * r * (P(-1) + a) + P(1))^0 * q)
-
-local function mpvprint(...) -- variable print
-    for i=1,select("#",...) do
-        local value = select(i,...)
-        if value ~= nil then
-            n = n + 1
-            local t = type(value)
-            if t == "number" then
-                buffer[n] = f_numeric(value)
-            elseif t == "string" then
-                buffer[n] = lpegmatch(p,value)
-            elseif t == "table" then
-                local m = #t
-                if m == 2 then
-                    buffer[n] = f_pair(unpack(t))
-                elseif m == 3 then
-                    buffer[n] = f_triplet(unpack(t))
-                elseif m == 4 then
-                    buffer[n] = f_quadruple(unpack(t))
-                else -- error
-                    buffer[n] = ""
-                end
-            else -- boolean or whatever
-                buffer[n] = tostring(value)
-            end
-        end
-    end
-end
-
-mp.print  = mpprint
-mp.vprint = mpvprint
+mp.print = mpprint
 
 -- We had this:
 --
@@ -242,7 +204,7 @@ local replacer = lpeg.replacer("@","%%")
 
 function mp.fprint(fmt,...)
     n = n + 1
-    if not find(fmt,"%",1,true) then
+    if not find(fmt,"%%") then
         fmt = lpegmatch(replacer,fmt)
     end
     buffer[n] = formatters[fmt](...)
@@ -251,14 +213,12 @@ end
 local function mpquoted(fmt,s,...)
     n = n + 1
     if s then
-        if not find(fmt,"%",1,true) then
+        if not find(fmt,"%%") then
             fmt = lpegmatch(replacer,fmt)
         end
-     -- buffer[n] = '"' .. formatters[fmt](s,...) .. '"'
-        buffer[n] = lpegmatch(p,formatters[fmt](s,...))
+        buffer[n] = '"' .. formatters[fmt](s,...) .. '"'
     elseif fmt then
-     -- buffer[n] = '"' .. fmt .. '"'
-        buffer[n] = lpegmatch(p,fmt)
+        buffer[n] = '"' .. fmt .. '"'
     else
         -- something is wrong
     end
@@ -270,8 +230,8 @@ function mp.n(t)
     return type(t) == "table" and #t or 0
 end
 
-local whitespace = lpegpatterns.whitespace
-local newline    = lpegpatterns.newline
+local whitespace = lpeg.patterns.whitespace
+local newline    = lpeg.patterns.newline
 local setsep     = newline^2
 local comment    = (S("#%") + P("--")) * (1-newline)^0 * (whitespace - setsep)^0
 local value      = (1-whitespace)^1 / tonumber
@@ -313,6 +273,24 @@ end
 --         draw lua("mp.path(MP.myset[" & decimal i & "])") withcolor c[i] ;
 --     endfor ;
 -- \stopMPpage
+
+-- function metapost.runscript(code)
+--     local f = loadstring(f_code(code))
+--     if f then
+--         local result = f()
+--         if result then
+--             local t = type(result)
+--             if t == "number" then
+--                 return f_numeric(result)
+--             elseif t == "string" then
+--                 return result
+--             else
+--                 return tostring(result)
+--             end
+--         end
+--     end
+--     return ""
+-- end
 
 local cache, n = { }, 0 -- todo: when > n then reset cache or make weak
 
@@ -361,7 +339,7 @@ function metapost.runscript(code)
             report_luarun("no result")
         end
     else
-        report_luarun("no result, invalid code: %s",code)
+        report_luarun("no result, invalid code")
     end
     return ""
 end
@@ -501,15 +479,13 @@ function mp.prefix(str)
      mpquoted(match(str,"^(.-)[%d%[]") or str)
 end
 
--- function mp.dimension(str)
---     local n = 0
---     for s in gmatch(str,"%[?%-?%d+%]?") do --todo: lpeg
---         n = n + 1
---     end
---     mpprint(n)
--- end
-
-mp.dimension = lpeg.counter(P("[") * lpegpatterns.integer * P("]") + lpegpatterns.integer,mpprint)
+function mp.dimensions(str)
+    local n = 0
+    for s in gmatch(str,"%[?%-?%d+%]?") do --todo: lpeg
+        n = n + 1
+    end
+    mpprint(n)
+end
 
 -- faster and okay as we don't have many variables but probably only
 -- basename makes sense and even then it's not called that often
@@ -668,49 +644,6 @@ do
 
     function mp.texstr(name)
         qprint(getmacro(metapost.namespace .. name))
-    end
-
-end
-
-do
-
-    local mpvprint = mp.vprint
-
-    local stores = { }
-
-    function mp.newstore(name)
-        stores[name] = { }
-    end
-
-    function mp.disposestore(name)
-        stores[name] = nil
-    end
-
-    function mp.tostore(name,key,value)
-        stores[name][key] = value
-    end
-
-    function mp.fromstore(name,key)
-        mpvprint(stores[name][key]) -- type specific
-    end
-
-    interfaces.implement {
-        name      = "getMPstored",
-        arguments = "2 strings",
-        actions   = function(name,key)
-            context(stores[name][key])
-        end
-    }
-
-end
-
-do
-
-    local mpprint  = mp.print
-    local texmodes = tex.modes
-
-    function mp.processingmode(s)
-        mpprint(tostring(texmodes[s]))
     end
 
 end

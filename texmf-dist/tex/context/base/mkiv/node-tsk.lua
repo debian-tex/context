@@ -386,7 +386,7 @@ tasks.new {
 
 tasks.new {
     name      = "shipouts",
-    arguments = 1,
+    arguments = 0,
  -- nostate   = true, -- maybe but only for main ones so little gain
     processor = nodeprocessor,
     sequence  = {

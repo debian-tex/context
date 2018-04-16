@@ -6,8 +6,6 @@ if not modules then modules = { } end modules ['trac-ctx'] = {
     license   = "see context related readme files"
 }
 
-local next = next
-
 local context       = context
 local implement     = interfaces.implement
 local register      = trackers.register
@@ -57,16 +55,16 @@ implement {
 
 implement {
     name    = "installtextracker",
-    arguments = "3 strings",
     actions = function(tag,enable,disable)
         install(textrackers,trackers.register,tag,enable,disable)
     end,
+    arguments = { "string", "string", "string" }
 }
 
 implement {
     name      = "installtexdirective",
-    arguments = "3 strings",
     actions   = function(tag,enable,disable)
         install(texdirectives,directives.register,tag,enable,disable)
     end,
+    arguments = { "string", "string", "string" }
 }

@@ -8,6 +8,8 @@ if not modules then modules = { } end modules ["page-mix"] = {
 
 -- inserts.getname(name)
 
+-- getfield(l,"head") -> getlist
+
 -- local node, tex = node, tex
 -- local nodes, interfaces, utilities = nodes, interfaces, utilities
 -- local trackers, logs, storage = trackers, logs, storage
@@ -17,14 +19,12 @@ if not modules then modules = { } end modules ["page-mix"] = {
 
 local next, type = next, type
 local concat = table.concat
-local ceil = math.ceil
+local ceil, floor = math.ceil, math.floor
 
 local trace_state  = false  trackers.register("mixedcolumns.trace",  function(v) trace_state  = v end)
 local trace_detail = false  trackers.register("mixedcolumns.detail", function(v) trace_detail = v end)
 
 local report_state = logs.reporter("mixed columns")
-
-local context             = context
 
 local nodecodes           = nodes.nodecodes
 
@@ -47,6 +47,7 @@ local flushnode           = nuts.flush
 local concatnodes         = nuts.concat
 local slidenodes          = nuts.slide -- ok here as we mess with prev links intermediately
 
+local setfield            = nuts.setfield
 local setlink             = nuts.setlink
 local setlist             = nuts.setlist
 local setnext             = nuts.setnext
@@ -56,6 +57,7 @@ local setwhd              = nuts.setwhd
 local setheight           = nuts.setheight
 local setdepth            = nuts.setdepth
 
+local getfield            = nuts.getfield
 local getnext             = nuts.getnext
 local getprev             = nuts.getprev
 local getid               = nuts.getid
@@ -69,8 +71,6 @@ local getpenalty          = nuts.getpenalty
 local getwidth            = nuts.getwidth
 local getheight           = nuts.getheight
 local getdepth            = nuts.getdepth
-local traverse_id         = nuts.traverse_id
-local traverse            = nuts.traverse
 
 local theprop             = nuts.theprop
 
@@ -123,7 +123,7 @@ local function collectinserts(result,nxt,nxtid)
         if nxtid == insert_code then
             i = i + 1
             result.i = i
-            inserttotal = inserttotal + getheight(nxt) -- height includes depth (hm, still? needs checking)
+            inserttotal = inserttotal + getheight(nxt) -- height includes depth
             local s = getsubtype(nxt)
             local c = inserts[s]
             if trace_detail then
@@ -267,7 +267,6 @@ local function preparesplit(specification) -- a rather large function
     local height         = 0
     local depth          = 0
     local skip           = 0
-    local handlenotes    = specification.notes or false
     local splitmethod    = specification.splitmethod or false
     if splitmethod == v_none then
         splitmethod = false
@@ -279,14 +278,10 @@ local function preparesplit(specification) -- a rather large function
     if nofcolumns == 0 then
         nofcolumns = 1
     end
-    local preheight  = specification.preheight or 0
-    local extra      = specification.extra or 0
-    local maxheight  = specification.maxheight
-    local optimal    = originalheight/nofcolumns
-    local noteheight = specification.noteheight or 0
-
-    maxheight = maxheight - noteheight
-
+    local preheight = specification.preheight or 0
+    local extra     = specification.extra or 0
+    local maxheight = specification.maxheight
+    local optimal   = originalheight/nofcolumns
     if specification.balance ~= v_yes then
         optimal = maxheight
     end
@@ -635,7 +630,7 @@ local function preparesplit(specification) -- a rather large function
         if trace_state then
             report_state("%-8s > column %s, content: %s","line (1)",column,listtoutf(getlist(current),true,true))
         end
-        if more and handlenotes then
+        if more then
             nxt, inserts, insertskips, nextskips, inserttotal = collectinserts(result,nxt,nxtid)
         end
         local state, skipped = checked(advance+inserttotal+insertskips,more and "line (2)" or "line only",lastlocked)
@@ -758,7 +753,7 @@ local function preparesplit(specification) -- a rather large function
     specification.overflow       = overflow
     specification.discarded      = discarded
 
-    setlist(getbox(specification.box))
+    setlist(getbox(specification.box),nil)
 
     return specification
 end
@@ -781,9 +776,9 @@ local function finalize(result)
                 end
                 local t = r.tail
                 if t then
-                    setnext(t)
+                    setnext(t,nil)
                 else
-                    setnext(h)
+                    setnext(h,nil)
                     r.tail = h
                 end
                 for c, list in next, r.inserts do
@@ -791,13 +786,11 @@ local function finalize(result)
                     for i=1,#list do
                         local l = list[i]
                         local h = new_hlist()
-                        local g = getlist(l)
                         t[i] = h
-                        setlist(h,g)
-                        local ht = getheight(l)
-                        local dp = getdepth(l)
-                        local wd = getwidth(g)
-                        setwhd(h,wd,ht,dp)
+                        setlist(h,getlist(l))
+                        local wd, ht, dp = getwhd(l)
+                        -- here ht is still ht + dp !
+                        setwhd(h,getwidth(h),ht,dp)
                         setlist(l)
                     end
                     setprev(t[1])  -- needs checking
@@ -828,23 +821,6 @@ local function report_deltas(result,str)
     end
     report_state("%s, cycles %s, deltas % | t",str,result.cycle or 1,t)
 end
-
--- local function xxcollectinserts(h)
---     local skips, total, order = 0, 0, 0
---     print(h)
---     if h then
--- h = getlist(h)
--- for n in traverse(h) do
---     print(tonode(n))
--- end
---         for n in traverse_id(insert_code,h) do
---             order = order + 1
---             total = total + getheight(n)
---             skips = skips + structures.notes.check_spacing(getsubtype(n),order)
---         end
---     end
---     return skips, total
--- end
 
 local function setsplit(specification)
     splitruns = splitruns + 1
@@ -934,6 +910,7 @@ local function getsplit(result,n)
             return s
         end
     end
+
     if grid then
         -- print(n,result.maxtotal,r.total,r.extra)
         if isglobal then
@@ -985,11 +962,13 @@ local function getsplit(result,n)
     end
 
     for c, list in next, r.inserts do
+
         local l = concatnodes(list)
         for i=1,#list-1 do
             setdepth(list[i],0)
         end
         local b = vpack(l) -- multiple arguments, todo: fastvpack
+
      -- setbox("global",c,b)
         setbox(c,b)
         r.inserts[c] = nil
@@ -1046,7 +1025,6 @@ implement {
            { "box", "integer" },
            { "nofcolumns", "integer" },
            { "maxheight", "dimen" },
-           { "noteheight", "dimen" },
            { "step", "dimen" },
            { "cycles", "integer" },
            { "preheight", "dimen" },
@@ -1059,7 +1037,6 @@ implement {
            { "alternative" },
            { "internalgrid" },
            { "grid", "boolean" },
-           { "notes", "boolean" },
         }
     }
 }

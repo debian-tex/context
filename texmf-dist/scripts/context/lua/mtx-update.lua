@@ -19,7 +19,7 @@ local helpinfo = [[
  <metadata>
   <entry name="name">mtx-update</entry>
   <entry name="detail">ConTeXt Minimals Updater</entry>
-  <entry name="version">1.03</entry>
+  <entry name="version">1.02</entry>
  </metadata>
  <flags>
   <category name="basic">
@@ -51,7 +51,7 @@ local helpinfo = [[
 
 local application = logs.application {
     name     = "mtx-update",
-    banner   = "ConTeXt Minimals Updater 1.03",
+    banner   = "ConTeXt Minimals Updater 1.02",
     helpinfo = helpinfo,
 }
 
@@ -61,7 +61,6 @@ local format, concat, gmatch, gsub, find = string.format, table.concat, string.g
 
 scripts         = scripts         or { }
 scripts.update  = scripts.update  or { }
-local update    = scripts.update
 
 minimals        = minimals        or { }
 minimals.config = minimals.config or { }
@@ -71,7 +70,7 @@ minimals.config = minimals.config or { }
 
 os.setenv("CYGWIN","nontsec")
 
-update.texformats = {
+scripts.update.texformats = {
     "cont-en",
     "cont-nl",
     "cont-cz",
@@ -86,28 +85,28 @@ update.texformats = {
     "plain"
 }
 
--- update.mpformats = {
+-- scripts.update.mpformats = {
 --  -- "metafun",
 --  -- "mpost",
 -- }
 
 -- experimental is not functional at the moment
 
-update.repositories = {
+scripts.update.repositories = {
     "current",
     "experimental"
 }
 
 -- more options than just these two are available (no idea why this is here)
 
-update.versions = {
+scripts.update.versions = {
     "current",
     "latest"
 }
 
 -- list of basic folders that are needed to make a functional distribution
 
-update.base = {
+scripts.update.base = {
     { "base/tex/",                "texmf" },
     { "base/metapost/",           "texmf" },
     { "fonts/common/",            "texmf" },
@@ -124,10 +123,7 @@ update.base = {
 -- binaries and font-related files
 -- for pdftex we don't need OpenType fonts, for LuaTeX/XeTeX we don't need TFM files
 
-update.defaultengine = "luatex"
-update.rsyncvariant  = "cygwin" -- will be come mingw
-
-update.engines = {
+scripts.update.engines = {
     ["luatex"] = {
         { "fonts/new/",               "texmf" },
         { "bin/luatex/<platform>/",   "texmf-<platform>" },
@@ -155,7 +151,7 @@ update.engines = {
     },
 }
 
-update.goodies = {
+scripts.update.goodies = {
     ["scite"] = {
         { "bin/<platform>/scite/",    "texmf-<platform>" },
     },
@@ -164,7 +160,7 @@ update.goodies = {
     },
 }
 
-update.platforms = {
+scripts.update.platforms = {
     ["mswin"]          = "mswin",
     ["windows"]        = "mswin",
     ["win32"]          = "mswin",
@@ -187,8 +183,6 @@ update.platforms = {
     --
     ["linux-64"]       = "linux-64",
     ["linux64"]        = "linux-64",
-    --
-    ["linuxmusl-64"]   = "linuxmusl-64",
     --
     ["linux-armhf"]    = "linux-armhf",
     --
@@ -228,20 +222,20 @@ local windowsplatform = {
     ["win64"] = true,
 }
 
-update.selfscripts = {
+scripts.update.selfscripts = {
     "mtxrun",
  -- "luatools",
 }
 
 -- the list is filled up later (when we know what modules to download)
 
-update.modules = {
+scripts.update.modules = {
 }
 
-update.fonts = {
+scripts.update.fonts = {
 }
 
-function update.run(str)
+function scripts.update.run(str)
     -- important, otherwise formats fly to a weird place
     -- (texlua sets luatex as the engine, we need to reset that or to fix texexec :)
     os.setenv("engine",nil)
@@ -253,7 +247,7 @@ function update.run(str)
     end
 end
 
-function update.fullpath(path)
+function scripts.update.fullpath(path)
     if file.is_rootbased_path(path) then
         return path
     else
@@ -261,8 +255,10 @@ function update.fullpath(path)
     end
 end
 
+local rsync_variant = "cygwin" -- will be come mingw
+
 local function drive(d)
-    if update.rsyncvariant == "cygwin" then
+    if rsync_variant == "cygwin" then
         d = gsub(d,[[([a-zA-Z]):/]], "/cygdrive/%1/")
     else
         d = gsub(d,[[([a-zA-Z]):/]], "/%1/")
@@ -270,11 +266,11 @@ local function drive(d)
     return d
 end
 
-function update.synchronize()
+function scripts.update.synchronize()
 
     report("update, start")
 
-    local texroot      = update.fullpath(states.get("paths.root"))
+    local texroot      = scripts.update.fullpath(states.get("paths.root"))
     local engines      = states.get('engines') or { }
     local platforms    = states.get('platforms') or { }
     local repositories = states.get('repositories')      -- minimals
@@ -335,7 +331,7 @@ function update.synchronize()
             return prefix .. concat(list_of_folders, format(" %s", prefix))
         end
 
-        -- example of usage: print(list_of_folders_to_rsync_string(collection_to_list_of_folders(update.base, os.platform)))
+        -- example of usage: print(list_of_folders_to_rsync_string(collection_to_list_of_folders(scripts.update.base, os.platform)))
 
         -- rename function and add some more functionality:
         --   * recursive/non-recursive (default: non-recursive)
@@ -381,7 +377,7 @@ function update.synchronize()
             for i=1,#available_modules do
                 local s = available_modules[i]
                 if modules.all or modules[s] then
-                    update.modules[#update.modules+1] = { format("modules/%s/",s), "texmf-modules" }
+                    scripts.update.modules[#scripts.update.modules+1] = { format("modules/%s/",s), "texmf-modules" }
                     report("+ %s",s)
                 else
                     report("  %s",s)
@@ -402,7 +398,7 @@ function update.synchronize()
             for i=1,#available_fonts do
                 local s = available_fonts[i]
                 if fonts.all or fonts[s] then
-                    update.fonts[#update.fonts+1] = { format("fonts/extra/%s/",s), "texmf" }
+                    scripts.update.fonts[#scripts.update.fonts+1] = { format("fonts/extra/%s/",s), "texmf" }
                 end
                 asked[s] = nil
             end
@@ -413,7 +409,7 @@ function update.synchronize()
 
         local function add_collection(collection,platform)
             if collection and platform then
-                platform = update.platforms[platform]
+                platform = scripts.update.platforms[platform]
                 if platform then
                     for i=1,#collection do
                         local c = collection[i]
@@ -431,30 +427,30 @@ function update.synchronize()
         end
 
         for platform in table.sortedhash(platforms) do
-            add_collection(update.base,platform)
+            add_collection(scripts.update.base,platform)
         end
         for platform in table.sortedhash(platforms) do
-            add_collection(update.modules,platform)
+            add_collection(scripts.update.modules,platform)
         end
         for platform in table.sortedhash(platforms) do
-            add_collection(update.fonts,platform)
+            add_collection(scripts.update.fonts,platform)
         end
         for engine in table.sortedhash(engines) do
             for platform in table.sortedhash(platforms) do
-                add_collection(update.engines[engine],platform)
+                add_collection(scripts.update.engines[engine],platform)
             end
         end
 
         if goodies and type(goodies) == "table" then
             for goodie in table.sortedhash(goodies) do
                 for platform in table.sortedhash(platforms) do
-                    add_collection(update.goodies[goodie],platform)
+                    add_collection(scripts.update.goodies[goodie],platform)
                 end
             end
         end
 
         local combined = { }
-        local update_repositories = update.repositories
+        local update_repositories = scripts.update.repositories
         for i=1,#update_repositories do
             local repository = update_repositories[i]
             if repositories[repository] then
@@ -485,7 +481,7 @@ function update.synchronize()
             command = format("%s %s %s %s %s'%s' '%s'", bin, normalflags, deleteflags, dryrunflags, url, archives, drive(destination))
             -- report("running command: %s",command)
             if not fetched[command] then
-                update.run(command,true)
+                scripts.update.run(command,true)
                 fetched[command] = command
             end
         end
@@ -493,7 +489,7 @@ function update.synchronize()
         local function update_script(script, platform)
             local bin = gsub(bin,"\\","/")
             local texroot = gsub(texroot,"\\","/")
-            platform = update.platforms[platform]
+            platform = scripts.update.platforms[platform]
             if platform then
                 local command
                 if windowsplatform[platform] then
@@ -504,13 +500,13 @@ function update.synchronize()
                     command = format([[%s -tgo --chmod=a+x '%s/texmf-context/scripts/context/lua/%s.lua' '%s/texmf-%s/bin/%s']], bin, texroot, script, texroot, platform, script)
                 end
                 report("updating %s for %s: %s", script, platform, command)
-                update.run(command)
+                scripts.update.run(command)
             end
         end
 
         for platform in table.sortedhash(platforms) do
-            for i=1, #update.selfscripts do
-                update_script(update.selfscripts[i],platform)
+            for i=1, #scripts.update.selfscripts do
+                update_script(scripts.update.selfscripts[i],platform)
             end
         end
 
@@ -524,9 +520,9 @@ function update.synchronize()
     resolvers.load_tree(texroot) -- else we operate in the wrong tree
 
     -- update filename database for pdftex/xetex
-    update.run(format('mtxrun --tree="%s" %s --direct --resolve mktexlsr %s',texroot,silent,quiet))
+    scripts.update.run(format('mtxrun --tree="%s" %s --direct --resolve mktexlsr %s',texroot,silent,quiet))
     -- update filename database for luatex
-    update.run(format('mtxrun --tree="%s" %s --generate',texroot,silent))
+    scripts.update.run(format('mtxrun --tree="%s" %s --generate',texroot,silent))
 
     report("update, done")
 end
@@ -540,14 +536,14 @@ function table.fromhash(t)
 end
 
 -- make the ConTeXt formats
-function update.make()
+function scripts.update.make()
 
     report("make, start")
 
     local force     = environment.argument("force")
     local silent    = environment.argument("silent") and "--silent" or ""
     local quiet     = silent == "" and "" or "--quiet"
-    local texroot   = update.fullpath(states.get("paths.root"))
+    local texroot   = scripts.update.fullpath(states.get("paths.root"))
     local engines   = states.get('engines')
     local goodies   = states.get('goodies')
     local platforms = states.get('platforms')
@@ -555,12 +551,12 @@ function update.make()
 
     resolvers.load_tree(texroot)
 
-    update.run(format('mtxrun --tree="%s" %s --direct --resolve mktexlsr %s',texroot,silent,quiet))
-    update.run(format('mtxrun --tree="%s" %s --generate',texroot,silent))
+    scripts.update.run(format('mtxrun --tree="%s" %s --direct --resolve mktexlsr %s',texroot,silent,quiet))
+    scripts.update.run(format('mtxrun --tree="%s" %s --generate',texroot,silent))
 
     local askedformats = formats
-    local texformats = table.tohash(update.texformats)
- -- local mpformats = table.tohash(update.mpformats)
+    local texformats = table.tohash(scripts.update.texformats)
+ -- local mpformats = table.tohash(scripts.update.mpformats)
     for k,v in table.sortedhash(texformats) do
         if not askedformats[k] then
             texformats[k] = nil
@@ -575,24 +571,24 @@ function update.make()
     if formatlist ~= "" then
         for engine in table.sortedhash(engines) do
             if engine == "luatex" or engine == "luajittex" then
-                update.run(format('mtxrun --tree="%s" %s --script context --autogenerate --make %s',texroot,silent,silent))
-                update.run(format('mtxrun --tree="%s" %s --script context --autogenerate --make --engine=luajittex %s',texroot,silent,silent))
+                scripts.update.run(format('mtxrun --tree="%s" %s --script context --autogenerate --make %s',texroot,silent,silent))
+                scripts.update.run(format('mtxrun --tree="%s" %s --script context --autogenerate --make --engine=luajittex %s',texroot,silent,silent))
             else
-             -- update.run(format('mtxrun --tree="%s" %s --script texexec --make --all %s --%s %s',texroot,silent,silent,engine,formatlist))
-                update.run(format('mtxrun --tree="%s" --resolve %s --script context --resolve --make %s --engine=%s %s',texroot,silent,silent,engine,formatlist))
+             -- scripts.update.run(format('mtxrun --tree="%s" %s --script texexec --make --all %s --%s %s',texroot,silent,silent,engine,formatlist))
+                scripts.update.run(format('mtxrun --tree="%s" --resolve %s --script context --resolve --make %s --engine=%s %s',texroot,silent,silent,engine,formatlist))
             end
         end
     end
  -- local formatlist = concat(table.fromhash(mpformats), " ")
  -- if formatlist ~= "" then
- --     update.run(format('mtxrun --tree="%s" %s --script texexec --make --all %s %s',texroot,silent,silent,formatlist))
+ --     scripts.update.run(format('mtxrun --tree="%s" %s --script texexec --make --all %s %s',texroot,silent,silent,formatlist))
  -- end
     if not force then
         report("make, use --force to really make formats")
     end
 
- -- update.run(format('mtxrun --tree="%s" %s --direct --resolve mktexlsr',texroot,silent)) -- needed for mpost
-    update.run(format('mtxrun --tree="%s" %s --generate',texroot,silent))
+ -- scripts.update.run(format('mtxrun --tree="%s" %s --direct --resolve mktexlsr',texroot,silent)) -- needed for mpost
+    scripts.update.run(format('mtxrun --tree="%s" %s --generate',texroot,silent))
 
     report("make, done")
 end
@@ -622,17 +618,17 @@ if scripts.savestate then
 
     states.set("context.version", environment.argument("context"), "current", true) -- ok
 
-    local valid = table.tohash(update.repositories)
+    local valid = table.tohash(scripts.update.repositories)
     for r in gmatch(environment.argument("repository") or "current","([^, ]+)") do
         if valid[r] then states.set("repositories." .. r, true) end
     end
 
-    local valid = update.engines
+    local valid = scripts.update.engines
     local engine = environment.argument("engine") or ""
     if engine == "" then
         local e = states.get("engines")
         if not e or not next(e) then
-            engine = update.defaultengine
+            engine = "all"
         end
     end
     if engine ~= "" then
@@ -650,16 +646,16 @@ if scripts.savestate then
         end
     end
 
-    local valid = update.platforms
+    local valid = scripts.update.platforms
     for r in gmatch(environment.argument("platform") or os.platform,"([^, ]+)") do
         if valid[r] then states.set("platforms." .. r, true) end
     end
 
-    local valid = table.tohash(update.texformats)
+    local valid = table.tohash(scripts.update.texformats)
     for r in gmatch(environment.argument("formats") or "","([^, ]+)") do
         if valid[r] then states.set("formats." .. r, true) end
     end
- -- local valid = table.tohash(update.mpformats)
+ -- local valid = table.tohash(scripts.update.mpformats)
  -- for r in gmatch(environment.argument("formats") or "","([^, ]+)") do
  --     if valid[r] then states.set("formats." .. r, true) end
  -- end
@@ -699,18 +695,18 @@ if environment.argument("state") then
 end
 
 if environment.argument("mingw") then
-    update.rsyncvariant = "mingw"
+    rsync_variant = "mingw"
 elseif environment.argument("cygwin") then
-    update.rsyncvariant = "cygwin"
+    rsync_variant = "cygwin"
 end
 
 if environment.argument("update") then
-    update.synchronize()
+    scripts.update.synchronize()
     if environment.argument("make") then
-        update.make()
+        scripts.update.make()
     end
 elseif environment.argument("make") then
-    update.make()
+    scripts.update.make()
 elseif environment.argument("exporthelp") then
     application.export(environment.argument("exporthelp"),environment.files[1])
 else

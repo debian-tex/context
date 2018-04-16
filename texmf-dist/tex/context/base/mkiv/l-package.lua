@@ -18,15 +18,11 @@ if not modules then modules = { } end modules ['l-package'] = {
 
 local type = type
 local gsub, format, find = string.gsub, string.format, string.find
-local insert, remove = table.insert, table.remove
 
 local P, S, Cs, lpegmatch = lpeg.P, lpeg.S, lpeg.Cs, lpeg.match
 
-local package   = package
-local searchers = package.searchers or package.loaders
-
--------.loaders = nil -- old stuff that we don't want
--------.seeall  = nil -- old stuff that we don't want
+local package    = package
+local searchers  = package.searchers or package.loaders
 
 -- dummies
 
@@ -195,25 +191,7 @@ local function registerpath(tag,what,target,...)
             add(path)
         end
     end
-end
-
-local function pushpath(tag,what,target,path)
-    local path = helpers.cleanpath(path)
-    insert(target,1,path)
-    if helpers.trace then
-        helpers.report("pushing %s path in front: %s",tag,path)
-    end
-end
-
-local function poppath(tag,what,target)
-    local path = remove(target,1)
-    if helpers.trace then
-        if path then
-            helpers.report("popping %s path from front: %s",tag,path)
-        else
-            helpers.report("no %s path to pop",tag)
-        end
-    end
+    return paths
 end
 
 helpers.registerpath = registerpath
@@ -221,21 +199,9 @@ helpers.registerpath = registerpath
 function package.extraluapath(...)
     registerpath("extra lua","lua",extraluapaths,...)
 end
-function package.pushluapath(path)
-    pushpath("extra lua","lua",extraluapaths,path)
-end
-function package.popluapath()
-    poppath("extra lua","lua",extraluapaths)
-end
 
 function package.extralibpath(...)
     registerpath("extra lib","lib",extralibpaths,...)
-end
-function package.pushlibpath(path)
-    pushpath("extra lib","lib",extralibpaths,path)
-end
-function package.poplibpath()
-    poppath("extra lib","lua",extralibpaths)
 end
 
 -- lib loader (used elsewhere)

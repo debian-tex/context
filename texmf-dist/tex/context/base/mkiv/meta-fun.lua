@@ -10,8 +10,7 @@ if not modules then modules = { } end modules ['meta-fun'] = {
 
 local format, load, type = string.format, load, type
 
-local context    = context
-local metapost   = metapost
+local metapost = metapost
 
 metapost.metafun = metapost.metafun or { }
 local metafun    = metapost.metafun

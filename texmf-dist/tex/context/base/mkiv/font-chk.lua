@@ -10,18 +10,12 @@ if not modules then modules = { } end modules ['font-chk'] = {
 -- move to the nodes namespace
 
 local next = next
-local floor = math.floor
-
-local context              = context
 
 local formatters           = string.formatters
 local bpfactor             = number.dimenfactors.bp
 local fastcopy             = table.fastcopy
-local sortedkeys           = table.sortedkeys
-local sortedhash           = table.sortedhash
 
-local report               = logs.reporter("fonts")
-local report_checking      = logs.reporter("fonts","checking")
+local report_fonts         = logs.reporter("fonts","checking") -- replace
 
 local allocate             = utilities.storage.allocate
 
@@ -33,9 +27,6 @@ local checkers             = fonts.checkers
 local fonthashes           = fonts.hashes
 local fontdata             = fonthashes.identifiers
 local fontcharacters       = fonthashes.characters
-
-local currentfont          = font.current
-local addcharacters        = font.addcharacters
 
 local helpers              = fonts.helpers
 
@@ -61,7 +52,7 @@ local implement            = interfaces.implement
 
 local glyph_code           = nodes.nodecodes.glyph
 
-local new_special          = nodes.pool.special -- todo: literal
+local new_special          = nodes.pool.special
 local hpack_node           = node.hpack
 
 local nuts                 = nodes.nuts
@@ -71,6 +62,7 @@ local tonode               = nuts.tonode
 local getfont              = nuts.getfont
 local getchar              = nuts.getchar
 
+local setfield             = nuts.setfield
 local setchar              = nuts.setchar
 
 local traverse_id          = nuts.traverse_id
@@ -86,11 +78,7 @@ local action = false
 
 local function onetimemessage(font,char,message) -- char == false returns table
     local tfmdata = fontdata[font]
-    local shared  = tfmdata.shared
-    if not shared then
-        shared = { }
-        tfmdata.shared = shared
-    end
+    local shared = tfmdata.shared
     local messages = shared.messages
     if not messages then
         messages = { }
@@ -102,14 +90,10 @@ local function onetimemessage(font,char,message) -- char == false returns table
         messages[message] = category
     end
     if char == false then
-        return sortedkeys(category), category
-    end
-    local cc = category[char]
-    if not cc then
-        report_checking("char %C in font %a with id %a: %s",char,tfmdata.properties.fullname,font,message)
-        category[char] = 1
-    else
-        category[char] = cc + 1
+        return table.sortedkeys(category)
+    elseif not category[char] then
+        report_fonts("char %C in font %a with id %a: %s",char,tfmdata.properties.fullname,font,message)
+        category[char] = true
     end
 end
 
@@ -196,13 +180,13 @@ local variants = allocate {
     { tag = "yellow",  r = .6, g = .6, b =  0 },
 }
 
-local pdf_blob = "pdf: q %.6F 0 0 %.6F 0 0 cm %s %s %s rg %s %s %s RG 10 M 1 j 1 J 0.05 w %s Q"
+local pdf_blob = "pdf: q %0.6F 0 0 %0.6F 0 0 cm %s %s %s rg %s %s %s RG 10 M 1 j 1 J 0.05 w %s Q"
 
 local cache = { } -- saves some tables but not that impressive
 
 local function missingtonode(tfmdata,character)
-    local commands = character.commands
-    local fake  = hpack_node(new_special(commands[1][2])) -- todo: literal
+    local commands  = character.commands
+    local fake  = hpack_node(new_special(commands[1][2]))
     fake.width  = character.width
     fake.height = character.height
     fake.depth  = character.depth
@@ -214,11 +198,7 @@ local function addmissingsymbols(tfmdata) -- we can have an alternative with rul
     local properties = tfmdata.properties
     local size       = tfmdata.parameters.size
     local scale      = size * bpfactor
-    local tonode     = nil
-    local collected  = { }
-    if properties.finalized and not addcharacters then
-        tonode = missingtonode
-    end
+    local tonode     = properties.finalized and missingtonode or nil
     for i=1,#variants do
         local v = variants[i]
         local tag, r, g, b = v.tag, v.r, v.g, v.b
@@ -227,7 +207,7 @@ local function addmissingsymbols(tfmdata) -- we can have an alternative with rul
             local name = fake.name
             local privatename = formatters["placeholder %s %s"](name,tag)
             if not hasprivate(tfmdata,privatename) then
-                local hash = formatters["%s_%s_%1.3f_%1.3f_%1.3f_%i"](name,tag,r,g,b,floor(size))
+                local hash = formatters["%s_%s_%s_%s_%s_%s"](name,tag,r,g,b,size)
                 local char = cache[hash]
                 if not char then
                     char = {
@@ -240,18 +220,9 @@ local function addmissingsymbols(tfmdata) -- we can have an alternative with rul
                     }
                     cache[hash] = char
                 end
-                local u = addprivate(tfmdata, privatename, char)
-                if not tonode then
-                    collected[u] = char
-                end
+                addprivate(tfmdata, privatename, char)
             end
         end
-    end
-    if #collected > 0 then
-        addcharacters(properties.id, {
-            type       = "real",
-            characters = collected,
-        })
     end
 end
 
@@ -268,19 +239,18 @@ fonts.loggers.add_placeholders        = function(id) addmissingsymbols(fontdata[
 fonts.loggers.category_to_placeholder = mapping
 
 function commands.getplaceholderchar(name)
-    local id = currentfont()
+    local id = font.current()
     addmissingsymbols(fontdata[id])
     context(getprivatenode(fontdata[id],name))
 end
 
 -- todo in luatex: option to add characters (just slots, no kerns etc)
--- we can do that now so ...
 
 local function placeholder(font,char)
     local tfmdata  = fontdata[font]
     local category = chardata[char].category
     local fakechar = mapping[category]
-    local slot     = getprivateslot(font,fakechar)
+    local slot = getprivateslot(font,fakechar)
     if not slot then
         addmissingsymbols(tfmdata)
         slot = getprivateslot(font,fakechar)
@@ -298,9 +268,9 @@ function checkers.missing(head)
         local char = getchar(n)
         if font ~= lastfont then
             characters = fontcharacters[font]
-            lastfont   = font
+            lastfont = font
         end
-        if font > 0 and not characters[char] and is_character[chardata[char].category] then
+        if not characters[char] and is_character[chardata[char].category] then
             if action == "remove" then
                 onetimemessage(font,char,"missing (will be deleted)")
             elseif action == "replace" then
@@ -348,9 +318,9 @@ local relevant = {
 
 local function getmissing(id)
     if id then
-        local list = getmissing(currentfont())
+        local list = getmissing(font.current())
         if list then
-            local _, list = next(getmissing(currentfont()))
+            local _, list = next(getmissing(font.current()))
             return list
         else
             return { }
@@ -358,91 +328,73 @@ local function getmissing(id)
     else
         local t = { }
         for id, d in next, fontdata do
-            local shared   = d.shared
-            local messages = shared and shared.messages
+            local shared = d.shared
+            local messages = shared.messages
             if messages then
-                local filename = d.properties.filename
-                local tf = t[filename] or { }
+                local tf = t[d.properties.filename] or { }
                 for i=1,#relevant do
                     local tm = messages[relevant[i]]
                     if tm then
-                        for k, v in next, tm do
-                            tf[k] = (tf[k] or 0) + v
-                        end
+                        tf = table.merged(tf,tm)
                     end
                 end
                 if next(tf) then
-                    t[filename] = tf
+                    t[d.properties.filename] = tf
                 end
             end
         end
-        local l = { }
         for k, v in next, t do
-            l[k] = sortedkeys(v)
+            t[k] = table.sortedkeys(v)
         end
-        return l, t
+        return t
     end
 end
 
 checkers.getmissing = getmissing
 
+local tracked = false
 
-do
+trackers.register("fonts.missing", function(v)
+    if v then
+        enableaction("processors","fonts.checkers.missing")
+        tracked = true
+    else
+        disableaction("processors","fonts.checkers.missing")
+    end
+    if v == "replace" then
+        otffeatures.defaults.missing = true
+    end
+    action = v
+end)
 
-    local reported = true
-    local tracked  = false
+local report_characters = logs.reporter("fonts","characters")
+local report_character  = logs.reporter("missing")
 
-    callback.register("glyph_not_found",function(font,char)
-        if font > 0 then
-            if char > 0 then
-                onetimemessage(font,char,"missing")
-            else
-                -- we have a special case
-            end
-        elseif not reported then
-            report("nullfont is used, maybe no bodyfont is defined")
-            reported = true
-        end
-    end)
+local logsnewline       = logs.newline
+local logspushtarget    = logs.pushtarget
+local logspoptarget     = logs.poptarget
 
-    trackers.register("fonts.missing", function(v)
-        if v then
-            enableaction("processors","fonts.checkers.missing")
-            tracked = true
-        else
-            disableaction("processors","fonts.checkers.missing")
-        end
-        if v == "replace" then
-            otffeatures.defaults.missing = true
-        end
-        action = v
-    end)
-
-    logs.registerfinalactions(function()
---         if tracked then
-            local collected, details = getmissing()
-            if next(collected) then
-                for filename, list in sortedhash(details) do
-                    logs.startfilelogging(report,"missing characters",filename)
-                    for u, v in sortedhash(list) do
-                        report("%4i  %U  %c  %s",v,u,u,chardata[u].description)
-                    end
-                    logs.stopfilelogging()
+luatex.registerstopactions(function()
+    if tracked then
+        local collected = checkers.getmissing()
+        if next(collected) then
+            logspushtarget("logfile")
+            for filename, list in table.sortedhash(collected) do
+                logsnewline()
+                report_characters("start missing characters: %s",filename)
+                logsnewline()
+                for i=1,#list do
+                    local u = list[i]
+                    report_character("%U  %c  %s",u,u,chardata[u].description)
                 end
-                if logs.loggingerrors() then
-                    for filename, list in sortedhash(details) do
-                        logs.starterrorlogging(report,"missing characters",filename)
-                        for u, v in sortedhash(list) do
-                            report("%4i  %U  %c  %s",v,u,u,chardata[u].description)
-                        end
-                        logs.stoperrorlogging()
-                    end
-                end
+                logsnewline()
+                report_characters("stop missing characters")
+                logsnewline()
             end
---         end
-    end)
-
-end
+            logspoptarget()
+        end
+    end
+end)
 
 -- for the moment here
 
@@ -507,3 +459,7 @@ local dummies_specification = {
 
 registerotffeature(dummies_specification)
 registerafmfeature(dummies_specification)
+
+-- callback.register("char_exists",function(f,c) -- to slow anyway as called often so we should flag in tfmdata
+--     return true
+-- end)

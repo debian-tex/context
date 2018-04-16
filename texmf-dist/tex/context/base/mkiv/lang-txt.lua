@@ -252,7 +252,7 @@ data.labels={
     ["sk"]="P",
    },
   },
-  ["arccos"]={
+  ["acos"]={
    ["labels"]={
     ["cz"]="arccos",
     ["en"]="arccos",
@@ -262,14 +262,14 @@ data.labels={
     ["sk"]="arccos",
    },
   },
-  ["arccosh"]={
+  ["arccos"]={
    ["labels"]={
-    ["cz"]="arccosh",
-    ["en"]="arccosh",
-    ["es"]="arc\\sixperemspace cosh",
-    ["hr"]="arc\\sixperemspace cosh",
-    ["pl"]="arc\\sixperemspace cosh",
-    ["sk"]="arccosh",
+    ["cz"]="arccos",
+    ["en"]="arccos",
+    ["es"]="arc\\sixperemspace cos",
+    ["hr"]="arc\\sixperemspace cos",
+    ["pl"]="arc\\sixperemspace cos",
+    ["sk"]="arccos",
    },
   },
   ["arcctg"]={
@@ -292,16 +292,6 @@ data.labels={
     ["sk"]="arcsin",
    },
   },
-  ["arcsinh"]={
-   ["labels"]={
-    ["cz"]="arcsinh",
-    ["en"]="arcsinh",
-    ["es"]="arc\\sixperemspace senh",
-    ["hr"]="arc\\sixperemspace sinh",
-    ["pl"]="arc\\sixperemspace sinh",
-    ["sk"]="arcsinh",
-   },
-  },
   ["arctan"]={
    ["labels"]={
     ["cz"]="arctg",
@@ -312,13 +302,13 @@ data.labels={
     ["sk"]="arctg",
    },
   },
-  ["arctanh"]={
+  ["arctg"]={
    ["labels"]={
-    ["cz"]="arctgh",
-    ["en"]="arctanh",
-    ["es"]="arc\\sixperemspace tanh",
-    ["hr"]="arc\\sixperemspace tgh",
-    ["pl"]="arc\\sixperemspace tgh",
+    ["cz"]="arctg",
+    ["en"]="arctan",
+    ["es"]="arc\\sixperemspace tan",
+    ["hr"]="arc\\sixperemspace tg",
+    ["pl"]="arc\\sixperemspace tg",
     ["sk"]="arctg",
    },
   },
@@ -328,6 +318,26 @@ data.labels={
     ["en"]="arg",
     ["es"]="arg",
     ["sk"]="arg",
+   },
+  },
+  ["asin"]={
+   ["labels"]={
+    ["cz"]="arcsin",
+    ["en"]="arcsin",
+    ["es"]="arc\\sixperemspace sen",
+    ["hr"]="arc\\sixperemspace sin",
+    ["pl"]="arc\\sixperemspace sin",
+    ["sk"]="arcsin",
+   },
+  },
+  ["atan"]={
+   ["labels"]={
+    ["cz"]="arctg",
+    ["en"]="arctan",
+    ["es"]="arc\\sixperemspace tan",
+    ["hr"]="arc\\sixperemspace tg",
+    ["pl"]="arc\\sixperemspace tg",
+    ["sk"]="arctg",
    },
   },
   ["cos"]={
@@ -607,6 +617,16 @@ data.labels={
     ["en"]="tanh",
     ["es"]="tanh",
     ["sk"]="tgh",
+   },
+  },
+  ["tg"]={
+   ["labels"]={
+    ["cz"]="tg",
+    ["en"]="tan",
+    ["es"]="tan",
+    ["hr"]="tg",
+    ["pl"]="tg",
+    ["sk"]="tg",
    },
   },
  },
@@ -2989,13 +3009,8 @@ data.labels={
 
 local functions = data.labels.functions
 
-functions.asin   = functions.arcsin
-functions.acos   = functions.arccos
-functions.atan   = functions.arctan
-functions.asinh  = functions.arcsinh
-functions.acosh  = functions.arccosh
-functions.atanh  = functions.arctanh
+functions.asin = functions.arcsin
+functions.acos = functions.arccos
+functions.atan = functions.arctan
 
-functions.tg     = functions.tan
-functions.arctg  = functions.arctan
-functions.arctgh = functions.arctanh
+table.save("e:/tmp/x.lua",data.labels)

@@ -6,9 +6,9 @@ if not modules then modules = { } end modules ['x-cals'] = {
     license   = "see context related readme files"
 }
 
-local next, type = next, type
+local next = next
 local format, lower = string.format, string.lower
-local xmlcprint, xmlcollected, xmlelements = xml.cprint, xml.collected, xml.elements
+local xmlsprint, xmlcprint, xmlcollected, xmlelements = xml.sprint, xml.cprint, xml.collected, xml.elements
 local n_todimen, s_todimen = number.todimen, string.todimen
 
 -- there is room for speedups as well as cleanup (using context functions)

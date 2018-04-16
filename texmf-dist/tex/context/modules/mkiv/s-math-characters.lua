@@ -16,8 +16,6 @@ local lower = string.lower
 local utfchar = utf.char
 local round = math.round
 
-local context        = context
-
 local fontdata       = fonts.hashes.identifiers
 local chardata       = characters.data
 local blocks         = characters.blocks
@@ -75,11 +73,10 @@ function moduledata.math.characters.showlist(specification)
         sorted = table.sortedkeys(characters)
     end
     if virtual then
-        local fonts = tfmdata.fonts
-        for i=1,#fonts do
-            local id = fonts[i].id
+        for k, v in ipairs(tfmdata.fonts) do
+            local id = v.id
             local name = fontdata[id].properties.name
-            names[i] = (name and file.basename(name)) or id
+            names[k] = (name and file.basename(name)) or id
         end
     end
     if check then

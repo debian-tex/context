@@ -29,10 +29,10 @@ disableaction(textfileactions,         "characters.filters.utf.reorder")
 appendaction (textlineactions,"system","characters.filters.utf.reorder")
 disableaction(textlineactions,         "characters.filters.utf.reorder")
 
-appendaction (textfileactions,"system","characters.filters.utf.collapse")   -- not per line
+appendaction (textfileactions,"system","characters.filters.utf.collapse")
 disableaction(textfileactions,         "characters.filters.utf.collapse")
 
-appendaction (textfileactions,"system","characters.filters.utf.decompose")  -- not per line
+appendaction (textfileactions,"system","characters.filters.utf.decompose")
 disableaction(textfileactions,         "characters.filters.utf.decompose")
 
 local report    = logs.reporter("unicode filter")
@@ -65,14 +65,12 @@ function utffilters.enable()
 end
 
 local function configure(what,v)
-    if v == "" then
-        report("%a unset",what)
-    elseif v == "line" then
+    if v == "line" then
         disableaction(textfileactions,what)
         enableaction (textlineactions,what)
     elseif not toboolean(v) then
         if reporting ~= "never" then
-            report("%a disabled",what)
+            report("%a disabled",k)
             reporting = "yes"
         end
         enforced[what] = false
@@ -83,10 +81,6 @@ local function configure(what,v)
         disableaction(textlineactions,what)
     end
 end
-
--- first line:
---
--- % directives="filters.utf.collapse=true"
 
 directives.register("filters.utf.reorder",   function(v) configure("characters.filters.utf.reorder",  v) end)
 directives.register("filters.utf.collapse",  function(v) configure("characters.filters.utf.collapse", v) end)

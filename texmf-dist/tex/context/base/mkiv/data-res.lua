@@ -6,6 +6,15 @@ if not modules then modules = { } end modules ['data-res'] = {
     license   = "see context related readme files",
 }
 
+-- In practice we will work within one tds tree, but i want to keep
+-- the option open to build tools that look at multiple trees, which is
+-- why we keep the tree specific data in a table. We used to pass the
+-- instance but for practical purposes we now avoid this and use a
+-- instance variable. We always have one instance active (sort of global).
+
+-- I will reimplement this module ... way too fuzzy now and we can work
+-- with some sensible constraints as it is only is used for context.
+
 -- todo: cache:/// home:/// selfautoparent:/// (sometime end 2012)
 
 local gsub, find, lower, upper, match, gmatch = string.gsub, string.find, string.lower, string.upper, string.match, string.gmatch
@@ -145,7 +154,8 @@ local suffixmap = resolvers.suffixmap
 
 resolvers.defaultsuffixes = { "tex" } --  "mkiv", "cld" -- too tricky
 
-local instance = nil -- the current one (fast access)
+resolvers.instance = resolvers.instance or nil -- the current one (slow access)
+local     instance = resolvers.instance or nil -- the current one (fast access)
 
 -- An instance has an environment (coming from the outside, kept raw), variables
 -- (coming from the configuration file), and expansions (variables with nested
@@ -208,7 +218,7 @@ local function expandedvariable(var)
     return lpegmatch(variableexpander,var) or var
 end
 
-function resolvers.reset()
+function resolvers.newinstance() -- todo: all vars will become lowercase and alphanum only
 
     -- normally we only need one instance but for special cases we can (re)load one so
     -- we stick to this model.
@@ -217,27 +227,24 @@ function resolvers.reset()
         report_resolving("creating instance")
     end
 
-    local environment = { }
-    local variables   = { }
-    local expansions  = { }
-    local order       = { }
+    local environment, variables, expansions, order = allocate(), allocate(), allocate(), allocate()
 
-    instance = {
+    local newinstance = {
         environment     = environment,
         variables       = variables,
         expansions      = expansions,
         order           = order,
-        files           = { },
-        setups          = { },
-        found           = { },
-        foundintrees    = { },
-        hashes          = { },
-        hashed          = { },
+        files           = allocate(),
+        setups          = allocate(),
+        found           = allocate(),
+        foundintrees    = allocate(),
+        hashes          = allocate(),
+        hashed          = allocate(),
         pathlists       = false,-- delayed
-        specification   = { },
-        lists           = { },
-        data            = { }, -- only for loading
-        fakepaths       = { },
+        specification   = allocate(),
+        lists           = allocate(),
+        data            = allocate(), -- only for loading
+        fakepaths       = allocate(),
         remember        = true,
         diskcache       = true,
         renewcache      = false,
@@ -288,10 +295,18 @@ function resolvers.reset()
         return v
     end)
 
+    return newinstance
+
 end
 
-function resolvers.initialized()
-    return instance ~= nil
+function resolvers.setinstance(someinstance) -- only one instance is active
+    instance = someinstance
+    resolvers.instance = someinstance
+    return someinstance
+end
+
+function resolvers.reset()
+    return resolvers.setinstance(resolvers.newinstance())
 end
 
 local function reset_hashes()
@@ -486,15 +501,10 @@ local function load_configuration_files()
     end
 end
 
-function resolvers.configurationfiles()
-    return instance.specification or { }
-end
-
 -- scheme magic ... database loading
 
 local function load_file_databases()
-    instance.loaderror = false
-    instance.files     = { }
+    instance.loaderror, instance.files = false, allocate()
     if not instance.renewcache then
         local hashes = instance.hashes
         for k=1,#hashes do
@@ -683,13 +693,13 @@ function resolvers.datastate()
 end
 
 function resolvers.variable(name)
-    local name   = name and lpegmatch(dollarstripper,name)
+    local name = name and lpegmatch(dollarstripper,name)
     local result = name and instance.variables[name]
     return result ~= nil and result or ""
 end
 
 function resolvers.expansion(name)
-    local name   = name and lpegmatch(dollarstripper,name)
+    local name = name and lpegmatch(dollarstripper,name)
     local result = name and instance.expansions[name]
     return result ~= nil and result or ""
 end
@@ -735,7 +745,7 @@ end
 
 local done = { }
 
-function resolvers.resetextrapaths()
+function resolvers.resetextrapath()
     local ep = instance.extra_paths
     if not ep then
         done                 = { }
@@ -744,10 +754,6 @@ function resolvers.resetextrapaths()
         done = { }
         reset_caches()
     end
-end
-
-function resolvers.getextrapaths()
-    return instance.extra_paths or { }
 end
 
 function resolvers.registerextrapath(paths,subpaths)
@@ -926,7 +932,11 @@ function resolvers.cleanedpathlist(v) -- can be cached if needed
 end
 
 function resolvers.expandbraces(str) -- output variable and brace expansion of STRING
-    local pth = expandedpathfromlist(resolvers.splitpath(str))
+--     local ori = resolvers.variable(str)
+--     if ori == "" then
+        local ori = str
+--     end
+    local pth = expandedpathfromlist(resolvers.splitpath(ori))
     return joinpath(pth)
 end
 
@@ -938,20 +948,6 @@ function resolvers.registerfilehash(name,content,someerror)
         if somerror == true then -- can be unset
             instance.loaderror = someerror
         end
-    end
-end
-
-function resolvers.getfilehashes()
-    return instance and instance.files or { }
-end
-
-function resolvers.gethashes()
-    return instance and instance.hashes or { }
-end
-
-function resolvers.renewcache()
-    if instance then
-        instance.renewcache = true
     end
 end
 
@@ -972,7 +968,7 @@ end
 local function collect_files(names) -- potential files .. sort of too much when asking for just one file
     local filelist = { }            -- but we need it for pattern matching later on
     local noffiles = 0
-    local function check(hash,root,pathname,path,basename,name)
+    local function check(hash,root,pathname,path,name)
         if not pathname or find(path,pathname) then
             local variant = hash.type
             local search  = filejoin(root,path,name) -- funny no concatinator
@@ -1011,10 +1007,10 @@ local function collect_files(names) -- potential files .. sort of too much when 
                     local metadata = content.metadata
                     local realroot = metadata and metadata.path or hashname
                     if type(path) == "string" then
-                        check(hash,realroot,pathname,path,basename,name)
+                        check(hash,realroot,pathname,path,name)
                     else
                         for i=1,#path do
-                            check(hash,realroot,pathname,path[i],basename,name)
+                            check(hash,realroot,pathname,path[i],name)
                         end
                     end
                 end
@@ -1033,27 +1029,16 @@ function resolvers.registerintrees(filename,format,filetype,usedmethod,foundname
     if usedmethod == "direct" and filename == foundname and fit[foundname] then
         -- just an extra lookup after a test on presence
     else
-        local collapsed = collapsepath(foundname,true)
         local t = {
             filename   = filename,
-            format     = format    ~= "" and format   or nil,
+            format     = format ~= "" and format or nil,
             filetype   = filetype  ~= "" and filetype or nil,
             usedmethod = usedmethod,
             foundname  = foundname,
-            fullname   = collapsed,
         }
         fit[foundname] = t
         foundintrees[#foundintrees+1] = t
     end
-end
-
-function resolvers.foundintrees()
-    return instance.foundintrees or { }
-end
-
-function resolvers.foundintree(fullname)
-    local f = fit[fullname]
-    return f and f.usedmethod == "database"
 end
 
 -- split the next one up for readability (but this module needs a cleanup anyway)
@@ -1077,17 +1062,15 @@ local preparetreepattern = Cs((P(".")/"%%." + P("-")/"%%-" + P(1))^0 * Cc("$"))
 local collect_instance_files
 
 local function find_analyze(filename,askedformat,allresults)
-    local filetype    = ''
-    local filesuffix  = suffixonly(filename)
-    local wantedfiles = { }
+    local filetype, wantedfiles, ext = '', { }, suffixonly(filename)
     -- too tricky as filename can be bla.1.2.3:
     --
-    -- if not suffixmap[filesuffix] then
+    -- if not suffixmap[ext] then
     --     wantedfiles[#wantedfiles+1] = filename
     -- end
     wantedfiles[#wantedfiles+1] = filename
     if askedformat == "" then
-        if filesuffix == "" or not suffixmap[filesuffix] then
+        if ext == "" or not suffixmap[ext] then
             local defaultsuffixes = resolvers.defaultsuffixes
             local formatofsuffix  = resolvers.formatofsuffix
             for i=1,#defaultsuffixes do
@@ -1105,7 +1088,7 @@ local function find_analyze(filename,askedformat,allresults)
             end
         end
     else
-        if filesuffix == "" or not suffixmap[filesuffix] then
+        if ext == "" or not suffixmap[ext] then
             local format_suffixes = suffixes[askedformat]
             if format_suffixes then
                 for i=1,#format_suffixes do
@@ -1177,10 +1160,11 @@ local function find_qualified(filename,allresults,askedformat,alsostripped) -- t
     if alsostripped and suffix and suffix ~= "" then
         -- try to find in tree (no suffix manipulation), here we search for the
         -- matching last part of the name
-        local basename    = filebasename(filename)
-        local pattern     = lpegmatch(preparetreepattern,filename)
+        local basename = filebasename(filename)
+        local pattern = lpegmatch(preparetreepattern,filename)
+        -- messy .. to be sorted out
         local savedformat = askedformat
-        local format      = savedformat or ""
+        local format = savedformat or ""
         if format == "" then
             askedformat = resolvers.formatofsuffix(suffix)
         end
@@ -1285,7 +1269,7 @@ end
 local function find_intree(filename,filetype,wantedfiles,allresults)
     local pathlists = instance.pathlists
     if not pathlists then
-        pathlists = setmetatableindex({ },makepathlist)
+        pathlists = setmetatableindex(allocate(),makepathlist)
         instance.pathlists = pathlists
     end
     local pathlist = pathlists[filetype]
@@ -1604,9 +1588,9 @@ function resolvers.findpath(filename,filetype)
 end
 
 local function findgivenfiles(filename,allresults)
-    local base   = filebasename(filename)
-    local result = { }
-    local hashes = instance.hashes
+    local base    = filebasename(filename)
+    local result  = { }
+    local hashes  = instance.hashes
     --
     local function okay(hash,path,name)
         local found = methodhandler('concatinators',hash.type,hash.name,path,name)
@@ -1661,12 +1645,12 @@ end
 -- why bother
 
 local function findwildcardfiles(filename,allresults,result)
-    local result = result or { }
-    local base   = filebasename(filename)
-    local dirn   = filedirname(filename)
-    local path   = lower(lpegmatch(makewildcard,dirn) or dirn)
-    local name   = lower(lpegmatch(makewildcard,base) or base)
-    local files  = instance.files
+    local result  = result or { }
+    local base    = filebasename(filename)
+    local dirn    = filedirname(filename)
+    local path    = lower(lpegmatch(makewildcard,dirn) or dirn)
+    local name    = lower(lpegmatch(makewildcard,base) or base)
+    local files   = instance.files
     --
     if find(name,"*",1,true) then
         local hashes = instance.hashes
@@ -1752,23 +1736,15 @@ function resolvers.automount()
     -- implemented later
 end
 
-function resolvers.starttiming()
-    statistics.starttiming(instance)
-end
-
-function resolvers.stoptiming()
-    statistics.stoptiming(instance)
-end
-
 function resolvers.load(option)
-    resolvers.starttiming()
+    statistics.starttiming(instance)
     identify_configuration_files()
     load_configuration_files()
     if option ~= "nofiles" then
         load_databases()
         resolvers.automount()
     end
-    resolvers.stoptiming()
+    statistics.stoptiming(instance)
     local files = instance.files
     return files and next(files) and true
 end
@@ -1875,6 +1851,7 @@ function resolvers.booleanvariable(str,default)
 end
 
 function resolvers.dowithfilesintree(pattern,handle,before,after) -- will move, can be a nice iterator instead
+    local instance = resolvers.instance
     local hashes   = instance.hashes
     for i=1,#hashes do
         local hash     = hashes[i]
@@ -1914,31 +1891,3 @@ resolvers.obsolete = obsolete
 
 resolvers.find_file  = resolvers.findfile    obsolete.find_file  = resolvers.findfile
 resolvers.find_files = resolvers.findfiles   obsolete.find_files = resolvers.findfiles
-
--- moved here
-
-function resolvers.knownvariables(pattern)
-    if instance then
-        local environment = instance.environment
-        local variables   = instance.variables
-        local expansions  = instance.expansions
-        local order       = instance.order
-        local pattern     = upper(pattern or "")
-        local result      = { }
-        for i=1,#order do
-            for key in next, order[i] do
-                if result[key] == nil and key ~= "" and (pattern == "" or find(upper(key),pattern)) then
-                    result[key] = {
-                        environment = rawget(environment,key),
-                        variable    = key,
-                        expansion   = expansions[key],
-                        resolved    = resolveprefix(expansions[key]),
-                    }
-                end
-            end
-        end
-        return result
-    else
-        return { }
-    end
-end

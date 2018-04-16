@@ -7,7 +7,6 @@ if not modules then modules = { } end modules ['data-env'] = {
 }
 
 local lower, gsub = string.lower, string.gsub
-local next = next
 
 local resolvers = resolvers
 

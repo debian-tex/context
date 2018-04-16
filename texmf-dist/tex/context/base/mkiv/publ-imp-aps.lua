@@ -412,10 +412,6 @@ categories.unpublished = {
 -- like misc below but includes organization.
 
 categories.electronic = {
-    sets = {
-        author = { "author", "collaboration", "organization", },
-        howpublished = { "howpublished", "doi", "url", },
-    },
     required = {
         "title"
     },
@@ -424,8 +420,8 @@ categories.electronic = {
         "year", "month",
         "author",
         "collaboration",
-        "organization",
         "address",
+        "organization",
         "howpublished",
         "doi", "url", "note",
     },
@@ -434,10 +430,6 @@ categories.electronic = {
 -- use this type when nothing else fits.
 
 categories.misc = {
-    sets = {
-        author = { "author", "collaboration", },
-        howpublished = { "howpublished", "doi", "url", },
-    },
     required = {
         -- nothing is really important here
     },

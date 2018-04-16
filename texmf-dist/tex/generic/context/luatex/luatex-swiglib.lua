@@ -16,18 +16,16 @@ function requireswiglib(required,version)
     if library then
         return library
     else
-        local full = string.gsub(required,"%.","/"
-        local path = file.pathpart(full)
-        local name = file.nameonly(full) .. libsuffix
+        local name = string.gsub(required,"%.","/") .. libsuffix
         local list = kpse.show_path("clua")
         for root in string.gmatch(list,pathsplit) do
             local full = false
             if type(version) == "string" and version ~= "" then
-                full = root .. "/" .. path .. "/" .. version .. "/" .. name
+                full = root .. "/" .. version .. "/" .. name
                 full = lfs.isfile(full) and full
             end
             if not full then
-                full = root .. "/" .. path .. "/" .. name
+                full = root .. "/" .. name
                 full = lfs.isfile(full) and full
             end
             if full then

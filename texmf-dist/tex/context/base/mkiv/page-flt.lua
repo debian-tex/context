@@ -9,17 +9,12 @@ if not modules then modules = { } end modules ['page-flt'] = {
 -- floats -> managers.floats
 -- some functions are a tex/lua mix so we need a separation
 
-local next = next
-local tostring = tostring
 local insert, remove = table.insert, table.remove
 local find = string.find
-local abs = math.abs
 
-local trace_floats     = false  trackers.register("floats.caching",    function(v) trace_floats     = v end)
-local trace_collecting = false  trackers.register("floats.collecting", function(v) trace_collecting = v end)
+local trace_floats = false  trackers.register("graphics.floats", function(v) trace_floats = v end) -- name might change
 
-local report_floats     = logs.reporter("floats","caching")
-local report_collecting = logs.reporter("floats","collecting")
+local report_floats = logs.reporter("structure","floats")
 
 local C, S, P, lpegmatch = lpeg.C, lpeg.S, lpeg.P, lpeg.match
 
@@ -27,7 +22,6 @@ local C, S, P, lpegmatch = lpeg.C, lpeg.S, lpeg.P, lpeg.match
 -- text page leftpage rightpage (todo: top, bottom, margin, order)
 
 local setdimen         = tex.setdimen
-local getdimen         = tex.getdimen
 local setcount         = tex.setcount
 local texsetbox        = tex.setbox
 local textakebox       = nodes.takebox
@@ -84,25 +78,14 @@ function floats.pop()
     end
 end
 
-local function setdimensions(t,b)
-    local bw, bh, bd = 0, 0, 0
-    local nw, nh, nd = 0, 0, 0
+local function setdimensions(b)
+    local w, h, d = 0, 0, 0
     if b then
-        bw = b.width
-        bh = b.height
-        bd = b.depth
+        w, h, d = b.width, b.height, b.depth
     end
-    if t then
-        nw = t.width  or bw
-        nh = t.height or bh
-        nd = t.depth  or bd
-    end
-    setdimen("global","floatwidth",     bw)
-    setdimen("global","floatheight",    bh+bd)
-    setdimen("global","naturalfloatwd", nw)
-    setdimen("global","naturalfloatht", nh)
-    setdimen("global","naturalfloatdp", nd)
-    return bw, bh, bd, nw, nh, dp
+    setdimen("global","floatwidth", w)
+    setdimen("global","floatheight", h+d)
+    return w, h, d
 end
 
 local function get(stack,n,bylabel)
@@ -132,12 +115,9 @@ function floats.save(which,data)
         local stack = stacks[which]
         noffloats = noffloats + 1
         local t = {
-            n      = noffloats,
-            data   = data or { },
-            width  = getdimen("naturalfloatwd"),
-            height = getdimen("naturalfloatht"),
-            depth  = getdimen("naturalfloatdp"),
-            box    = b,
+            n    = noffloats,
+            data = data or { },
+            box  = b,
         }
         insert(stack,t)
 -- inspect(stacks)
@@ -158,11 +138,9 @@ function floats.resave(which)
         which = which or default
         local stack = stacks[which]
         local b = textakebox("floatbox")
-        if not b then
-            report_floats("resaved float is empty")
-        end
         last.box = b
         insert(stack,1,last)
+-- inspect(stacks)
         setcount("global","savednoffloats",#stacks[default])
         if trace_floats then
             report_floats("%s, category %a, number %a, slot %a width %p, height %p, depth %p","resaving",
@@ -177,14 +155,15 @@ end
 
 function floats.flush(which,n,bylabel)
     which = which or default
+-- inspect(stacks)
     local stack = stacks[which]
     local t, b, n = get(stack,n or 1,bylabel)
     if t then
         if not b then
             showmessage("floatblocks",1,t.n)
         end
-        local w, h, d = setdimensions(t,b)
         if trace_floats then
+            local w, h, d = setdimensions(b) -- ?
             report_floats("%s, category %a, number %a, slot %a width %p, height %p, depth %p","flushing",
                 which,t.n,n,w,h,d)
         else
@@ -193,7 +172,7 @@ function floats.flush(which,n,bylabel)
         texsetbox("floatbox",b)
         last = remove(stack,n)
         last.box = nil
-        setcount("global","savednoffloats",#stacks[which]) -- default?
+        setcount("global","savednoffloats",#stacks[default]) -- default?
     else
         setdimensions()
     end
@@ -204,7 +183,7 @@ function floats.consult(which,n)
     local stack = stacks[which]
     local t, b, n = get(stack,n)
     if t then
-        local w, h, d = setdimensions(t,b)
+        local w, h, d = setdimensions(b)
         if trace_floats then
             report_floats("%s, category %a, number %a, slot %a width %p, height %p, depth %p","consulting",
                 which,t.n,n,w,h,d)
@@ -219,46 +198,16 @@ function floats.consult(which,n)
 end
 
 function floats.collect(which,maxwidth,distance)
-    local usedwhich = which or default
-    local stack     = stacks[usedwhich]
-    local stacksize = #stack
-    local collected = 0
-    local maxheight = 0
-    local maxdepth  = 0
-
-    local function register()
-        collected = collected + 1
-        maxwidth  = rest
-        if h > maxheight then
-            maxheight = h
-        end
-        if d > maxdepth then
-            maxdepth = d
-        end
-    end
-
-    for i=1,stacksize do
+    which = which or default
+    local stack = stacks[which]
+    local n, m = #stack, 0
+    for i=1,n do
         local t, b, n = get(stack,i)
         if t then
-            local w, h, d, nw = setdimensions(t,b)
-            -- we use the real width
-            w = nw
-            -- which could be an option
-            local rest = maxwidth - w - (1 == 1 and 0 or distance)
-            local fits = rest > -10
-            if trace_collecting then
-                report_collecting("%s, category %a, number %a, slot %a width %p, rest %p, fit %a","collecting",
-                    usedwhich,t.n,n,w,rest,fits)
-            end
-            if fits then
-                collected = collected + 1
-                maxwidth  = rest
-                if h > maxheight then
-                    maxheight = h
-                end
-                if d > maxdepth then
-                    maxdepth = d
-                end
+            local w, h, d = setdimensions(b)
+            if w + distance < maxwidth then
+                m = m + 1
+                maxwidth = maxwidth - w - distance
             else
                 break
             end
@@ -266,8 +215,10 @@ function floats.collect(which,maxwidth,distance)
             break
         end
     end
-    setcount("global","nofcollectedfloats",collected)
-    setdimen("global","maxcollectedfloatstotal",maxheight+maxdepth)
+    if m == 0 then
+        m = 1
+    end
+    setcount("global","nofcollectedfloats",m)
 end
 
 function floats.getvariable(name,default)

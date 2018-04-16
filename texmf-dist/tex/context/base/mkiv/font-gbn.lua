@@ -13,8 +13,6 @@ if context then
     os.exit()
 end
 
-local next = next
-
 local fonts = fonts
 local nodes = nodes
 
@@ -73,8 +71,7 @@ function nodes.handlers.setbasemodepass(v)
     basemodepass = v
 end
 
--------- nodes.handlers.nodepass(head)
-function nodes.handlers.nodepass(head,groupcode,size,packtype,direction)
+function nodes.handlers.nodepass(head)
     local fontdata = fonts.hashes.identifiers
     if fontdata then
         local nuthead   = tonut(head)
@@ -84,7 +81,6 @@ function nodes.handlers.nodepass(head,groupcode,size,packtype,direction)
         local basefont  = nil
         local variants  = nil
         local redundant = nil
-        local nofused   = 0
         for n in traverse_id(glyph_code,nuthead) do
             local font = getfont(n)
             if font ~= prevfont then
@@ -101,7 +97,6 @@ function nodes.handlers.nodepass(head,groupcode,size,packtype,direction)
                             local processors = shared.processes
                             if processors and #processors > 0 then
                                 usedfonts[font] = processors
-                                nofused = nofused + 1
                             elseif basemodepass then
                                 basefont = { n, nil }
                                 basefonts[#basefonts+1] = basefont
@@ -183,7 +178,6 @@ function nodes.handlers.nodepass(head,groupcode,size,packtype,direction)
                                     local processors = shared.processes
                                     if processors and #processors > 0 then
                                         usedfonts[font] = processors
-                                        nofused = nofused + 1
                                     end
                                 end
                             end
@@ -195,7 +189,7 @@ function nodes.handlers.nodepass(head,groupcode,size,packtype,direction)
         if next(usedfonts) then
             for font, processors in next, usedfonts do
                 for i=1,#processors do
-                    head = processors[i](head,font,0,direction,nofused) or head
+                    head = processors[i](head,font,0) or head
                 end
             end
         end
@@ -235,7 +229,7 @@ function nodes.handlers.nodepass(head,groupcode,size,packtype,direction)
 end
 
 function nodes.handlers.basepass(head)
-    if basemodepass then
+    if not basemodepass then
         head = n_ligaturing(head)
         head = n_kerning(head)
     end
@@ -247,9 +241,9 @@ local basepass    = nodes.handlers.basepass
 local injectpass  = nodes.injections.handler
 local protectpass = nodes.handlers.protectglyphs
 
-function nodes.simple_font_handler(head,groupcode,size,packtype,direction)
+function nodes.simple_font_handler(head)
     if head then
-        head = nodepass(head,groupcode,size,packtype,direction)
+        head = nodepass(head)
         head = injectpass(head)
         if not basemodepass then
             head = basepass(head)

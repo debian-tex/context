@@ -8,17 +8,18 @@ if not modules then modules = { } end modules ['data-lst'] = {
 
 -- used in mtxrun, can be loaded later .. todo
 
-local type = type
-local concat, sortedhash = table.concat,table.sortedhash
+local rawget, type, next = rawget, type, next
 
-local resolvers       = resolvers
-local listers         = resolvers.listers or { }
-resolvers.listers     = listers
+local find, concat, upper = string.find, table.concat, string.upper
+local fastcopy, sortedpairs = table.fastcopy, table.sortedpairs
 
-local resolveprefix   = resolvers.resolve
+local resolvers     = resolvers
+local listers       = resolvers.listers or { }
+resolvers.listers   = listers
 
-local report_lists    = logs.reporter("resolvers","lists")
-local report_resolved = logs.reporter("system","resolved")
+local resolveprefix = resolvers.resolve
+
+local report_lists = logs.reporter("resolvers","lists")
 
 local function tabstr(str)
     if type(str) == 'table' then
@@ -29,18 +30,41 @@ local function tabstr(str)
 end
 
 function listers.variables(pattern)
-    local result = resolvers.knownvariables(pattern)
-    for key, value in sortedhash(result) do
-        report_lists(key)
-        report_lists("  env: %s",tabstr(value.environment or "unset"))
-        report_lists("  var: %s",tabstr(value.variable    or "unset"))
-        report_lists("  exp: %s",tabstr(value.expansion   or "unset"))
-        report_lists("  res: %s",tabstr(value.resolved    or "unset"))
+    local instance    = resolvers.instance
+    local environment = instance.environment
+    local variables   = instance.variables
+    local expansions  = instance.expansions
+    local pattern     = upper(pattern or "")
+    local configured  = { }
+    local order       = instance.order
+    for i=1,#order do
+        for k, v in next, order[i] do
+            if v ~= nil and configured[k] == nil then
+                configured[k] = v
+            end
+        end
     end
+    local env = fastcopy(environment)
+    local var = fastcopy(variables)
+    local exp = fastcopy(expansions)
+    for key, value in sortedpairs(configured) do
+        if key ~= "" and (pattern == "" or find(upper(key),pattern)) then
+            report_lists(key)
+            report_lists("  env: %s",tabstr(rawget(environment,key))        or "unset")
+            report_lists("  var: %s",tabstr(configured[key])                or "unset")
+            report_lists("  exp: %s",tabstr(expansions[key])                or "unset")
+            report_lists("  res: %s",tabstr(resolveprefix(expansions[key])) or "unset")
+        end
+    end
+    instance.environment = fastcopy(env)
+    instance.variables   = fastcopy(var)
+    instance.expansions  = fastcopy(exp)
 end
 
+local report_resolved = logs.reporter("system","resolved")
+
 function listers.configurations()
-    local configurations = resolvers.configurationfiles()
+    local configurations = resolvers.instance.specification
     for i=1,#configurations do
         report_resolved("file : %s",resolveprefix(configurations[i]))
     end

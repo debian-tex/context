@@ -240,10 +240,13 @@
    \d_overlay_linewidth\linewidth
    \edef\overlaylinecolor{\mathornamentparameter\c!color}%
    \edef\p_mp{\mathornamentparameter\c!mp}%
-   % the width of the graphic determines the width of the final result
+   % thw width of the graphic determines the width of the final result
    \setbox\scratchbox\hpack{\uniqueMPgraphic{\p_mp}}% todo: add code key + tag
-   \hpack to \wd\scratchbox{\hss\box\nextbox\hss}%
-   \hskip-\wd\scratchbox
+   \scratchdimen       \wd\scratchbox
+ % \scratchtopoffset   \dimexpr\scratchoffset+\dp\nextbox\relax
+ % \scratchbottomoffset\dimexpr\scratchoffset+\ht\nextbox/2\relax
+   \hpack to \scratchdimen{\hss\box\nextbox\hss}%
+   \hskip-\scratchdimen
    \box\scratchbox
    \endgroup}
 

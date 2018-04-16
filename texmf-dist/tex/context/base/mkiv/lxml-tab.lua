@@ -160,20 +160,9 @@ local entities, parameters
 local strip, utfize, resolve, cleanup, resolve_predefined, unify_predefined
 local dcache, hcache, acache
 local mt, dt, nt
-local currentfilename, currentline, linenumbers
-
-local grammar_parsed_text_one
-local grammar_parsed_text_two
-local grammar_unparsed_text
-
-local handle_hex_entity
-local handle_dec_entity
-local handle_any_entity_dtd
-local handle_any_entity_text
 
 local function preparexmlstate(settings)
     if settings then
-        linenumbers        = settings.linenumbers
         stack              = { }
         level              = 0
         top                = { }
@@ -190,8 +179,6 @@ local function preparexmlstate(settings)
         unify_predefined   = settings.unify_predefined_entities   -- &#038; -> &amp;
         cleanup            = settings.text_cleanup
         entities           = settings.entities or { }
-        currentfilename    = settings.currentresource
-        currentline        = 1
         parameters         = { }
         reported_at_errors = { }
         dcache             = { }
@@ -206,7 +193,6 @@ local function preparexmlstate(settings)
             resolve_predefined = true
         end
     else
-        linenumbers        = false
         stack              = nil
         level              = nil
         top                = nil
@@ -228,8 +214,6 @@ local function preparexmlstate(settings)
         dcache             = nil
         hcache             = nil
         acache             = nil
-        currentfilename    = nil
-        currentline        = 1
     end
 end
 
@@ -274,24 +258,14 @@ local function add_empty(spacing, namespace, tag)
     top = stack[level]
     dt = top.dt
     nt = #dt + 1
-    local t = linenumbers and {
+    local t = {
         ns = namespace or "",
         rn = resolved,
         tg = tag,
         at = at,
         dt = { },
         ni = nt, -- set slot, needed for css filtering
-        cf = currentfilename,
-        cl = currentline,
-        __p__ = top,
-    } or {
-        ns = namespace or "",
-        rn = resolved,
-        tg = tag,
-        at = at,
-        dt = { },
-        ni = nt, -- set slot, needed for css filtering
-        __p__ = top,
+        __p__ = top
     }
     dt[nt] = t
     setmetatable(t, mt)
@@ -307,28 +281,18 @@ local function add_begin(spacing, namespace, tag)
         dt[nt] = spacing
     end
     local resolved = namespace == "" and xmlns[#xmlns] or nsremap[namespace] or namespace
-    dt = { }
-    top = linenumbers and {
+    top = {
         ns = namespace or "",
         rn = resolved,
         tg = tag,
         at = at,
-        dt = dt,
+        dt = { },
         ni = nil, -- preset slot, needed for css filtering
-        cf = currentfilename,
-        cl = currentline,
-        __p__ = stack[level],
-    } or {
-        ns = namespace or "",
-        rn = resolved,
-        tg = tag,
-        at = at,
-        dt = dt,
-        ni = nil, -- preset slot, needed for css filtering
-        __p__ = stack[level],
+        __p__ = stack[level]
     }
     setmetatable(top, mt)
-    nt = 0
+    dt = top.dt
+    nt = #dt
     level = level + 1
     stack[level] = top
     at = { }
@@ -408,15 +372,7 @@ local function add_special(what, spacing, text)
         -- forget it
     else
         nt = nt + 1
-        dt[nt] = linenumbers and {
-            special = true,
-            ns      = "",
-            tg      = what,
-            ni      = nil, -- preset slot
-            dt      = { text },
-            cf      = currentfilename,
-            cl      = currentline,
-        } or {
+        dt[nt] = {
             special = true,
             ns      = "",
             tg      = what,
@@ -448,12 +404,20 @@ local function attribute_specification_error(str)
     return str
 end
 
--- I'm sure that this lpeg can be simplified (less captures) but it evolved ...
--- so i'm not going to change it now.
+-- these will be set later
+
+local grammar_parsed_text_one
+local grammar_parsed_text_two
+
+local handle_hex_entity
+local handle_dec_entity
+local handle_any_entity_dtd
+local handle_any_entity_text
+
+-- in order to overcome lua limitations we wrap entity stuff in a
+-- closure
 
 do
-
-    -- In order to overcome lua limitations we wrap entity stuff in a closure.
 
     local badentity = "&" -- was "&error;"
 
@@ -916,14 +880,7 @@ local function handle_crap_error(chr)
     return chr
 end
 
-local function handlenewline()
-    currentline = currentline + 1
-end
-
-local spacetab         = S(' \t')
 local space            = S(' \r\n\t')
-local newline          = lpegpatterns.newline / handlenewline
-local anything         = P(1)
 local open             = P('<')
 local close            = P('>')
 local squote           = S("'")
@@ -940,9 +897,67 @@ local name             = name_yes + name_nop
 local utfbom           = lpegpatterns.utfbom -- no capture
 local spacing          = C(space^0)
 
-local space_nl         = spacetab + newline
-local spacing_nl       = Cs((space_nl)^0)
-local anything_nl      = newline + P(1)
+----- entitycontent    = (1-open-semicolon)^0
+local anyentitycontent = (1-open-semicolon-space-close-ampersand)^0
+local hexentitycontent = R("AF","af","09")^1
+local decentitycontent = R("09")^1
+local parsedentity     = P("#")/"" * (
+                                P("x")/"" * (hexentitycontent/handle_hex_entity) +
+                                            (decentitycontent/handle_dec_entity)
+                            ) +             (anyentitycontent/handle_any_entity_dtd) -- can be Cc(true)
+local parsedentity_text= P("#")/"" * (
+                                P("x")/"" * (hexentitycontent/handle_hex_entity) +
+                                            (decentitycontent/handle_dec_entity)
+                            ) +             (anyentitycontent/handle_any_entity_text) -- can be Cc(false)
+----- entity           = ampersand/"" * parsedentity * ( (semicolon/"") + #(P(1)/handle_end_entity))
+local entity           = (ampersand/"") * parsedentity   * (semicolon/"")
+                       + ampersand * (anyentitycontent / handle_end_entity)
+local entity_text      = (ampersand/"") * parsedentity_text * (semicolon/"")
+                       + ampersand * (anyentitycontent / handle_end_entity)
+
+local text_unparsed    = C((1-open)^1)
+local text_parsed      = (Cs((1-open-ampersand)^1)/add_text + Cs(entity_text)/add_text)^1
+
+local somespace        = space^1
+local optionalspace    = space^0
+
+----- value            = (squote * C((1 - squote)^0) * squote) + (dquote * C((1 - dquote)^0) * dquote) -- ampersand and < also invalid in value
+local value            = (squote * Cs((entity + (1 - squote))^0) * squote) + (dquote * Cs((entity + (1 - dquote))^0) * dquote) -- ampersand and < also invalid in value
+
+local endofattributes  = slash * close + close -- recovery of flacky html
+local whatever         = space * name * optionalspace * equal
+----- wrongvalue       = C(P(1-whatever-close)^1 + P(1-close)^1) / attribute_value_error
+----- wrongvalue       = C(P(1-whatever-endofattributes)^1 + P(1-endofattributes)^1) / attribute_value_error
+----- wrongvalue       = C(P(1-space-endofattributes)^1) / attribute_value_error
+local wrongvalue       = Cs(P(entity + (1-space-endofattributes))^1) / attribute_value_error
+
+local attributevalue   = value + wrongvalue
+
+local attribute        = (somespace * name * optionalspace * equal * optionalspace * attributevalue) / add_attribute
+----- attributes       = (attribute)^0
+
+local attributes       = (attribute + somespace^-1 * (((1-endofattributes)^1)/attribute_specification_error))^0
+
+local parsedtext       = text_parsed   -- / add_text
+local unparsedtext     = text_unparsed / add_text
+local balanced         = P { "[" * ((1 - S"[]") + V(1))^0 * "]" } -- taken from lpeg manual, () example
+
+local emptyelement     = (spacing * open         * name * attributes * optionalspace * slash * close) / add_empty
+local beginelement     = (spacing * open         * name * attributes * optionalspace         * close) / add_begin
+local endelement       = (spacing * open * slash * name              * optionalspace         * close) / add_end
+
+-- todo: combine the opens in:
+
+local begincomment     = open * P("!--")
+local endcomment       = P("--") * close
+local begininstruction = open * P("?")
+local endinstruction   = P("?") * close
+local begincdata       = open * P("![CDATA[")
+local endcdata         = P("]]") * close
+
+local someinstruction  = C((1 - endinstruction)^0)
+local somecomment      = C((1 - endcomment    )^0)
+local somecdata        = C((1 - endcdata      )^0)
 
 local function weirdentity(k,v)
     if trace_entities then
@@ -969,177 +984,97 @@ local function publicentity(k,v,n)
     entities[k] = v
 end
 
-local function install(spacenewline,spacing,anything)
+-- todo: separate dtd parser
 
-    local anyentitycontent = (1-open-semicolon-space-close-ampersand)^0
-    local hexentitycontent = R("AF","af","09")^1
-    local decentitycontent = R("09")^1
-    local parsedentity     = P("#")/"" * (
-                                    P("x")/"" * (hexentitycontent/handle_hex_entity) +
-                                                (decentitycontent/handle_dec_entity)
-                                ) +             (anyentitycontent/handle_any_entity_dtd) -- can be Cc(true)
-    local parsedentity_text= P("#")/"" * (
-                                    P("x")/"" * (hexentitycontent/handle_hex_entity) +
-                                                (decentitycontent/handle_dec_entity)
-                                ) +             (anyentitycontent/handle_any_entity_text) -- can be Cc(false)
-    local entity           = (ampersand/"") * parsedentity   * (semicolon/"")
-                           + ampersand * (anyentitycontent / handle_end_entity)
-    local entity_text      = (ampersand/"") * parsedentity_text * (semicolon/"")
-                           + ampersand * (anyentitycontent / handle_end_entity)
+local begindoctype     = open * P("!DOCTYPE")
+local enddoctype       = close
+local beginset         = P("[")
+local endset           = P("]")
+local wrdtypename      = C((1-somespace-P(";"))^1)
+local doctypename      = C((1-somespace-close)^0)
+local elementdoctype   = optionalspace * P("<!ELEMENT") * (1-close)^0 * close
 
-    local text_unparsed    = Cs((anything-open)^1)
-    local text_parsed      = (Cs((anything-open-ampersand)^1)/add_text + Cs(entity_text)/add_text)^1
+local basiccomment     = begincomment * ((1 - endcomment)^0) * endcomment
 
-    local somespace        = (spacenewline)^1
-    local optionalspace    = (spacenewline)^0
+local weirdentitytype  = P("%") * (somespace * doctypename * somespace * value) / weirdentity
+local normalentitytype = (doctypename * somespace * value) / normalentity
+local publicentitytype = (doctypename * somespace * P("PUBLIC") * somespace * value)/publicentity
+local systementitytype = (doctypename * somespace * P("SYSTEM") * somespace * value * somespace * P("NDATA") * somespace * doctypename)/systementity
+local entitydoctype    = optionalspace * P("<!ENTITY") * somespace * (systementitytype + publicentitytype + normalentitytype + weirdentitytype) * optionalspace * close
 
-    local value            = (squote * Cs((entity + (anything - squote))^0) * squote) + (dquote * Cs((entity + (anything - dquote))^0) * dquote) -- ampersand and < also invalid in value
-
-    local endofattributes  = slash * close + close -- recovery of flacky html
-    local whatever         = space * name * optionalspace * equal
-    local wrongvalue       = Cs(P(entity + (1-space-endofattributes))^1) / attribute_value_error
-
-    local attributevalue   = value + wrongvalue
-
-    local attribute        = (somespace * name * optionalspace * equal * optionalspace * attributevalue) / add_attribute
-
---     local attributes       = (attribute + somespace^-1 * (((1-endofattributes)^1)/attribute_specification_error))^0
-    local attributes       = (attribute + somespace^-1 * (((anything-endofattributes)^1)/attribute_specification_error))^0
-
-    local parsedtext       = text_parsed   -- / add_text
-    local unparsedtext     = text_unparsed / add_text
-    local balanced         = P { "[" * ((anything - S"[]") + V(1))^0 * "]" } -- taken from lpeg manual, () example
-
-    local emptyelement     = (spacing * open         * name * attributes * optionalspace * slash * close) / add_empty
-    local beginelement     = (spacing * open         * name * attributes * optionalspace         * close) / add_begin
-    local endelement       = (spacing * open * slash * name              * optionalspace         * close) / add_end
-
-    -- todo: combine the opens in:
-
-    local begincomment     = open * P("!--")
-    local endcomment       = P("--") * close
-    local begininstruction = open * P("?")
-    local endinstruction   = P("?") * close
-    local begincdata       = open * P("![CDATA[")
-    local endcdata         = P("]]") * close
-
-    local someinstruction  = C((anything - endinstruction)^0)
-    local somecomment      = C((anything - endcomment    )^0)
-    local somecdata        = C((anything - endcdata      )^0)
-
-    -- todo: separate dtd parser
-
-    local begindoctype     = open * P("!DOCTYPE")
-    local enddoctype       = close
-    local beginset         = P("[")
-    local endset           = P("]")
-    local wrdtypename      = C((anything-somespace-P(";"))^1)
-    local doctypename      = C((anything-somespace-close)^0)
-    local elementdoctype   = optionalspace * P("<!ELEMENT") * (anything-close)^0 * close
-
-    local basiccomment     = begincomment * ((anything - endcomment)^0) * endcomment
-
-    local weirdentitytype  = P("%") * (somespace * doctypename * somespace * value) / weirdentity
-    local normalentitytype = (doctypename * somespace * value) / normalentity
-    local publicentitytype = (doctypename * somespace * P("PUBLIC") * somespace * value)/publicentity
-    local systementitytype = (doctypename * somespace * P("SYSTEM") * somespace * value * somespace * P("NDATA") * somespace * doctypename)/systementity
-    local entitydoctype    = optionalspace * P("<!ENTITY") * somespace * (systementitytype + publicentitytype + normalentitytype + weirdentitytype) * optionalspace * close
-
-    local function weirdresolve(s)
-        lpegmatch(entitydoctype,parameters[s])
-    end
-
-    local function normalresolve(s)
-        lpegmatch(entitydoctype,entities[s])
-    end
-
-    local entityresolve    = P("%") * (wrdtypename/weirdresolve ) * P(";")
-                           + P("&") * (wrdtypename/normalresolve) * P(";")
-
-    entitydoctype          = entitydoctype + entityresolve
-
-    -- we accept comments in doctypes
-
-    local doctypeset       = beginset * optionalspace * P(elementdoctype + entitydoctype + entityresolve + basiccomment + space)^0 * optionalspace * endset
-    local definitiondoctype= doctypename * somespace * doctypeset
-    local publicdoctype    = doctypename * somespace * P("PUBLIC") * somespace * value * somespace * value * somespace * doctypeset
-    local systemdoctype    = doctypename * somespace * P("SYSTEM") * somespace * value * somespace * doctypeset
-    local simpledoctype    = (anything-close)^1 -- * balanced^0
-    local somedoctype      = C((somespace * (publicdoctype + systemdoctype + definitiondoctype + simpledoctype) * optionalspace)^0)
-
-    local instruction      = (spacing * begininstruction * someinstruction * endinstruction) / function(...) add_special("@pi@",...) end
-    local comment          = (spacing * begincomment     * somecomment     * endcomment    ) / function(...) add_special("@cm@",...) end
-    local cdata            = (spacing * begincdata       * somecdata       * endcdata      ) / function(...) add_special("@cd@",...) end
-    local doctype          = (spacing * begindoctype     * somedoctype     * enddoctype    ) / function(...) add_special("@dt@",...) end
-
-    local crap_parsed     = anything - beginelement - endelement - emptyelement - begininstruction - begincomment - begincdata - ampersand
-    local crap_unparsed   = anything - beginelement - endelement - emptyelement - begininstruction - begincomment - begincdata
-
-    local parsedcrap      = Cs((crap_parsed^1 + entity_text)^1) / handle_crap_error
-    local parsedcrap      = Cs((crap_parsed^1 + entity_text)^1) / handle_crap_error
-    local unparsedcrap    = Cs((crap_unparsed              )^1) / handle_crap_error
-
-    --  nicer but slower:
-    --
-    --  local instruction = (Cc("@pi@") * spacing * begininstruction * someinstruction * endinstruction) / add_special
-    --  local comment     = (Cc("@cm@") * spacing * begincomment     * somecomment     * endcomment    ) / add_special
-    --  local cdata       = (Cc("@cd@") * spacing * begincdata       * somecdata       * endcdata      ) / add_special
-    --  local doctype     = (Cc("@dt@") * spacing * begindoctype     * somedoctype     * enddoctype    ) / add_special
-
-    local trailer = space^0 * (text_unparsed/set_message)^0
-
-    --  comment + emptyelement + text + cdata + instruction + V("parent"), -- 6.5 seconds on 40 MB database file
-    --  text + comment + emptyelement + cdata + instruction + V("parent"), -- 5.8
-    --  text + V("parent") + emptyelement + comment + cdata + instruction, -- 5.5
-
-    -- local grammar_parsed_text = P { "preamble",
-    --     preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0 * V("parent") * trailer,
-    --     parent   = beginelement * V("children")^0 * endelement,
-    --     children = parsedtext + V("parent") + emptyelement + comment + cdata + instruction + parsedcrap,
-    -- }
-
-    local grammar_parsed_text_one = P { "preamble",
-        preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0,
-    }
-
-    local grammar_parsed_text_two = P { "followup",
-        followup = V("parent") * trailer,
-        parent   = beginelement * V("children")^0 * endelement,
-        children = parsedtext + V("parent") + emptyelement + comment + cdata + instruction + parsedcrap,
-    }
-
-    local grammar_unparsed_text = P { "preamble",
-        preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0 * V("parent") * trailer,
-        parent   = beginelement * V("children")^0 * endelement,
-        children = unparsedtext + V("parent") + emptyelement + comment + cdata + instruction + unparsedcrap,
-    }
-
-    return grammar_parsed_text_one, grammar_parsed_text_two, grammar_unparsed_text
-
+local function weirdresolve(s)
+    lpegmatch(entitydoctype,parameters[s])
 end
 
-grammar_parsed_text_one_nop ,
-grammar_parsed_text_two_nop ,
-grammar_unparsed_text_nop   = install(space, spacing, anything)
+local function normalresolve(s)
+    lpegmatch(entitydoctype,entities[s])
+end
 
-grammar_parsed_text_one_yes ,
-grammar_parsed_text_two_yes ,
-grammar_unparsed_text_yes   = install(space_nl, spacing_nl, anything_nl)
+local entityresolve    = P("%") * (wrdtypename/weirdresolve ) * P(";")
+                       + P("&") * (wrdtypename/normalresolve) * P(";")
+
+entitydoctype          = entitydoctype + entityresolve
+
+-- we accept comments in doctypes
+
+local doctypeset       = beginset * optionalspace * P(elementdoctype + entitydoctype + entityresolve + basiccomment + space)^0 * optionalspace * endset
+local definitiondoctype= doctypename * somespace * doctypeset
+local publicdoctype    = doctypename * somespace * P("PUBLIC") * somespace * value * somespace * value * somespace * doctypeset
+local systemdoctype    = doctypename * somespace * P("SYSTEM") * somespace * value * somespace * doctypeset
+local simpledoctype    = (1-close)^1 -- * balanced^0
+local somedoctype      = C((somespace * (publicdoctype + systemdoctype + definitiondoctype + simpledoctype) * optionalspace)^0)
+
+local instruction      = (spacing * begininstruction * someinstruction * endinstruction) / function(...) add_special("@pi@",...) end
+local comment          = (spacing * begincomment     * somecomment     * endcomment    ) / function(...) add_special("@cm@",...) end
+local cdata            = (spacing * begincdata       * somecdata       * endcdata      ) / function(...) add_special("@cd@",...) end
+local doctype          = (spacing * begindoctype     * somedoctype     * enddoctype    ) / function(...) add_special("@dt@",...) end
+
+local crap_parsed     = 1 - beginelement - endelement - emptyelement - begininstruction - begincomment - begincdata - ampersand
+local crap_unparsed   = 1 - beginelement - endelement - emptyelement - begininstruction - begincomment - begincdata
+local parsedcrap      = Cs((crap_parsed^1 + entity_text)^1) / handle_crap_error
+local parsedcrap      = Cs((crap_parsed^1 + entity_text)^1) / handle_crap_error
+local unparsedcrap    = Cs((crap_unparsed              )^1) / handle_crap_error
+
+--  nicer but slower:
+--
+--  local instruction = (Cc("@pi@") * spacing * begininstruction * someinstruction * endinstruction) / add_special
+--  local comment     = (Cc("@cm@") * spacing * begincomment     * somecomment     * endcomment    ) / add_special
+--  local cdata       = (Cc("@cd@") * spacing * begincdata       * somecdata       * endcdata      ) / add_special
+--  local doctype     = (Cc("@dt@") * spacing * begindoctype     * somedoctype     * enddoctype    ) / add_special
+
+local trailer = space^0 * (text_unparsed/set_message)^0
+
+--  comment + emptyelement + text + cdata + instruction + V("parent"), -- 6.5 seconds on 40 MB database file
+--  text + comment + emptyelement + cdata + instruction + V("parent"), -- 5.8
+--  text + V("parent") + emptyelement + comment + cdata + instruction, -- 5.5
+
+-- local grammar_parsed_text = P { "preamble",
+--     preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0 * V("parent") * trailer,
+--     parent   = beginelement * V("children")^0 * endelement,
+--     children = parsedtext + V("parent") + emptyelement + comment + cdata + instruction + parsedcrap,
+-- }
+
+grammar_parsed_text_one = P { "preamble",
+    preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0,
+}
+
+grammar_parsed_text_two = P { "followup",
+    followup = V("parent") * trailer,
+    parent   = beginelement * V("children")^0 * endelement,
+    children = parsedtext + V("parent") + emptyelement + comment + cdata + instruction + parsedcrap,
+}
+
+local grammar_unparsed_text = P { "preamble",
+    preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0 * V("parent") * trailer,
+    parent   = beginelement * V("children")^0 * endelement,
+    children = unparsedtext + V("parent") + emptyelement + comment + cdata + instruction + unparsedcrap,
+}
 
 -- maybe we will add settings to result as well
 
-local function _xmlconvert_(data,settings,detail)
+local function _xmlconvert_(data,settings)
     settings = settings or { } -- no_root strip_cm_and_dt given_entities parent_root error_handler
     preparexmlstate(settings)
-    if settings.linenumbers then
-        grammar_parsed_text_one = grammar_parsed_text_one_yes
-        grammar_parsed_text_two = grammar_parsed_text_two_yes
-        grammar_unparsed_text   = grammar_unparsed_text_yes
-    else
-        grammar_parsed_text_one = grammar_parsed_text_one_nop
-        grammar_parsed_text_two = grammar_parsed_text_two_nop
-        grammar_unparsed_text   = grammar_unparsed_text_nop
-    end
     local preprocessor = settings.preprocessor
     if data and data ~= "" and type(preprocessor) == "function" then
         data = preprocessor(data,settings) or data -- settings.currentresource
@@ -1156,8 +1091,6 @@ local function _xmlconvert_(data,settings,detail)
     nt = 0
     if not data or data == "" then
         errorstr = "empty xml file"
-    elseif data == true then
-        errorstr = detail or "problematic xml file"
     elseif utfize or resolve then
         local m = lpegmatch(grammar_parsed_text_one,data)
         if m then
@@ -1180,7 +1113,7 @@ local function _xmlconvert_(data,settings,detail)
     end
     local result
     if errorstr and errorstr ~= "" then
-        result = { dt = { { ns = "", tg = "error", dt = { errorstr }, at = { }, er = true } } }
+        result = { dt = { { ns = "", tg = "error", dt = { errorstr }, at={ }, er = true } } }
         setmetatable(result, mt)
         setmetatable(result.dt[1], mt)
         setmetatable(stack, mt)
@@ -1192,7 +1125,7 @@ local function _xmlconvert_(data,settings,detail)
             if errorhandler then
                 local currentresource = settings.currentresource
                 if currentresource and currentresource ~= "" then
-                    xml.errorhandler(formatters["load error in [%s]: %s"](currentresource,errorstr),currentresource)
+                    xml.errorhandler(formatters["load error in [%s]: %s"](currentresource,errorstr))
                 else
                     xml.errorhandler(formatters["load error: %s"](errorstr))
                 end
@@ -1239,10 +1172,8 @@ local function xmlconvert(data,settings)
     local ok, result = pcall(function() return _xmlconvert_(data,settings) end)
     if ok then
         return result
-    elseif type(result) == "string" then
-        return _xmlconvert_(true,settings,result)
     else
-        return _xmlconvert_(true,settings)
+        return _xmlconvert_("",settings)
     end
 end
 

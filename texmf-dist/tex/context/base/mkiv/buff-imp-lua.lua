@@ -9,7 +9,7 @@ if not modules then modules = { } end modules ['buff-imp-lua'] = {
 -- borrowed from ctx scite lexers
 -- add goto/label scanning
 --
--- deprecated:
+-- depricated:
 --
 -- gcinfo unpack getfenv setfenv loadlib
 -- table.maxn table.getn table.setn
@@ -82,7 +82,6 @@ local LuaSnippetQuote         = verbatim.LuaSnippetQuote
 local LuaSnippetString        = verbatim.LuaSnippetString
 local LuaSnippetSpecial       = verbatim.LuaSnippetSpecial
 local LuaSnippetComment       = verbatim.LuaSnippetComment
-local LuaSnippetCommentText   = verbatim.LuaSnippetCommentText
 local LuaSnippetNameCore      = verbatim.LuaSnippetNameCore
 local LuaSnippetNameBase      = verbatim.LuaSnippetNameBase
 local LuaSnippetNameLibraries = verbatim.LuaSnippetNameLibraries
@@ -128,7 +127,6 @@ local handler = visualizers.newhandler {
     boundary     = function(s) LuaSnippetBoundary(s) end,
     special      = function(s) LuaSnippetSpecial(s) end,
     comment      = function(s) LuaSnippetComment(s) end,
-    commenttext  = function(s) LuaSnippetCommentText(s) end,
     quote        = function(s) LuaSnippetQuote(s) end,
     string       = function(s) LuaSnippetString(s) end,
     period       = function(s) verbatim(s) end,
@@ -137,12 +135,7 @@ local handler = visualizers.newhandler {
     name_c       = visualizename_c,
 }
 
------ comment     = P("--")
-local comment     = P("--") * (patterns.anything - patterns.newline)^0
-local comment_lb  = P("--[[")
-local comment_le  = P("--]]")
-local comment_lt  = patterns.utf8char - comment_le - patterns.newline
-
+local comment     = P("--")
 local name        = (patterns.letter + patterns.underscore)
                   * (patterns.letter + patterns.underscore + patterns.digit)^0
 local boundary    = S('()[]{}')
@@ -175,12 +168,11 @@ local grammar = visualizers.newgrammar("default", { "visualizer",
     longstring =
         longstring / long,
     comment =
-        makepattern(handler, "comment", comment_lb)
-      * (   makepattern(handler, "commenttext", comment_lt)
-          + V("whitespace")
-        )^0
-      * makepattern(handler, "comment", comment_le)
-      + makepattern(handler,"comment",comment),
+        makepattern(handler,"comment",comment)
+      * (V("space") + V("content"))^0,
+    longcomment =
+        makepattern(handler,"comment",comment)
+      * longstring / long,
     name =
         makepattern(handler,"name_a",name)
       * (   V("optionalwhitespace")
@@ -195,7 +187,8 @@ local grammar = visualizers.newgrammar("default", { "visualizer",
         )^0,
 
     pattern =
-        V("comment")
+        V("longcomment")
+      + V("comment")
       + V("longstring")
       + V("dstring")
       + V("sstring")

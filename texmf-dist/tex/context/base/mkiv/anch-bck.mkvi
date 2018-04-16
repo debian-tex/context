@@ -159,9 +159,6 @@
 
 % todo \backgroundvariable\c!variant
 
-% criterium determines when we fall back on text
-% always is always forcing paragraphs
-
 \let\anch_backgrounds_text_start_indeed\relax
 \let\anch_backgrounds_text_stop_indeed \relax
 
@@ -170,17 +167,13 @@
    \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_txt}
 
 \setvalue{\??textbackgroundlevel\v!paragraph}%
-  {\ifnum\c_anch_backgrounds_text_level>\textbackgroundparameter\c!criterium\relax
+  {\ifnum\c_anch_backgrounds_text_level>\plusone
      \let\anch_backgrounds_text_start_indeed\anch_backgrounds_text_start_txt
      \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_txt
    \else
      \let\anch_backgrounds_text_start_indeed\anch_backgrounds_text_start_par
      \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_par
    \fi}
-
-\setvalue{\??textbackgroundlevel\v!always}%
-  {\let\anch_backgrounds_text_start_indeed\anch_backgrounds_text_start_par
-   \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_par}
 
 \setvalue{\??textbackgroundlevel\v!none}%
   {\anch_backgrounds_text_preset_nop}
@@ -520,7 +513,6 @@
    \c!rightoffset=\textbackgroundparameter\c!leftoffset,
    \c!topoffset=\!!zeropoint,  % \v!medium,
    \c!bottomoffset=\textbackgroundparameter\c!topoffset,
-   \c!criterium=\plusone,
    \c!level=-1,
    \c!alternative=0,
    \c!align=,

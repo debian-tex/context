@@ -64,9 +64,11 @@ local getsubtype          = nuts.getsubtype
 local getlist             = nuts.getlist
 local getchar             = nuts.getchar
 local getattr             = nuts.getattr
+local getfield            = nuts.getfield
 local getprop             = nuts.getprop
 local getdir              = nuts.getdir
 
+local setfield            = nuts.setfield
 local setprop             = nuts.setprop
 local setchar             = nuts.setchar
 local setdir              = nuts.setdir
@@ -240,7 +242,7 @@ end
 
 -- local space  = { char = 0x0020, direction = "ws",  original = "ws"  }
 -- local lre    = { char = 0x202A, direction = "lre", original = "lre" }
--- local rle    = { char = 0x202B, direction = "rle", original = "rle" }
+-- local lre    = { char = 0x202B, direction = "rle", original = "rle" }
 -- local pdf    = { char = 0x202C, direction = "pdf", original = "pdf" }
 -- local object = { char = 0xFFFC, direction = "on",  original = "on"  }
 --
@@ -559,30 +561,28 @@ local function resolve_weak(list,size,start,limit,orderbefore,orderafter)
         end
     else -- probably more efficient
         local runner = start + 2
-        if runner <= limit then
-            local before = list[start]
-            local entry  = list[start + 1]
-            local after  = list[runner]
-            while after do
-                local direction = entry.direction
-                if direction == "es" then
-                    if before.direction == "en" and after.direction == "en" then
+        local before = list[start]
+        local entry  = list[start + 1]
+        local after  = list[runner]
+        while after do
+            local direction = entry.direction
+            if direction == "es" then
+                if before.direction == "en" and after.direction == "en" then
+                    entry.direction = "en"
+                end
+            elseif direction == "cs" then
+                local prevdirection = before.direction
+                if prevdirection == "en" then
+                    if after.direction == "en" then
                         entry.direction = "en"
                     end
-                elseif direction == "cs" then
-                    local prevdirection = before.direction
-                    if prevdirection == "en" then
-                        if after.direction == "en" then
-                            entry.direction = "en"
-                        end
-                    elseif prevdirection == "an" and after.direction == "an" then
-                        entry.direction = "an"
-                    end
+                elseif prevdirection == "an" and after.direction == "an" then
+                    entry.direction = "an"
                 end
-                before  = current
-                current = after
-                after   = list[runner]
             end
+            before  = current
+            current = after
+            after   = list[runner]
         end
     end
     -- W5
@@ -814,57 +814,11 @@ local function resolve_levels(list,size,baselevel,analyze_fences)
     end
 end
 
--- local function insert_dir_points(list,size)
---     -- L2, but no actual reversion is done, we simply annotate where
---     -- begindir/endddir node will be inserted.
---     local maxlevel = 0
---     local finaldir = false
---     for i=1,size do
---         local level = list[i].level
---         if level > maxlevel then
---             maxlevel = level
---         end
---     end
---     for level=0,maxlevel do
---         local started  = false
---         local begindir = nil
---         local enddir   = nil
---         if level % 2 == 1 then
---             begindir = "+TRT"
---             enddir   = "-TRT"
---         else
---             begindir = "+TLT"
---             enddir   = "-TLT"
---         end
---         for i=1,size do
---             local entry = list[i]
---             if entry.level >= level then
---                 if not started then
---                     entry.begindir = begindir
---                     started        = true
---                 end
---             else
---                 if started then
---                     list[i-1].enddir = enddir
---                     started          = false
---                 end
---             end
---         end
---         -- make sure to close the run at end of line
---         if started then
---             finaldir = enddir
---         end
---     end
---     if finaldir then
---         list[size].enddir = finaldir
---     end
--- end
-
 local function insert_dir_points(list,size)
     -- L2, but no actual reversion is done, we simply annotate where
     -- begindir/endddir node will be inserted.
     local maxlevel = 0
-    local toggle   = true
+    local finaldir = false
     for i=1,size do
         local level = list[i].level
         if level > maxlevel then
@@ -872,18 +826,15 @@ local function insert_dir_points(list,size)
         end
     end
     for level=0,maxlevel do
-        local started  -- = false
-        local begindir -- = nil
-        local enddir   -- = nil
-        local prev     -- = nil
-        if toggle then
-            begindir = "+TLT"
-            enddir   = "-TLT"
-            toggle   = false
-        else
+        local started  = false
+        local begindir = nil
+        local enddir   = nil
+        if level % 2 == 1 then
             begindir = "+TRT"
             enddir   = "-TRT"
-            toggle   = true
+        else
+            begindir = "+TLT"
+            enddir   = "-TLT"
         end
         for i=1,size do
             local entry = list[i]
@@ -894,36 +845,18 @@ local function insert_dir_points(list,size)
                 end
             else
                 if started then
-                    prev.enddir = enddir
-                    started     = false
+                    list[i-1].enddir = enddir
+                    started          = false
                 end
             end
-            prev = entry
+        end
+        -- make sure to close the run at end of line
+        if started then
+            finaldir = enddir
         end
     end
-    -- make sure to close the run at end of line
-    local last = list[size]
-    if not last.enddir then
-        local s = { }
-        local n = 0
-        for i=1,size do
-            local entry = list[i]
-            local e = entry.enddir
-            local b = entry.begindir
-            if e then
-                n = n - 1
-            end
-            if b then
-                n = n + 1
-                s[n] = b
-            end
-        end
-        if n > 0 then
-            if trace_list and n > 1 then
-                report_directions("unbalanced list")
-            end
-            last.enddir = s[n] == "+TRT" and "-TRT" or "-TLT"
-        end
+    if finaldir then
+        list[size].enddir = finaldir
     end
 end
 

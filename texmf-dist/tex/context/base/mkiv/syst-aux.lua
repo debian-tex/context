@@ -11,7 +11,7 @@ if not modules then modules = { } end modules ['syst-aux'] = {
 -- utfmatch(str,"(.?)(.*)$")
 -- utf.sub(str,1,1)
 
-local tonumber, next = tonumber, next
+local tonumber = tonumber
 local utfsub = utf.sub
 local P, S, R, C, Cc, Cs, Carg, lpegmatch = lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.Cc, lpeg.Cs, lpeg.Carg, lpeg.match
 local next = next
@@ -23,7 +23,7 @@ local formatters        = string.formatters
 local setcatcode        = tex.setcatcode
 local utf8character     = lpeg.patterns.utf8character
 local settings_to_array = utilities.parsers.settings_to_array
-local settings_to_set   = utilities.parsers.settings_to_set
+local settings_to_set  = utilities.parsers.settings_to_set
 local setmacro          = interfaces.setmacro
 
 local pattern           = C(utf8character^-1) * C(P(1)^0)
@@ -61,7 +61,7 @@ local ctx_doifelse = commands.doifelse
 
 implement {
     name      = "doifelsefirstchar",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(str,chr)
         ctx_doifelse(lpegmatch(pattern,str) == chr)
     end
@@ -69,7 +69,7 @@ implement {
 
 implement {
     name      = "getsubstring",
-    arguments = "3 strings",
+    arguments = { "string", "string", "string" },
     actions   = function(str,first,last)
         context(utfsub(str,tonumber(first),tonumber(last)))
     end
@@ -390,8 +390,8 @@ local function doifelsecommon(a,b)
         end
         return
     end
-    local ba = find(a,",",1,true)
-    local bb = find(b,",",1,true)
+    local ba = find(a,",")
+    local bb = find(b,",")
     if ba and bb then
         local ha = hash[a]
         local hb = hash[b]
@@ -433,8 +433,8 @@ local function doifcommon(a,b)
         end
         return
     end
-    local ba = find(a,",",1,true)
-    local bb = find(b,",",1,true)
+    local ba = find(a,",")
+    local bb = find(b,",")
     if ba and bb then
         local ha = hash[a]
         local hb = hash[b]
@@ -476,8 +476,8 @@ local function doifnotcommon(a,b)
         end
         return
     end
-    local ba = find(a,",",1,true)
-    local bb = find(b,",",1,true)
+    local ba = find(a,",")
+    local bb = find(b,",")
     if ba and bb then
         local ha = hash[a]
         local hb = hash[b]
@@ -519,7 +519,7 @@ local function doifelseinset(a,b)
         end
         return
     end
-    local bb = find(b,",",1,true)
+    local bb = find(b,",")
     if bb then
         if hash[b][a] then
      -- if settings_to_set(b)[a] then
@@ -542,7 +542,7 @@ local function doifinset(a,b)
         end
         return
     end
-    local bb = find(b,",",1,true)
+    local bb = find(b,",")
     if bb then
        if hash[b][a] then
     -- if settings_to_set(b)[a] then
@@ -565,7 +565,7 @@ local function doifnotinset(a,b)
         end
         return
     end
-    local bb = find(b,",",1,true)
+    local bb = find(b,",")
     if bb then
         if hash[b][a] then
      -- if settings_to_set(b)[a] then
@@ -581,42 +581,42 @@ end
 implement {
     name      = "doifelsecommon",
     actions   = doifelsecommon,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 implement {
     name      = "doifcommon",
     actions   = doifcommon,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 implement {
     name      = "doifnotcommon",
     actions   = doifnotcommon,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 implement {
     name      = "doifelseinset",
     actions   = doifelseinset,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 implement {
     name      = "doifinset",
     actions   = doifinset,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 implement {
     name      = "doifnotinset",
     actions   = doifnotinset,
-    arguments = "2 strings",
+    arguments = { "string", "string" },
 }
 
 -- implement {
 --     name      = "stringcompare",
---     arguments = "2 strings",
+--     arguments = { "string", "string" },
 --     actions   = function(a,b)
 --         context((a == b and 0) or (a > b and 1) or -1)
 --     end
@@ -624,7 +624,7 @@ implement {
 --
 -- implement {
 --     name      = "doifelsestringafter",
---     arguments = "2 strings",
+--     arguments = { "string", "string" },
 --     actions   = function(a,b)
 --         ctx_doifelse((a == b and 0) or (a > b and 1) or -1)
 --     end
@@ -632,7 +632,7 @@ implement {
 --
 -- implement {
 --     name      = "doifelsestringbefore",
---     arguments = "2 strings",
+--     arguments = { "string", "string" },
 --     actions   = function(a,b)
 --         ctx_doifelse((a == b and 0) or (a < b and -1) or 1)
 --     end
@@ -640,7 +640,7 @@ implement {
 
 -- implement { -- not faster than addtocommalist
 --     name      = "additemtolist", -- unique
---     arguments = "2 strings",
+--     arguments = { "string", "string" },
 --     actions   = function(l,s)
 --         if l == "" or s == l then
 --          -- s = s
@@ -652,18 +652,3 @@ implement {
 --         context(s)
 --     end
 -- }
-
-local bp = number.dimenfactors.bp
-
-interfaces.implement {
-    name      = "tobigpoints",
-    actions   = function(d) context("%.5F",bp * d) end,
-    arguments = "dimension",
-}
-
-interfaces.implement {
-    name      = "towholebigpoints",
-    actions   = function(d) context("%r",bp * d) end,
-    arguments = "dimension",
-}
-

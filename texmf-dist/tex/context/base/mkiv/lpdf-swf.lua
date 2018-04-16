@@ -10,21 +10,17 @@ if not modules then modules = { } end modules ['lpdf-swf'] = {
 -- was using tex code. This is the official implementation.
 
 local format, gsub = string.format, string.gsub
-local concat = table.concat
 
-local backends        = backends
-local lpdf            = lpdf
-local context         = context
+local backends, lpdf = backends, lpdf
 
-local pdfconstant     = lpdf.constant
-local pdfstring       = lpdf.string
-local pdfdictionary   = lpdf.dictionary
-local pdfarray        = lpdf.array
-local pdfreference    = lpdf.reference
-local pdfflushobject  = lpdf.flushobject
-local pdfsharedobject = lpdf.shareobjectreference
+local pdfconstant    = lpdf.constant
+local pdfstring      = lpdf.string
+local pdfdictionary  = lpdf.dictionary
+local pdfarray       = lpdf.array
+local pdfreference   = lpdf.reference
+local pdfflushobject = lpdf.flushobject
 
-local checkedkey      = lpdf.checkedkey
+local checkedkey     = lpdf.checkedkey
 
 local codeinjections = backends.pdf.codeinjections
 local nodeinjections = backends.pdf.nodeinjections
@@ -49,18 +45,17 @@ table.setmetatableindex(activations,  function() return activations  .click end)
 table.setmetatableindex(deactivations,function() return deactivations.focus end)
 
 local function insertswf(spec)
+
     local width     = spec.width
     local height    = spec.height
     local filename  = spec.foundname
     local resources = spec.resources
     local display   = spec.display
     local controls  = spec.controls
-    local arguments = spec.arguments
 
     local resources = resources and parametersets[resources]
     local display   = display   and parametersets[display]
-    local controls  = controls  and parametersets[controls]  -- not yet used
-    local arguments = arguments and parametersets[arguments] -- not yet used
+    local controls  = controls  and parametersets[controls] -- not yet used
 
     local preview   = checkedkey(display,"preview","string")
     local toolbar   = checkedkey(display,"toolbar","boolean")
@@ -68,16 +63,13 @@ local function insertswf(spec)
     local embeddedreference = codeinjections.embedfile { file = filename }
 
     local flash = pdfdictionary {
-        Subtype   = pdfconstant("RichMediaConfiguration"),
+        Subtype   = pdfconstant("Flash"),
         Instances = pdfarray {
             pdfdictionary {
-                Type    = pdfconstant("RichMediaInstance"),
-                Asset   = embeddedreference,
-                Subtype = pdfconstant("Flash"), -- 3D Sound Video ... somehow still Flash too
-                Params  = pdfsharedobject(pdfdictionary {
-                    Binding   = pdfconstant("Background"), -- Foreground makes swf behave erratic
-                    FlashVars = arguments and pdfstring(table.sequenced(arguments,"&")) or nil,
-                }),
+                Asset  = embeddedreference,
+                Params = pdfdictionary {
+                    Binding = pdfconstant("Background") -- Foreground makes swf behave erratic
+                }
             },
         },
     }
@@ -106,6 +98,7 @@ local function insertswf(spec)
     local root          = file.dirname(filename)
     local relativepaths = nil
     local paths         = nil
+
     if resources then
         local names = configuration.Assets.Names
         local prefix = false
@@ -197,8 +190,7 @@ local function insertswf(spec)
             Playcount = 1,
         },
         Presentation  = pdfdictionary {
-         -- PassContextClick = false,
-            PassContextClick = true,
+            PassContextClick = false,
             Style            = pdfconstant("Embedded"),
             Toolbar          = toolbar,
             NavigationPane   = false,
@@ -302,7 +294,6 @@ function backends.pdf.nodeinjections.insertswf(spec)
         display   = spec.display,
         controls  = spec.controls,
         resources = spec.resources,
-        arguments = spec.arguments,
      -- factor    = spec.factor,
      -- label     = spec.label,
     }

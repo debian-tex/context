@@ -8,7 +8,6 @@ if not modules then modules = { } end modules ['lxml-sor'] = {
 
 local format, concat, rep = string.format, table.concat, string.rep
 local lpegmatch = lpeg.match
-local next = next
 
 local xml         = xml
 local lxml        = lxml

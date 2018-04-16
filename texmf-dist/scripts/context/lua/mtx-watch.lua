@@ -167,7 +167,6 @@ function scripts.watch.watch()
                 lfs.chdir(path)
                 local files = { }
                 glob(files,path)
-                glob(files,".")
                 table.sort(files,filenamesort)
 --                 for name, time in next, files do
                 for i=1,#files do
@@ -177,7 +176,6 @@ function scripts.watch.watch()
                     local name = joinname(dirname,basename)
                 --~ local ok, joblog = xpcall(function() return dofile(name) end, function() end )
                     local ok, joblog = pcall(dofile,name)
-report("checking file %s/%s: %s",dirname,basename,ok and "okay" or "skipped")
                     if ok and joblog then
                         if joblog.status == "processing" then
                             report("aborted job, %s added to queue",name)
@@ -401,9 +399,7 @@ function scripts.watch.cleanup_stale_files() -- removes duplicates
     elseif not delay then
         report("missing --cleanup=delay")
     else
-        if not force then
-            report("dryrun, use --force for real cleanup")
-        end
+        report("dryrun, use --force for real cleanup")
         local files = dir.glob(file.join(path,"*"))
         local rtime = time()
         for i=1,#files do

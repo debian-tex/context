@@ -15,10 +15,12 @@ local nuts            = nodes.nuts
 local tonode          = nuts.tonode
 local tonut           = nuts.tonut
 
+local setfield        = nuts.setfield
 local setlink         = nuts.setlink
 local setchar         = nuts.setchar
 local setattrlist     = nuts.setattrlist
 
+local getfield        = nuts.getfield
 local getfont         = nuts.getfont
 local getattrlist     = nuts.getattrlist
 

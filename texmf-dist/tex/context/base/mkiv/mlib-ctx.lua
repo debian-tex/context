@@ -6,10 +6,12 @@ if not modules then modules = { } end modules ['mlib-ctx'] = {
     license   = "see context related readme files",
 }
 
+-- for the moment we have the scanners here but they migh tbe moved to
+-- the other modules
+
 local type, tostring = type, tostring
 local format, concat = string.format, table.concat
 local settings_to_hash = utilities.parsers.settings_to_hash
-local formatters = string.formatters
 
 local report_metapost = logs.reporter("metapost")
 
@@ -18,8 +20,9 @@ local stoptiming         = statistics.stoptiming
 
 local mplib              = mplib
 
-metapost                 = metapost or { }
+metapost                 = metapost or {}
 local metapost           = metapost
+
 local context            = context
 
 local setters            = tokens.setters
@@ -84,10 +87,14 @@ function metapost.getextensions(instance,state)
     end
 end
 
+-- function commands.getmpextensions(instance,state)
+--     context(metapost.getextensions(instance,state))
+-- end
+
 implement {
     name      = "setmpextensions",
     actions   = metapost.setextensions,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {
@@ -132,7 +139,7 @@ implement {
     end
 }
 
--- metapost.variables = { } -- to be stacked
+-- metapost.variables  = { } -- to be stacked
 
 implement {
     name      = "mprunvar",
@@ -172,7 +179,7 @@ implement {
 
 implement {
     name      = "mprunset",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(name,connector)
         local value = metapost.variables[name]
         if value ~= nil then
@@ -193,39 +200,6 @@ implement {
 
 function metapost.graphic(specification)
     metapost.graphic_base_pass(setmpsformat(specification))
-end
-
-function metapost.startgraphic(t)
-    if not t then
-        t = { }
-    end
-    if not t.instance then
-        t.instance = metapost.defaultinstance
-    end
-    if not t.format then
-        t.format = metapost.defaultformat
-    end
-    if not t.method then
-        t.method = metapost.defaultmethod
-    end
-    if not t.definitions then
-        t.definitions = ""
-    end
-    t.data = { }
-    return t
-end
-
-function metapost.stopgraphic(t)
-    if t then
-        t.data = concat(t.data or { },"\n")
-        metapost.graphic(t)
-        t.data = ""
-    end
-end
-
-function metapost.tographic(t,f,s,...)
-    local d = t.data
-    d[#d+1] = s and formatters[f](s,...) or f
 end
 
 implement {

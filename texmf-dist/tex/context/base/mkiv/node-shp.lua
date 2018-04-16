@@ -37,6 +37,7 @@ local tonode         = nuts.tonode
 local remove_node    = nuts.remove
 local traverse_nodes = nuts.traverse
 
+local getfield       = nuts.getfield
 local setfield       = nuts.setfield
 local setlink        = nuts.setlink
 local setprev        = nuts.setprev
@@ -151,10 +152,10 @@ function handlers.cleanupbox(head)
     return tonode(cleanup_flushed(tonut(head))), true
 end
 
-local actions = tasks.actions("shipouts")
+local actions = tasks.actions("shipouts")  -- no extra arguments
 
-function handlers.finalize(head,where) -- problem, attr loaded before node, todo ...
-    return actions(head,where)
+function handlers.finalize(head) -- problem, attr loaded before node, todo ...
+    return actions(head)
 end
 
 -- handlers.finalize = actions

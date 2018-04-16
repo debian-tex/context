@@ -14,7 +14,7 @@ if not modules then modules = { } end modules ['typo-tal'] = {
 
 -- We can speed up by saving the current fontcharacters[font] + lastfont.
 
-local next, type, tonumber = next, type, tonumber
+local next, type = next, type
 local div = math.div
 local utfbyte = utf.byte
 
@@ -38,7 +38,6 @@ local tonode               = nuts.tonode
 
 local getnext              = nuts.getnext
 local getprev              = nuts.getprev
-local getboth              = nuts.getboth
 local getid                = nuts.getid
 local getfont              = nuts.getfont
 local getchar              = nuts.getchar
@@ -101,7 +100,7 @@ local validsigns = {
 -- If needed we can have more modes which then also means a faster simple handler
 -- for non numbers.
 
-local function setcharacteralign(column,separator,before,after)
+local function setcharacteralign(column,separator)
     if not enabled then
         enableaction("processors","typesetters.characteralign.handler")
         enabled = true
@@ -124,14 +123,11 @@ local function setcharacteralign(column,separator,before,after)
             separator = comma
             method    = v_number
         end
-        local before = tonumber(before) or 0
-        local after  = tonumber(after) or 0
         dataset = {
             separator  = separator,
             list       = { },
-            maxbefore  = before,
-            maxafter   = after,
-            predefined = before > 0 or after > 0,
+            maxafter   = 0,
+            maxbefore  = 0,
             collected  = false,
             method     = method,
             separators = validseparators,
@@ -154,12 +150,6 @@ implement {
     name      = "setcharacteralign",
     actions   = setcharacteralign,
     arguments = { "integer", "string" }
-}
-
-implement {
-    name      = "setcharacteraligndetail",
-    actions   = setcharacteralign,
-    arguments = { "integer", "string", "dimension", "dimension" }
 }
 
 implement {
@@ -267,9 +257,10 @@ function characteralign.handler(originalhead,where)
             elseif (b_start or a_start) and id == glue_code then
                 -- maybe only in number mode
                 -- somewhat inefficient
-                local prev, next = getboth(current)
+                local next = getnext(current)
+                local prev = getprev(current)
                 if next and prev and getid(next) == glyph_code and getid(prev) == glyph_code then -- too much checking
-                    local width = fontcharacters[getfont(b_start or a_start)][separator or period].width
+                    local width = fontcharacters[getfont(b_start)][separator or period].width
                     setglue(current,width)
                     setattr(current,a_character,punctuationspace)
                     if a_start then
@@ -319,25 +310,8 @@ function characteralign.handler(originalhead,where)
             current = getnext(current)
         end
     end
-    local predefined = dataset.predefined
-    local before, after
-    if predefined then
-        before = b_start and list_dimensions(b_start,getnext(b_stop)) or 0
-        after  = a_start and list_dimensions(a_start,getnext(a_stop)) or 0
-    else
-        local entry = list[row]
-        if entry then
-            before = entry.before or 0
-            after  = entry.after  or 0
-        else
-            before = b_start and list_dimensions(b_start,getnext(b_stop)) or 0
-            after  = a_start and list_dimensions(a_start,getnext(a_stop)) or 0
-            list[row] = {
-                before = before,
-                after  = after,
-            }
-            return tonode(head), true
-        end
+    local entry = list[row]
+    if entry then
         if not dataset.collected then
          -- print("[maxbefore] [maxafter]")
             local maxbefore = 0
@@ -356,53 +330,61 @@ function characteralign.handler(originalhead,where)
             dataset.maxafter  = maxafter
             dataset.collected = true
         end
-    end
-    local maxbefore = dataset.maxbefore
-    local maxafter  = dataset.maxafter
-    local new_kern  = trace_split and traced_kern or new_kern
-    if b_start then
-        if before < maxbefore then
-            head = insert_node_before(head,b_start,new_kern(maxbefore-before))
-        end
-        if not c then
-         -- print("[before]")
-            if dataset.hasseparator then
-                local width = fontcharacters[getfont(b_start)][separator].width
-                insert_node_after(head,b_stop,new_kern(maxafter+width))
+        local maxbefore = dataset.maxbefore
+        local maxafter  = dataset.maxafter
+        local before    = entry.before or 0
+        local after     = entry.after  or 0
+        local new_kern  = trace_split and traced_kern or new_kern
+        if b_start then
+            if before < maxbefore then
+                head = insert_node_before(head,b_start,new_kern(maxbefore-before))
+            end
+            if not c then
+             -- print("[before]")
+                if dataset.hasseparator then
+                    local width = fontcharacters[getfont(b_stop)][separator].width
+                    insert_node_after(head,b_stop,new_kern(maxafter+width))
+                end
+            elseif a_start then
+             -- print("[before] [separator] [after]")
+                if after < maxafter then
+                    insert_node_after(head,a_stop,new_kern(maxafter-after))
+                end
+            else
+             -- print("[before] [separator]")
+                if maxafter > 0 then
+                    insert_node_after(head,c,new_kern(maxafter))
+                end
             end
         elseif a_start then
-         -- print("[before] [separator] [after]")
+            if c then
+             -- print("[separator] [after]")
+                if maxbefore > 0 then
+                    head = insert_node_before(head,c,new_kern(maxbefore))
+                end
+            else
+             -- print("[after]")
+                local width = fontcharacters[getfont(b_stop)][separator].width
+                head = insert_node_before(head,a_start,new_kern(maxbefore+width))
+            end
             if after < maxafter then
                 insert_node_after(head,a_stop,new_kern(maxafter-after))
             end
-        else
-         -- print("[before] [separator]")
+        elseif c then
+         -- print("[separator]")
+            if maxbefore > 0 then
+                head = insert_node_before(head,c,new_kern(maxbefore))
+            end
             if maxafter > 0 then
                 insert_node_after(head,c,new_kern(maxafter))
             end
         end
-    elseif a_start then
-        if c then
-         -- print("[separator] [after]")
-            if maxbefore > 0 then
-                head = insert_node_before(head,c,new_kern(maxbefore))
-            end
-        else
-         -- print("[after]")
-            local width = fontcharacters[getfont(b_stop)][separator].width
-            head = insert_node_before(head,a_start,new_kern(maxbefore+width))
-        end
-        if after < maxafter then
-            insert_node_after(head,a_stop,new_kern(maxafter-after))
-        end
-    elseif c then
-     -- print("[separator]")
-        if maxbefore > 0 then
-            head = insert_node_before(head,c,new_kern(maxbefore))
-        end
-        if maxafter > 0 then
-            insert_node_after(head,c,new_kern(maxafter))
-        end
+    else
+        entry = {
+            before = b_start and list_dimensions(b_start,getnext(b_stop)) or 0,
+            after  = a_start and list_dimensions(a_start,getnext(a_stop)) or 0,
+        }
+        list[row] = entry
     end
     return tonode(head), true
 end

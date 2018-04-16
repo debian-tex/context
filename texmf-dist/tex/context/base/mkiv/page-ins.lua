@@ -102,7 +102,7 @@ implement {
 implement {
     name      = "setinsertionlocation",
     actions   = inserts.setlocation,
-    arguments = "2 strings",
+    arguments = { "string", "string" }
 }
 
 implement {

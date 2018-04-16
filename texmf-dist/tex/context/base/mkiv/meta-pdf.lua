@@ -13,19 +13,15 @@ if not modules then modules = { } end modules ['meta-pdf'] = {
 -- We can make it even more efficient if needed, but as we don't use this
 -- code often in \MKIV\ it makes no sense.
 
-local tonumber = tonumber
 local concat, unpack = table.concat, table.unpack
 local gsub, find, byte, gmatch, match = string.gsub, string.find, string.byte, string.gmatch, string.match
 local lpegmatch = lpeg.match
 local round = math.round
 local formatters, format = string.formatters, string.format
 
-local mplib                     = mplib
-local metapost                  = metapost
-local lpdf                      = lpdf
-local context                   = context
+local report_mptopdf = logs.reporter("graphics","mptopdf")
 
-local report_mptopdf            = logs.reporter("graphics","mptopdf")
+local mplib, metapost, lpdf, context = mplib, metapost, lpdf, context
 
 local texgetattribute           = tex.getattribute
 
@@ -35,7 +31,7 @@ local pdfgraycode               = lpdf.graycode
 local pdfspotcode               = lpdf.spotcode
 local pdftransparencycode       = lpdf.transparencycode
 local pdffinishtransparencycode = lpdf.finishtransparencycode
------ pdfpageliteral            = nodes.pool.pdfpageliteral
+local pdfliteral                = nodes.pool.pdfliteral
 
 metapost.mptopdf = metapost.mptopdf or { }
 local mptopdf    = metapost.mptopdf
@@ -68,7 +64,7 @@ resetall()
 -- -- comment hack
 --
 -- local function pdfcode(str)
---    context(pdfpageliteral(str))
+--    context(pdfliteral(str))
 -- end
 
 local pdfcode = context.pdfliteral
@@ -531,7 +527,7 @@ local captures_old = ( space + verbose + preamble           )^0
 local captures_new = ( space + verbose + procset + preamble )^0
 
 local function parse(m_data)
-    if find(m_data,"%%BeginResource: procset mpost",1,true) then
+    if find(m_data,"%%%%BeginResource: procset mpost") then
      -- report_mptopdf("using sparse scanner, case 1")
         lpegmatch(captures_new,m_data)
     elseif find(m_data,"%%%%BeginProlog%s*%S+(.-)%%%%EndProlog") then

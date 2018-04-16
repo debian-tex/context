@@ -27,7 +27,6 @@ local new_latelua     = nuts.pool.latelua
 local settexdimen     = tokens.setters.dimen
 
 local gettexbox       = tokens.getters.box
-local settexbox       = tokens.setters.box
 local gettexdimen     = tokens.getters.dimen
 local gettexcount     = tokens.getters.count
 
@@ -96,13 +95,13 @@ jobobjects.page   = getobjectpage
 -- implement {
 --     name      = "objectnumber",
 --     actions   = { getobjectnumber, context },
---     arguments = "2 strings",
+--     arguments = { "string", "string" },
 -- }
 --
 -- implement {
 --     name      = "objectpage",
 --     actions   = { getobjectpage, context },
---     arguments = "2 strings",
+--     arguments = { "string", "string" },
 -- }
 --
 -- implement {
@@ -125,37 +124,22 @@ objects = {
     n    = 0,
 }
 
-local objects = objects
-
-function objects.register(ns,id,b,referenced,offset,mode)
+function objects.register(ns,id,b,referenced)
     objects.n = objects.n + 1
-    nodes.handlers.finalize(gettexbox(b),"object")
-    if mode == 0 then
-        -- tex
-        data[ns][id] = {
-            codeinjections.registerboxresource(b), -- a box number
-            offset,
-            referenced or false,
-            mode,
-        }
-    else
-        -- box (backend)
-        data[ns][id] = {
-            codeinjections.registerboxresource(b,offset), -- a box number
-            false,
-            referenced,
-            mode,
-        }
-    end
+    nodes.handlers.finalize(gettexbox(b))
+    data[ns][id] = {
+        codeinjections.registerboxresource(b), -- a box number
+        gettexdimen("objectoff"),
+        referenced
+    }
 end
 
-function objects.restore(ns,id) -- why not just pass a box number here too (ok, we also set offset)
+function objects.restore(ns,id)
     local d = data[ns][id]
     if d then
         local index  = d[1]
         local offset = d[2]
         local status = d[3]
-        local mode   = d[4]
         local hbox   = codeinjections.restoreboxresource(index) -- a nut !
         if status then
             local list = getlist(hbox)
@@ -165,10 +149,10 @@ function objects.restore(ns,id) -- why not just pass a box number here too (ok, 
             setlink(list,page)
         end
         setbox("objectbox",hbox)
-        settexdimen("objectoff",offset or 0)
+        settexdimen("objectoff",offset)
     else
         setbox("objectbox",nil)
-        settexdimen("objectoff",0) -- for good old times
+        settexdimen("objectoff",0)
     end
 end
 
@@ -177,7 +161,7 @@ function objects.dimensions(index)
     if d then
         return codeinjections.boxresourcedimensions(d[1])
     else
-        return 0, 0, 0, 0
+        return 0, 0, 0
     end
 end
 
@@ -200,25 +184,25 @@ end
 
 implement {
     name      = "registerreferencedobject",
-    arguments = { "string", "string", "integer", true, "dimension", "integer" },
+    arguments = { "string", "string", "integer", true },
     actions   = objects.register,
 }
 
 implement {
     name      = "registerobject",
-    arguments = { "string", "string", "integer", false, "dimension", "integer" },
+    arguments = { "string", "string", "integer" },
     actions   = objects.register,
 }
 
 implement {
     name      = "restoreobject",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = objects.restore,
 }
 
 implement {
     name      = "doifelseobject",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(ns,id)
         ctx_doifelse(data[ns][id])
      -- ctx_doifelse(objects.reference(ns,id))
@@ -227,7 +211,7 @@ implement {
 
 implement {
     name      = "doifelseobjectreference",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(ns,id)
      -- ctx_doifelse(data[ns][id])
         ctx_doifelse(objects.reference(ns,id))
@@ -252,17 +236,17 @@ implement {
 
 implement {
     name      = "getobjectdimensions",
-    arguments = "2 strings",
+    arguments = { "string", "string" },
     actions   = function(ns,id)
-        local object = data[ns][id]
-        local w, h, d, o = 0, 0, 0, 0
-        if object then
-            w, h, d, o = codeinjections.boxresourcedimensions(object[1])
+        local o = data[ns][id]
+        local w, h, d = 0, 0, 0
+        if d then
+            w, h, d = codeinjections.boxresourcedimensions(o[1])
         end
         settexdimen("objectwd",w or 0)
         settexdimen("objectht",h or 0)
         settexdimen("objectdp",d or 0)
-        settexdimen("objectoff",o or #objects > 2 and object[2] or 0)
+        settexdimen("objectoff",o[2])
     end
 }
 

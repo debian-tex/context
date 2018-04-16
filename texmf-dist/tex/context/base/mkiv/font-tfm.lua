@@ -244,8 +244,6 @@ local function read_from_tfm(specification)
         --
         constructors.enhanceparameters(parameters) -- official copies for us
         --
-        properties.private       =  properties.private or tfmdata.private or privateoffset
-        --
         if newtfmdata then
             --
             -- We do nothing as we assume flat tfm files. It would become real messy
@@ -438,7 +436,7 @@ do
         local originals  = tfmdata.characters
         local indices    = { }
         local parentfont = { "font", 1 }
-        local private    = tfmdata or fonts.constructors.privateoffset
+        local private    = fonts.constructors.privateoffset
         local reported   = encdone[tfmfile][encfile]
 
         -- create characters table
@@ -516,7 +514,6 @@ do
         tfmdata.tounicode     = 1
         tfmdata.embedding     = "subset"
         tfmdata.usedbitmap    = bitmap and virtualid
-        tfmdata.private       = private
 
         return tfmdata
     end
@@ -551,9 +548,7 @@ end
     local flushstreamobject = lpdf and lpdf.flushstreamobject
     local setfontattributes = pdf.setfontattributes
 
-    if flushstreamobject then
-        -- we're in context
-    else
+    if not flushstreamobject then
         flushstreamobject = function(data)
             return pdf.obj {
                 immediate = true,

@@ -7,15 +7,13 @@ if not modules then modules = { } end modules ['strc-num'] = {
 }
 
 local format = string.format
-local next, type, tonumber = next, type, tonumber
+local next, type = next, type
 local min, max = math.min, math.max
 local insert, remove, copy = table.insert, table.remove, table.copy
 local texsetcount = tex.setcount
 
 -- Counters are managed here. They can have multiple levels which makes it easier to synchronize
 -- them. Synchronization is sort of special anyway, as it relates to document structuring.
-
-local context           = context
 
 local allocate          = utilities.storage.allocate
 local setmetatableindex = table.setmetatableindex

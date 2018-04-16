@@ -24,6 +24,8 @@ local setmetatableindex  = table.setmetatableindex
 local nuts               = nodes.nuts
 local tonut              = nuts.tonut
 
+local getfield           = nuts.getfield
+local setfield           = nuts.setfield
 local getid              = nuts.getid
 local getlist            = nuts.getlist
 local getattr            = nuts.getattr
@@ -714,17 +716,17 @@ end
 
 -- interface
 
-implement { name = "markingtitle",       actions = marks.title,         arguments = "2 strings" }
-implement { name = "markingnumber",      actions = marks.number,        arguments = "2 strings" }
+implement { name = "markingtitle",       actions = marks.title,         arguments = { "string", "string" } }
+implement { name = "markingnumber",      actions = marks.number,        arguments = { "string", "string" } }
 
-implement { name = "definemarking",      actions = marks.define,        arguments = "2 strings" }
-implement { name = "relatemarking",      actions = marks.relate,        arguments = "2 strings" }
-implement { name = "setmarking",         actions = marks.set,           arguments = "2 strings" }
-implement { name = "resetmarking",       actions = marks.reset,         arguments = "string" }
+implement { name = "definemarking",      actions = marks.define,        arguments = { "string", "string" } }
+implement { name = "relatemarking",      actions = marks.relate,        arguments = { "string", "string" } }
+implement { name = "setmarking",         actions = marks.set,           arguments = { "string", "string" } }
+implement { name = "resetmarking",       actions = marks.reset,         arguments = { "string" } }
 implement { name = "synchronizemarking", actions = marks.synchronize,   arguments = { "string", "integer", "string" } }
-implement { name = "getmarking",         actions = marks.fetch,         arguments = "3 strings" }
-implement { name = "fetchonemark",       actions = marks.fetchonemark,  arguments = "3 strings" }
-implement { name = "fetchtwomarks",      actions = marks.fetchtwomarks, arguments = "2 strings" }
-implement { name = "fetchallmarks",      actions = marks.fetchallmarks, arguments = "2 strings" }
+implement { name = "getmarking",         actions = marks.fetch,         arguments = { "string", "string", "string" } }
+implement { name = "fetchonemark",       actions = marks.fetchonemark,  arguments = { "string", "string", "string" } }
+implement { name = "fetchtwomarks",      actions = marks.fetchtwomarks, arguments = { "string", "string" } }
+implement { name = "fetchallmarks",      actions = marks.fetchallmarks, arguments = { "string", "string" } }
 
 implement { name = "doifelsemarking",    actions = { marks.exists, commands.doifelse }, arguments = "string" }

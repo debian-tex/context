@@ -9,7 +9,7 @@ if not modules then modules = { } end modules ['scrp-ini'] = {
 -- We need to rewrite this a bit ... rather old code ... will be done when japanese
 -- is finished.
 
-local tonumber, next = tonumber, next
+local attributes, nodes, node = attributes, nodes, node
 
 local trace_analyzing    = false  trackers.register("scripts.analyzing",        function(v) trace_analyzing   = v end)
 local trace_injections   = false  trackers.register("scripts.injections",       function(v) trace_injections  = v end)
@@ -21,10 +21,6 @@ local report_splitting     = logs.reporter("scripts","splitting")
 
 local utfbyte, utfsplit = utf.byte, utf.split
 local gmatch = string.gmatch
-
-local attributes        = attributes
-local nodes             = nodes
-local context           = context
 
 local texsetattribute   = tex.setattribute
 
@@ -973,7 +969,7 @@ implement {
 implement {
     name      = "setscript",
     actions   = scripts.set,
-    arguments = "3 strings",
+    arguments = { "string", "string", "string" }
 }
 
 implement {
