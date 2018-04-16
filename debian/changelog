@@ -1,3 +1,9 @@
+context (2018.04.04.20180416-1) unstable; urgency=medium
+
+  * TeX Live 2018 release: 2018.04.04.20180416
+
+ -- Norbert Preining <preining@debian.org>  Mon, 16 Apr 2018 13:22:06 +0900
+
 context (2018.04.02.20180404-1) experimental; urgency=medium
 
   * New upstream version 2018.04.02.20180404
