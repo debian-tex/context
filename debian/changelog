@@ -1,3 +1,11 @@
+context (2018.04.04.20181118-1) unstable; urgency=medium
+
+  * update make-orig-tar to remove windows stubs
+  * New upstream version 2018.04.04.20181118
+  * bump standards version, no changes necessary
+
+ -- Norbert Preining <preining@debian.org>  Sun, 18 Nov 2018 15:02:56 +0900
+
 context (2018.04.04.20180416-1) unstable; urgency=medium
 
   * TeX Live 2018 release: 2018.04.04.20180416
