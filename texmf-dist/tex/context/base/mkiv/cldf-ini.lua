@@ -319,7 +319,43 @@ local interfacescanners = setmetatablenewindex(function(t,k,v)
     rawset(t,k,v)
 end)
 
-interfaces.scanners = interfacescanners
+function interfaces.registerscanner(name,action,protected,public,call)
+    if storedscanners[name] then
+     -- report_cld("warning: scanner %a is already set",k)
+     -- os.exit()
+        -- \scan_<k> is already in the format
+     -- report_cld("using interface scanner: %s",k)
+    else
+        storedscanners[name] = true
+--         if protected then
+--          -- report_cld("installing expandable interface scanner: %s",k)
+--             if public then
+--                 context("\\installprotectedctxscanner{%s}{interfaces.scanners.%s}",name,name)
+--             else
+--                 context("\\installprotectedctxscanner{clf_%s}{interfaces.scanners.%s}",name,name)
+--             end
+--         else
+--          -- report_cld("installing protected interface scanner: %s",k)
+--             if public then
+--                 context("\\installctxscanner{%s}{interfaces.scanners.%s}",name,name)
+--             else
+--                 context("\\installctxscanner{clf_%s}{interfaces.scanners.%s}",name,name)
+--             end
+--         end
+         -- report_cld("installing interface scanner: %s",k)
+            context("\\install%sctxscanner%s{%s%s}{interfaces.scanners.%s}",
+                protected and "protected" or "",
+                call      and "call"      or "",
+                public    and ""          or "clf_",
+                name,
+                name
+            )
+    end
+    rawset(interfacescanners,name,action)
+end
+
+interfaces.scanners = storage.mark(interfacescanners)
+interfaces._ = interfaces.scanners
 
 context.functions = {
     register   = registerfunction,
@@ -603,9 +639,49 @@ function context.printlines(str,raw)     -- todo: see if via file is useable
     end
 end
 
+-- function context.printtable(t,separator)     -- todo: see if via file is useable
+--     if separator == nil or separator == true then
+--         separator = "\r"
+--     elseif separator == "" then
+--         separator = false
+--     end
+--     for i=1,#t do
+--         context(t[i]) -- we need to go through catcode handling
+--         if separator then
+--             context(separator)
+--         end
+--     end
+-- end
+
+function context.printtable(t,separator)     -- todo: see if via file is useable
+    if separator == nil or separator == true then
+        separator = "\r"
+    elseif separator == "" or separator == false then
+        separator = ""
+    end
+    local s = concat(t,separator)
+    if s ~= "" then
+        context(s)
+    end
+end
+
 -- -- -- "{" .. ti .. "}" is somewhat slower in a cld-mkiv run than "{",ti,"}"
 
 local containseol = patterns.containseol
+
+local s_cldl_option_b   = "[\\cldl"
+local s_cldl_option_f   = "[\\cldl" -- add space (not needed)
+local s_cldl_option_e   = "]"
+local s_cldl_option_s   = "\\cldl"
+local s_cldl_argument_b = "{\\cldl"
+local s_cldl_argument_f = "{\\cldl "
+local s_cldl_argument_e = "}"
+
+-- local s_cldl_option_b   = "["
+-- local s_cldl_option_f   = "" -- add space (not needed)
+-- local s_cldl_option_s   = ""
+-- local s_cldl_argument_b = "{"
+-- local s_cldl_argument_f = "{ "
 
 local function writer(parent,command,...) -- already optimized before call
     flush(currentcatcodes,command) -- todo: ctx|prt|texcatcodes
@@ -673,8 +749,7 @@ local function writer(parent,command,...) -- already optimized before call
                 elseif tn == 1 then -- some 20% faster than the next loop
                     local tj = ti[1]
                     if type(tj) == "function" then
-                        flush(currentcatcodes,"[\\cldl",storefunction(tj),"]")
-                     -- flush(currentcatcodes,"[",storefunction(tj),"]")
+                        flush(currentcatcodes,s_cldl_option_b,storefunction(tj),s_cldl_option_e)
                     else
                         flush(currentcatcodes,"[",tj,"]")
                     end
@@ -684,11 +759,9 @@ local function writer(parent,command,...) -- already optimized before call
                         local tj = ti[j]
                         if type(tj) == "function" then
                             if j == tn then
-                                flush(currentcatcodes,"\\cldl",storefunction(tj),"]")
-                             -- flush(currentcatcodes,"",storefunction(tj),"]")
+                                flush(currentcatcodes,s_cldl_option_s,storefunction(tj),"]")
                             else
-                                flush(currentcatcodes,"\\cldl",storefunction(tj),",")
-                             -- flush(currentcatcodes,"",storefunction(tj),",")
+                                flush(currentcatcodes,s_cldl_option_s,storefunction(tj),",")
                             end
                         else
                             if j == tn then
@@ -700,8 +773,8 @@ local function writer(parent,command,...) -- already optimized before call
                     end
                 end
             elseif typ == "function" then
-                flush(currentcatcodes,"{\\cldl ",storefunction(ti),"}") -- todo: ctx|prt|texcatcodes
-             -- flush(currentcatcodes,"{",storefunction(ti),"}") -- todo: ctx|prt|texcatcodes
+                -- todo: ctx|prt|texcatcodes
+                flush(currentcatcodes,s_cldl_argument_f,storefunction(ti),s_cldl_argument_e)
             elseif typ == "boolean" then
                 if ti then
                     flushdirect(currentcatcodes,"\r")
@@ -711,8 +784,7 @@ local function writer(parent,command,...) -- already optimized before call
             elseif typ == "thread" then
                 report_context("coroutines not supported as we cannot yield across boundaries")
             elseif isnode(ti) then -- slow
-                flush(currentcatcodes,"{\\cldl",storenode(ti),"}")
-             -- flush(currentcatcodes,"{",storenode(ti),"}")
+                flush(currentcatcodes,s_cldl_argument_b,storenode(ti),s_cldl_argument_e)
             else
                 report_context("error: %a gets a weird argument %a",command,ti)
             end
@@ -736,11 +808,9 @@ end
 --             if tp == "string" or tp == "number"then
 --                 flush(prtcatcodes,"{",ti,"}")
 --             elseif tp == "function" then
---                 flush(prtcatcodes,"{\\cldl ",storefunction(ti),"}")
---              -- flush(currentcatcodes,"{",storefunction(ti),"}") -- todo: ctx|prt|texcatcodes
+--                 flush(prtcatcodes,s_cldl_argument_f,storefunction(ti),s_cldl_argument_e)
 --             elseif isnode(ti) then
---                 flush(prtcatcodes,"{\\cldl",storenode(ti),"}")
---              -- flush(currentcatcodes,"{",storenode(ti),"}")
+--                 flush(prtcatcodes,s_cldl_argument_b,storenode(ti),s_cldl_argument_e)
 --             else
 --                 report_context("fatal error: prt %a gets a weird argument %a",command,ti)
 --             end
@@ -905,22 +975,22 @@ local defaultcaller = caller
 setmetatableindex(context,indexer)
 setmetatablecall (context,caller)
 
-function context.sprint(...) -- takes catcodes as first argument
+function  context.sprint(...) -- takes catcodes as first argument
     flush(...)
 end
 
-function context.fprint(fmt,first,...)
-    if type(catcodes) == "number" then
-        if first then
-            flush(currentcatcodes,formatters[fmt](first,...))
+function context.fprint(first,second,third,...)
+    if type(first) == "number" then
+        if third then
+            flush(first,formatters[second](third,...))
         else
-            flush(currentcatcodes,fmt)
+            flush(first,second)
         end
     else
-        if fmt then
-            flush(formatters[catcodes](fmt,first,...))
+        if second then
+            flush(formatters[first](second,third,...))
         else
-            flush(catcodes)
+            flush(first)
         end
     end
 end

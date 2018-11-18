@@ -153,15 +153,16 @@ function table.tocsv(t,specification)
             fields = sortedkeys(t[1])
         end
         local separator = specification.separator or ","
+        local noffields = #fields
         if specification.preamble == true then
-            for f=1,#fields do
+            for f=1,noffields do
                 r[f] = lpegmatch(escape,tostring(fields[f]))
             end
             result[1] = concat(r,separator)
         end
         for i=1,#t do
             local ti = t[i]
-            for f=1,#fields do
+            for f=1,noffields do
                 local field = ti[fields[f]]
                 if type(field) == "string" then
                     r[f] = lpegmatch(escape,field)
@@ -215,30 +216,31 @@ end
 local nspaces = utilities.strings.newrepeater(" ")
 
 local function toxml(t,d,result,step)
+    local r = #result
     for k, v in sortedpairs(t) do
         local s = nspaces[d] -- inlining this is somewhat faster but gives more formatters
         local tk = type(k)
         local tv = type(v)
         if tv == "table" then
             if tk == "number" then
-                result[#result+1] = formatters["%s<entry n='%s'>"](s,k)
+                r = r + 1 result[r] = formatters["%s<entry n='%s'>"](s,k)
                 toxml(v,d+step,result,step)
-                result[#result+1] = formatters["%s</entry>"](s,k)
+                r = r + 1 result[r] = formatters["%s</entry>"](s,k)
             else
-                result[#result+1] = formatters["%s<%s>"](s,k)
+                r = r + 1 result[r] = formatters["%s<%s>"](s,k)
                 toxml(v,d+step,result,step)
-                result[#result+1] = formatters["%s</%s>"](s,k)
+                r = r + 1 result[r] = formatters["%s</%s>"](s,k)
             end
         elseif tv == "string" then
             if tk == "number" then
-                result[#result+1] = formatters["%s<entry n='%s'>%!xml!</entry>"](s,k,v,k)
+                r = r + 1 result[r] = formatters["%s<entry n='%s'>%!xml!</entry>"](s,k,v,k)
             else
-                result[#result+1] = formatters["%s<%s>%!xml!</%s>"](s,k,v,k)
+                r = r + 1 result[r] = formatters["%s<%s>%!xml!</%s>"](s,k,v,k)
             end
         elseif tk == "number" then
-            result[#result+1] = formatters["%s<entry n='%s'>%S</entry>"](s,k,v,k)
+            r = r + 1 result[r] = formatters["%s<entry n='%s'>%S</entry>"](s,k,v,k)
         else
-            result[#result+1] = formatters["%s<%s>%S</%s>"](s,k,v,k)
+            r = r + 1 result[r] = formatters["%s<%s>%S</%s>"](s,k,v,k)
         end
     end
 end
@@ -478,11 +480,11 @@ end
 -- inspect(table.drop({ { a=2 }, {a=3} }))
 -- inspect(table.drop({ { a=2 }, {a=3} },true))
 
-function table.autokey(t,k)
-    local v = { }
-    t[k] = v
-    return v
-end
+-- function table.autokey(t,k) -- replaced
+--     local v = { }
+--     t[k] = v
+--     return v
+-- end
 
 local selfmapper = { __index = function(t,k) t[k] = k return k end }
 
@@ -615,6 +617,10 @@ local is_simple_table = table.is_simple_table
 --     end
 --     return nil
 -- end
+
+-- In order to overcome the luajit (65K constant) limitation I tried a split approach,
+-- i.e. outputting the first level tables as locals but that failed with large cjk
+-- fonts too so I removed that ... just use luatex instead.
 
 local function serialize(root,name,specification)
 
