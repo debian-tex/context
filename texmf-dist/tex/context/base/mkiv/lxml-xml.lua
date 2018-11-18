@@ -6,6 +6,7 @@ if not modules then modules = { } end modules ['lxml-xml'] = {
     license   = "see context related readme files"
 }
 
+local tonumber, next = tonumber, next
 local concat = table.concat
 local find, lower, upper = string.find, string.lower, string.upper
 
@@ -17,6 +18,10 @@ local xmltostring    = xml.tostring
 local xmlserialize   = xml.serialize
 local xmlcollected   = xml.collected
 local xmlnewhandlers = xml.newhandlers
+
+local reparsedentity  = xml.reparsedentitylpeg   -- \Ux{...}
+local unescapedentity = xml.unescapedentitylpeg
+local parsedentity    = reparsedentity
 
 local function first(collected) -- wrong ?
     return collected and collected[1]
@@ -159,6 +164,10 @@ local function xmltotext(root)
     else
         return xmlserialize(root,xmltexthandler) or ""
     end
+end
+
+function xml.serializetotext(root)
+    return root and xmlserialize(root,xmltexthandler) or ""
 end
 
 --
@@ -347,6 +356,25 @@ function xml.text(id,pattern) -- brrr either content or element (when cdata)
         return xmltotext(id) or ""
     else
         return ""
+    end
+end
+
+function xml.pure(id,pattern)
+    if pattern then
+        local collected = xmlfilter(id,pattern)
+        if collected and #collected > 0 then
+            parsedentity = unescapedentity
+            local s = collected and #collected > 0 and xmltotext(collected[1]) or ""
+            parsedentity = reparsedentity
+            return s
+        else
+            return ""
+        end
+    else
+        parsedentity = unescapedentity
+        local s = xmltotext(id) or ""
+        parsedentity = reparsedentity
+        return s
     end
 end
 
