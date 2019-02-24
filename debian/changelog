@@ -1,3 +1,13 @@
+context (2018.04.04.20181118-2) unstable; urgency=medium
+
+  [ Norbert Preining ]
+  * update VCS and my email
+
+  [ Hilmar Preuße ]
+  * Remove context-doc-nonfree from Suggests (Closes: #919761).
+
+ -- Norbert Preining <norbert@preining.info>  Sun, 24 Feb 2019 11:21:44 +0900
+
 context (2018.04.04.20181118-1) unstable; urgency=medium
 
   * update make-orig-tar to remove windows stubs

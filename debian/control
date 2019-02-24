@@ -14,7 +14,7 @@ Section: tex
 Architecture: all
 Depends: ruby | ruby-interpreter, texlive-binaries (>= 2018), texlive-base (>= 2018), texlive-metapost (>= 2018), lmodern (>= 2.004.4), tex-gyre, ${misc:Depends}
 Recommends: fonts-gfs-artemisia, fonts-gfs-baskerville, fonts-gfs-bodoni-classic, fonts-gfs-didot-classic, fonts-gfs-didot, fonts-gfs-olga, fonts-gfs-porson, fonts-gfs-gazis, fonts-gfs-neohellenic, fonts-gfs-solomos, fonts-gfs-theokritos, fonts-freefont, fonts-sil-gentium, context-modules
-Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree, context-doc-nonfree
+Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree
 Conflicts: texlive-context, tetex-bin (<< 2007), texlive-xetex (<< 2009)
 Replaces: texlive-context
 Provides: texlive-context
