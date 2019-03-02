@@ -6,7 +6,7 @@ context (2018.04.04.20181118-2) unstable; urgency=medium
   [ Hilmar Preuße ]
   * Remove context-doc-nonfree from Suggests (Closes: #919761).
 
- -- Norbert Preining <norbert@preining.info>  Sun, 24 Feb 2019 11:21:44 +0900
+ -- Norbert Preining <norbert@preining.info>  Sat, 02 Mar 2019 13:55:38 +0900
 
 context (2018.04.04.20181118-1) unstable; urgency=medium
 
