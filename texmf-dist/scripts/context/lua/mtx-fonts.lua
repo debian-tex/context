@@ -14,9 +14,9 @@ local suffix, addsuffix, removesuffix, replacesuffix = file.suffix, file.addsuff
 local nameonly, basename, joinpath, collapsepath = file.nameonly, file.basename, file.join, file.collapsepath
 local lower = string.lower
 local concat = table.concat
-local write_nl = texio.write_nl
+local write_nl = (logs and logs.writer) or (texio and texio.write_nl) or print
 
-local otlversion  = 3.103
+local otlversion  = 3.106
 
 local helpinfo = [[
 <?xml version="1.0"?>

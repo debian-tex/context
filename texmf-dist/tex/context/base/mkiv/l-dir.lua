@@ -75,7 +75,8 @@ function dir.current()
     return (gsub(currentdir(),"\\","/"))
 end
 
--- somewhat optimized
+-- The next one is somewhat optimized but still slow but it's a pitty that the iterator
+-- doesn't return a mode too.
 
 local function glob_pattern_function(path,patt,recurse,action)
     if isdir(path) then
@@ -89,25 +90,30 @@ local function glob_pattern_function(path,patt,recurse,action)
             usedpath = path
         end
         local dirs
-        for name in walkdir(usedpath) do
+        local nofdirs  = 0
+        for name, mode, size, time in walkdir(usedpath) do
             if name ~= "." and name ~= ".." then
                 local full = path .. name
-                local mode = attributes(full,'mode')
+                if mode == nil then
+                    mode = attributes(full,'mode')
+                end
                 if mode == 'file' then
                     if not patt or find(full,patt) then
-                        action(full)
+                        action(full,size,time)
                     end
                 elseif recurse and mode == "directory" then
-                    if not dirs then
-                        dirs = { full }
+                    if dirs then
+                        nofdirs = nofdirs + 1
+                        dirs[nofdirs] = full
                     else
-                        dirs[#dirs+1] = full
+                        nofdirs = 1
+                        dirs    = { full }
                     end
                 end
             end
         end
         if dirs then
-            for i=1,#dirs do
+            for i=1,nofdirs do
                 glob_pattern_function(dirs[i],patt,recurse,action)
             end
         end
@@ -118,38 +124,43 @@ local function glob_pattern_table(path,patt,recurse,result)
     if not result then
         result = { }
     end
-    if isdir(path) then
-        local usedpath
-        if path == "/" then
-            usedpath = "/."
-        elseif not find(path,"/$") then
-            usedpath = path .. "/."
-            path = path .. "/"
-        else
-            usedpath = path
-        end
-        local dirs
-        for name in walkdir(usedpath) do
-            if name ~= "." and name ~= ".." then
-                local full = path .. name
-                local mode = attributes(full,'mode')
-                if mode == 'file' then
-                    if not patt or find(full,patt) then
-                        result[#result+1] = full
-                    end
-                elseif recurse and mode == "directory" then
-                    if not dirs then
-                        dirs = { full }
-                    else
-                        dirs[#dirs+1] = full
-                    end
+    local usedpath
+    if path == "/" then
+        usedpath = "/."
+    elseif not find(path,"/$") then
+        usedpath = path .. "/."
+        path = path .. "/"
+    else
+        usedpath = path
+    end
+    local dirs
+    local nofdirs  = 0
+    local noffiles = #result
+    for name, mode in walkdir(usedpath) do
+        if name ~= "." and name ~= ".." then
+            local full = path .. name
+            if mode == nil then
+                mode = attributes(full,'mode')
+            end
+            if mode == 'file' then
+                if not patt or find(full,patt) then
+                    noffiles = noffiles + 1
+                    result[noffiles] = full
+                end
+            elseif recurse and mode == "directory" then
+                if dirs then
+                    nofdirs = nofdirs + 1
+                    dirs[nofdirs] = full
+                else
+                    nofdirs = 1
+                    dirs    = { full }
                 end
             end
         end
-        if dirs then
-            for i=1,#dirs do
-                glob_pattern_table(dirs[i],patt,recurse,result)
-            end
+    end
+    if dirs then
+        for i=1,nofdirs do
+            glob_pattern_table(dirs[i],patt,recurse,result)
         end
     end
     return result
@@ -160,12 +171,13 @@ local function globpattern(path,patt,recurse,method)
     if patt and sub(patt,1,-3) == path then
         patt = false
     end
+    local okay = isdir(path)
     if kind == "function" then
-        return glob_pattern_function(path,patt,recurse,method)
+        return okay and glob_pattern_function(path,patt,recurse,method) or { }
     elseif kind == "table" then
-        return glob_pattern_table(path,patt,recurse,method)
+        return okay and glob_pattern_table(path,patt,recurse,method) or method
     else
-        return glob_pattern_table(path,patt,recurse,{ })
+        return okay and glob_pattern_table(path,patt,recurse,{ }) or { }
     end
 end
 
@@ -185,7 +197,7 @@ local function collectpattern(path,patt,recurse,result)
         if not find(path,"/$") then
             path = path .. '/'
         end
-        for name in scanner, first do
+        for name in scanner, first do -- cna be optimized
             if name == "." then
                 -- skip
             elseif name == ".." then
@@ -313,11 +325,13 @@ local function globfiles(path,recurse,func,files) -- func == pattern or function
     end
     files = files or { }
     local noffiles = #files
-    for name in walkdir(path) do
+    for name, mode in walkdir(path) do
         if find(name,"^%.") then
             --- skip
         else
-            local mode = attributes(name,'mode')
+            if mode == nil then
+                mode = attributes(name,'mode')
+            end
             if mode == "directory" then
                 if recurse then
                     globfiles(path .. "/" .. name,recurse,func,files)
@@ -342,11 +356,13 @@ local function globdirs(path,recurse,func,files) -- func == pattern or function
     end
     files = files or { }
     local noffiles = #files
-    for name in walkdir(path) do
+    for name, mode in walkdir(path) do
         if find(name,"^%.") then
             --- skip
         else
-            local mode = attributes(name,'mode')
+            if mode == nil then
+                mode = attributes(name,'mode')
+            end
             if mode == "directory" then
                 if not func or func(name) then
                     noffiles = noffiles + 1
@@ -589,8 +605,7 @@ local stack = { }
 function dir.push(newdir)
     local curdir = currentdir()
     insert(stack,curdir)
-    if newdir and newdir ~= "" then
-        chdir(newdir)
+    if newdir and newdir ~= "" and chdir(newdir) then
         return newdir
     else
         return curdir

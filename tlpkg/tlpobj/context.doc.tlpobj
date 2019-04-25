@@ -1,8 +1,8 @@
 name context.doc
 category Package
-revision 47285
+revision 50573
 shortdesc doc files of context
-docfiles size=22510
+docfiles size=25648
  texmf-dist/doc/context/documents/general/fonts/fonts-mkiv.pdf
  texmf-dist/doc/context/documents/general/magazines/mag-0000-mkiv.pdf
  texmf-dist/doc/context/documents/general/magazines/mag-0002-mkiv.pdf
@@ -22,7 +22,9 @@ docfiles size=22510
  texmf-dist/doc/context/documents/general/manuals/epub-mkiv-demo.epub
  texmf-dist/doc/context/documents/general/manuals/epub-mkiv-demo.pdf
  texmf-dist/doc/context/documents/general/manuals/epub-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/graphics.pdf
  texmf-dist/doc/context/documents/general/manuals/hybrid.pdf
+ texmf-dist/doc/context/documents/general/manuals/interaction.pdf
  texmf-dist/doc/context/documents/general/manuals/languages-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/libraries-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/lua-mkiv.pdf
@@ -36,6 +38,7 @@ docfiles size=22510
  texmf-dist/doc/context/documents/general/manuals/mmlexamp.pdf
  texmf-dist/doc/context/documents/general/manuals/mmlprime.pdf
  texmf-dist/doc/context/documents/general/manuals/mreadme.pdf
+ texmf-dist/doc/context/documents/general/manuals/musings.pdf
  texmf-dist/doc/context/documents/general/manuals/nodes.pdf
  texmf-dist/doc/context/documents/general/manuals/notnow.pdf
  texmf-dist/doc/context/documents/general/manuals/onandon.pdf
@@ -48,6 +51,7 @@ docfiles size=22510
  texmf-dist/doc/context/documents/general/manuals/still.pdf
  texmf-dist/doc/context/documents/general/manuals/swiglib-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/templates-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/texit.pdf
  texmf-dist/doc/context/documents/general/manuals/tiptrick.pdf
  texmf-dist/doc/context/documents/general/manuals/tools-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/units-mkiv.pdf
@@ -68,12 +72,26 @@ docfiles size=22510
  texmf-dist/doc/context/documents/general/qrcs/setup-mapping-ro.pdf
  texmf-dist/doc/context/documents/general/qrcs/setup-nl.pdf
  texmf-dist/doc/context/documents/general/qrcs/setup-ro.pdf
+ texmf-dist/doc/context/examples/calculator/calculator.pdf
+ texmf-dist/doc/context/examples/calculator/calculator.tex
+ texmf-dist/doc/context/examples/clock/clock.pdf
+ texmf-dist/doc/context/examples/clock/clock.tex
+ texmf-dist/doc/context/presentations/bachotex/2005/bachotex-2005-fonts.tex
+ texmf-dist/doc/context/presentations/bachotex/2005/bachotex-2005-hyphenation.tex
+ texmf-dist/doc/context/presentations/bachotex/2009/bachotex-2009-luatex.tex
+ texmf-dist/doc/context/presentations/bachotex/2009/bachotex-2009-math.tex
+ texmf-dist/doc/context/presentations/bachotex/2009/bachotex-2009-opentype.tex
  texmf-dist/doc/context/presentations/bachotex/2010/bachotex-2010-clash.pdf
  texmf-dist/doc/context/presentations/bachotex/2010/bachotex-2010-clash.tex
  texmf-dist/doc/context/presentations/bachotex/2010/bachotex-2010-move.pdf
  texmf-dist/doc/context/presentations/bachotex/2010/bachotex-2010-move.tex
  texmf-dist/doc/context/presentations/bachotex/2011/bachotex-2011-cld-and-mkvi.pdf
  texmf-dist/doc/context/presentations/bachotex/2011/bachotex-2011-cld-and-mkvi.tex
+ texmf-dist/doc/context/presentations/bachotex/2011/bachotex-2011-ebook.tex
+ texmf-dist/doc/context/presentations/bachotex/2011/bachotex-2011-math.tex
+ texmf-dist/doc/context/presentations/bachotex/2011/bachotex-2011-metapost.tex
+ texmf-dist/doc/context/presentations/bachotex/2012/bachotex-2012-context.tex
+ texmf-dist/doc/context/presentations/bachotex/2012/bachotex-2012-future.tex
  texmf-dist/doc/context/presentations/bachotex/2013/bachotex-2013-bits.pdf
  texmf-dist/doc/context/presentations/bachotex/2013/bachotex-2013-bits.tex
  texmf-dist/doc/context/presentations/bachotex/2013/bachotex-2013-luatex.pdf
@@ -82,6 +100,8 @@ docfiles size=22510
  texmf-dist/doc/context/presentations/bachotex/2013/bachotex-2013-sense.tex
  texmf-dist/doc/context/presentations/bachotex/2013/bachotex-2013-speed.pdf
  texmf-dist/doc/context/presentations/bachotex/2013/bachotex-2013-speed.tex
+ texmf-dist/doc/context/presentations/bachotex/2014/bachotex-2014-luatex.tex
+ texmf-dist/doc/context/presentations/bachotex/2014/bachotex-2014-metapost.tex
  texmf-dist/doc/context/presentations/bachotex/2015/bachotex-2015-ligatures.pdf
  texmf-dist/doc/context/presentations/bachotex/2015/bachotex-2015-ligatures.tex
  texmf-dist/doc/context/presentations/bachotex/2016/bachotex-2016-opentype.pdf
@@ -96,6 +116,17 @@ docfiles size=22510
  texmf-dist/doc/context/presentations/bachotex/2017/bachotex-2017-variablefonts-demo.tex
  texmf-dist/doc/context/presentations/bachotex/2017/bachotex-2017-variablefonts.pdf
  texmf-dist/doc/context/presentations/bachotex/2017/bachotex-2017-variablefonts.tex
+ texmf-dist/doc/context/presentations/bachotex/2018/bachotex-2018-fonteffects.pdf
+ texmf-dist/doc/context/presentations/bachotex/2018/bachotex-2018-fonteffects.tex
+ texmf-dist/doc/context/presentations/bachotex/2018/bachotex-2018-mp.pdf
+ texmf-dist/doc/context/presentations/bachotex/2018/bachotex-2018-mp.tex
+ texmf-dist/doc/context/presentations/context/2007/context-2007-luatex.tex
+ texmf-dist/doc/context/presentations/context/2007/context-2007-mkiv.tex
+ texmf-dist/doc/context/presentations/context/2010/context-2010-just-in-time-1.tex
+ texmf-dist/doc/context/presentations/context/2010/context-2010-just-in-time-2.tex
+ texmf-dist/doc/context/presentations/context/2010/context-2010-requirements.tex
+ texmf-dist/doc/context/presentations/context/2010/context-2010-structure-matters.tex
+ texmf-dist/doc/context/presentations/context/2010/context-2010-workflows.tex
  texmf-dist/doc/context/presentations/context/2011/context-2011-ebook-export.pdf
  texmf-dist/doc/context/presentations/context/2011/context-2011-ebook-export.tex
  texmf-dist/doc/context/presentations/context/2011/context-2011-mathml-update.pdf
@@ -150,6 +181,8 @@ docfiles size=22510
  texmf-dist/doc/context/presentations/examples/present-split-001.tex
  texmf-dist/doc/context/presentations/examples/present-stepper-001.pdf
  texmf-dist/doc/context/presentations/examples/present-stepper-001.tex
+ texmf-dist/doc/context/presentations/examples/present-steps-001.pdf
+ texmf-dist/doc/context/presentations/examples/present-steps-001.tex
  texmf-dist/doc/context/presentations/examples/present-tiles-001.pdf
  texmf-dist/doc/context/presentations/examples/present-tiles-001.tex
  texmf-dist/doc/context/presentations/examples/present-weird-001.pdf
@@ -158,6 +191,9 @@ docfiles size=22510
  texmf-dist/doc/context/presentations/examples/present-windows-001.tex
  texmf-dist/doc/context/presentations/present-readme.pdf
  texmf-dist/doc/context/presentations/present-readme.tex
+ texmf-dist/doc/context/presentations/tug/2001/tug-2001-ideas.pdf
+ texmf-dist/doc/context/presentations/tug/2001/tug-2001-ideas.tex
+ texmf-dist/doc/context/presentations/tug/2007/tug-2007-fonts.pdf
  texmf-dist/doc/context/presentations/tug/2007/tug-2007-fonts.tex
  texmf-dist/doc/context/scripts/mkii/ctxtools.html
  texmf-dist/doc/context/scripts/mkii/ctxtools.man
@@ -251,18 +287,12 @@ docfiles size=22510
  texmf-dist/doc/context/scripts/mkiv/mtx-metapost.html
  texmf-dist/doc/context/scripts/mkiv/mtx-metapost.man
  texmf-dist/doc/context/scripts/mkiv/mtx-metapost.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-metatex.html
- texmf-dist/doc/context/scripts/mkiv/mtx-metatex.man
- texmf-dist/doc/context/scripts/mkiv/mtx-metatex.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-modules.html
  texmf-dist/doc/context/scripts/mkiv/mtx-modules.man
  texmf-dist/doc/context/scripts/mkiv/mtx-modules.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-package.html
  texmf-dist/doc/context/scripts/mkiv/mtx-package.man
  texmf-dist/doc/context/scripts/mkiv/mtx-package.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-patterns.html
- texmf-dist/doc/context/scripts/mkiv/mtx-patterns.man
- texmf-dist/doc/context/scripts/mkiv/mtx-patterns.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-pdf.html
  texmf-dist/doc/context/scripts/mkiv/mtx-pdf.man
  texmf-dist/doc/context/scripts/mkiv/mtx-pdf.xml
@@ -309,6 +339,7 @@ docfiles size=22510
  texmf-dist/doc/context/scripts/mkiv/mtxrun.man
  texmf-dist/doc/context/scripts/mkiv/mtxrun.xml
  texmf-dist/doc/context/sources/general/fonts/fonts/fonts-appendix.tex
+ texmf-dist/doc/context/sources/general/fonts/fonts/fonts-demo-rule.lua
  texmf-dist/doc/context/sources/general/fonts/fonts/fonts-environment.tex
  texmf-dist/doc/context/sources/general/fonts/fonts/fonts-extensions.tex
  texmf-dist/doc/context/sources/general/fonts/fonts/fonts-features.tex
@@ -475,6 +506,7 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/details/mill.png
  texmf-dist/doc/context/sources/general/manuals/epub/epub-mkiv-demo.tex
  texmf-dist/doc/context/sources/general/manuals/epub/epub-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/graphics/graphics.tex
  texmf-dist/doc/context/sources/general/manuals/hybrid/benchmark-1.tex
  texmf-dist/doc/context/sources/general/manuals/hybrid/benchmark-2.tex
  texmf-dist/doc/context/sources/general/manuals/hybrid/benchmark-3.tex
@@ -528,6 +560,27 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/hybrid/tagged-009.png
  texmf-dist/doc/context/sources/general/manuals/hybrid/tagged-010.png
  texmf-dist/doc/context/sources/general/manuals/hybrid/tagged-011.png
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-actions.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-annotations.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-attachments.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-bookmarks.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-buttons.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-comments.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-enabling.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-hyperlinks.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-importing.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-javascript.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-menus.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-progress.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-structure.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-style.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-tagging.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-transitions.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction-widgets.tex
+ texmf-dist/doc/context/sources/general/manuals/interaction/interaction.tex
  texmf-dist/doc/context/sources/general/manuals/languages/languages-appendix.tex
  texmf-dist/doc/context/sources/general/manuals/languages/languages-basics.tex
  texmf-dist/doc/context/sources/general/manuals/languages/languages-environment.tex
@@ -542,6 +595,7 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/lua/lua-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-contents.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-enhancements.tex
+ texmf-dist/doc/context/sources/general/manuals/luatex/luatex-firstpage.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-fonts.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-introduction.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-languages.tex
@@ -550,6 +604,9 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-math.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-modifications.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-nodes.tex
+ texmf-dist/doc/context/sources/general/manuals/luatex/luatex-preamble.tex
+ texmf-dist/doc/context/sources/general/manuals/luatex/luatex-registers.tex
+ texmf-dist/doc/context/sources/general/manuals/luatex/luatex-statistics.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-style.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-titlepage.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex.tex
@@ -726,6 +783,17 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/mk/mk-xml.xml
  texmf-dist/doc/context/sources/general/manuals/mk/mk-zapfino.tex
  texmf-dist/doc/context/sources/general/manuals/mk/mk.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-children.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-perception.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-roadmap.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-stability.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-staygo.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-style.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-whytex.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings.tex
  texmf-dist/doc/context/sources/general/manuals/nodes/nodes-sun-pia-03149.jpg
  texmf-dist/doc/context/sources/general/manuals/nodes/nodes-sun-pia-03150.jpg
  texmf-dist/doc/context/sources/general/manuals/nodes/nodes.tex
@@ -734,11 +802,19 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/notnow/notnow.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/m-fonts-plugins-timings-luajittex.lua
  texmf-dist/doc/context/sources/general/manuals/onandon/m-fonts-plugins-timings-luatex.lua
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-110.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-53.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-decade.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-editing.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-emoji.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-execute.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-expansion.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-fences.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-ffi.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-media.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-modern.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-performance.tex
+ texmf-dist/doc/context/sources/general/manuals/onandon/onandon-runtoks.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-seguiemj.pdf
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-seguiemj.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-speed-000.tex
@@ -930,6 +1006,14 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv-gm-1.png
  texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/templates/templates-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-conditions.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-leaders.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-lookahead.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-style.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/texit/texit.tex
  texmf-dist/doc/context/sources/general/manuals/tiptrick/tiptrick.tex
  texmf-dist/doc/context/sources/general/manuals/tiptrick/tiptrick.xml
  texmf-dist/doc/context/sources/general/manuals/tools/tools-mkiv.tex
@@ -949,6 +1033,18 @@ docfiles size=22510
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-xml.tex
  texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-01.xml
  texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-02.xml
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-commands.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-converter.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-examples.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-expressions.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-filtering.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-lookups.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-lpath.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-style.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-tricks.tex
  texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/xtables/xtables-mkiv.tex
  texmf-dist/doc/man/man1/context.1
@@ -989,14 +1085,10 @@ docfiles size=22510
  texmf-dist/doc/man/man1/mtx-interface.man1.pdf
  texmf-dist/doc/man/man1/mtx-metapost.1
  texmf-dist/doc/man/man1/mtx-metapost.man1.pdf
- texmf-dist/doc/man/man1/mtx-metatex.1
- texmf-dist/doc/man/man1/mtx-metatex.man1.pdf
  texmf-dist/doc/man/man1/mtx-modules.1
  texmf-dist/doc/man/man1/mtx-modules.man1.pdf
  texmf-dist/doc/man/man1/mtx-package.1
  texmf-dist/doc/man/man1/mtx-package.man1.pdf
- texmf-dist/doc/man/man1/mtx-patterns.1
- texmf-dist/doc/man/man1/mtx-patterns.man1.pdf
  texmf-dist/doc/man/man1/mtx-pdf.1
  texmf-dist/doc/man/man1/mtx-pdf.man1.pdf
  texmf-dist/doc/man/man1/mtx-plain.1

@@ -515,15 +515,20 @@ local function cleanname(name)
 end
 
 local function cleanfilename(fullname,defaultsuffix)
-    local path, name, suffix = splitname(fullname)
-    name = gsub(lower(name),"[^%a%d]","")
-    if suffix and suffix ~= "" then
-        return name .. ".".. suffix
-    elseif defaultsuffix and defaultsuffix ~= "" then
-        return name .. ".".. defaultsuffix
-    else
-        return name
+    if fullname then
+        local path, name, suffix = splitname(fullname)
+        if name then
+            name = gsub(lower(name),"[^%a%d]","")
+            if suffix and suffix ~= "" then
+                return name .. ".".. suffix
+            elseif defaultsuffix and defaultsuffix ~= "" then
+                return name .. ".".. defaultsuffix
+            else
+                return name
+            end
+        end
     end
+    return "badfontname"
 end
 
 local sorter = function(a,b)
@@ -1172,7 +1177,7 @@ local function analyzefiles(olddata)
             report_names("scanning path %a for %s files",blobpath,suffix)
         end, function(blobtype,blobpath,pattern,total,checked,done)
             blobpath = resolveprefix(blobpath) -- no shortcut
-            report_names("%s entries found, %s %s files checked, %s okay",total,checked,suffix,done)
+            report_names("%s %s files checked, %s okay",checked,suffix,done)
         end)
     end
 
@@ -2009,7 +2014,8 @@ local lastlookups, lastpattern = { }, ""
 
 local function look_them_up(lookups,specification)
     for key, value in sortedhash(specification) do
-        local t, n = { }, 0
+        local t = { }
+        local n = 0
         if find(value,"*",1,true) then
             value = topattern(value)
             for i=1,#lookups do

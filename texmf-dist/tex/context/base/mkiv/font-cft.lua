@@ -242,12 +242,21 @@ do
             hasitalics       = t_boolean,
             autoitalicamount = t_float,
             nostackmath      = t_boolean,
-            noglyphnames     = t_boolean,
             mode             = t_string,
             hasmath          = t_boolean,
             mathitalics      = t_boolean,
             textitalics      = t_boolean,
             finalized        = t_boolean,
+            effect = {
+                effect  = t_cardinal,
+                width   = t_float,
+                factor  = t_float,
+                hfactor = t_float,
+                vfactor = t_float,
+                wdelta  = t_float,
+                hdelta  = t_float,
+                ddelta  = t_float,
+            }
         },
         parameters = {
             mathsize               = t_cardinal,

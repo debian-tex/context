@@ -69,35 +69,30 @@ local lpegmatch = lpeg.match
 local getcurrentdir, attributes = lfs.currentdir, lfs.attributes
 local checkedsplit = string.checkedsplit
 
--- local patterns = file.patterns or { }
--- file.patterns  = patterns
-
 local P, R, S, C, Cs, Cp, Cc, Ct = lpeg.P, lpeg.R, lpeg.S, lpeg.C, lpeg.Cs, lpeg.Cp, lpeg.Cc, lpeg.Ct
 
 -- better this way:
 
-local tricky     = S("/\\") * P(-1)
 local attributes = lfs.attributes
+
+function lfs.isdir(name)
+    return attributes(name,"mode") == "directory"
+end
+
+function lfs.isfile(name)
+    local a = attributes(name,"mode")
+    return a == "file" or a == "link" or nil
+end
+
+function lfs.isfound(name)
+    local a = attributes(name,"mode")
+    return (a == "file" or a == "link") and name or nil
+end
 
 if sandbox then
     sandbox.redefine(lfs.isfile,"lfs.isfile")
     sandbox.redefine(lfs.isdir, "lfs.isdir")
-end
-
-function lfs.isdir(name)
-    if lpegmatch(tricky,name) then
-        return attributes(name,"mode") == "directory"
-    else
-        return attributes(name.."/.","mode") == "directory"
-    end
-end
-
-function lfs.isfile(name)
-    return attributes(name,"mode") == "file"
-end
-
-function lfs.isfound(name)
-    return attributes(name,"mode") == "file" and name or nil
+    sandbox.redefine(lfs.isfound, "lfs.isfound")
 end
 
 local colon     = P(":")
@@ -337,43 +332,52 @@ end
 -- But after some testing Taco and I came up with the more robust
 -- variant:
 
-function file.is_writable(name)
-    if not name then
-        -- error
-    elseif lfs.isdir(name) then
-        name = name .. "/m_t_x_t_e_s_t.tmp"
-        local f = io.open(name,"wb")
-        if f then
-            f:close()
-            os.remove(name)
-            return true
-        end
-    elseif lfs.isfile(name) then
-        local f = io.open(name,"ab")
-        if f then
-            f:close()
-            return true
-        end
-    else
-        local f = io.open(name,"ab")
-        if f then
-            f:close()
-            os.remove(name)
-            return true
-        end
-    end
-    return false
-end
+if lfs.isreadablefile and lfs.iswritablefile then
 
-local readable = P("r") * Cc(true)
+    file.is_readable = lfs.isreadablefile
+    file.is_writable = lfs.iswritablefile
 
-function file.is_readable(name)
-    if name then
-        local a = attributes(name)
-        return a and lpegmatch(readable,a.permissions) or false
-    else
+else
+
+    function file.is_writable(name)
+        if not name then
+            -- error
+        elseif lfs.isdir(name) then
+            name = name .. "/m_t_x_t_e_s_t.tmp"
+            local f = io.open(name,"wb")
+            if f then
+                f:close()
+                os.remove(name)
+                return true
+            end
+        elseif lfs.isfile(name) then
+            local f = io.open(name,"ab")
+            if f then
+                f:close()
+                return true
+            end
+        else
+            local f = io.open(name,"ab")
+            if f then
+                f:close()
+                os.remove(name)
+                return true
+            end
+        end
         return false
     end
+
+    local readable = P("r") * Cc(true)
+
+    function file.is_readable(name)
+        if name then
+            local a = attributes(name)
+            return a and lpegmatch(readable,a.permissions) or false
+        else
+            return false
+        end
+    end
+
 end
 
 file.isreadable = file.is_readable -- depricated
@@ -725,3 +729,10 @@ function file.withinbase(path) -- don't go beyond root
     return true
 end
 
+-- not used in context but was in luatex once:
+
+local symlinkattributes = lfs.symlinkattributes
+
+function lfs.readlink(name)
+    return symlinkattributes(name,"target") or nil
+end
