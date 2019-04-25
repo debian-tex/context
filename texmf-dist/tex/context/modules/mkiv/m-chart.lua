@@ -864,8 +864,8 @@ local function getchart(settings,forced_x,forced_y,forced_nx,forced_ny)
     for i=1,#data do
         local cell = data[i]
         if not autofocus or autofocus[cell.name] then -- offsets probably interfere with autofocus
-            local x = cell.x
-            local y = cell.y
+            local x = cell.realx -- was bug: .x
+            local y = cell.realy -- was bug: .y
             if minx == 0 or x < minx then minx = x end
             if miny == 0 or y < miny then miny = y end
             if minx == 0 or x > maxx then maxx = x end
@@ -926,18 +926,16 @@ local function getchart(settings,forced_x,forced_y,forced_nx,forced_ny)
     return chart
 end
 
-local function makechart(chart)
+local function makechart_indeed(chart)
     local settings      = chart.settings
     local chartsettings = settings.chart
-    --
-    context.begingroup()
-    context.forgetall()
     --
     local g = ctx_startgraphic {
         instance    = "metafun",
         format      = "metafun",
         method      = "scaled",
         definitions = "",
+        wrapped     = true,
     }
     --
     ctx_tographic(g,"if unknown context_flow : input mp-char.mpiv ; fi ;")
@@ -1012,7 +1010,16 @@ local function makechart(chart)
     ctx_tographic(g,"flow_end_chart ;")
     ctx_stopgraphic(g)
     --
-    context.endgroup()
+end
+
+-- We need to wrap because of tex.runtoks!
+
+local function makechart(chart)
+    context.hbox()
+    context.bgroup()
+    context.forgetall()
+    context(function() makechart_indeed(chart) end)
+    context.egroup()
 end
 
 local function splitchart(chart)

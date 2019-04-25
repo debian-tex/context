@@ -167,7 +167,8 @@ local function collectcontent(name,separator) -- no print
     elseif nnames == 1 then
         return getcontent(names[1])
     else
-        local t, n = { }, 0
+        local t = { }
+        local n = 0
         for i=1,nnames do
             local c = getcontent(names[i])
             if c ~= "" then
@@ -182,7 +183,7 @@ local function collectcontent(name,separator) -- no print
 end
 
 local function loadcontent(name) -- no print
-    local content = collectcontent(name,"\n") -- tex likes \n
+    local content = collectcontent(name,"\n") -- tex likes \n hm, elsewhere \r
     local ok, err = load(content)
     if ok then
         return ok()
@@ -350,11 +351,17 @@ buffers.undent = undent
 --     commands.doifelse(more)
 -- end
 
+local split = table.setmetatableindex(function(t,k)
+    local v = totable(k)
+    t[k] = v
+    return v
+end)
+
 function tokens.pickup(start,stop)
-    local stoplist     = totable(stop)
+    local stoplist     = split[stop] -- totable(stop)
     local stoplength   = #stoplist
     local stoplast     = stoplist[stoplength]
-    local startlist    = totable(start)
+    local startlist    = split[start] -- totable(start)
     local startlength  = #startlist
     local startlast    = startlist[startlength]
     local list         = { }
@@ -645,7 +652,10 @@ local function gettexbuffer(name)
     end
 end
 
-buffers.run = runbuffer
+buffers.get          = getbuffer
+buffers.getmkiv      = getbuffermkiv
+buffers.gettexbuffer = gettexbuffer
+buffers.run          = runbuffer
 
 implement { name = "getbufferctxlua", actions = loadcontent,   arguments = "string" }
 implement { name = "getbuffer",       actions = getbuffer,     arguments = "string" }
@@ -708,3 +718,18 @@ do
     end
 
 end
+
+-- moved here:
+
+function buffers.samplefile(name)
+    if not buffers.exists(name) then
+        buffers.assign(name,io.loaddata(resolvers.findfile(name)))
+    end
+    buffers.get(name)
+end
+
+implement {
+    name      = "samplefile", -- bad name, maybe rename to injectbuffercontent
+    actions   = buffers.samplefile,
+    arguments = "string"
+}

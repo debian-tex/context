@@ -82,9 +82,13 @@ local seconds = function(n) return n or 0 end
 --
 -- end
 
-local function starttiming(instance)
+local function starttiming(instance,reset)
     local timer = timers[instance or "notimer"]
     local it = timer.timing
+    if reset then
+        it = 0
+        timer.loadtime = 0
+    end
     if it == 0 then
         timer.starttime = ticks()
         if not timer.loadtime then
@@ -123,6 +127,24 @@ local function elapsed(instance)
     end
 end
 
+local function currenttime(instance)
+    if type(instance) == "number" then
+        return instance
+    else
+        local timer = timers[instance or "notimer"]
+        local it = timer.timing
+        if it > 1 then
+            -- whatever
+        else
+            local starttime = timer.starttime
+            if starttime and starttime > 0 then
+                return seconds(timer.loadtime + ticks() - starttime)
+            end
+        end
+        return 0
+    end
+end
+
 local function elapsedtime(instance)
     return format("%0.3f",elapsed(instance))
 end
@@ -141,6 +163,7 @@ statistics.hastiming      = hastiming
 statistics.resettiming    = resettiming
 statistics.starttiming    = starttiming
 statistics.stoptiming     = stoptiming
+statistics.currenttime    = currenttime
 statistics.elapsed        = elapsed
 statistics.elapsedtime    = elapsedtime
 statistics.elapsedindeed  = elapsedindeed
@@ -191,13 +214,11 @@ function statistics.show()
      -- collectgarbage("collect")
         register("lua properties",function()
             local hashchar = tonumber(status.luatex_hashchars)
-            local hashtype = status.luatex_hashtype
             local mask = lua.mask or "ascii"
-            return format("engine: %s %s, used memory: %s, hash type: %s, hash chars: min(%i,40), symbol mask: %s (%s)",
+            return format("engine: %s %s, used memory: %s, hash chars: min(%i,40), symbol mask: %s (%s)",
                 jit and "luajit" or "lua",
                 LUAVERSION,
                 statistics.memused(),
-                hashtype or "default",
                 hashchar and 2^hashchar or "unknown",
                 mask,
                 mask == "utf" and "τεχ" or "tex")
@@ -229,17 +250,26 @@ end
 
 function statistics.runtime()
     stoptiming(statistics)
- --  stoptiming(statistics) -- somehow we can start the timer twice, but where
-    return statistics.formatruntime(elapsedtime(statistics))
+ -- stoptiming(statistics) -- somehow we can start the timer twice, but where
+    local runtime = lua.getruntime and lua.getruntime() or elapsedtime(statistics)
+    return statistics.formatruntime(runtime)
 end
 
 local report = logs.reporter("system")
 
-function statistics.timed(action)
+function statistics.timed(action,all)
     starttiming("run")
     action()
     stoptiming("run")
-    report("total runtime: %s seconds",elapsedtime("run"))
+    local runtime = tonumber(elapsedtime("run"))
+    if all then
+        local alltime = tonumber(lua.getruntime and lua.getruntime() or elapsedtime(statistics))
+        if alltime and alltime > 0 then
+            report("total runtime: %0.3f seconds of %0.3f seconds",runtime,alltime)
+            return
+        end
+    end
+    report("total runtime: %0.3f seconds",runtime)
 end
 
 -- goodie
