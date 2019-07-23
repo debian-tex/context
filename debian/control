@@ -3,7 +3,7 @@ Section: tex
 Priority: optional
 Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <norbert@preining.info>
-Build-Depends: debhelper (>= 7.0.50~)
+Build-Depends: debhelper (>= 9~)
 Build-Depends-Indep: tex-common (>= 6)
 Standards-Version: 4.2.1
 Vcs-Git: https://github.com/debian-tex/context.git
