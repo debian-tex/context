@@ -4,6 +4,7 @@ context (2019.03.21.20190425-3) UNRELEASED; urgency=medium
   * Bump debhelper dependency to >= 9, since that's what is used in
     debian/compat.
   * Bump debhelper from old 9 to 12.
+  * Strip unusual field spacing from debian/control.
 
  -- Debian Janitor <janitor@jelmer.uk>  Tue, 23 Jul 2019 08:51:23 +0000
 
