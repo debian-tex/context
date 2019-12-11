@@ -1,3 +1,13 @@
+context (2019.03.21.20190425-3) UNRELEASED; urgency=medium
+
+  * Trim trailing whitespace.
+  * Bump debhelper dependency to >= 9, since that's what is used in
+    debian/compat.
+  * Bump debhelper from old 9 to 12.
+  * Strip unusual field spacing from debian/control.
+
+ -- Debian Janitor <janitor@jelmer.uk>  Tue, 23 Jul 2019 08:51:23 +0000
+
 context (2019.03.21.20190425-2) unstable; urgency=medium
 
   * Upload to unstable
@@ -53,8 +63,8 @@ context (2017.05.15.20170613-2) unstable; urgency=medium
 context (2017.05.15.20170613-1) experimental; urgency=medium
 
   * New upstream version 2017.05.15.20170613
-  * new dh compat level 9 
-  * bump deps to TL 2017 
+  * new dh compat level 9
+  * bump deps to TL 2017
 
  -- Norbert Preining <preining@debian.org>  Tue, 13 Jun 2017 09:30:28 +0900
 
@@ -151,7 +161,7 @@ context (2013.05.28.20130702-1) unstable; urgency=low
 
 context (2013.04.20.20130517-1) unstable; urgency=low
 
-  * new upstream fetched from tlpretest 
+  * new upstream fetched from tlpretest
 
  -- Norbert Preining <preining@debian.org>  Fri, 17 May 2013 11:53:21 +0900
 
@@ -194,7 +204,7 @@ context (2012.05.29.20120529-1) unstable; urgency=low
 context (2012.05.24.20120525-1) unstable; urgency=low
 
   * new upstream release 2012.05.24
-  * run mtxrun --generate before the formats are build (necessary on 
+  * run mtxrun --generate before the formats are build (necessary on
     new installations as the dh_installtex generated code skips it)
 
  -- Norbert Preining <preining@debian.org>  Fri, 25 May 2012 12:42:24 +0900
@@ -230,7 +240,7 @@ context (2011.05.18.20110626-1) unstable; urgency=low
   * rebuild with new tex-common (Closes: #606040), tighten BD-Indep
 
   [ Norbert Preining ]
-  * update to version which is/will be in TL2011 
+  * update to version which is/will be in TL2011
     (Closes: #613416, #606656, #609600)
   * drop most of the build adaptions
   * drop maintainer code to upgrade from old-old versions converting
@@ -296,12 +306,12 @@ context (2009.08.19-1) experimental; urgency=low
   * add ${misc:Depends} to the depends field
   * bump build-dep on tex-common to >= 2.00 to get fix for dh_installtex
     usage of --flavor argument
-  * do not ship some fonts in the binary package, but links to 
+  * do not ship some fonts in the binary package, but links to
     recommended font packages
   * only depend on texlive-binaries for TL2009
 
   [ أحمد المحمودي (Ahmed El-Mahmoudy) ]
-  * debian/rules: use /usr/share/quilt/quilt.make provided by quilt and remove 
+  * debian/rules: use /usr/share/quilt/quilt.make provided by quilt and remove
     patch-stamp & unpatch targets (Closes: #538544).
 
  -- Norbert Preining <preining@debian.org>  Mon, 12 Oct 2009 14:45:40 +0900
@@ -324,7 +334,7 @@ context (2008.05.21-1) unstable; urgency=low
 
   * new upstream releases
   * update the release notes from the wiki page
-  * fix XeTeX/ConTeXt usage with the LModern fonts as they are present in 
+  * fix XeTeX/ConTeXt usage with the LModern fonts as they are present in
     Debian:
     - add a patch fix-for-old-lmodern-fonts that updates the type-otf.tex file
     - add the missing map files
@@ -466,9 +476,9 @@ context (2007.03.19-1) experimental; urgency=low
     - Named font styles can now also be 'sans' or 'sansbold'
     - The old marvosym metric file is included, fixing the
       'MarvoSym' symbols and '\texteuro' bugs
-    - Quoting of font files is changed so that hopefully XeTeX bare 
+    - Quoting of font files is changed so that hopefully XeTeX bare
       fontfiles are OK now.
-    - For some other small changes, see the details page 
+    - For some other small changes, see the details page
   * depend on texlive >= 2007:
     - remove ctxfmtutil hack, texlive 2007 can deal with different
       engines in the fmtutil.cnf file
