@@ -45,7 +45,7 @@ local getkern             = nuts.getkern
 local getheight           = nuts.getheight
 
 local insert_node_after   = nuts.insert_after
-local delete_node         = nuts.delete
+local remove_node         = nuts.remove
 local end_of_math         = nuts.end_of_math
 
 local texgetattribute     = tex.getattribute
@@ -315,7 +315,7 @@ local function texthandler(head)
                     if trace_italics then
                         report_italics("deleting last correction before %s %C",char,"glyph")
                     end
-                    delete_node(prevhead,previnserted)
+                    remove_node(prevhead,previnserted,true)
                 else
                     --
                     if replaceitalic ~= 0 then
@@ -327,7 +327,7 @@ local function texthandler(head)
                         if trace_italics then
                             report_italics("deleting last correction before %s %C","replace",char)
                         end
-                        delete_node(replacehead,replaceinserted)
+                        remove_node(replacehead,replaceinserted,true)
                     end
                     --
                     if postitalic ~= 0 then
@@ -339,7 +339,7 @@ local function texthandler(head)
                         if trace_italics then
                             report_italics("deleting last correction before %s %C","post",char)
                         end
-                        delete_node(posthead,postinserted)
+                        remove_node(posthead,postinserted,true)
                     end
                 end
                 --
@@ -383,6 +383,8 @@ local function texthandler(head)
             postinserted    = nil
             postitalic      = 0
             updated         = false
+            replacefont     = nil
+            postfont        = nil
             pre, post, replace, pretail, posttail, replacetail = getdisc(current,true)
             if replace then
                 local current = replacetail
@@ -390,29 +392,32 @@ local function texthandler(head)
                     local char, id = isglyph(current)
                     if char then
                         local font = id
-                        local data = italicsdata[font]
-                        if data then
-                            local attr = forcedvariant or getattr(current,a_italics)
-                            if attr and attr > 0 then
-                                local cd = data[char]
-                                if not cd then
-                                    -- this really can happen
-                                    replaceitalic = 0
-                                else
-                                    replaceitalic = cd.italic
-                                    if not replaceitalic then
-                                        replaceitalic = setitalicinfont(font,char) -- calculated once
-                                     -- replaceitalic = 0
-                                    end
-                                    if replaceitalic ~= 0 then
-                                        lastfont    = font
-                                        lastattr    = attr
-                                        replacechar = char
-                                        replacehead = replace
-                                        updated     = true
+                        if font ~= lastfont then
+                            local data = italicsdata[font]
+                            if data then
+                                local attr = forcedvariant or getattr(current,a_italics)
+                                if attr and attr > 0 then
+                                    local cd = data[char]
+                                    if not cd then
+                                        -- this really can happen
+                                        replaceitalic = 0
+                                    else
+                                        replaceitalic = cd.italic
+                                        if not replaceitalic then
+                                            replaceitalic = setitalicinfont(font,char) -- calculated once
+                                         -- replaceitalic = 0
+                                        end
+                                        if replaceitalic ~= 0 then
+                                            lastfont    = font
+                                            lastattr    = attr
+                                            replacechar = char
+                                            replacehead = replace
+                                            updated     = true
+                                        end
                                     end
                                 end
                             end
+                            replacefont = font
                         end
                         break
                     else
@@ -426,35 +431,41 @@ local function texthandler(head)
                     local char, id = isglyph(current)
                     if char then
                         local font = id
-                        local data = italicsdata[font]
-                        if data then
-                            local attr = forcedvariant or getattr(current,a_italics)
-                            if attr and attr > 0 then
-                                local cd = data[char]
-                                if not cd then
-                                    -- this really can happen
-                                    -- postitalic = 0
-                                else
-                                    postitalic = cd.italic
-                                    if not postitalic then
-                                        postitalic = setitalicinfont(font,char) -- calculated once
-                                     -- postitalic = 0
-                                    end
-                                    if postitalic ~= 0 then
-                                        lastfont = font
-                                        lastattr = attr
-                                        postchar = char
-                                        posthead = post
-                                        updated  = true
+                        if font ~= lastfont then
+                            local data = italicsdata[font]
+                            if data then
+                                local attr = forcedvariant or getattr(current,a_italics)
+                                if attr and attr > 0 then
+                                    local cd = data[char]
+                                    if not cd then
+                                        -- this really can happen
+                                        -- postitalic = 0
+                                    else
+                                        postitalic = cd.italic
+                                        if not postitalic then
+                                            postitalic = setitalicinfont(font,char) -- calculated once
+                                         -- postitalic = 0
+                                        end
+                                        if postitalic ~= 0 then
+                                            lastfont = font
+                                            lastattr = attr
+                                            postchar = char
+                                            posthead = post
+                                            updated  = true
+                                        end
                                     end
                                 end
                             end
+                            postfont = font
                         end
                         break
                     else
                         current = getprev(current)
                     end
                 end
+            end
+            if replacefont or postfont then
+                lastfont = replacefont or postfont
             end
             if updated then
                 setdisc(current,pre,post,replace)
@@ -520,7 +531,7 @@ local function texthandler(head)
             else
                 if replaceitalic ~= 0 then
                     if trace_italics then
-                        report_italics("inserting %p between %s italic %C and whatever",replaceritalic,"replace",replacechar)
+                        report_italics("inserting %p between %s italic %C and whatever",replaceitalic,"replace",replacechar)
                     end
                     insert_node_after(replacehead,replace,correction_kern(replaceitalic,current))
                     previnserted    = nil

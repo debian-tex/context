@@ -1,5 +1,10 @@
 -- original file : copas.lua
--- for more into : see util-soc.lua
+-- for more info : see util-soc.lua
+-- copyright     : see below
+-- comment       : this version is a it cleaned up and adapted
+
+-- there is an official update but i'll wait till it is stable before i check
+-- it out (after all what we have now seems to work ok)
 
 local socket = socket or require("socket")
 local ssl    = ssl or nil -- only loaded upon demand
@@ -50,6 +55,8 @@ local copas = {
 
     report       = report,
 
+    trace        = false,
+
 }
 
 local function statushandler(status, ...)
@@ -60,7 +67,9 @@ local function statushandler(status, ...)
     if type(err) == "table" then
         err = err[1]
     end
-    report("error: %s",tostring(err))
+    if copas.trace then
+        report("error: %s",tostring(err))
+    end
     return nil, err
 end
 
@@ -76,7 +85,9 @@ function socket.newtry(finalizer)
         if not status then
             local detail = select(2,...)
             pcall(finalizer,detail)
-            report("error: %s",tostring(detail))
+            if copas.trace then
+                report("error: %s",tostring(detail))
+            end
             return
         end
         return ...

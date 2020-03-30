@@ -31,11 +31,11 @@ texconfig.param_size      =  25000
 texconfig.save_size       = 100000
 texconfig.stack_size      =  10000
 texconfig.function_size   =  32768
-texconfig.properties_size =  65536
+texconfig.properties_size =  10000
+texconfig.fix_mem_init    = 750000
 
 -- registering bytecode chunks
 
------ bytecode    = lua.bytecode or { } -- we use functions
 local bytedata    = lua.bytedata or { }
 local bytedone    = lua.bytedone or { }
 
@@ -136,31 +136,25 @@ if LUATEXENGINE == nil then
                 or (find(status.banner,"LuajitTeX",1,true) and "luajittex" or "luatex")
 end
 
-if LUATEXVERION == nil then
-    LUATEXVERSION = status.luatex_revision
+if LUATEXVERSION == nil then
     LUATEXVERSION = status.luatex_version/100
-               -- + tonumber(LUATEXVERSION)/1000
-                  + (tonumber(LUATEXVERSION) or (string.byte(LUATEXVERSION)-string.byte("a")+10))/1000
+                  + tonumber(status.luatex_revision)/10000
 end
 
 if CONTEXTLMTXMODE == nil then
-    if status.obj_ptr == nil then
-        CONTEXTLMTXMODE = 2
-    else
-        CONTEXTLMTXMODE = 0
-        for i=1,#arg do if arg[i] == "--c:lmtx" then
-            CONTEXTLMTXMODE, pdf, img = 1, nil, nil
-            break
-        end end
-    end
+    CONTEXTLMTXMODE = LUATEXENGINE == "luametatex" and 1 or 0
 end
 
 if LUATEXFUNCTIONALITY == nil then
     LUATEXFUNCTIONALITY = status.development_id or 6346
 end
 
+if LUATEXFORMATID == nil then
+    LUATEXFORMATID = status.format_id or 0
+end
+
 if JITSUPPORTED == nil then
-    JITSUPPORTED = LUATEXENGINE == "luajittex" or jit
+    JITSUPPORTED = LUATEXENGINE == "luajittex" or jit -- "or jit" can go
 end
 
 if INITEXMODE == nil then
@@ -263,6 +257,10 @@ local function find_write_file(id,name)
     return target_file(name)
 end
 
+local function find_log_file(name)
+    return target_file(name)
+end
+
 local function open_read_file(name)
     local f = io.open(name,'rb')
     return {
@@ -281,6 +279,7 @@ local open_data_file = open_read_file
 callback.register('find_read_file' , find_read_file )
 callback.register('open_read_file' , open_read_file )
 callback.register('find_write_file', find_write_file)
+callback.register('find_log_file',   find_log_file)
 
 callback.register('find_data_file' , find_data_file )
 callback.register('open_data_file' , open_data_file )

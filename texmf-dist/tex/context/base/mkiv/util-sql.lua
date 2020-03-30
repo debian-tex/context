@@ -60,7 +60,7 @@ if not modules then modules = { } end modules ['util-sql'] = {
 
 local format, match = string.format, string.match
 local random = math.random
-local rawset, setmetatable, getmetatable, load, type = rawset, setmetatable, getmetatable, load, type
+local rawset, rawget, setmetatable, getmetatable, load, type = rawset, rawget, setmetatable, getmetatable, load, type
 local P, S, V, C, Cs, Ct, Cc, Cg, Cf, patterns, lpegmatch = lpeg.P, lpeg.S, lpeg.V, lpeg.C, lpeg.Cs, lpeg.Ct, lpeg.Cc, lpeg.Cg, lpeg.Cf, lpeg.patterns, lpeg.match
 local concat = table.concat
 
@@ -109,16 +109,43 @@ local defaults     = { __index =
     },
 }
 
-setmetatableindex(sql.methods,function(t,k)
-    if type(k) == "string" then
-        report_state("start loading method %a",k)
-        require("util-sql-imp-"..k)
-        report_state("loading method %a done",k)
-        return rawget(t,k)
-    else
-        report_state("invalid method %a",tostring(k))
-    end
-end)
+if optional then
+
+    local methods = {
+        ffi       = "mysql",
+        library   = "mysql",
+        swiglib   = "mysql",
+        postgress = "postgress",
+        sqlite    = "sqlite",
+        sqlite3   = "sqlite",
+    }
+
+    setmetatableindex(sql.methods,function(t,k)
+        local m = methods[k]
+        if m then
+            report_state("start loading method %a as %a",k,m)
+            require("libs-imp-" .. m)
+            report_state("loading method %a done",k)
+            return rawget(t,m)
+        else
+            report_state("invalid method %a",tostring(k))
+        end
+    end)
+
+else
+
+    setmetatableindex(sql.methods,function(t,k)
+        if type(k) == "string" then
+            report_state("start loading method %a",k)
+            require("util-sql-imp-" .. k)
+            report_state("loading method %a done",k)
+            return rawget(t,k)
+        else
+            report_state("invalid method %a",tostring(k))
+        end
+    end)
+
+end
 
 -- converters
 

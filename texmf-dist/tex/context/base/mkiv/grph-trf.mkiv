@@ -139,7 +139,7 @@
    %
    \d_grph_scale_dp\dp\nextbox
    \ifx\p_depth\v!no \ifzeropt\d_grph_scale_dp \else
-     \setbox\nextbox\hpack{\raise\d_grph_scale_dp\box\nextbox}% new
+     \setbox\nextbox\naturalhpack{\raise\d_grph_scale_dp\box\nextbox}% new
      \d_grph_scale_dp\dp\nextbox
    \fi \fi
    \d_grph_scale_wd\wd\nextbox
@@ -168,7 +168,7 @@
 %   {\d_grph_scale_wd\finalscaleboxxscale\d_grph_scale_wd
 %    \d_grph_scale_ht\finalscaleboxyscale\d_grph_scale_ht
 %    \d_grph_scale_dp\finalscaleboxyscale\d_grph_scale_dp
-%    \setbox\nextbox\hpack
+%    \setbox\nextbox\naturalhpack
 %      {\dostartscaling \finalscaleboxxscale \finalscaleboxyscale
 %       \smashedbox\nextbox
 %       \dostopscaling}%
@@ -195,7 +195,7 @@
    \fi}
 
 \def\grph_scale_apply_yes
-  {\setbox\nextbox\hpack
+  {\setbox\nextbox\naturalhpack
      {\dostartscaling \finalscaleboxxscale \finalscaleboxyscale
       \smashedbox\nextbox
       \dostopscaling}%
@@ -567,13 +567,13 @@
   {\ifx\p_equalwidth\empty \else
     \scratchdimen\p_equalwidth\relax
     \ifdim\d_grph_scale_wd<\scratchdimen
-      \setbox\nextbox\hpack to \scratchdimen{\hss\box\nextbox\hss}%
+      \setbox\nextbox\naturalhpack to \scratchdimen{\hss\box\nextbox\hss}%
     \fi
    \fi
    \ifx\p_equalheight\empty \else
      \scratchdimen\p_equalheight\relax
      \ifdim\d_grph_scale_ht<\scratchdimen
-       \setbox\nextbox\vpack to \scratchdimen{\vss\box\nextbox\vss}%
+       \setbox\nextbox\naturalvpack to \scratchdimen{\vss\box\nextbox\vss}%
      \fi
    \fi}
 
@@ -603,8 +603,18 @@
    \edef\p_sy{#2}%
    \dowithnextboxcs\grph_scale_fast_sx_xy_finish\hbox}
 
+% \def\grph_scale_fast_sx_xy_finish
+%   {\grph_scale_check_sx_sy
+%    \grph_scale_calculations_nop
+%    \grph_scale_apply
+%    \box\nextbox
+%    \egroup}
+
 \def\grph_scale_fast_sx_xy_finish
   {\grph_scale_check_sx_sy
+   \d_grph_scale_wd\wd\nextbox
+   \d_grph_scale_ht\ht\nextbox
+   \d_grph_scale_dp\dp\nextbox
    \grph_scale_calculations_nop
    \grph_scale_apply
    \box\nextbox
@@ -677,7 +687,7 @@
      \scratchheight\clippingparameter\c!sy\scratchheight
      \advance\scratchyoffset \ht\nextbox
    \fi
-   \setbox\nextbox\hpack
+   \setbox\nextbox\naturalhpack
      {\advance\scratchxoffset -\clippingparameter\c!leftoffset  \relax
       \advance\scratchyoffset -\clippingparameter\c!bottomoffset\relax
       \hskip-\scratchxoffset
@@ -686,13 +696,13 @@
    \wd\nextbox\zeropoint
    \ht\nextbox\zeropoint
    \dp\nextbox\zeropoint
-   \setbox\nextbox\hpack
+   \setbox\nextbox\naturalhpack
      {\advance\scratchwidth \dimexpr\clippingparameter\c!leftoffset  +\clippingparameter\c!rightoffset\relax
       \advance\scratchheight\dimexpr\clippingparameter\c!bottomoffset+\clippingparameter\c!topoffset  \relax
       \dostartclipping{\clippingparameter\c!mp}\scratchwidth\scratchheight
         \box\nextbox
       \dostopclipping}%
-   \setbox\nextbox\hpack
+   \setbox\nextbox\naturalhpack
      {\hskip-\clippingparameter\c!leftoffset
       \lower \clippingparameter\c!bottomoffset
       \box\nextbox}%
@@ -750,7 +760,11 @@
   {\scratchdimen\wd\nextbox
    % better use an hbox (if no \forgetall, leftskip etc may creep in)
    %\setbox\nextbox\vbox{\forgetall\dostartmirroring\hskip-\wd\nextbox\box\nextbox\dostopmirroring}%
-   \setbox\nextbox\hpack{\dostartmirroring\hskip-\wd\nextbox\box\nextbox\dostopmirroring}%
+   \setbox\nextbox\naturalhpack
+     {\dostartmirroring
+      \hskip-\wd\nextbox
+      \box\nextbox
+      \dostopmirroring}%
    \wd\nextbox\scratchdimen
    \box\nextbox
    \egroup}
@@ -898,7 +912,7 @@
    \egroup}
 
 \def\grph_rotate_finish_indeed
-  {\hpack\bgroup
+  {\naturalhpack\bgroup
      \ifx\p_rotation_rotation\empty
        \grph_rotate_finish_nop
      \else
@@ -910,10 +924,10 @@
   {\boxcursor\box\nextbox}
 
 \setvalue{\??rotatepreset\v!left}%
-  {\edef\p_rotation_rotation{\doifelseoddpage{90}{270}}}
+  {\edef\p_rotation_rotation{90}}
 
 \setvalue{\??rotatepreset\v!right}%
-  {\edef\p_rotation_rotation{\doifelseoddpage{270}{90}}}
+  {\edef\p_rotation_rotation{270}}
 
 \setvalue{\??rotatepreset\v!inner}%
   {\signalrightpage
@@ -924,25 +938,23 @@
    \doifelserightpage{\def\p_rotation_rotation{90}}{\def\p_rotation_rotation{270}}}
 
 \setvalue{\??rotatepreset\v!default}%
-  {\edef\p_rotation_rotation{\realnumber{\p_rotation_rotation}}}% get rid of leading zeros and spaces
+  {}
 
 \def\grph_rotate_finish_yes
-  {\csname\??rotatepreset
-     \ifcsname\??rotatepreset\p_rotation_rotation\endcsname\p_rotation_rotation\else\v!default\fi
-   \endcsname
-   \setbox\nextbox\vpack{\box\nextbox}% not really needed
+  {\begincsname\??rotatepreset\p_rotation_rotation\endcsname
+   \setbox\nextbox\naturalvpack{\box\nextbox}% not really needed
    \dontcomplain
    \ifconditional\c_grph_rotate_center
      \d_grph_rotate_saved_width \wd\nextbox
      \d_grph_rotate_saved_height\ht\nextbox
      \d_grph_rotate_saved_depth \dp\nextbox
-     \setbox\nextbox\vpack{\vskip.5\ht\nextbox\hskip-.5\wd\nextbox\box\nextbox}%
+     \setbox\nextbox\naturalvpack{\vskip.5\ht\nextbox\hskip-.5\wd\nextbox\box\nextbox}%
      \smashbox\nextbox
    \fi
    \d_grph_rotate_width \wd\nextbox
    \d_grph_rotate_height\ht\nextbox
    \d_grph_rotate_depth \dp\nextbox
-   \setbox\nextbox\vpack{\hpack{\raise\dp\nextbox\box\nextbox}}%
+   \setbox\nextbox\naturalvpack{\naturalhpack{\raise\dp\nextbox\box\nextbox}}%
    \d_grph_rotate_used_height \ht\nextbox
    % much of the next happens in lua (all the sin and cos) so we can do that in
    % one go if needed
@@ -973,7 +985,7 @@
      \fi\fi
    \fi
    \ifconditional\c_grph_rotate_center
-     \setbox\nextbox\vpack{\vskip-.5\d_grph_rotate_saved_height\hskip.5\d_grph_rotate_saved_height\box\nextbox}%
+     \setbox\nextbox\naturalvpack{\vskip-.5\d_grph_rotate_saved_height\hskip.5\d_grph_rotate_saved_height\box\nextbox}%
      \wd\nextbox\d_grph_rotate_saved_width
      \ht\nextbox\d_grph_rotate_saved_height
      \dp\nextbox\d_grph_rotate_saved_depth
@@ -1039,9 +1051,9 @@
    \fi}
 
 \def\grph_rotate_apply
-  {\setbox\nextbox\vpack to \d_grph_rotate_y_size
+  {\setbox\nextbox\naturalvpack to \d_grph_rotate_y_size
      {\vfill
-      \hpack to \d_grph_rotate_x_size
+      \naturalhpack to \d_grph_rotate_x_size
         {\dostartrotation\p_rotation_rotation
            \wd\nextbox\zeropoint
            \ht\nextbox\zeropoint
@@ -1049,7 +1061,7 @@
          \dostoprotation
          \hfill}%
       \kern\d_grph_rotate_y_position}%
-   \setbox\nextbox\hpack
+   \setbox\nextbox\naturalhpack
      {\kern\dimexpr\d_grph_rotate_x_position+\d_grph_rotate_x_offset\relax
       \lower\d_grph_rotate_y_offset\box\nextbox}}
 

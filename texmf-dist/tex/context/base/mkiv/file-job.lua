@@ -46,7 +46,7 @@ local dirname           = file.dirname
 local is_qualified_path = file.is_qualified_path
 
 local cleanpath         = resolvers.cleanpath
-local inputstack        = resolvers.inputstack
+local toppath           = resolvers.toppath
 local resolveprefix     = resolvers.resolve
 
 local hasscheme         = url.hasscheme
@@ -172,8 +172,8 @@ implement {
 
 -- moved from tex to lua:
 
-local texpatterns = { "%s.mkvi", "%s.mkiv", "%s.tex" }
-local luapatterns = { "%s" .. utilities.lua.suffixes.luc, "%s.lua" }
+local texpatterns = { "%s.mkvi", "%s.mkiv", "%s.mklx", "%s.mkxl", "%s.tex" }
+local luapatterns = { "%s" .. utilities.lua.suffixes.luc, "%s.lua", "%s.lmt" }
 local cldpatterns = { "%s.cld" }
 local xmlpatterns = { "%s.xml" }
 
@@ -326,6 +326,8 @@ end
 local suffixes = {
     mkvi = usetexfile,
     mkiv = usetexfile,
+    mklx = usetexfile,
+    mkxl = usetexfile,
     tex  = usetexfile,
     luc  = useluafile,
     lua  = useluafile,
@@ -789,7 +791,7 @@ end
 
 local function autoname(name)
     if name == "*" then
-        name = nameonly(inputstack[#inputstack] or name)
+        name = nameonly(toppath() or name)
     end
     return name
 end
@@ -1114,11 +1116,11 @@ function document.setfilenames()
     end
 end
 
-implement { name = "setdocumentcommandline",   actions = document.setcommandline,  onlyonce = true }
-implement { name = "setdocumentmodes",         actions = document.setmodes,        onlyonce = true }
-implement { name = "setdocumentmodules",       actions = document.setmodules,      onlyonce = true }
-implement { name = "setdocumentenvironments",  actions = document.setenvironments, onlyonce = true }
-implement { name = "setdocumentfilenames",     actions = document.setfilenames,    onlyonce = true }
+implement { name = "setdocumentcommandline",  actions = document.setcommandline,  onlyonce = true }
+implement { name = "setdocumentmodes",        actions = document.setmodes,        onlyonce = true }
+implement { name = "setdocumentmodules",      actions = document.setmodules,      onlyonce = true }
+implement { name = "setdocumentenvironments", actions = document.setenvironments, onlyonce = true }
+implement { name = "setdocumentfilenames",    actions = document.setfilenames,    onlyonce = true }
 
 do
 

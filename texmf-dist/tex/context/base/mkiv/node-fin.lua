@@ -12,10 +12,12 @@ if not modules then modules = { } end modules ['node-fin'] = {
 -- leaders are also triggers ... see colo-ext for an example (negate a box)
 
 local next, type, format = next, type, string.format
+local setmetatableindex = table.setmetatableindex
 
 local attributes, nodes, node = attributes, nodes, node
 
 local nuts               = nodes.nuts
+local tonut              = nodes.tonut
 
 local getnext            = nuts.getnext
 local getid              = nuts.getid
@@ -25,6 +27,8 @@ local getattr            = nuts.getattr
 local getwidth           = nuts.getwidth
 local getwhd             = nuts.getwhd
 local getorientation     = nuts.getorientation
+local has_dimensions     = nuts.has_dimensions
+local getbox             = nuts.getbox
 
 local setlist            = nuts.setlist
 local setleader          = nuts.setleader
@@ -38,16 +42,9 @@ local nextnode           = nuts.traversers.node
 local nodecodes          = nodes.nodecodes
 local rulecodes          = nodes.rulecodes
 
------ normalrule_code    = rulecodes.normal
 local boxrule_code       = rulecodes.box
 local imagerule_code     = rulecodes.image
 local emptyrule_code     = rulecodes.empty
------ userrule_code      = rulecodes.user
------ overrule_code      = rulecodes.over
------ underrule_code     = rulecodes.under
------ fractionrule_code  = rulecodes.fraction
------ radicalrule_code   = rulecodes.radical
------ outlinerule_code   = rulecodes.outline
 
 local glyph_code         = nodecodes.glyph
 local disc_code          = nodecodes.disc
@@ -55,6 +52,9 @@ local glue_code          = nodecodes.glue
 local rule_code          = nodecodes.rule
 local hlist_code         = nodecodes.hlist
 local vlist_code         = nodecodes.vlist
+
+local texlists           = tex.lists
+local texgetnest         = tex.getnest
 
 local states             = attributes.states
 local numbers            = attributes.numbers
@@ -182,7 +182,7 @@ local function process(attribute,head,inheritance,default) -- one attribute
     local leader = nil
     for stack, id in nextnode, head do
         if id == glyph_code or id == disc_code then
-            check = true -- disc no longer needed as we flatten replace
+            check = true
         elseif id == glue_code then
             leader = getleader(stack)
             if leader then
@@ -235,8 +235,7 @@ local function process(attribute,head,inheritance,default) -- one attribute
                 -- end nested --
             end
         elseif id == rule_code then
-            local wd, ht, dp = getwhd(stack)
-            check = wd ~= 0 or (ht+dp) ~= 0
+            check = has_dimensions(stack)
         end
         -- much faster this way than using a check() and nested() function
         if check then
@@ -309,7 +308,7 @@ local function selective(attribute,head,inheritance,default) -- two attributes
     local leader = nil
     for stack, id, subtype in nextnode, head do
         if id == glyph_code or id == disc_code then
-            check = true -- disc no longer needed as we flatten replace
+            check = true
         elseif id == glue_code then
             leader = getleader(stack)
             if leader then
@@ -374,8 +373,7 @@ local function selective(attribute,head,inheritance,default) -- two attributes
                 -- so no redundant color stuff (only here, layers for instance should obey)
                 check = false
             else
-                local wd, ht, dp = getwhd(stack)
-                check = wd ~= 0 or (ht+dp) ~= 0
+                check = has_dimensions(stack)
             end
         end
         if check then
@@ -485,8 +483,7 @@ local function stacked(attribute,head,default) -- no triggering, no inheritance,
                 end
             end
         elseif id == rule_code then
-            local wd, ht, dp = getwhd(stack)
-            check = wd ~= 0 or (ht+dp) ~= 0
+            check = has_dimensions(stack)
         end
         if check then
             local a = getattr(stack,attribute)
@@ -559,20 +556,25 @@ local function stacker(attribute,head,default) -- no triggering, no inheritance,
                     if a and attrib ~= a and nslistwise[a] then -- viewerlayer
                         head = insert_node_before(head,current,copy_node(nsdata[a]))
                         list = stacker(attribute,content,a)
+                        if list ~= content then
+                            setlist(current,list)
+                        end
                         head, current = insert_node_after(head,current,copy_node(nsnone))
                     else
                         list = stacker(attribute,content,attrib)
+                        if list ~= content then
+                            setlist(current,list)
+                        end
                     end
                 else
                     list = stacker(attribute,content,default)
-                end
-                if list ~= content then
-                    setlist(current,list)
+                    if list ~= content then
+                        setlist(current,list)
+                    end
                 end
             end
         elseif id == rule_code then
-            local wd, ht, dp = getwhd(current)
-            check = wd ~= 0 or (ht+dp) ~= 0
+            check = has_dimensions(current)
         end
 
         if check then
@@ -621,89 +623,6 @@ local function stacker(attribute,head,default) -- no triggering, no inheritance,
     return head
 end
 
--- local nextid = nodes.nuts.traversers.id
---
--- local function stacker(attribute,head,default) -- no triggering, no inheritance, but list-wise
---
---  -- nsbegin()
---     local stacked  = false
---
---     local current  = head
---     local previous = head
---     local attrib   = default or unsetvalue
---     local check    = false
---     local leader   = false
---
---     local id       = getid(current)
---     while current do
---         if id == glyph_code then
---             check = true
---         elseif id == glue_code then
---             leader = getleader(current)
---             if leader then
---                 check = true
---             end
---         elseif id == hlist_code or id == vlist_code then
---             local content = getlist(current)
---             if content then
---                 local list
---                 if nslistwise then
---                     local a = getattr(current,attribute)
---                     if a and attrib ~= a and nslistwise[a] then -- viewerlayer
---                         head = insert_node_before(head,current,copy_node(nsdata[a]))
---                         list = stacker(attribute,content,a)
---                         head, current = insert_node_after(head,current,copy_node(nsnone))
---                     else
---                         list = stacker(attribute,content,attrib)
---                     end
---                 else
---                     list = stacker(attribute,content,default)
---                 end
---                 if list ~= content then
---                     setlist(current,list)
---                 end
---             end
---         elseif id == rule_code then
---             check = getwidth(current) ~= 0
---         end
---
---         if check then
---             local a = getattr(current,attribute) or unsetvalue
---             if a ~= attrib then
---                 if not stacked then
---                     stacked = true
---                     nsbegin()
---                 end
---                 local n = nsstep(a)
---                 if n then
---                     head = insert_node_before(head,current,n) -- a
---                 end
---                 attrib = a
---                 if leader then
---                     -- tricky as a leader has to be a list so we cannot inject before
---                     local list = stacker(attribute,leader,attrib)
---                     leader = false
---                 end
---             end
---             check = false
---         end
---
---         previous = current
---
---         current, id = nextid(current,current)
---     end
---
---     if stacked then
---         local n = nsend()
---         while n do
---             head = insert_node_after(head,previous,n)
---             n = nsend()
---         end
---     end
---
---     return head
--- end
-
 states.stacker = function(namespace,attribute,head,default)
     local head = stacker(attribute,head,default)
     nsreset()
@@ -715,3 +634,100 @@ end
 statistics.register("attribute processing time", function()
     return statistics.elapsedseconds(attributes,"front- and backend")
 end)
+
+-- -- --
+
+do
+
+    local cleaners = { }
+    local trace    = true -- false
+
+    function attributes.cleanup()
+        if next(cleaners) then
+            local values = setmetatableindex("table")
+
+            if trace then
+                starttiming(values)
+            end
+
+            local function check(l)
+                for n, id in nextnode, l do
+                    if id == hlist_code or id == vlist_code or id == glue_code then
+                        local l = getlist(n)
+                        if l then
+                            check(l)
+                        end
+                    end
+                    for a in next, cleaners do
+                        local v = getattr(n,a)
+                        if v then
+                         -- values[a] = values[a] + 1
+                            values[a][v] = true
+                        end
+                    end
+                end
+            end
+
+            local top = texgetnest("ptr")
+            for i=1,top do
+                local l = texgetnest(i)
+                if l then
+                    check(tonut(l.head))
+                end
+            end
+
+            do local l
+                l = tonut(texlists.page_ins_head)       if l then check(l) end
+                l = tonut(texlists.contrib_head)        if l then check(l) end
+                l = tonut(texlists.page_discards_head)  if l then check(l) end
+                l = tonut(texlists.split_discards_head) if l then check(l) end
+                l = tonut(texlists.page_head)           if l then check(l) end
+            end
+
+            -- todo: traverseboxes
+
+            for i=0,65535 do
+                local b = getbox(i)
+                if b then
+                    local l = getlist(b)
+                    if l then
+                        check(l)
+                    end
+                end
+            end
+
+            for a, t in next, values do
+                cleaners[a](a,t)
+            end
+
+            if trace then
+                stoptiming(values)
+                local a = table.sortedkeys(values)
+                local t = statistics.elapsedtime(values)
+                local r = tex.getcount("realpageno")
+                if #a == 0 then
+                    logs.report("attributes","cleaning up at page %i took %s seconds, no attributes",r,t)
+                else
+                    logs.report("attributes","cleaning up at page %i took %s seconds, attributes: % t",r,t,a)
+                end
+            end
+        end
+    end
+
+    -- not yet used but when we do ... delay a call till we enable it (attr-ini.mkiv)
+
+    -- local function show(a,t) for k, v in next, t do print(a,k) end end
+    --
+    -- attributes.registercleaner(  1, show)
+    -- attributes.registercleaner(  2, show)
+
+    function attributes.registercleaner(a,f)
+        cleaners[a] = f
+    end
+
+    implement {
+        name    = "cleanupattributes",
+        actions = attributes.cleanup,
+    }
+
+end

@@ -109,6 +109,8 @@ colors.pushset = pushset
 colors.popset  = popset
 colors.setlist = setlist
 
+-- todo: set at the lua end
+
 local ctx_colordefagc = context.colordefagc
 local ctx_colordefagt = context.colordefagt
 local ctx_colordefalc = context.colordefalc
@@ -447,7 +449,8 @@ local function defineprocesscolor(name,str,global,freeze) -- still inconsistent 
             local r = settings.r
             local g = settings.g
             local b = settings.b
-            if r or g or b then
+            local w = settings.w
+            if r or g or (b and not w) then
                 -- we can consider a combined rgb cmyk s definition
                 definecolor(name, register_color(name,'rgb', tonumber(r) or 0, tonumber(g) or 0, tonumber(b) or 0), global)
             else
@@ -465,16 +468,21 @@ local function defineprocesscolor(name,str,global,freeze) -- still inconsistent 
                         r, g, b = colors.hsvtorgb(tonumber(h) or 0, tonumber(s) or 1, tonumber(v) or 1) -- maybe later native
                         definecolor(name, register_color(name,'rgb',r,g,b), global)
                     else
-                        local x = settings.x or h
-                        if x then
-                            r, g, b = lpegmatch(hexpattern,x) -- can be inlined
-                            if r and g and b then
-                                definecolor(name, register_color(name,'rgb',r,g,b), global)
-                            else
-                                definecolor(name, register_color(name,'gray',r or 0), global)
-                            end
+                        if w then
+                            r, g, b = colors.hwbtorgb(tonumber(h) or 0, tonumber(b) or 1, tonumber(w) or 1) -- maybe later native
+                            definecolor(name, register_color(name,'rgb',r,g,b), global)
                         else
-                            definecolor(name, register_color(name,'gray',tonumber(s) or 0), global)
+                            local x = settings.x or h
+                            if x then
+                                r, g, b = lpegmatch(hexpattern,x) -- can be inlined
+                                if r and g and b then
+                                    definecolor(name, register_color(name,'rgb',r,g,b), global)
+                                else
+                                    definecolor(name, register_color(name,'gray',r or 0), global)
+                                end
+                            else
+                                definecolor(name, register_color(name,'gray',tonumber(s) or 0), global)
+                            end
                         end
                     end
                 end
@@ -508,6 +516,65 @@ local function defineprocesscolor(name,str,global,freeze) -- still inconsistent 
     colorset[name] = true-- maybe we can store more
 end
 
+-- You cannot overload a local color so one then has to use some prefix, like
+-- mp:red. Kind of protection.
+
+local function defineprocesscolordirect(settings)
+    if settings then
+        local name = settings.name
+        if name then
+            local r = settings.r
+            local g = settings.g
+            local b = settings.b
+            local w = settings.w
+            if r or g or (b and not w) then
+                -- we can consider a combined rgb cmyk s definition
+                register_color(name,'rgb', r or 0, g or 0, b or 0)
+            else
+                local c = settings.c
+                local m = settings.m
+                local y = settings.y
+                local k = settings.k
+                if c or m or y or k then
+                    register_color(name,'cmyk',c or 0, m or 0, y or 0, k or 0)
+                else
+                    local h = settings.h
+                    local s = settings.s
+                    local v = settings.v
+                    if v then
+                        r, g, b = colors.hsvtorgb(h or 0, s or 1, v or 1) -- maybe later native
+                        register_color(name,'rgb',r,g,b)
+                    else
+                        if w then
+                            r, g, b = colors.hwbtorgb((tonumber(h) or 0) / 360, tonumber(b) or 1, tonumber(w) or 1) -- maybe later native
+                            register_color(name,'rgb',r,g,b)
+                        else
+                            local x = settings.x or h
+                            if x then
+                                r, g, b = lpegmatch(hexpattern,x) -- can be inlined
+                                if r and g and b then
+                                    register_color(name,'rgb',r,g,b)
+                                else
+                                    register_color(name,'gray',r or 0)
+                                end
+                            else
+                                register_color(name,'gray',s or 0)
+                            end
+                        end
+                    end
+                end
+            end
+            local a = settings.a
+            local t = settings.t
+            if a and t then
+                transparencies.register(name,transparent[a] or a or 1,t or 1)
+            end
+            colorset[name] = true-- maybe we can store more
+            valid[name] = true
+        end
+    end
+end
+
 local function isblack(ca) -- maybe commands
     local cv = ca > 0 and colorvalues[ca]
     return (cv and cv[2] == 0) or false
@@ -518,7 +585,6 @@ colors.isblack = isblack
 -- local m, c, t = attributes.colors.namedcolorattributes(parent)
 -- if c and c > 1 then -- 1 is black
 -- local v = attributes.colors.values[c]
-
 
 local function definespotcolor(name,parent,str,global)
     if parent == "" or find(parent,"=",1,true) then
@@ -657,6 +723,8 @@ colors.defineprocesscolor   = defineprocesscolor
 colors.definespotcolor      = definespotcolor
 colors.definemultitonecolor = definemultitonecolor
 
+colors.defineprocesscolordirect = defineprocesscolordirect -- test for mp
+
 -- will move to mlib-col as colors in mp are somewhat messy due to the fact
 -- that we cannot cast .. so we really need to use (s,s,s) for gray in order
 -- to be able to map onto 'color'
@@ -734,10 +802,13 @@ local function namedcolorattributes(name)
         elseif color == true then
             color = paletnamespace .. prefix .. name
         end
-    elseif valid[name] then
-        color = name
     else
-        return space, l_color.black
+        color = valid[name]
+        if not color then
+            return space, l_color.black
+        elseif color == true then
+            color = name
+        end
     end
     color = counts[color]
     if color then
@@ -772,7 +843,6 @@ colors.mpoptions    = mpoptions
 -- mp.NamedColor = function(str)
 --     mpprint(mpnamedcolor(str))
 -- end
-
 
 -- local function formatcolor(ca,separator)
 --     local cv = colorvalues[ca]
@@ -953,6 +1023,12 @@ local function complement(one,fraction,i)
     return otf
 end
 
+colors.helpers = {
+    inbetween  = inbetween,
+    justone    = justone,
+    complement = complement,
+}
+
 defineintermediatecolor = function(name,fraction,c_one,c_two,a_one,a_two,specs,global,freeze)
     fraction = tonumber(fraction) or 1
     local one, two = colorvalues[c_one], colorvalues[c_two] -- beware, it uses the globals
@@ -1014,6 +1090,7 @@ colors.defineintermediatecolor = defineintermediatecolor
 -- for the moment downward compatible
 
 local patterns = {
+    CONTEXTLMTXMODE > 0 and "colo-imp-%s.mkxl" or "",
     "colo-imp-%s.mkiv",
     "colo-imp-%s.tex",
     -- obsolete:
@@ -1022,13 +1099,7 @@ local patterns = {
 }
 
 local function action(name,foundname)
-    -- could be one command
-    context.startreadingfile()
-    context.startcolorset { name }
-    context.input(foundname)
-    context.showmessage("colors",4,name)
-    context.stopcolorset()
-    context.stopreadingfile()
+    context.loadfoundcolorsetfile(name,foundname)
 end
 
 local function failure(name)
@@ -1037,7 +1108,7 @@ local function failure(name)
 end
 
 local function usecolors(name)
-    commands.uselibrary {
+    resolvers.uselibrary {
         category = "color definition",
         name     = name,
         patterns = patterns,

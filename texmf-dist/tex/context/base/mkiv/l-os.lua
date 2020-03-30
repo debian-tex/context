@@ -30,7 +30,7 @@ local date, time = os.date, os.time
 local find, format, gsub, upper, gmatch = string.find, string.format, string.gsub, string.upper, string.gmatch
 local concat = table.concat
 local random, ceil, randomseed = math.random, math.ceil, math.randomseed
-local rawget, rawset, type, getmetatable, setmetatable, tonumber, tostring = rawget, rawset, type, getmetatable, setmetatable, tonumber, tostring
+local type, setmetatable, tonumber, tostring = type, setmetatable, tonumber, tostring
 
 -- This check needs to happen real early on. Todo: we can pick it up from the commandline
 -- if we pass --binpath= (which is useful anyway)
@@ -227,7 +227,10 @@ local launchers = {
 }
 
 function os.launch(str)
-    execute(format(launchers[os.name] or launchers.unix,str))
+    local command = format(launchers[os.name] or launchers.unix,str)
+    -- todo: pcall
+--     print(command)
+    execute(command)
 end
 
 local gettimeofday = os.gettimeofday or os.clock
@@ -456,7 +459,7 @@ end
 local d
 
 function os.timezone(delta)
-    d = d or tonumber(tonumber(date("%H")-date("!%H")))
+    d = d or ((tonumber(date("%H")) or 0) - (tonumber(date("!%H")) or 0))
     if delta then
         if d > 0 then
             return format("+%02i:00",d)
@@ -632,6 +635,14 @@ function os.validdate(year,month,day)
         end
     end
     return year, month, day
+end
+
+function os.date(fmt,...)
+    if not fmt then
+        -- otherwise differences between unix, mingw and msvc
+        fmt = "%Y-%m-%d %H:%M"
+    end
+    return date(fmt,...)
 end
 
 local osexit   = os.exit

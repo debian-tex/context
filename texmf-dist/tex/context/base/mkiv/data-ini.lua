@@ -10,11 +10,11 @@ local next, type, getmetatable, rawset = next, type, getmetatable, rawset
 local gsub, find, gmatch, char = string.gsub, string.find, string.gmatch, string.char
 local filedirname, filebasename, filejoin = file.dirname, file.basename, file.join
 local ostype, osname, osuname, ossetenv, osgetenv = os.type, os.name, os.uname, os.setenv, os.getenv
+local sortedpairs = table.sortedpairs
 
 local P, S, R, C, Cs, Cc, lpegmatch = lpeg.P, lpeg.S, lpeg.R, lpeg.C, lpeg.Cs, lpeg.Cc, lpeg.match
 
 local trace_locating   = false  trackers.register("resolvers.locating",   function(v) trace_locating   = v end)
-local trace_detail     = false  trackers.register("resolvers.details",    function(v) trace_detail     = v end)
 local trace_expansions = false  trackers.register("resolvers.expansions", function(v) trace_expansions = v end)
 
 local report_initialization = logs.reporter("resolvers","initialization")
@@ -217,12 +217,6 @@ end
 
 environment.texroot = file.collapsepath(texroot)
 
--- if type(profiler) == "table" and not jit then
---     directives.register("system.profile",function()
---         profiler.start("luatex-profile.log")
---     end)
--- end
-
 -- a forward definition
 
 -- Because we use resolvers.resolve a lot later on, we will implement the basics here and
@@ -333,7 +327,7 @@ if ostype == "unix" then
             rawset(t,k,v)
         end
         local colon = P(":")
-        for k, v in table.sortedpairs(prefixes) do
+        for k, v in sortedpairs(prefixes) do
             if p then
                 p = P(k) + p
             else

@@ -34,6 +34,8 @@ local ctxcore       = context.core
 local variables     = interfaces.variables
 
 local ctx_flushnode = context.nuts.flush
+local ctx_sprint    = context.sprint
+local txtcatcodes   = tex.txtcatcodes
 
 local nuts          = nodes.nuts
 local tonode        = nuts.tonode
@@ -46,6 +48,8 @@ local setattrlist   = nuts.setattrlist
 
 local texgetcount   = tex.getcount
 local texsetcount   = tex.setcount
+
+local is_letter     = characters.is_letter
 
 -- a set of basic fast ones
 
@@ -69,6 +73,14 @@ function context.char(k) -- used as escape too, so don't change to utf
         if type(k) == "number" then
             context([[\char%s\relax]],k)
         end
+    end
+end
+
+function context.safechar(c)
+    if characters.is_letter[c] then -- not yet loaded
+        ctx_sprint(c)
+    else
+        ctx_sprint(txtcatcodes,c)
     end
 end
 
@@ -193,34 +205,12 @@ context.registers = {
     newchar   = function(name,u) context([[\chardef\%s=%s\relax]],name,u) end,
 }
 
-do
-
-    if CONTEXTLMTXMODE > 1 then
-
-        function context.latelua(f)
-            -- table check moved elsewhere
-            local latelua = new_latelua(f)
-            setattrlist(latelua,true) -- will become an option
-            ctx_flushnode(latelua,true)
-        end
-
-    else
-
-        function context.latelua(f)
-            if type(f) == "table" then
-                local action        = f.action
-                local specification = f.specification or f
-                f = function() action(specification) end
-            end
-            local latelua = new_latelua(f)
-            setattrlist(latelua,true) -- will become an option
-            ctx_flushnode(latelua,true)
-        end
-
-    end
-
+function context.latelua(f)
+    -- table check moved elsewhere
+    local latelua = new_latelua(f)
+    setattrlist(latelua,true) -- will become an option
+    ctx_flushnode(latelua,true)
 end
--- yes or no
 
 do
 
