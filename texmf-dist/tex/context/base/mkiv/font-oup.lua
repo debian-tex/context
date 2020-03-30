@@ -720,6 +720,10 @@ local function checklookups(fontdata,missing,nofmissing)
     end
 end
 
+local firstprivate = fonts.privateoffsets and fonts.privateoffsets.textbase or 0xF0000
+local puafirst     = 0xE000
+local pualast      = 0xF8FF
+
 local function unifymissing(fontdata)
     if not fonts.mappings then
         require("font-map")
@@ -730,19 +734,21 @@ local function unifymissing(fontdata)
     resources.unicodes = unicodes
     for unicode, d in next, fontdata.descriptions do
         if unicode < privateoffset then
-            local name = d.name
-            if name then
-                unicodes[name] = unicode
+            if unicode >= puafirst and unicode <= pualast then
+                -- report_unicodes("resolving private unicode %U",unicode)
+            else
+                local name = d.name
+                if name then
+                    unicodes[name] = unicode
+                end
             end
+        else
+            -- report_unicodes("resolving private unicode %U",unicode)
         end
     end
     fonts.mappings.addtounicode(fontdata,fontdata.filename,checklookups)
     resources.unicodes = nil
 end
-
-local firstprivate = fonts.privateoffsets and fonts.privateoffsets.textbase or 0xF0000
-local puafirst     = 0xE000
-local pualast      = 0xF8FF
 
 local function unifyglyphs(fontdata,usenames)
     local private      = fontdata.private or privateoffset
@@ -1362,65 +1368,6 @@ function readers.pack(data)
             end
         end
 
-     -- -- This was an experiment to see if we can bypass the luajit limits but loading is
-     -- -- still an issue due to other limits so we don't use this ... actually it can
-     -- -- prevent a luajittex crash but i don't care too much about that as we can't use
-     -- -- that engine anyway then.
-     --
-     -- local function check(t)
-     --     if type(t) == "table" then
-     --         local s = sortedkeys(t)
-     --         local n = #s
-     --         if n <= 10 then
-     --             return
-     --         end
-     --         local ranges = { }
-     --         local first, last
-     --         for i=1,#s do
-     --             local ti = s[i]
-     --             if not first then
-     --                 first = ti
-     --                 last  = ti
-     --             elseif ti == last + 1 then
-     --                 last = ti
-     --             elseif last - first < 10 then
-     --                 -- we could permits a few exceptions
-     --                 return
-     --             else
-     --                 ranges[#ranges+1] = { first, last }
-     --                 first, last = nil, nil
-     --             end
-     --         end
-     --         if #ranges > 0 then
-     --             return {
-     --                 ranges = ranges
-     --             }
-     --         end
-     --     end
-     -- end
-     --
-     -- local function pack_boolean(v)
-     --     local tag
-     --     local r = check(v)
-     --     if r then
-     --         v = r
-     --         tag = tabstr_normal(v)
-     --     else
-     --         tag = tabstr_boolean(v)
-     --     end
-     --     local ht = h[tag]
-     --     if ht then
-     --         c[ht] = c[ht] + 1
-     --         return ht
-     --     else
-     --         nt = nt + 1
-     --         t[nt] = v
-     --         h[tag] = nt
-     --         c[nt] = 1
-     --         return nt
-     --     end
-     -- end
-
         local function pack_final(v)
             -- v == number
             if c[v] <= criterium then
@@ -1573,16 +1520,34 @@ function readers.pack(data)
                             if kind == "gpos_pair" then
                                 local c = step.coverage
                                 if c then
-                                    if step.format == "pair" then
+                                    if step.format ~= "pair" then
+                                        for g1, d1 in next, c do
+                                            c[g1] = pack_normal(d1)
+                                        end
+                                    elseif step.shared then
+                                        -- This branch results from classes. We already share at the reader end. Maybe
+                                        -- the sharing should be moved there altogether but it becomes kind of messy
+                                        -- then. Here we're still wasting time because in the second pass we serialize
+                                        -- and hash. So we compromise. We could merge the two passes ...
+                                        local shared = { }
+                                        for g1, d1 in next, c do
+                                            for g2, d2 in next, d1 do
+                                                if not shared[d2] then
+                                                    local f = d2[1] if f and f ~= true then d2[1] = pack_indexed(f) end
+                                                    local s = d2[2] if s and s ~= true then d2[2] = pack_indexed(s) end
+                                                    shared[d2] = true
+                                                end
+                                            end
+                                        end
+                                        if pass == 2 then
+                                            step.shared = nil -- weird, so dups
+                                        end
+                                    else
                                         for g1, d1 in next, c do
                                             for g2, d2 in next, d1 do
                                                 local f = d2[1] if f and f ~= true then d2[1] = pack_indexed(f) end
                                                 local s = d2[2] if s and s ~= true then d2[2] = pack_indexed(s) end
                                             end
-                                        end
-                                    else
-                                        for g1, d1 in next, c do
-                                            c[g1] = pack_normal(d1)
                                         end
                                     end
                                 end

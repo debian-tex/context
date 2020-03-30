@@ -259,12 +259,19 @@ local function graytohsv(s)
     return 0, 0, s
 end
 
+local function hwbtorgb(hue,black,white)
+    local r, g, b = hsvtorgb(hue,1,.5)
+    local f = 1 - white - black
+    return f * r + white, f * g + white , f * b + white
+end
+
 colors.rgbtocmyk  = rgbtocmyk
 colors.rgbtogray  = rgbtogray
 colors.cmyktorgb  = cmyktorgb
 colors.cmyktogray = cmyktogray
 colors.rgbtohsv   = rgbtohsv
 colors.hsvtorgb   = hsvtorgb
+colors.hwbtorgb   = hwbtorgb
 colors.hsvtogray  = hsvtogray
 colors.graytohsv  = graytohsv
 
@@ -549,7 +556,7 @@ local function extender(transparencies,key)
 end
 
 local function reviver(data,n)
-    if transparencies.supported then
+    if n and transparencies.supported then
         local v = values[n]
         local d
         if not v then

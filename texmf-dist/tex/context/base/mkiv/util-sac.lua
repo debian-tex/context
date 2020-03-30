@@ -43,6 +43,8 @@ function streams.size(f)
     return f and f[3] or 0
 end
 
+streams.getsize = streams.size
+
 function streams.setposition(f,i)
     if f[4] then
         -- zerobased
@@ -261,9 +263,9 @@ function streams.readfixed2(f)
     f[2] = j + 1
     local a, b = byte(f[1],i,j)
     if a >= 0x80 then
-        tonumber((a - 0x100) .. "." .. b)
+        return tonumber((a - 0x100) .. "." .. b) or 0
     else
-        tonumber((a        ) .. "." .. b)
+        return tonumber((a        ) .. "." .. b) or 0
     end
 end
 
@@ -273,9 +275,9 @@ function streams.readfixed4(f)
     f[2] = j + 1
     local a, b, c, d = byte(f[1],i,j)
     if a >= 0x80 then
-        tonumber((0x100 * a + b - 0x10000) .. "." .. (0x100 * c + d))
+        return tonumber((0x100 * a + b - 0x10000) .. "." .. (0x100 * c + d)) or 0
     else
-        tonumber((0x100 * a + b          ) .. "." .. (0x100 * c + d))
+        return tonumber((0x100 * a + b          ) .. "." .. (0x100 * c + d)) or 0
     end
 end
 
@@ -364,16 +366,16 @@ if sio and sio.readcardinal2 then
         f[2] = i + 4
         return readinteger4(f[1],i)
     end
- -- function streams.readfixed2(f) -- needs recent luatex
- --     local i = f[2]
- --     f[2] = i + 2
- --     return readfixed2(f[1],i)
- -- end
- -- function streams.readfixed4(f) -- needs recent luatex
- --     local i = f[2]
- --     f[2] = i + 4
- --     return readfixed4(f[1],i)
- -- end
+    function streams.readfixed2(f) -- needs recent luatex
+        local i = f[2]
+        f[2] = i + 2
+        return readfixed2(f[1],i)
+    end
+    function streams.readfixed4(f) -- needs recent luatex
+        local i = f[2]
+        f[2] = i + 4
+        return readfixed4(f[1],i)
+    end
     function streams.read2dot4(f)
         local i = f[2]
         f[2] = i + 2
@@ -482,6 +484,61 @@ else
         elseif b == 3 then for i=1,n do t[i] = readinteger3(f[1],i) end
         elseif b == 4 then for i=1,n do t[i] = readinteger4(f[1],i) end end
         return t
+    end
+
+end
+
+-- For practical reasons we put this here. It's less efficient but ok when we don't
+-- have much access.
+
+do
+
+    local files = utilities.files
+
+    if files then
+
+        local openfile     = files.open
+        local openstream   = streams.open
+        local openstring   = streams.openstring
+
+        local setmetatable = setmetatable
+
+        function io.newreader(str,method)
+            local f, m
+            if method == "string" then
+                f = openstring(str)
+                m = streams
+            elseif method == "stream" then
+                f = openstream(str)
+                m = streams
+            else
+                f = openfile(str,"rb")
+                m = files
+            end
+            if f then
+                local t = { }
+                setmetatable(t, {
+                    __index = function(t,k)
+                        local r = m[k]
+                        if k == "close" then
+                            if f then
+                                m.close(f)
+                                f = nil
+                            end
+                            return function() end
+                        elseif r then
+                            local v = function(_,a,b) return r(f,a,b) end
+                            t[k] = v
+                            return v
+                        else
+                            print("unknown key",k)
+                        end
+                    end
+                } )
+                return t
+            end
+        end
+
     end
 
 end

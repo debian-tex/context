@@ -56,11 +56,17 @@
 
 \startluacode
 
+    local find = string.find
+
     if #document.files == 0 then
         context("no files given")
     else
-        for _, filename in ipairs(document.files) do
-            if not string.find(filename,"^mtx%-context%-") then
+        if document.arguments.pattern then
+            document.files = dir.glob(document.arguments.pattern)
+        end
+        for i=1,#document.files do
+            local filename = document.files[i]
+            if not find(filename,"^mtx%-context%-") and not find(filename,"^context%-extra") then
                 logs.report("copy",filename)
                 context.getfiguredimensions
                     { filename }

@@ -99,8 +99,8 @@ local wordboundary_code = boundarycodes.word
 local texgetnest        = tex.getnest -- to be used
 local texsetcount       = tex.setcount
 
-local flush_node        = node.flush_node
-local flush_list        = node.flush_list
+local flush_node        = nodes.flush_node
+local flush_list        = nodes.flush_list
 
 local settexattribute   = tex.setattribute
 local punctuation       = characters.is_punctuation
@@ -175,7 +175,7 @@ local function pickup(head,tail,str)
         while true do
             local prev = first.prev
             if prev and prev[a_marked] == attr then
-                if prev.id == localpar_code then -- and prev.subtype == 0
+                if prev.id == localpar_code then -- and start_of_par(prev)
                     break
                 else
                     first = prev
@@ -185,6 +185,14 @@ local function pickup(head,tail,str)
             end
         end
         return first, last
+    end
+end
+
+local function found(str)
+    local list = texgetnest()
+    if list then
+        local tail = list.tail
+        return tail and tail[a_marked] == marked[str]
     end
 end
 
@@ -254,6 +262,12 @@ interfaces.implement {
     arguments = "string",
 }
 
+interfaces.implement {
+    name      = "doifelsemarkedcontent",
+    actions   = function(str) ctx_doifelse(found(str)) end,
+    arguments = "string",
+}
+
 -- We just put these here.
 
 interfaces.implement {
@@ -283,6 +297,8 @@ interfaces.implement {
 --         context.sprint(t_lastnodeid)
 --     end,
 -- }
+
+-- not needed in lmtx ...
 
 interfaces.implement {
     name    = "lastnodeid",

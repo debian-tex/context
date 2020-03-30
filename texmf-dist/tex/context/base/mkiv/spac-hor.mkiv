@@ -38,8 +38,14 @@
 \unexpanded\def\setupindenting
   {\doifelsenextoptionalcs\spac_indentation_setup_options\spac_indentation_setup_size}
 
+% \unexpanded\def\spac_indentation_setup_size
+%   {\assigndimension\v_spac_indentation_current\d_spac_indentation_par{1\emwidth}{1.5\emwidth}{2\emwidth}}
+
 \unexpanded\def\spac_indentation_setup_size
-  {\assigndimension\v_spac_indentation_current\d_spac_indentation_par{1\emwidth}{1.5\emwidth}{2\emwidth}}
+  {\assigndimension\v_spac_indentation_current\d_spac_indentation_par{1\emwidth}{1.5\emwidth}{2\emwidth}%
+   \ifzeropt\parindent\else
+     \parindent\d_spac_indentation_par\relax % new per 2019-04-12 : just in case it has been set beforehand
+   \fi}
 
 \let\synchronizeindenting\spac_indentation_setup_size
 
@@ -60,7 +66,9 @@
    \ifzeropt\parindent\else
      \doifemptytoks\everypar\spac_indentation_set_everypar
    \fi
-   \ifconditional\c_spac_indentation_indent_first\else
+   \ifconditional\c_spac_indentation_indent_first
+     \spac_indentation_variant_yes % better than: \let\checkindentation\relax
+   \else
      \spac_indentation_variant_no
    \fi
    \spac_indentation_check_toggle}
@@ -191,7 +199,7 @@
                                   \parindent\zeropoint
                                   \c_spac_indentation_toggle_state\zerocount}
 
-\installindentingmethod \v!toggle{\parindent\ifdim\parindent=\zeropoint
+\installindentingmethod \v!toggle{\parindent\ifzeropt\parindent
                                     \d_spac_indentation_par
                                   \else
                                     \zeropoint
@@ -210,7 +218,7 @@
 \installmacrostack\ifindentation
 
 \def\spac_indentation_remove
-  {\ifdim\parindent=\zeropoint \else
+  {\ifzeropt\parindent \else
      \begingroup
      \setbox\scratchbox\lastbox
      \endgroup
@@ -267,7 +275,7 @@
    \fi}
 
 \def\spac_indentation_variant_force
-  {\ifvmode \ifdim\parindent=\zeropoint \else
+  {\ifvmode \ifzeropt\parindent \else
      % was : \hskip\parindent
      % can be: \indent
      % but we test:
@@ -839,7 +847,7 @@
 \letvalue{\??skipadaptionright\v!no      }\zeropoint
 \letvalue{\??skipadaptionright\empty     }\zeropoint
 
-% \setvalue{\??skipadaptionleft \v!standard}{\ifdim\d_spac_indentation_par=\zeropoint\narrowerparameter\c!left\else\d_spac_indentation_par\fi}
+% \setvalue{\??skipadaptionleft \v!standard}{\ifzeropt\d_spac_indentation_par\narrowerparameter\c!left\else\d_spac_indentation_par\fi}
 % \setvalue{\??skipadaptionright\v!standard}{\narrowerparameter\c!right}
 
 \letcsnamecsname\csname\??skipadaptionleft \v!standard\endcsname\csname\??skipadaptionleft \v!yes\endcsname
@@ -1253,7 +1261,7 @@
    \advance\c_spac_ignore_spaces\minusone}
 
 \def\spac_ignore_spaces_body
-  {\ifdim\lastskip=\zeropoint
+  {\ifzeropt\lastskip
      \exitloop
    \else\ifdim\lastskip=\s_spac_ignore_spaces
      \unskip
@@ -1266,5 +1274,14 @@
 %D   {obeyfollowingtoken}
 
 \def\obeyfollowingtoken{{}}  % end \cs scanning
+
+%D Something new:
+
+\unexpanded\def\interwordspacebefore{\wordboundary\zwnj\hskip\interwordspace\relax}
+\unexpanded\def\interwordspaceafter {\hskip\interwordspace\relax\zwnj\wordboundary}
+
+\unexpanded\def\interwordspacesbefore#1{\dofastloopcs{#1}\interwordspacebefore}
+\unexpanded\def\interwordspacesafter #1{\dofastloopcs{#1}\interwordspaceafter}
+\unexpanded\def\interwordspaces      #1{\wordboundary\zwnj\dofastloopcs{\numexpr#1+\minusone}\interwordspaceafter}
 
 \protect \endinput

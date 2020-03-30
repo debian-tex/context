@@ -21,7 +21,7 @@ add features.</p>
 
 local fonts, logs, trackers, resolvers = fonts, logs, trackers, resolvers
 
-local next, type, tonumber, rawget, rawset = next, type, tonumber, rawget, rawset
+local next, type, tonumber, rawset = next, type, tonumber, rawset
 local match, lower, gsub, strip, find = string.match, string.lower, string.gsub, string.strip, string.find
 local char, byte, sub = string.char, string.byte, string.sub
 local abs = math.abs
@@ -235,7 +235,6 @@ do
         binary = decrypt(binary,55665,4)
 
         local names    = { }
-
         local encoding = lpegmatch(p_filterencoding,ascii)
         local metadata = lpegmatch(p_filtermetadata,ascii,1,{})
         local glyphs   = { }
@@ -255,7 +254,7 @@ do
                 },
             }
             -- only cff 1 in type 1 fonts
-            fonts.handlers.otf.readers.parsecharstrings(false,data,glyphs,true,"cff",streams)
+            fonts.handlers.otf.readers.parsecharstrings(false,data,glyphs,true,"cff",streams,true)
         else
             lpegmatch(p_filternames,binary,1,filename)
         end

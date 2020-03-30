@@ -1,4 +1,3 @@
-
 %D \module
 %D   [       file=typo-chr,
 %D        version=2015.01.01, % or about that time
@@ -78,6 +77,9 @@
 
 \def\typo_marked_remove[#1]%
   {\clf_pickupmarkedcontent action{remove}mark{#1}\relax}
+
+\unexpanded\def\doifelsemarkedcontent#1%
+  {\clf_doifelsemarkedcontent{#1}}
 
 %D A few helpers (put here for convenience):
 %D
