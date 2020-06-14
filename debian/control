@@ -2,7 +2,8 @@ Source: context
 Section: tex
 Priority: optional
 Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
-Uploaders: Norbert Preining <norbert@preining.info>
+Uploaders: Norbert Preining <norbert@preining.info>,
+	   Hilmar Preusse <hille42@web.de>
 Build-Depends: debhelper-compat (= 12), tex-common
 Build-Depends-Indep: tex-common (>= 6)
 Standards-Version: 4.2.1
