@@ -11,7 +11,6 @@ Vcs-Git: https://github.com/debian-tex/context.git
 Vcs-Browser: https://github.com/debian-tex/context
 
 Package: context
-Section: tex
 Architecture: all
 Depends: ruby | ruby-interpreter, texlive-binaries (>= 2019), texlive-base (>= 2019), texlive-metapost (>= 2019), lmodern (>= 2.004.4), tex-gyre, ${misc:Depends}
 Recommends: fonts-gfs-artemisia, fonts-gfs-baskerville, fonts-gfs-bodoni-classic, fonts-gfs-didot-classic, fonts-gfs-didot, fonts-gfs-olga, fonts-gfs-porson, fonts-gfs-gazis, fonts-gfs-neohellenic, fonts-gfs-solomos, fonts-gfs-theokritos, fonts-freefont, fonts-sil-gentium, context-modules
