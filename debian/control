@@ -4,14 +4,13 @@ Priority: optional
 Maintainer: Debian TeX maintainers <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <norbert@preining.info>,
 	   Hilmar Preusse <hille42@web.de>
-Build-Depends: debhelper-compat (= 12), tex-common
+Build-Depends: debhelper-compat (= 13), tex-common
 Build-Depends-Indep: tex-common (>= 6)
 Standards-Version: 4.2.1
 Vcs-Git: https://github.com/debian-tex/context.git
 Vcs-Browser: https://github.com/debian-tex/context
 
 Package: context
-Section: tex
 Architecture: all
 Depends: ruby | ruby-interpreter, texlive-binaries (>= 2019), texlive-base (>= 2019), texlive-metapost (>= 2019), lmodern (>= 2.004.4), tex-gyre, ${misc:Depends}
 Recommends: fonts-gfs-artemisia, fonts-gfs-baskerville, fonts-gfs-bodoni-classic, fonts-gfs-didot-classic, fonts-gfs-didot, fonts-gfs-olga, fonts-gfs-porson, fonts-gfs-gazis, fonts-gfs-neohellenic, fonts-gfs-solomos, fonts-gfs-theokritos, fonts-freefont, fonts-sil-gentium, context-modules
