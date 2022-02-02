@@ -10,6 +10,10 @@ context (2020.03.10.20200331-2) UNRELEASED; urgency=medium
   * Remove 1 obsolete maintscript entry.
   * Bump debhelper from old 12 to 13.
   * Remove Section on context that duplicates source.
+  * Remove constraints unnecessary since buster:
+    + Build-Depends-Indep: Drop versioned constraint on tex-common.
+    + context: Drop versioned constraint on lmodern in Depends.
+    + context: Drop versioned constraint on texlive-xetex in Conflicts.
 
  -- Debian Janitor <janitor@jelmer.uk>  Wed, 06 May 2020 08:12:38 +0000
 
