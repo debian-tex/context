@@ -435,9 +435,21 @@ end
 references.synchronizepage = synchronizepage
 
 local function enhancereference(specification)
-    local l = tobesaved[specification.prefix][specification.tag]
-    if l then
-        synchronizepage(l.references)
+    local prefix = specification.prefix
+    if prefix then
+        local entry = tobesaved[prefix]
+        if entry then
+            entry = entry[specification.tag]
+            if entry then
+                synchronizepage(entry.references)
+            else
+                -- normally a bug
+            end
+        else
+            -- normally a bug
+        end
+    else
+        -- normally a bug
     end
 end
 
@@ -2289,7 +2301,7 @@ function genericfilters.title(data)
     if data then
         local titledata = data.titledata or data.useddata
         if titledata then
-            helpers.title(titledata.title or "?",data.metadata)
+            helpers.title(titledata.reference or titledata.title or "?",data.metadata)
         end
     end
 end
@@ -2615,6 +2627,18 @@ implement {
 -- }
 
 implement {
+    name      = "askedreference",
+    public    = true,
+    protected = true,
+    actions   = function()
+        local actions = references.currentset
+        if actions then
+            context("[p=%s,r=%s]",actions.prefix or "",actions.reference)
+        end
+    end
+}
+
+implement {
     name    = "referencerealpage",
     actions = function()
         local actions = references.currentset
@@ -2637,7 +2661,6 @@ end
 
 implement { name = "referenceposx", actions = function() context("%p",referencepos("x")) end }
 implement { name = "referenceposy", actions = function() context("%p",referencepos("y")) end }
-
 
 implement {
     name    = "referencecolumn",

@@ -1,5 +1,6 @@
 if not modules then modules = { } end modules ['math-map'] = {
     version   = 1.001,
+    optimize  = true,
     comment   = "companion to math-ini.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
@@ -688,9 +689,9 @@ local issygreek = regular_tf.symbols
 local isgreek   = merged(islcgreek,isucgreek,issygreek)
 
 local greekremapping = {
-    [1] = { what = "unchanged" }, -- upright
-    [2] = { what = "upright", it = "tf", bi = "bf" }, -- upright
-    [3] = { what = "italic",  tf = "it", bf = "bi" }, -- italic
+    { what = "unchanged" }, -- upright
+    { what = "upright", it = "tf", bi = "bf" }, -- upright
+    { what = "italic",  tf = "it", bf = "bi" }, -- italic
 }
 
 local usedremap = { }

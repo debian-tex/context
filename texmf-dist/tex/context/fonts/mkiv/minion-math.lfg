@@ -1,12 +1,20 @@
-local kern_100 = { bottomright = { { kern = -100 } } }
-local kern_150 = { bottomright = { { kern = -150 } } }
-local kern_200 = { bottomright = { { kern = -200 } } }
+local dimensions, kerns  if CONTEXTLMTXMODE == 0 then
+
+    local kern_W = { bottomright = { { kern = -150 } } }
+    local kern_V = { bottomright = { { kern = -200 } } }
+
+    kerns = {
+        [0x1D449] = kern_V, -- 𝑉
+        [0x1D44A] = kern_W, -- 𝑊
+    }
+
+end
 
 return {
     name = "minion-math",
     version = "1.00",
     comment = "Goodies that complement minion math.",
-    author = "Hans Hagen",
+    author = "Hans Hagen & Mikael Sundqvist",
     copyright = "ConTeXt development team",
     designsizes = {
         ["Minion-Math"] = {
@@ -22,9 +30,33 @@ return {
         },
     },
     mathematics = {
-        kerns = {
-            [0x1D449] = kern_200, -- 𝑉
-            [0x1D44A] = kern_150, -- 𝑊
+        tweaks = {
+            aftercopying = {
+             -- {
+             --     tweak    = "version",
+             --     expected = "unknown",
+             -- },
+                {
+                    tweak = "dimensions",
+                 -- smaller = true,
+                    list  = dimensions,
+                },
+                {
+                    tweak  = "fixprimes",
+                    factor = 0.85,
+                },
+                {
+                    tweak = "checkspacing",
+                },
+                {
+                    tweak = "addscripts",
+                },
+            },
         },
+        --
+        -- experimental fixes for mkiv:
+        --
+        dimensions = dimensions,
+        kerns = kerns,
     },
 }

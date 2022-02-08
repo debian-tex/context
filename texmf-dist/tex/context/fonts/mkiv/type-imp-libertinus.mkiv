@@ -63,17 +63,17 @@
 
     \starttypescript [\s!mono] [libertinus]
         \setups[\s!font:\s!fallback:\s!mono]
-        \definefontsynonym [LibertinusMono-Regular]     [\s!file:libertinusmono-regular]
+        \definefontsynonym [LibertinusMono-Regular] [\s!file:libertinusmono-regular]
     \stoptypescript
 
     \starttypescript [\s!mono] [libertinus] [\s!name]
         \setups[\s!font:\s!fallback:\s!mono]
-        \definefontsynonym [\s!Mono]           [LibertinusMono-Regular]     [\s!features=\s!default]
+        \definefontsynonym [\s!Mono] [LibertinusMono-Regular] [\s!features=\s!none]
     \stoptypescript
 
     \starttypescript [\s!math] [libertinus] [\s!name]
-        \definefontsynonym[\s!MathRoman    ] [\s!file:libertinusmath-regular.otf] [\s!features={\s!math\mathsizesuffix,mathextra}]
-        \definefontsynonym[\s!MathRomanBold] [\s!file:libertinusmath-regular.otf] [\s!features={\s!math\mathsizesuffix,mathextra}]
+        \definefontsynonym[\s!MathRoman    ] [\s!file:libertinusmath-regular.otf] [\s!features={\s!math\mathsizesuffix,mathextra},\s!goodies=libertinus-math.lfg]
+        \definefontsynonym[\s!MathRomanBold] [\s!file:libertinusmath-regular.otf] [\s!features={\s!math\mathsizesuffix,mathextra},\s!goodies=libertinus-math.lfg]
     \stoptypescript
 
     \starttypescript [libertinus]

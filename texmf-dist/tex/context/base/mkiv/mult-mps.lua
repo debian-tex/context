@@ -6,7 +6,7 @@ return {
         "..", "...", "--", "---", "&", "\\",
     },
     primitives = { -- to be checked
-        "charcode", "day", "linecap", "linejoin", "miterlimit", "month", "pausing",
+        "charcode", "day", "linecap", "linejoin", "miterlimit", "stacking", "month", "pausing",
         "prologues", "showstopping", "time", "tracingcapsules", "tracingchoices", "mpprocset",
         "tracingcommands", "tracingequations", "tracinglostchars",
         "tracingmacros", "tracingonline", "tracingoutput", "tracingrestores",
@@ -27,11 +27,10 @@ return {
         "shipout", "show", "showdependencies", "showtoken", "showvariable",
         "special",
         "begingroup", "endgroup", "of", "curl", "tension", "and", "controls",
-        "interpath", "on", "off",
         "def", "vardef", "enddef", "expr", "suffix", "text", "primary", "secondary",
         "tertiary", "primarydef", "secondarydef", "tertiarydef",
         "randomseed", "also", "contour", "doublepath",
-        "withcolor", "withcmykcolor", "withpen",
+        "withcolor", "withcmykcolor", "withpen", "withstacking",
         "dashed",
         "envelope",
         "if", "else", "elseif", "fi", "for", "endfor", "forever", "exitif", "within",
@@ -59,7 +58,7 @@ return {
         "prescriptpart", "postscriptpart",
         "rgbcolor", "cmykcolor", -- "greycolor", "graycolor",
         "colormodel",  "graypart", "greypart", "greycolor", "graycolor",
-        "dashpart", "penpart",
+        "dashpart", "penpart", "stackingpart",
 --         "colorpart",
         "stroked", "filled", "textual", "clipped", "bounded", "pathpart",
         "expandafter",
@@ -68,11 +67,14 @@ return {
         "fontpart", "fontsize", "glyph", "restoreclipcolor", "troffmode",
         --
         "runscript", "maketext", "numbersystem",
+        "overloadmode", "setproperty",
     },
     commands = {
+        "on", "off",
+        "interpath",
         "upto", "downto",
         "beginfig", "endfig",
-        "beginglyph", "endglyph", -- actually a mult-fun one
+        "beginglyph", "endglyph", "beginfont", "endfont", -- actually a mult-fun one
         "rotatedaround", "reflectedabout",
         "arrowhead",
         "currentpen", "currentpicture", "cuttings",
@@ -115,10 +117,13 @@ return {
         --
         "red", "green", "blue", "cyan", "magenta", "yellow", "black", "white", "background",
         --
-        "mm", "pt", "dd", "bp", "cm", "pc", "cc", "in",
+        "mm", "pt", "dd", "bp", "cm", "pc", "cc", "in", "dk",
         --
-        "triplet", "quadruplet", "totransform", "bymatrix",
+        "triplet", "quadruplet", "totransform", "bymatrix", "closedcurve", "closedlines",
         --
+        "primitive", "permanent", "immutable", "mutable", "frozen",
+        --
+        "showproperty", "showhashentry",
     },
     internals = { -- we need to remove duplicates above
         --
@@ -130,6 +135,10 @@ return {
         "defaultpen", "defaultscale",
         "join_radius",
         "charscale", -- actually a mult-fun one
+        --
+        "inicatcoderegime", "texcatcoderegime", "luacatcoderegime", "notcatcoderegime",
+        "vrbcatcoderegime", "prtcatcoderegime", "ctxcatcoderegime", "txtcatcoderegime",
+        "catcoderegime",
         --
         "ditto", "EOF", -- maybe also down etc
         --

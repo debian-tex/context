@@ -13,13 +13,23 @@ if not modules then modules = { } end modules ['util-zip'] = {
 -- keep some hybrid functionality.
 
 local type, tostring, tonumber = type, tostring, tonumber
-local sort = table.sort
+local sort, concat = table.sort, table.concat
 
 local find, format, sub, gsub = string.find, string.format, string.sub, string.gsub
 local osdate, ostime, osclock = os.date, os.time, os.clock
 local ioopen = io.open
 local loaddata, savedata = io.loaddata, io.savedata
 local filejoin, isdir, dirname, mkdirs = file.join, lfs.isdir, file.dirname, dir.mkdirs
+local suffix, suffixes = file.suffix, file.suffixes
+local openfile = io.open
+
+gzip = gzip or { } -- so in luatex we keep the old ones too
+
+if not zlib then
+    zlib = xzip    -- in luametatex we shadow the old one
+elseif not xzip then
+    xzip = zlib
+end
 
 local files         = utilities.files
 local openfile      = files.open
@@ -34,32 +44,13 @@ local band          = bit32.band
 local rshift        = bit32.rshift
 local lshift        = bit32.lshift
 
-local decompress, expandsize, calculatecrc
+local zlibdecompress     = zlib.decompress
+local zlibdecompresssize = zlib.decompresssize
+local zlibchecksum       = zlib.crc32
 
--- if flate then
---
---     decompress   = flate.flate_decompress
---     calculatecrc = flate.update_crc32
---
--- else
-
-    local zlibdecompress = zlib.decompress
-    local zlibexpandsize = zlib.expandsize
-    local zlibchecksum   = zlib.crc32
-
-    decompress = function(source)
-        return zlibdecompress(source,-15) -- auto
-    end
-
-    expandsize = zlibexpandsize and function(source,targetsize)
-        return zlibexpandsize(source,targetsize,-15) -- auto
-    end or decompress
-
-    calculatecrc = function(buffer,initial)
-        return zlibchecksum(initial or 0,buffer)
-    end
-
--- end
+local decompress     = function(source)            return zlibdecompress    (source,-15)            end -- auto
+local decompresssize = function(source,targetsize) return zlibdecompresssize(source,targetsize,-15) end -- auto
+local calculatecrc   = function(buffer,initial)    return zlibchecksum      (initial or 0,buffer)   end
 
 local zipfiles      = { }
 utilities.zipfiles  = zipfiles
@@ -201,8 +192,8 @@ local openzipfile, closezipfile, unzipfile, foundzipfile, getziphash, getziplist
                 setposition(handle,position)
                 local result = readstring(handle,compressed)
                 if data.method == 8 then
-                    if expandsize then
-                        result = expandsize(result,data.uncompressed)
+                    if decompresssize then
+                        result = decompresssize(result,data.uncompressed)
                     else
                         result = decompress(result)
                     end
@@ -516,48 +507,170 @@ if xzip then -- flate then do
 
 end
 
-zipfiles.gunzipfile = gzip.load
+-- todo: compress/decompress that work with offset in string
 
--- if flate then
+-- We only have a few official methods here:
 --
---     local streams       = utilities.streams
---     local openfile      = streams.open
---     local closestream   = streams.close
---     local setposition   = streams.setposition
---     local getsize       = streams.size
---     local readcardinal4 = streams.readcardinal4le
---     local getstring     = streams.getstring
---     local decompress    = flate.gz_decompress
+--   local decompressed = gzip.load       (filename)
+--   local resultsize   = gzip.save       (filename,compresslevel)
+--   local compressed   = gzip.compress   (str,compresslevel)
+--   local decompressed = gzip.decompress (str)
+--   local iscompressed = gzip.compressed (str)
+--   local suffix, okay = gzip.suffix     (filename)
 --
---     -- id1=1 id2=1 method=1 flags=1 mtime=4(le) extra=1 os=1
---     -- flags:8 comment=...<nul> flags:4 name=...<nul> flags:2 extra=...<nul> flags:1 crc=2
---     -- data:?
---     -- crc=4 size=4
+-- In LuaMetaTeX we have only xzip which implements a very few methods:
 --
---     function zipfiles.gunzipfile(filename)
---         local strm = openfile(filename)
---         if strm then
---             setposition(strm,getsize(strm) - 4 + 1)
---             local size = readcardinal4(strm)
---             local data = decompress(getstring(strm),size)
---             closestream(strm)
---             return data
---         end
---     end
---
--- elseif gzip then
---
---     local openfile = gzip.open
---
---     function zipfiles.gunzipfile(filename)
---         local g = openfile(filename,"rb")
---         if g then
---             local d = g:read("*a")
---             d:close()
---             return d
---         end
---     end
---
--- end
+--   compress   (str,level,method,window,memory,strategy)
+--   decompress (str,window)
+--   adler32    (str,checksum)
+--   crc32      (str,checksum)
+
+local pattern   = "^\x1F\x8B\x08"
+local gziplevel = 3
+
+function gzip.suffix(filename)
+    local suffix, extra = suffixes(filename)
+    local gzipped = extra == "gz"
+    return suffix, gzipped
+end
+
+function gzip.compressed(s)
+    return s and find(s,pattern)
+end
+
+local getdecompressed
+local putcompressed
+
+if gzip.compress then
+
+    local gzipwindow = 15 + 16 -- +16: gzip, +32: gzip|zlib
+
+    local compress   = zlib.compress
+    local decompress = zlib.decompress
+
+    getdecompressed = function(str)
+        return decompress(str,gzipwindow) -- pass offset
+    end
+
+    putcompressed = function(str,level)
+        return compress(str,level or gziplevel,nil,gzipwindow)
+    end
+
+else
+
+    -- Special window values are: flate: -15, zlib: 15, gzip : -15
+
+    local gzipwindow = -15 -- miniz needs this
+    local identifier = "\x1F\x8B"
+
+    local compress      = zlib.compress
+    local decompress    = zlib.decompress
+    local crc32         = zlib.crc32
+
+    local streams       = utilities.streams
+    local openstream    = streams.openstring
+    local closestream   = streams.close
+    local getposition   = streams.getposition
+    local readbyte      = streams.readbyte
+    local readcardinal4 = streams.readcardinal4le
+    local readcardinal2 = streams.readcardinal2le
+    local readstring    = streams.readstring
+    local readcstring   = streams.readcstring
+    local skipbytes     = streams.skip
+
+    local tocardinal1   = streams.tocardinal1
+    local tocardinal4   = streams.tocardinal4le
+
+    getdecompressed = function(str)
+        local s = openstream(str)
+        local identifier  = readstring(s,2)
+        local method      = readbyte(s,1)
+        local flags       = readbyte(s,1)
+        local timestamp   = readcardinal4(s)
+        local compression = readbyte(s,1)
+        local operating   = readbyte(s,1)
+     -- local isjusttext  = (flags & 0x01 ~= 0) and true             or false
+     -- local extrasize   = (flags & 0x04 ~= 0) and readcardinal2(s) or 0
+     -- local filename    = (flags & 0x08 ~= 0) and readcstring(s)   or ""
+     -- local comment     = (flags & 0x10 ~= 0) and readcstring(s)   or ""
+     -- local checksum    = (flags & 0x02 ~= 0) and readcardinal2(s) or 0
+        local isjusttext  = band(flags,0x01) ~= 0 and true             or false
+        local extrasize   = band(flags,0x04) ~= 0 and readcardinal2(s) or 0
+        local filename    = band(flags,0x08) ~= 0 and readcstring(s)   or ""
+        local comment     = band(flags,0x10) ~= 0 and readcstring(s)   or ""
+        local checksum    = band(flags,0x02) ~= 0 and readcardinal2(s) or 0
+        local compressed  = readstring(s,#str)
+        local data = decompress(compressed,gzipwindow) -- pass offset
+        return data
+    end
+
+    putcompressed = function(str,level,originalname)
+        return concat {
+            identifier,              -- 2 identifier
+            tocardinal1(0x08),       -- 1 method
+            tocardinal1(0x08),       -- 1 flags
+            tocardinal4(os.time()),  -- 4 mtime
+            tocardinal1(0x02),       -- 1 compression (2 or 4)
+            tocardinal1(0xFF),       -- 1 operating
+            (originalname or "unknownname") .. "\0",
+            compress(str,level,nil,gzipwindow),
+            tocardinal4(crc32(str)), -- 4
+            tocardinal4(#str),       -- 4
+        }
+    end
+
+end
+
+function gzip.load(filename)
+    local f = openfile(filename,"rb")
+    if not f then
+        -- invalid file
+    else
+        local data = f:read("*all")
+        f:close()
+        if data and data ~= "" then
+            if suffix(filename) == "gz" then
+                data = getdecompressed(data)
+            end
+            return data
+        end
+    end
+end
+
+function gzip.save(filename,data,level,originalname)
+    if suffix(filename) ~= "gz" then
+        filename = filename .. ".gz"
+    end
+    local f = openfile(filename,"wb")
+    if f then
+        data = putcompressed(data or "",level or gziplevel,originalname)
+        f:write(data)
+        f:close()
+        return #data
+    end
+end
+
+function gzip.compress(s,level)
+    if s and not find(s,pattern) then
+        if not level then
+            level = gziplevel
+        elseif level <= 0 then
+            return s
+        elseif level > 9 then
+            level = 9
+        end
+        return putcompressed(s,level or gziplevel) or s
+    end
+end
+
+function gzip.decompress(s)
+    if s and find(s,pattern) then
+        return getdecompressed(s)
+    else
+        return s
+    end
+end
+
+zipfiles.gunzipfile = gzip.load
 
 return zipfiles

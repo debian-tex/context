@@ -369,8 +369,7 @@ end
 local function add_text(text)
     if text == "" then
         return
-    end
-    if cleanup then
+    elseif cleanup then
         if nt > 0 then
             local s = dt[nt]
             if type(s) == "string" then
@@ -1022,6 +1021,7 @@ local function install(spacenewline,spacing,anything)
 
     local text_unparsed    = Cs((anything-open)^1)
     local text_parsed      = (Cs((anything-open-ampersand)^1)/add_text + Cs(entity_text)/add_text)^1
+--     local text_parsed      = ((Cs(((anything-open-ampersand)^1) + entity_text))/add_text)^1
 
     local somespace        = (spacenewline)^1
     local optionalspace    = (spacenewline)^0
@@ -1043,9 +1043,15 @@ local function install(spacenewline,spacing,anything)
     local unparsedtext     = text_unparsed / add_text
     local balanced         = P { "[" * ((anything - S"[]") + V(1))^0 * "]" } -- taken from lpeg manual, () example
 
+    -- todo: combine empty and begin so that we scan attributes only once .. maybe also go for match time captures
+
     local emptyelement     = (spacing * open         * name * attributes * optionalspace * slash * close) / add_empty
     local beginelement     = (spacing * open         * name * attributes * optionalspace         * close) / add_begin
     local endelement       = (spacing * open * slash * name              * optionalspace         * close) / add_end
+
+--     local commonelement    =  spacing * open         * name * attributes * optionalspace *
+--     local cemptyelement    = (slash * close) / add_empty
+--     local cbeginelement    = (      * close) / add_begin
 
     -- todo: combine the opens in:
 
@@ -1103,11 +1109,7 @@ local function install(spacenewline,spacing,anything)
     local publicdoctype    = doctypename * somespace * P("PUBLIC") * somespace * value * somespace * value * somespace * doctypeset
     local systemdoctype    = doctypename * somespace * P("SYSTEM") * somespace * value * somespace * doctypeset
     local simpledoctype    = (anything-close)^1 -- * balanced^0
-    local somedoctype      = C((somespace * (
-
-publicentityfile +
-
-    publicdoctype + systemdoctype + definitiondoctype + simpledoctype) * optionalspace)^0)
+    local somedoctype      = C((somespace * (publicentityfile + publicdoctype + systemdoctype + definitiondoctype + simpledoctype) * optionalspace)^0)
 
     local instruction      = (spacing * begininstruction * someinstruction * endinstruction) / function(...) add_special("@pi@",...) end
     local comment          = (spacing * begincomment     * somecomment     * endcomment    ) / function(...) add_special("@cm@",...) end
@@ -1149,6 +1151,16 @@ publicentityfile +
         parent   = beginelement * V("children")^0 * endelement,
         children = parsedtext + V("parent") + emptyelement + comment + cdata + instruction + parsedcrap,
     }
+
+--     local grammar_parsed_text_two = P { "followup",
+--         followup = beginelement * V("children")^0 * endelement * trailer,
+--         children = parsedtext + beginelement * V("children")^0 * endelement + emptyelement + comment + cdata + instruction + parsedcrap,
+--     }
+
+-- local grammar_parsed_text_two = P { "followup",
+--     followup = commonelement * cbeginelement * V("children")^0 * endelement * trailer,
+--     children = parsedtext + commonelement * (cbeginelement * V("children")^0 * endelement + cemptyelement) + comment + cdata + instruction + parsedcrap,
+-- }
 
     local grammar_unparsed_text = P { "preamble",
         preamble = utfbom^0 * instruction^0 * (doctype + comment + instruction)^0 * V("parent") * trailer,
@@ -1292,13 +1304,26 @@ end
 
 xml.convert = xmlconvert
 
-function xml.inheritedconvert(data,xmldata) -- xmldata is parent
+function xml.inheritedconvert(data,xmldata,cleanup) -- xmldata is parent
     local settings = xmldata.settings
     if settings then
         settings.parent_root = xmldata -- to be tested
     end
  -- settings.no_root = true
     local xc = xmlconvert(data,settings) -- hm, we might need to locate settings
+    if cleanup then
+        local x = xc.dt
+        if x then
+            x = x[1]
+            if x and x.tg == "@pi@" then
+                local dt = x.dt
+                local pi = dt and dt[1]
+                if type(pi) == "string" and find(pi,"^xml") then
+                    remove(dt,1)
+                end
+            end
+        end
+    end
  -- xc.settings = nil
  -- xc.entities = nil
  -- xc.special = nil
@@ -1414,9 +1439,17 @@ local function copy(old,p)
                 new[k] = t
             elseif k == "dt" then
                 v.__p__ = nil
-                v = copy(v,new)
-                new[k] = v
-                v.__p__ = p
+                local t = { }
+                for i=1,#v do
+                    local vi = v[i]
+                    if type(vi) == "table" then
+                        t[i] = copy(vi,new)
+                    else
+                        t[i] = vi
+                    end
+                end
+                new[k] = t
+                t.__p__ = p
             else
                 new[k] = v -- so we also share entities, etc in root
             end
@@ -1946,7 +1979,7 @@ function xml.kind(e)
                 local tg = d.tg
                 if tg == "@cd@" then
                     return "cdata"
-                elseif tg == "@cm" then
+                elseif tg == "@cm@" then
                     return "comment"
                 elseif tg == "@pi@" then
                     return "instruction"

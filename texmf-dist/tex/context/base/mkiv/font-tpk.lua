@@ -1,5 +1,6 @@
-    if not modules then modules = { } end modules ['font-tpk'] = {
+if not modules then modules = { } end modules ['font-tpk'] = {
     version   = 1.001,
+    optimize  = true,
     comment   = "companion to font-lib.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
@@ -847,7 +848,6 @@ do
             direction      = direction,
          -- checksum       = checksum,
          -- embedding      = "unknown",
-         -- encodingbytes  = 0,
          -- extend         = 1000,
          -- slant          = 0,
          -- squeeze        = 0,

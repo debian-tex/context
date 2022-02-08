@@ -1,19 +1,55 @@
-local kern_200_050 = { bottomright = { { kern = -200 } }, topright = { { kern = 50 } } }
-local kern_100_050 = { bottomright = { { kern = -100 } }, topright = { { kern = 50 } } }
+local dimensions, kerns  if CONTEXTLMTXMODE == 0 then
+
+    local kern_V = { bottomright = { { kern = -200 } }, topright = { { kern = 50 } } }
+    local kern_W = { bottomright = { { kern = -100 } }, topright = { { kern = 50 } } }
+
+    kerns = {
+        [0x1D449] = kern_V, -- 𝑉
+        [0x1D44A] = kern_W, -- 𝑊
+    }
+
+end
 
 return {
     name = "schola-math",
     version = "1.00",
     comment = "Goodies that complement schola.",
-    author = "Hans Hagen",
+    author = "Hans Hagen & Mikael Sundqvist",
     copyright = "ConTeXt development team",
     mathematics = {
-        kerns = {
-            [0x1D449] = kern_200_050, --
-            [0x1D44A] = kern_100_050, -- 𝑊
+        tweaks = {
+            aftercopying = {
+                {
+                    tweak    = "version",
+                    expected = "Version 1.533",
+                },
+                {
+                    tweak = "dimensions",
+                    list  = {
+                        -- nothing yet
+                    }
+                },
+                {
+                    tweak   = "fixprimes",
+                    scale   = 0.8,
+                    smaller = true,
+                    factor  = 0.9,
+                },
+                {
+                    tweak = "checkspacing",
+                },
+                {
+                    tweak = "addscripts",
+                },
+            },
         },
         alternates = {
             dotless = { feature = 'dtls', value = 1, comment = "Mathematical Dotless Forms" },
         },
+        --
+        -- experimental fixes for mkiv:
+        --
+        dimensions = dimensions,
+        kerns = kerns,
     },
 }

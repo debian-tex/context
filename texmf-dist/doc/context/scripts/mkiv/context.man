@@ -1,4 +1,4 @@
-.TH "mtx-context" "1" "01-01-2020" "version 1.03" "ConTeXt Process Management"
+.TH "mtx-context" "1" "01-01-2022" "version 1.04" "ConTeXt Process Management"
 .SH NAME
  mtx-context - ConTeXt Process Management
 .SH SYNOPSIS
@@ -77,6 +77,9 @@ generate html error page instead (optional: =scite)
 .B --noconsole
 disable logging to the console (logfile only)
 .TP
+.B --nodummy
+don't create a dummy file (can confuse pdf viewers that keep file in view)
+.TP
 .B --purgeresult
 purge result file before run
 .TP
@@ -97,6 +100,9 @@ run extra imposition pass, given that the style sets up imposition
 .TP
 .B --noarrange
 ignore imposition specifications in the style
+.TP
+.B --pages
+report pagenumbers of names pages and list references (--page=... or --page=...)
 .TP
 .B --jit
 use luajittex with jit turned off (only use the faster virtual machine)
@@ -123,7 +129,7 @@ run without stopping
 never initializes synctex (for production runs)
 .TP
 .B --synctex
-run with synctex enabled (better use \setupsynctex[state=start]
+run with synctex enabled (better use \setupsynctex[state=start])
 .TP
 .B --nodates
 omit runtime dates in pdf file (optional value: a number (this 1970 offset time) or string "YYYY-MM-DD HH:MM")
@@ -165,17 +171,32 @@ generate timing and statistics overview
 .B --keeptuc
 keep previous tuc files (jobname-tuc-[run].tmp)
 .TP
+.B --keeppdf
+keep previous pdf files (jobname-pdf-keep.tmp)
+.TP
 .B --keeplog
 keep previous log files (jobname-log-[run].tmp)
 .TP
 .B --lmtx
 force lmtx mode (when available)
 .TP
+.B --overloadmode=error|warning|0--6|255
+enable csname overload checking
+.TP
 .B --extra=name
 process extra (mtx-context-... in distribution)
 .TP
 .B --extras
 show extras
+.TP
+.B --ownerpassword
+encrypt the (pdf) file using this master password
+.TP
+.B --userpassword
+use an additional password for opening the document
+.TP
+.B --permissions
+list of: print, modify, extract, add, fillin, assemble, quality
 .SH OPTIONS: SPECIAL
 .TP
 .B --pdftex

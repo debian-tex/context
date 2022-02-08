@@ -1,24 +1,65 @@
-local kern_200 = { bottomright = { { kern = -200 } } }
-local kern_100 = { bottomright = { { kern = -100 } } }
+local dimensions, kerns  if CONTEXTLMTXMODE == 0 then
+
+ -- local kern_V   = { bottomright = { { kern = -200 } } }
+ -- local kern_W   = { bottomright = { { kern = -100 } } }
+ -- local offset_f = { xoffset = "llx" }
+ --
+ -- dimensions = {
+ --     default = {
+ --         [0x1D453] = offset_f, -- 𝑓
+ --     },
+ -- }
+ --
+ -- kerns = {
+ --     [0x1D449] = kern_V, -- 𝑉
+ --     [0x1D44A] = kern_W, -- 𝑊
+ -- }
+
+end
+
 
 return {
     name = "termes-math",
     version = "1.00",
     comment = "Goodies that complement termes.",
-    author = "Hans Hagen",
+    author = "Hans Hagen & Mikael Sundqvist",
     copyright = "ConTeXt development team",
     mathematics = {
-        dimensions = {
-            default = {
-                [0x1D453] = { xoffset = "llx" },-- 𝑓
+        tweaks = {
+            aftercopying = {
+                {
+                    tweak    = "version",
+                    expected = "Version 1.543",
+                },
+                {
+                    tweak = "dimensions",
+                    list  = {
+                        [0x1D453] = { 0.6,  1.4,  1.2  }, -- f
+                        [0x1D457] = { 0.5,  1.3,  1.7  }, -- j
+                        [0x1D45D] = { 0.15, 1.15, 0    }, -- p
+                    },
+                },
+                {
+                    tweak   = "fixprimes",
+                    scale   = 0.7,
+                    smaller = true,
+                    factor  = 0.9,
+                },
+                {
+                    tweak = "checkspacing",
+                },
+                {
+                    tweak = "addscripts",
+                },
             },
-        },
-        kerns = {
-            [0x1D449] = kern_200, -- 𝑉
-            [0x1D44A] = kern_100, -- 𝑊
         },
         alternates = {
             dotless = { feature = 'dtls', value = 1, comment = "Mathematical Dotless Forms" },
         },
+        --
+        -- experimental fixes for mkiv:
+        --
+        dimensions = dimensions,
+        kerns = kerns,
     },
 }

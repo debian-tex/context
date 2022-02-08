@@ -102,9 +102,9 @@ local function exportcolors()
         local function black(f)
             return (f[1] == f[2]) and (f[2] == f[3]) and (f[3] == 0)
         end
---         local result, r = { f_mapping }, 1
-local result, r = { }, 0
-        for k, v in table.sortedhash(lexer.context.styles) do
+     -- local result, r = { f_mapping }, 1
+        local result, r = { }, 0
+        for k, v in table.sortedhash(lexers.styles) do
             local fore = v.fore
             if fore and not black(fore) then
                 r = r + 1
@@ -113,7 +113,7 @@ local result, r = { }, 0
         end
         r = r + 1
         result[r] = "%"
-        for k, v in table.sortedhash(lexer.context.styles) do
+        for k, v in table.sortedhash(lexers.styles) do
             local bold = v.bold
             local fore = v.fore
             r = r + 1
@@ -145,7 +145,7 @@ local function exportwhites()
 end
 
 local function exportstyled(lexer,text)
-    local result = lexer.lex(lexer,text,0)
+    local result = lexers.lex(lexer,text,0)
     local start = 1
     local whites = exportwhites()
     local buffer = { }
@@ -311,13 +311,16 @@ moduledata.scite = scite
 
 \stopluacode
 
-\definetyping[TEX] [option=cld]
-\definetyping[LUA] [option=lua]
+%definetyping[TEX] [option=cld]
+\setuptyping [TEX] [option=cld]
+%definetyping[LUA] [option=lua]
+\setuptyping [LUA] [option=lua]
 \definetyping[BTX] [option=bibtex]
 \definetyping[MPS] [option=mps]
-\definetyping[MP]  [option=mp]
+%definetyping[MP]  [option=mp]
+\setuptyping [MP]  [option=mp]
 \definetyping[PDF] [option=pdf]
-\definetyping[CPP] [option=web]
+\definetyping[CPP] [option=cpp]    % Which is kind of like the web one.
 \definetyping[WEB] [option=web]
 \definetyping[TXT] [option=txt]
 \definetyping[BNF] [option=bnf]    % I might use this in the metafun manual.
@@ -336,7 +339,7 @@ moduledata.scite = scite
 \unexpanded\def\buff_scite_slxb#1%
   {% we can have a side float
    \advance\hangindent\numexpr#1+2\relax\scitespaceskip
-   \begstrut\hskip#1\scitespaceskip
+   \begstrut\hskip#1\scitespaceskip\relax
    \ifcase\hangafter
      \hangafter\plusone\relax
    \fi}
@@ -378,7 +381,7 @@ moduledata.scite = scite
 \let\slxT    \lettertilde
 \let\slxS    \fixedspace
 
-\let\slxS    \buff_scite_slxs
+%let\slxS    \buff_scite_slxs
 \let\slxF    \buff_scite_slxf
 
 \def\module_scite_inherit_typing
@@ -397,6 +400,14 @@ moduledata.scite = scite
   {\scitebuffer[\ifx\currentscitelexer\empty tex\else\currentscitelexer\fi][@scite@]%
    \endgroup}
 
+\definelines
+  [scitelines]
+
+\setuplines
+  [scitelines]
+  [\c!before=,
+   \c!after=]
+
 \unexpanded\def\scitefile
   {\dosingleargument\module_scite_file}
 
@@ -410,9 +421,9 @@ moduledata.scite = scite
    \dontcomplain
    \raggedright
    \startcontextcode
-   \startlines
+   \startscitelines
    \getbuffer[lex]
-   \stoplines
+   \stopscitelines
    \stopcontextcode
    \endgroup}
 
@@ -432,9 +443,9 @@ moduledata.scite = scite
    \module_scite_inherit_typing
    \dontcomplain
    \raggedright
-   \startlines
+   \startscitelines
    \getbuffer[lex]
-   \stoplines
+   \stopscitelines
    \endgroup}
 
 \unexpanded\def\sciteinlinebuffer
@@ -476,14 +487,14 @@ moduledata.scite = scite
    \tt
    \installscitecommandsdisplay
    \dontcomplain
-\buff_verbatim_initialize_typing_one
-\buff_verbatim_set_line_margin
+   \buff_verbatim_initialize_typing_one
+   \buff_verbatim_set_line_margin
    \raggedright
-   \startlines
+   \startscitelines
    \clf_getbuffer{lex}}
 
 \unexpanded\def\stopDisplayScite
-  {\stoplines
+  {\stopscitelines
    \endgroup}
 
 \unexpanded\def\slxbreak

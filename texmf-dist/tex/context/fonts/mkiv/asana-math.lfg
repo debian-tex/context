@@ -30,14 +30,40 @@ local function more(value,target,original)
     end
 end
 
-
 return {
     name = "asana-math",
     version = "1.00",
     comment = "Goodies that complement asana.",
-    author = "Hans Hagen",
+    author = "Hans Hagen & Mikael Sundqvist",
     copyright = "ConTeXt development team",
     mathematics = {
+        tweaks = {
+            aftercopying = {
+                {
+                    tweak    = "version",
+                    expected = "Version 000.958",
+                    message  = "this font is not supported",
+                },
+                {
+                    tweak = "dimensions",
+                    list  = {
+                        -- nothing yet
+                    }
+                },
+                {
+                    tweak   = "fixprimes",
+                    factor  = 0.85,
+                    scale   = 0.65,
+                    smaller = true,
+                },
+                {
+                    tweak = "checkspacing",
+                },
+                {
+                    tweak = "addscripts",
+                },
+            },
+        },
         parameters = {
          -- DisplayOperatorMinHeight         = 0, -- more
          -- StackBottomDisplayStyleShiftDown = 0,

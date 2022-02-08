@@ -1,27 +1,89 @@
-local kern_200 = { bottomright = { { kern = -200 } } }
-local kern_100 = { bottomright = { { kern = -100 } } }
+local dimensions, kerns  if CONTEXTLMTXMODE == 0 then
 
--- Beware of updates !
+    local kern_V   = { bottomright = { { kern = -200 } } }
+    local kern_W   = { bottomright = { { kern = -100 } } }
+
+    dimensions = {
+        default = {
+         -- [0x1D453]     = { xoffset = 162, width = 278 + 162 },-- 𝑓
+         -- [0x1D453]     = offset_f, -- 𝑓
+         -- ["1:0x1D453"] = offset_f, -- needed for compact
+         -- ["2:0x1D453"] = offset_f, -- needed for compact
+--                 ["*:0x1D453"] = offset_f, -- 𝑓
+        },
+    }
+
+    kerns = {
+     -- [0x1D449]     = kern_V, -- 𝑉
+     -- ["1:0x1D449"] = kern_V, -- needed for compact
+     -- ["2:0x1D449"] = kern_V, -- needed for compact
+     -- [0x1D44A]     = kern_W, -- 𝑊
+     -- ["1:0x1D44A"] = kern_W, -- needed for compact
+     -- ["2:0x1D44A"] = kern_W, -- needed for compact
+     -- ["*:0x1D453"] = kern_f,
+        ["*:0x1D449"] = kern_V, -- 𝑉
+        ["*:0x1D44A"] = kern_W, -- 𝑊
+    }
+
+end
 
 return {
     name = "pagella-math",
     version = "1.00",
     comment = "Goodies that complement pagella.",
-    author = "Hans Hagen",
+    author = "Hans Hagen & Mikael Sundqvist",
     copyright = "ConTeXt development team",
     mathematics = {
-        dimensions = {
-            default = {
-             -- [0x1D453] = { xoffset = 162, width = 278 + 162 },-- 𝑓
-                [0x1D453] = { xoffset = "llx" },-- 𝑓
+        tweaks = {
+            aftercopying = {
+                {
+                    tweak    = "version",
+                    expected = "Version 1.632",
+                },
+             -- {
+             --     comment = "example"
+             --     tweak   = "action",
+             --     action  = function(target,original,parameters) mathematics.tweaks.fixdimensions(target, original, parameters)
+             --     list    = fixes, -- one of the parameters
+             -- },
+             -- {
+             --     comment = "example"
+             --     tweak   = "action",
+             --     action  = mathematics.tweaks.fixdimensions,
+             --     list    = fixes, -- one of the parameters
+             -- },
+                {
+                    tweak = "dimensions",
+                    list  = {      -- offset width italic
+                        [0x1D453] = { 0.50,  1.70, 0.6 }, -- f
+                        [0x1D454] = { 0.10,  1.15, 0.2 }, -- g
+                        [0x1D70F] = { -.10,  1,    0   }, -- \tau
+                        [0x1D712] = { 0.1,   1.2,  0.1 }, -- \chi
+                        [0x1D713] = { -0.05, 0.95, 0.1 }, -- \psi
+                        },
+                },
+                {
+                    tweak   = "fixprimes",
+                    factor  = 0.85,
+                    smaller = true,
+                    scale   = 0.70,
+                    fake    = 0.65,
+                },
+                {
+                    tweak = "checkspacing",
+                },
+                {
+                    tweak = "addscripts",
+                },
             },
-        },
-        kerns = {
-            [0x1D449] = kern_200, -- 𝑉
-            [0x1D44A] = kern_100, -- 𝑊
         },
         alternates = {
             dotless = { feature = 'dtls', value = 1, comment = "Mathematical Dotless Forms" },
         },
+        --
+        -- experimental fixes for mkiv:
+        --
+        dimensions = dimensions,
+        kerns = kerns,
     },
 }

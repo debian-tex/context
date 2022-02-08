@@ -74,7 +74,8 @@ local function pdfobj()
             immediate     = immediate,
         }
         if fileobject then
-            object.filename = content
+            object.file = content
+         -- object.filename = content
         else
             object.string = content
         end
@@ -214,7 +215,7 @@ local function pdfextension()
         if e then
             e()
         else
-            report("\\pdfextension: unknown %a",w)
+            report("\\pdfextension: unsupported %a",w)
         end
     end
 end
@@ -235,7 +236,7 @@ local function pdffeedback()
         if f then
             f()
         else
-            report("\\pdffeedback: unknown %a",w)
+            report("\\pdffeedback: unsupported %a",w)
         end
     end
 end
@@ -248,34 +249,39 @@ end
 -- linkmargin threadmargin vorigin xformmargin (tokenlists:) pageattr pageresources
 -- pagesattr pkmode trailerid xformattr xformresources
 
--- local variables = {
--- }
---
--- local function pdfvariable()
---     local w = scanword()
---     if w then
---         local f = variables[w]
---         if f then
---             f()
---         else
---             print("invalid variable",w)
---         end
---     else
---         print("missing variable")
---     end
--- end
+local variables = {
+    minorversion = function() context(lpdf.minorversion()) end,
+    majorversion = function() context(lpdf.majorversion()) end,
+}
+
+local function pdfvariable()
+    local w = scanword()
+    if w then
+        local f = variables[w]
+        if f then
+            f()
+        else
+            report("\\pdfvariable: unsupported %a",w)
+        end
+    else
+        print("missing variable")
+    end
+end
 
 -- kept:
 
 implement { name = "pdfextension", actions = pdfextension }
 implement { name = "pdffeedback",  actions = pdffeedback }
---------- { name = "pdfvariable",  actions = pdfvariable }
+implement { name = "pdfvariable",  actions = pdfvariable }
 
 -- for the moment (tikz)
 
-implement { name = "pdfliteral", actions = pdfliteral }
-implement { name = "pdfobj",     actions = pdfobj }
-implement { name = "pdflastobj", actions = pdflastobj }
-implement { name = "pdfrefobj",  actions = pdfrefobj }
---------- { name = "pdfannot",   actions = pdfannot }
---------- { name = "pdfdest",    actions = pdfdest }
+implement { name = "pdfliteral",    actions = pdfliteral }
+implement { name = "pdfobj",        actions = pdfobj }
+implement { name = "pdflastobj",    actions = pdflastobj }
+implement { name = "pdfrefobj",     actions = pdfrefobj }
+--------- { name = "pdfannot",      actions = pdfannot }
+--------- { name = "pdfdest",       actions = pdfdest }
+--------- { name = "pdfsave",       actions = pdfsave }
+--------- { name = "pdfrestore",    actions = pdfrestore }
+--------- { name = "pdfsetmatrix",  actions = pdfsetmatrix }

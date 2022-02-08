@@ -4,7 +4,7 @@
     <metadata>
         <entry name="name">mtx-context</entry>
         <entry name="detail">ConTeXt Process Management</entry>
-        <entry name="version">1.03</entry>
+        <entry name="version">1.04</entry>
         <entry name="comment">external helpinfo file</entry>
     </metadata>
     <flags>
@@ -82,6 +82,9 @@
                 <flag name="noconsole">
                     <short>disable logging to the console (logfile only)</short>
                 </flag>
+                <flag name="nodummy">
+                    <short>don't create a dummy file (can confuse pdf viewers that keep file in view)</short>
+                </flag>
                 <flag name="purgeresult">
                     <short>purge result file before run</short>
                 </flag>
@@ -106,6 +109,11 @@
                 </flag>
                 <flag name="noarrange">
                     <short>ignore imposition specifications in the style</short>
+                </flag>
+            </subcategory>
+            <subcategory>
+                <flag name="pages">
+                    <short>report pagenumbers of names pages and list references (<ref name="page"/>=... or <ref name="page"/>=...)</short>
                 </flag>
             </subcategory>
             <subcategory>
@@ -140,7 +148,7 @@
                     <short>never initializes synctex (for production runs)</short>
                 </flag>
                 <flag name="synctex">
-                    <short>run with synctex enabled (better use \setupsynctex[state=start]</short>
+                    <short>run with synctex enabled (better use \setupsynctex[state=start])</short>
                 </flag>
             </subcategory>
             <subcategory>
@@ -194,11 +202,17 @@
                 <flag name="keeptuc">
                     <short>keep previous tuc files (jobname-tuc-[run].tmp)</short>
                 </flag>
+                <flag name="keeppdf">
+                    <short>keep previous pdf files (jobname-pdf-keep.tmp)</short>
+                </flag>
                 <flag name="keeplog">
                     <short>keep previous log files (jobname-log-[run].tmp)</short>
                 </flag>
                 <flag name="lmtx">
                     <short>force lmtx mode (when available)</short>
+                </flag>
+                <flag name="overloadmode=error|warning|0--6|255">
+                    <short>enable csname overload checking</short>
                 </flag>
             </subcategory>
             <subcategory>
@@ -207,6 +221,17 @@
                 </flag>
                 <flag name="extras">
                     <short>show extras</short>
+                </flag>
+            </subcategory>
+            <subcategory>
+                <flag name="ownerpassword">
+                    <short>encrypt the (pdf) file using this master password</short>
+                </flag>
+                <flag name="userpassword">
+                    <short>use an additional password for opening the document</short>
+                </flag>
+                <flag name="permissions">
+                    <short>list of: print, modify, extract, add, fillin, assemble, quality</short>
                 </flag>
             </subcategory>
         </category>

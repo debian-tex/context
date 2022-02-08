@@ -54,6 +54,8 @@ local detailed           = publications.detailed
 local enhancer           = publications.enhancer
 local enhancers          = publications.enhancers
 
+if not publications.btx then publications.btx = { } end -- user space
+
 local tracers            = publications.tracers or { }
 publications.tracers     = tracers
 
@@ -2166,18 +2168,18 @@ do
 
     function lists.combiinlist(dataset,tag)
         local rendering = renderings[dataset]
-        local list      = rendering.list
+     -- local list      = rendering.list
         local toindex   = rendering.tagtolistindex
         return toindex and toindex[tag]
     end
 
     function lists.flushcombi(dataset,tag)
         local rendering = renderings[dataset]
-        local list      = rendering.list
         local toindex   = rendering.tagtolistindex
         local listindex = toindex and toindex[tag]
         if listindex then
-            local li = list[listindex]
+            local list = rendering.list
+            local li   = list[listindex]
             if li then
                 local data      = datasets[dataset]
                 local luadata   = data.luadata
@@ -2405,6 +2407,10 @@ do
             for k, v in sortedhash(s) do
                 s = k
                 break
+            end
+            -- weird
+            if type(s) == "table" then
+                return citevariants.default
             end
         end
         if s then
@@ -3500,8 +3506,39 @@ do
 
     function publications.prerollcmdstring(str)
         btxstring = str or ""
-        tex.runtoks("t_btx_cmd")
+        tex.runlocal("t_btx_cmd")
         return nodes.toutf(tex.getbox("b_btx_cmd").list) or str
     end
+
+end
+
+do
+
+    -- no caching for now
+
+    interfaces.implement { -- shared with mkiv so no public
+        name      = "btxdoifelsecitedone",
+        protected = true,
+     -- public    = true,
+     -- arguments = "2 arguments",
+        arguments = "2 strings",
+        actions   = function(dataset,tag)
+            -- dataset ignored
+            local list = structures.lists.tobesaved
+            local done = false
+            for i=1,#list do
+                local l = list[i]
+                local m = l.metadata
+                if m and m.kind == "btx" then
+                    local u = l.userdata
+                    if u and u.btxref == tag then
+                        done = true
+                        break
+                    end
+                end
+            end
+            ctx_doifelse(done)
+        end
+    }
 
 end

@@ -2,7 +2,7 @@ return {
     internals = {
         --
         "nocolormodel", "greycolormodel", "graycolormodel", "rgbcolormodel", "cmykcolormodel",
-        "shadefactor",
+        "shadefactor", "shadeoffset",
         "textextoffset", "textextanchor",
         "normaltransparent", "multiplytransparent", "screentransparent", "overlaytransparent",
         "softlighttransparent", "hardlighttransparent", "colordodgetransparent", "colorburntransparent",
@@ -17,7 +17,7 @@ return {
         "drawoptionsfactor",
         "dq", "sq",
         "crossingscale", "crossingoption",
-        "contextlmtxmode",
+        "contextlmtxmode", "metafunversion", "minifunversion",
         --
         -- for the moment we put these here as they need to stand out
         --
@@ -36,7 +36,17 @@ return {
         "applyparameters",
         "pushparameters",
         "popparameters",
+        "setluaparameter",
         "definecolor",
+        --
+        "record", "newrecord", "setrecord", "getrecord",
+        --
+        "anchorxy", "anchorx", "anchory",
+        "anchorht", "anchordp",
+        "anchorul", "anchorll", "anchorlr", "anchorur",
+        "localanchorbox", "localanchorcell", "localanchorspan",
+        "anchorbox", "anchorcell", "anchorspan",
+        "matrixbox", "matrixcell", "matrixspan",
     },
     commands = {
         "loadfile", "loadimage", "loadmodule",
@@ -72,8 +82,9 @@ return {
      -- "withshading", "withlinearshading", "withcircularshading", "withfromshadecolor", "withtoshadecolor",
         "shadedinto", "withshadecolors",
         "withshadedomain", "withshademethod", "withshadefactor", "withshadevector",
-        "withshadecenter", "withshadedirection", "withshaderadius", "withshadetransform",
+        "withshadecenter", "withshadedirection", "withshaderadius", "withshadetransform", "withshadecenterone", "withshadecentertwo",
         "withshadestep", "withshadefraction", "withshadeorigin", "shownshadevector", "shownshadeorigin",
+        "shownshadedirection", "shownshadecenter",
         "cmyk", "spotcolor", "multitonecolor", "namedcolor",
         "drawfill", "undrawfill",
         "inverted", "uncolored", "softened", "grayed", "greyed",
@@ -85,13 +96,15 @@ return {
         "withmask", "bitmapimage",
         "colordecimals", "ddecimal", "dddecimal", "ddddecimal", "colordecimalslist",
         "textext", "thetextext", "rawtextext", "textextoffset", "texbox", "thetexbox", "rawtexbox", "istextext",
+        "rawmadetext", "validtexbox", "onetimetextext", "rawfmttext", "thefmttext", "fmttext", "onetimefmttext",
         "notcached", "keepcached",
         "verbatim",
         "thelabel", "label",
         "autoalign",
-        "transparent", "withtransparency",
+        "transparent", "withtransparency", "withopacity",
         "property", "properties", "withproperties",
         "asgroup",
+        "withpattern", "withpatternscale", "withpatternfloat",
         "infont", -- redefined using textext
      -- "set_linear_vector", "set_circular_vector",
      -- "linear_shade", "circular_shade",
@@ -174,10 +187,18 @@ return {
         "isarray", "prefix", "dimension",
         "getmacro", "getdimen", "getcount", "gettoks",
         "setmacro", "setdimen", "setcount", "settoks",
+        "setglobalmacro", "setglobaldimen", "setglobalcount", "setglobaltoks",
         --
-        "positionpath", "positioncurve", "positionxy", "positionpxy",
-        "positionwhd", "positionpage", "positionregion", "positionbox",
+        "positionpath", "positioncurve", "positionxy", "positionparagraph", "positioncolumn",
+        "positionwhd", "positionpage", "positionregion", "positionbox", "positionx", "positiony",
         "positionanchor", "positioninregion", "positionatanchor",
+        --
+        "getposboxes", "getmultipars",
+        "getpospage", "getposparagraph", "getposcolumn", "getposregion",
+        "getposx", "getposy", "getposwidth", "getposheight", "getposdepth",
+        "getposleftskip", "getposrightskip", "getposhsize", "getposparindent", "getposhangindent", "getposhangafter",
+        "getposxy", "getposupperleft", "getposlowerleft", "getposupperright", "getposlowerright",
+        "getposllx", "getposlly", "getposurx", "getposury",
         --
         "wdpart", "htpart", "dppart",
         --
@@ -185,16 +206,24 @@ return {
         --
         "inpath", "pointof", "leftof", "rightof",
         --
-        "utflen", "utfsub",
+        "utfnum", "utflen", "utfsub",
         --
-        "newhash", "disposehash", "inhash", "tohash",
+        "newhash", "disposehash", "inhash", "tohash", "fromhash",
         --
         "isarray", "prefix", "isobject",
         --
-        "comment", "report", "lua", "mp", "MP", "luacall",
+        "comment", "report", "lua", "lualist", "mp", "MP", "luacall",
         --
         "mirrored", "mirroredabout",
         --
-        "scriptindex",
+        "scriptindex", "newscriptindex",
+        --
+        "newcolor", "newrgbcolor", "newcmykcolor",
+        "newnumeric", "newboolean", "newtransform", "newpath", "newpicture", "newstring", "newpair",
+        --
+        "mpvard", "mpvarn", "mpvars", "mpvar",
+        --
+        "withtolerance",
+        --
     },
 }

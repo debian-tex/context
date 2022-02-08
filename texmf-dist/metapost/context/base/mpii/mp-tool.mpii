@@ -131,12 +131,6 @@ enddef ;
 
 %D Colors:
 
-newinternal nocolormodel   ; nocolormodel   := 1 ;
-newinternal greycolormodel ; greycolormodel := 3 ;
-newinternal graycolormodel ; graycolormodel := 3 ;
-newinternal rgbcolormodel  ; rgbcolormodel  := 5 ;
-newinternal cmykcolormodel ; cmykcolormodel := 7 ;
-
 let grayscale = numeric ;
 let greyscale = numeric ;
 
@@ -1841,7 +1835,9 @@ enddef ;
 
 primarydef p enlonged len =
     begingroup
-    if pair p :
+    if len == 0 :
+        p
+    elseif pair p :
         save q ; path q ; q := origin -- p ;
         save al ; al := arclength(q) ;
         if al > 0 :
@@ -1864,8 +1860,12 @@ enddef ;
 % drawarrow p withcolor red ;
 % drawarrow p shortened 1cm withcolor green ;
 
+% primarydef p shortened d =
+%     reverse ( ( reverse (p enlonged -d) ) enlonged -d )
+% enddef ;
+
 primarydef p shortened d =
-    reverse ( ( reverse (p enlonged -d) ) enlonged -d )
+    reverse ( ( reverse (p enlonged -xpart paired(d)) ) enlonged -ypart paired(d) )
 enddef ;
 
 % yes or no, untested -)

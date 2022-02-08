@@ -1,4 +1,4 @@
-% language=uk
+% language=us runpath=texruns:manuals/luametatex
 
 \environment luametatex-style
 
@@ -8,6 +8,24 @@
 
 \startsection[title={Initialization},reference=init]
 
+\startsubsection[title={A bare bone engine}]
+
+Although the \LUAMETATEX\ engine will start up when you call the program it will
+not do much useful. You can compare it to computer hardware without (high level)
+operating system with a \TEX\ kernel being the bios. It can interpret \TEX\ code
+but for typesetting you need a reasonable setup. You also need to load fonts, and
+for output you need a backend, and both can be implemented in \LUA. If you don't
+like that and want to get up and running immediately, you will be more happy with
+\LUATEX, \PDFTEX\ or \XETEX, combined with your favorite macro package.
+
+If you just want to play around you can install the \CONTEXT\ distribution which
+(including manuals and some fonts) is tiny compared to a full \TEXLIVE\
+installation and can be run alongside it without problems. If there are issues
+you can go to the usual \CONTEXT\ support platforms and seek help where you can
+find the people who made \LUATEX\ and \LUAMETATEX.
+
+\stopsubsection
+
 \startsubsection[title={\LUAMETATEX\ as a \LUA\ interpreter}]
 
 \topicindex {initialization}
@@ -15,31 +33,30 @@
 
 Although \LUAMETATEX\ is primarily meant as a \TEX\ engine, it can also serve as
 a stand alone \LUA\ interpreter. There are two ways to make \LUAMETATEX\ behave
-like a standalone \LUA\ interpreter:
-
-\startitemize[packed]
-\startitem
-    if a \type {--luaonly} option is given on the commandline, or
-\stopitem
-\startitem
-    if the only non|-|option argument (file) on the commandline has the extension
-    \type {lua} or \type {luc}.
-\stopitem
-\stopitemize
+like a standalone \LUA\ interpreter. The first method uses the command line
+option \type {--luaonly} followed by a filename. The second is more automatic: if
+the only non|-|option argument (file) on the commandline has the extension \type
+{lmt} or \type {lua}. The \type {luc} extension has been dropped because bytecode
+compiled files are not portable and one can always load indirect. The \type {lmt}
+suffix is more \CONTEXT\ specific and makes it possible to have files for
+\LUATEX\ and \LUAMETATEX\ alongside.
 
 In this mode, it will set \LUA's \type {arg[0]} to the found script name, pushing
 preceding options in negative values and the rest of the command line in the
 positive values, just like the \LUA\ interpreter does.
 
-\LUAMETATEX\ will exit immediately after executing the specified \LUA\ script and is,
-in effect, a somewhat bulky stand alone \LUA\ interpreter with a bunch of extra
-preloaded libraries.
+\LUAMETATEX\ will exit immediately after executing the specified \LUA\ script and
+is, in effect, a somewhat bulky stand alone \LUA\ interpreter with a bunch of
+extra preloaded libraries. But we really want to keep the binary small, if
+possible below the 3MB which is okay for a script engine.
 
 When no argument is given, \LUAMETATEX\ will look for a \LUA\ file with the same
 name as the binary and run that one when present. This makes it possible to use
 the engine as a stub. For instance, in \CONTEXT\ a symlink from \type {mtxrun} to
-type {luametatex} will run the \type {mtxrun.lua} script when present in the same
-path as the binary itself
+type {luametatex} will run the \type {mtxrun.lmt} or \type {mtxrun.lua} script
+when present in the same path as the binary itself. As mentioned before first
+checking for (\CONTEXT) \type {lmt} files permits different files for different
+engines in the same path.
 
 \stopsubsection
 
@@ -66,8 +83,23 @@ are understood by \LUAMETATEX\ itself:
 \stoptabulate
 
 There are less options than with \LUATEX, because one has to deal with them in
-\LUA\ anyway. There are no options to enter a safer mode or control executing
-programs. This can easily be achieved with a startup \LUA\ script.
+\LUA\ anyway. So for instance there are no options to enter a safer mode or
+control executing programs because this can easily be achieved with a startup
+\LUA\ script.
+
+Next the initialization script is loaded and executed. From within the script,
+the entire command line is available in the \LUA\ table \type {arg}, beginning
+with \type {arg[0]}, containing the name of the executable. As consequence
+warnings about unrecognized options are suppressed.
+
+Command line processing happens very early on. So early, in fact, that none of
+\TEX's initializations have taken place yet. The \LUA\ libraries that don't deal
+with \TEX\ are initialized rather soon so you have these available.
+
+\LUAMETATEX\ allows some of the command line options to be overridden by reading
+values from the \type {texconfig} table at the end of script execution (see the
+description of the \type {texconfig} table later on in this document for more
+details on which ones exactly).
 
 The value to use for \prm {jobname} is decided as follows:
 
@@ -91,21 +123,7 @@ The value to use for \prm {jobname} is decided as follows:
 \stopitem
 \stopitemize
 
-Next the initialization script is loaded and executed. From within the script,
-the entire command line is available in the \LUA\ table \type {arg}, beginning
-with \type {arg[0]}, containing the name of the executable. As consequence
-warnings about unrecognized options are suppressed.
-
-Command line processing happens very early on. So early, in fact, that none of
-\TEX's initializations have taken place yet. The \LUA\ libraries that don't deal
-with \TEX\ are initialized early.
-
-\LUAMETATEX\ allows some of the command line options to be overridden by reading
-values from the \type {texconfig} table at the end of script execution (see the
-description of the \type {texconfig} table later on in this document for more
-details on which ones exactly).
-
-So let's summarize this. The handling of when is called jobname is a bit complex.
+So let's summarize this. The handling of what is called jobname is a bit complex.
 There can be explicit names set on the command line but when not set they can be
 taken from the \type {texconfig} table.
 
@@ -117,7 +135,9 @@ taken from the \type {texconfig} table.
 
 These names are initialized according to \type {--luaonly} or the first filename
 seen in the list of options. Special treatment of \type {&} and \type {*} as well
-as interactive startup is gone.
+as interactive startup is gone but we still enter \TEX\ via an forced \type {\input}
+into the input buffer. \footnote {This might change at some point into an explicit
+loading triggered via \LUA.}
 
 When we are in \TEX\ mode at some point the engine needs a filename, for instance
 for opening a log file. At that moment the set jobname becomes the internal one
@@ -132,6 +152,12 @@ access etc.\ internally uses the current code page but to the user is exposed as
 % fileio_state     .jobname         : a tex string (set when a (log) file is opened)
 % engine_state     .startup_jobname : handles by option parser
 % environment_state.input_name      : temporary interceptor
+
+There is an extra options \type{--permitloadlib} that needs to be given when you
+load external libraries via \LUA. Although you could manage this via \LUA\ itself
+in a startup script, the reason for having this as option is the wish for
+security (at some point that became a demand for \LUATEX), so this might give an
+extra feeling of protection.
 
 \stopsubsection
 
@@ -198,9 +224,16 @@ some care you can deal with \UNICODE\ just fine.
 
 There are some more libraries present. These are discussed on a later chapter.
 For instance we embed \type {luasocket} but contrary to \LUATEX\ don't embed the
-related \LUA\ code. An adapted version of \type {luafilesystem} is also included.
-There is a more extensive math library and there are libraries that deal with
-encryption and compression.
+related \LUA\ code. The \type {luafilesystem} module has been replaced by a more
+efficient one that also deals with the \MSWINDOWS\ file and environment
+properties better (\UNICODE\ support in \MSWINDOWS\ dates from before \UTF8
+became dominant so we need to deal with wide \UNICODE16).
+
+There are more extensive math libraries and there are libraries that deal with
+encryption and compression. There are also some optional libraries that we do
+interface but that are loaded on demand. The interfaces are as minimal as can be
+because we so much in \LUA, which also means that one can tune behaviour to
+usage better.
 
 \stopsection
 

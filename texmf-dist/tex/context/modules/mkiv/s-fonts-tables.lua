@@ -9,6 +9,8 @@ if not modules then modules = { } end modules ['s-fonts-tables'] = {
 moduledata.fonts          = moduledata.fonts        or { }
 moduledata.fonts.tables   = moduledata.fonts.tables or { }
 
+require("font-cft")
+
 local rawget, type = rawget, type
 
 local setmetatableindex   = table.setmetatableindex
@@ -26,6 +28,8 @@ local copy_node           = nodes.copy
 local setlink             = nodes.setlink
 local hpack               = nodes.hpack
 local applyvisuals        = nodes.applyvisuals
+
+local lefttoright_code    = nodes.dirvalues.lefttoright
 
 local handle_positions    = fonts.handlers.otf.datasetpositionprocessor
 local handle_injections   = nodes.injections.handler
@@ -285,17 +289,9 @@ function tabletracers.showpositionings(specification)
 
     if resources then
 
-        local direction = "TLT"
-
+        local direction = lefttoright_code -- not that relevant probably
         local sequences = resources.sequences
         local marks     = resources.marks
-
-        if tonumber(direction) == -1 or direction == "TRT"  then
-            direction = "TRT"
-        else
-            direction = "TLT"
-        end
-
         local visuals   = "fontkern,glyph,box"
 
         local datasets  = fonts.handlers.otf.dataset(tfmdata,fontid,0)
@@ -682,18 +678,28 @@ end
 
 local function collectligatures(steps)
 
+    -- Mostly the same as s-fonts-features so we should make a helper.
+
     local series = { }
     local stack  = { }
     local max    = 0
 
+    local function add(v)
+        local n = #stack
+        if n > max then
+            max = n
+        end
+        series[#series+1] = { v, unpack(stack) }
+    end
+
     local function make(tree)
         for k, v in sortedhash(tree) do
             if k == "ligature" then
-                local n = #stack
-                if n > max then
-                    max = n
-                end
-                series[#series+1] = { v, unpack(stack) }
+                add(v)
+            elseif tonumber(v) then
+                insert(stack,k)
+                add(v)
+                remove(stack)
             else
                 insert(stack,k)
                 make(v)

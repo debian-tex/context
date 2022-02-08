@@ -14,12 +14,12 @@ local helpinfo = [[
  <metadata>
   <entry name="name">mtx-install</entry>
   <entry name="detail">ConTeXt Installer</entry>
-  <entry name="version">2.00</entry>
+  <entry name="version">2.01</entry>
  </metadata>
  <flags>
   <category name="basic">
    <subcategory>
-    <flag name="platform" value="string"><short>platform (windows, linux, linux-64, osx-intel, osx-ppc, linux-ppc)</short></flag>
+    <flag name="platform" value="string"><short>platform</short></flag>
     <flag name="server" value="string"><short>repository url (rsync://contextgarden.net)</short></flag>
     <flag name="modules" value="string"><short>extra modules (can be list or 'all')</short></flag>
     <flag name="fonts" value="string"><short>additional fonts (can be list or 'all')</short></flag>
@@ -28,27 +28,55 @@ local helpinfo = [[
     <flag name="update"><short>update context</short></flag>
     <flag name="erase"><short>wipe the cache</short></flag>
     <flag name="identify"><short>create list of files</short></flag>
+    <flag name="secure"><short>use curl for https</short></flag>
    </subcategory>
   </category>
  </flags>
 </application>
 ]]
 
+local type, tonumber = type, tonumber
 local gsub, find, escapedpattern = string.gsub, string.find, string.escapedpattern
 local round = math.round
 local savetable, loadtable, sortedhash = table.save, table.load, table.sortedhash
 local copyfile, joinfile, filesize, dirname, addsuffix, basename = file.copy, file.join, file.size, file.dirname, file.addsuffix, file.basename
 local isdir, isfile, walkdir, pushdir, popdir, currentdir = lfs.isdir, lfs.isfile, lfs.dir, lfs.chdir, dir.push, dir.pop, currentdir
 local mkdirs, globdir = dir.mkdirs, dir.glob
-local osremove, osexecute, ostype = os.remove, os.execute, os.type
+local osremove, osexecute, ostype, resultof = os.remove, os.execute, os.type, os.resultof
 local savedata = io.savedata
 local formatters = string.formatters
+local httprequest = socket.http.request
 
-local fetch = socket.http.request
+local usecurl = false
+
+local function checkcurl()
+    local s = resultof("curl --version")
+    return type(s) == "string" and find(s,"libcurl") and find(s,"rotocols")
+end
+
+local function fetch(url)
+    local data   = nil
+    local detail = nil
+    if usecurl and find(url,"^https") then
+        data = resultof("curl " .. url)
+    else
+        data, detail = httprequest(url)
+    end
+    if type(data) ~= "string" then
+        data = false
+    elseif #data < 2048 then
+        local n, t = find(data,"<head>%s*<title>%s*(%d+)%s(.-)</title>")
+        if tonumber(n) then
+            data   = false
+            detail = n .. " " .. t
+        end
+    end
+    return data, detail
+end
 
 local application = logs.application {
     name     = "mtx-install",
-    banner   = "ConTeXt Installer 2.00",
+    banner   = "ConTeXt Installer 2.01",
     helpinfo = helpinfo,
 }
 
@@ -75,10 +103,14 @@ local platforms = {
     ["windows"]        = "mswin",
     ["win32"]          = "mswin",
     ["win"]            = "mswin",
+    ["arm32"]          = "windows-arm32",
+    ["windows-arm32"]  = "windows-arm32",
     --
     ["mswin-64"]       = "win64",
     ["windows-64"]     = "win64",
     ["win64"]          = "win64",
+    ["arm64"]          = "windows-arm64",
+    ["windows-arm64"]  = "windows-arm64",
     --
     ["linux"]          = "linux",
     ["linux-32"]       = "linux",
@@ -87,13 +119,14 @@ local platforms = {
     ["linux-64"]       = "linux-64",
     ["linux64"]        = "linux-64",
     --
-    ["linuxmusl-64"]   = "linuxmusl-64",
+    ["linuxmusl-64"]   = "linuxmusl",
+    ["linuxmusl"]      = "linuxmusl",
     --
     ["linux-armhf"]    = "linux-armhf",
     --
-    ["openbsd"]        = "openbsd6.6",
-    ["openbsd-i386"]   = "openbsd6.6",
-    ["openbsd-amd64"]  = "openbsd6.6-amd64",
+    ["openbsd"]        = "openbsd7.0",
+    ["openbsd-i386"]   = "openbsd7.0",
+    ["openbsd-amd64"]  = "openbsd7.0-amd64",
     --
     ["freebsd"]        = "freebsd",
     ["freebsd-i386"]   = "freebsd",
@@ -119,6 +152,8 @@ local platforms = {
     ["macosx"]         = "osx-64",
     ["osx"]            = "osx-64",
     ["osx-64"]         = "osx-64",
+    ["osx-arm"]        = "osx-arm64",
+    ["osx-arm64"]      = "osx-arm64",
     --
  -- ["solaris-intel"]  = "solaris-intel",
     --
@@ -152,11 +187,16 @@ function install.identify()
                 local name  = files[i]
                 local size  = filesize(name)
                 local base  = gsub(name,pattern,"")
-                local stamp = hashdata(io.loaddata(name))
-                details[i]  = { base, size, stamp }
-                total       = total + size
+                local data  = io.loaddata(name)
+                if data and #data > 0 then
+                    local stamp = hashdata(data)
+                    details[i]  = { base, size, stamp }
+                    total       = total + size
+                else
+                    report("%-24s : bad file %a",tree,name)
+                end
             end
-            report("%-20s : %4i files, %3.0f MB",tree,#files,total/(1000*1000))
+            report("%-24s : %4i files, %3.0f MB",tree,#files,total/(1000*1000))
 
             savetable(path .. ".tma",details)
 
@@ -498,16 +538,19 @@ function install.update()
     local binpath = joinfile(targetroot,"tex",texmfplatform,"bin")
 
     local luametatex = "luametatex"
+    local luatex     = "luatex"
     local mtxrun     = "mtxrun"
     local context    = "context"
 
     if ostype == "windows" then
         luametatex = addsuffix(luametatex,"exe")
+        luatex     = addsuffix(luatex,"exe")
         mtxrun     = addsuffix(mtxrun,"exe")
         context    = addsuffix(context,"exe")
     end
 
     local luametatexbin = joinfile(binpath,luametatex)
+    local luatexbin     = joinfile(binpath,luatex)
     local mtxrunbin     = joinfile(binpath,mtxrun)
     local contextbin    = joinfile(binpath,context)
 
@@ -552,6 +595,11 @@ function install.update()
     else
      -- report("xbit bad : %s",luametatexbin)
     end
+    if lfs.setexecutable(luatexbin) then
+        report("xbit set : %s",luatexbin)
+    else
+     -- report("xbit bad : %s",luatexbin)
+    end
     if lfs.setexecutable(mtxrunbin) then
         report("xbit set : %s",mtxrunbin)
     else
@@ -570,7 +618,6 @@ function install.update()
     end
     run("%s --make en", contextbin)
 
-
     -- in calling script: update mtxrun.exe and mtxrun.lua
 
     report("")
@@ -582,6 +629,14 @@ function install.update()
     report("")
 
     report("update, done")
+end
+
+if environment.argument("secure") then
+    usecurl = checkcurl()
+    if not usecurl then
+        report("no curl installed, quitting")
+        os.exit()
+    end
 end
 
 if environment.argument("identify") then

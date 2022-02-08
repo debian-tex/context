@@ -1,4 +1,6 @@
-% language=uk
+% language=us runpath=texruns:manuals/math
+
+% language=us
 
 % author    : Hans Hagen
 % copyright : PRAGMA ADE & ConTeXt Development Team
@@ -42,6 +44,10 @@
     \component math-suboptimal
     \component math-tricks
     \component math-oddities
+    \component math-grouping
+    \ifcase \contextlmtxmode \else
+        \component math-fun
+    \fi
 \stopbodymatter
 
 \stopdocument
