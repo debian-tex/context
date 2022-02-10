@@ -4,16 +4,16 @@ README for using ConTeXt on Debian
 1. non free content
 -------------------
 
-Most of the ConTeXt documentation is distributed only in pdf format, which 
+Most of the ConTeXt documentation is distributed only in pdf format, which
 will be made available together with fonts which are not DFSG compatible
-in the 
+in the
 	context-nonfree
 package.
 
 2. generation of documentation
 ------------------------------
 
-The documentation and examples for various modules as distributed in 
+The documentation and examples for various modules as distributed in
 	/usr/share/doc/context/third/...
 can be generated from the input code by calling
 	texexec --module t-french.tex
