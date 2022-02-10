@@ -27,8 +27,8 @@ local implement         = interfaces.implement
 local trace_jobfiles    = false  trackers.register("system.jobfiles", function(v) trace_jobfiles = v end)
 
 local report            = logs.reporter("system")
-local report_jobfiles   = logs.reporter("system","jobfiles")
-local report_functions  = logs.reporter("system","functions")
+local report_jobfiles   = logs.reporter("system", "jobfiles")
+local report_functions  = logs.reporter("system", "functions")
 
 local texsetcount       = tex.setcount
 local elements          = interfaces.elements
@@ -968,7 +968,11 @@ function document.setcommandline() -- has to happen at the tex end in order to e
     -- to trick the files table which actually only has one entry in a tex job
 
     if arguments.timing then
-        context.usemodule("timing")
+        context.usemodule { "timing" }
+    end
+
+    if arguments.usage then
+       trackers.enable("system.usage")
     end
 
     if arguments.batchmode then

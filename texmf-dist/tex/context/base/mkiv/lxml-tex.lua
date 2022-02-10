@@ -14,7 +14,7 @@ local concat, insert, remove, sortedkeys, reversed = table.concat, table.insert,
 local format, sub, gsub, find, gmatch, match = string.format, string.sub, string.gsub, string.find, string.gmatch, string.match
 local type, next, tonumber, tostring, select = type, next, tonumber, tostring, select
 local lpegmatch = lpeg.match
-local P, S, C, Cc, Cs = lpeg.P, lpeg.S, lpeg.C, lpeg.Cc, lpeg.Cs
+local P, S, C = lpeg.P, lpeg.S, lpeg.C
 local patterns = lpeg.patterns
 local setmetatableindex = table.setmetatableindex
 local formatters, strip = string.formatters, string.strip
@@ -472,6 +472,7 @@ lxml.addindex = addindex
 implement {
     name      = "xmladdindex",
     arguments = "string",
+    public    = true,
     actions   = addindex,
 }
 
@@ -1754,6 +1755,23 @@ local function concatlist(collected,separator,lastseparator,textonly) -- test th
     concatrange(collected,false,false,separator,lastseparator,textonly)
 end
 
+local function depth(collected)
+    local d = 0
+    if collected then
+        local c = collected and collected[1]
+        if c.tg then
+            while c do
+                d = d + 1
+                c = c.__p__
+                if not c then
+                    break
+                end
+            end
+        end
+    end
+    contextsprint(ctxcatcodes,d)
+end
+
 texfinalizers.first          = first
 texfinalizers.last           = last
 texfinalizers.all            = all
@@ -1777,6 +1795,7 @@ texfinalizers.concatrange    = concatrange
 texfinalizers.chainattribute = chainattribute
 texfinalizers.chainpath      = chainpath
 texfinalizers.default        = all -- !!
+texfinalizers.depth          = depth
 
 function texfinalizers.tag(collected,n)
     if collected then
@@ -1861,6 +1880,10 @@ end
 lxml.verbatim = verbatim
 
 -- helpers
+
+function lxml.depth(id)
+    depth { getid(id) }
+end
 
 function lxml.first(id,pattern)
     local collected = xmlapplylpath(getid(id),pattern)
@@ -2070,7 +2093,8 @@ do
     implement {
         name      = "xmldoifatt",
         arguments = "3 strings",
-        actions = function(id,k,v)
+        public    = true,
+        actions   = function(id,k,v)
             local e = getid(id)
             ctx_doif(e and e.at[k] == v or false)
         end
@@ -2079,7 +2103,8 @@ do
     implement {
         name      = "xmldoifnotatt",
         arguments = "3 strings",
-        actions = function(id,k,v)
+        public    = true,
+        actions   = function(id,k,v)
             local e = getid(id)
             ctx_doifnot(e and e.at[k] == v or false)
         end
@@ -2088,7 +2113,8 @@ do
     implement {
         name      = "xmldoifelseatt",
         arguments = "3 strings",
-        actions = function(id,k,v)
+        public    = true,
+        actions   = function(id,k,v)
             local e = getid(id)
             ctx_doifelse(e and e.at[k] == v or false)
         end
@@ -2356,8 +2382,8 @@ function lxml.nonspace(id,pattern) -- slow, todo loop
     xmltprint(xmlcollect(getid(id),pattern,true))
 end
 
-function lxml.strip(id,pattern,nolines,anywhere)
-    xml.strip(getid(id),pattern,nolines,anywhere)
+function lxml.strip(id,pattern,nolines,anywhere,everywhere)
+    xml.strip(getid(id),pattern,nolines,anywhere,everywhere)
 end
 
 function lxml.stripped(id,pattern,nolines)

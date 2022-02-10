@@ -55,7 +55,11 @@ end
 function mathematics.initializeparameters(target,original)
     local mathparameters = original.mathparameters
     if mathparameters and next(mathparameters) then
-        target.mathparameters = mathematics.dimensions(mathparameters)
+        mathparameters = mathematics.dimensions(mathparameters)
+        if not mathparameters.SpaceBeforeScript then
+            mathparameters.SpaceBeforeScript = mathparameters.SpaceAfterScript
+        end
+        target.mathparameters = mathparameters
     end
 end
 
@@ -224,117 +228,6 @@ sequencers.appendaction("mathparameters","system","mathematics.overloadparameter
 sequencers.appendaction("beforecopyingcharacters","system","mathematics.tweakbeforecopyingfont")
 sequencers.appendaction("aftercopyingcharacters", "system","mathematics.tweakaftercopyingfont")
 
-local virtualized = mathematics.virtualized
-
-function mathematics.overloaddimensions(target,original,set)
-    local goodies = target.goodies
-    if goodies then
-        for i=1,#goodies do
-            local goodie = goodies[i]
-            local mathematics = goodie.mathematics
-            local dimensions  = mathematics and mathematics.dimensions
-            if dimensions then
-                if trace_defining then
-                    report_math("overloading dimensions in %a @ %p",target.properties.fullname,target.parameters.size)
-                end
-                local characters   = target.characters
-                local descriptions = target.descriptions
-                local parameters   = target.parameters
-                local factor       = parameters.factor
-                local hfactor      = parameters.hfactor
-                local vfactor      = parameters.vfactor
-                -- to be sure
-                target.type = "virtual"
-                target.properties.virtualized = true
-                --
-                local function overload(dimensions)
-                    for unicode, data in next, dimensions do
-                        local character = characters[unicode]
-                        if not character then
-                            local c = virtualized[unicode]
-                            if c then
-                                character = characters[c]
-                            end
-                        end
-                        if character then
-                            --
-                            local width  = data.width
-                            local height = data.height
-                            local depth  = data.depth
-                            if trace_defining and (width or height or depth) then
-                                report_math("overloading dimensions of %C, width %p, height %p, depth %p",
-                                    unicode,width or 0,height or 0,depth or 0)
-                            end
-                            if width  then character.width  = width  * hfactor end
-                            if height then character.height = height * vfactor end
-                            if depth  then character.depth  = depth  * vfactor end
-                            --
-                            local xoffset = data.xoffset
-                            local yoffset = data.yoffset
-                            if xoffset == "llx" then
-                                local d = descriptions[unicode]
-                                if d then
-                                    xoffset         = - d.boundingbox[1] * hfactor
-                                    character.width = character.width + xoffset
-                                    xoffset         = rightcommand[xoffset]
-                                else
-                                    xoffset = nil
-                                end
-                            elseif xoffset and xoffset ~= 0 then
-                                xoffset = rightcommand[xoffset * hfactor]
-                            else
-                                xoffset = nil
-                            end
-                            if yoffset and yoffset ~= 0 then
-                                yoffset = upcommand[yoffset * vfactor]
-                            else
-                                yoffset = nil
-                            end
-                            if xoffset or yoffset then
-                                local commands = characters.commands
-                                if commands then
-                                    prependcommands(commands,yoffset,xoffset)
-                                else
-                                    local slot = charcommand[unicode]
-                                    if xoffset and yoffset then
-                                        character.commands = { xoffset, yoffset, slot }
-                                    elseif xoffset then
-                                        character.commands = { xoffset, slot }
-                                    else
-                                        character.commands = { yoffset, slot }
-                                    end
-                                end
-                            end
-                        elseif trace_defining then
-                            report_math("no overloading dimensions of %C, not in font",unicode)
-                        end
-                    end
-                end
-                if set == nil then
-                    set = { "default" }
-                end
-                if set == "all" or set == true then
-                    for name, set in next, dimensions do
-                        overload(set)
-                    end
-                else
-                    if type(set) == "string" then
-                        set = utilities.parsers.settings_to_array(set)
-                    end
-                    if type(set) == "table" then
-                        for i=1,#set do
-                            local d = dimensions[set[i]]
-                            if d then
-                                overload(d)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
 -- no, it's a feature now (see good-mth):
 --
 -- sequencers.appendaction("aftercopyingcharacters", "system","mathematics.overloaddimensions")
@@ -350,6 +243,8 @@ mathematics.tweaks = tweaks
 
 -- these could go to math-fbk
 
+-- local virtualized = mathematics.virtualized
+--
 -- local function accent_to_extensible(target,newchr,original,oldchr,height,depth,swap)
 --     local characters = target.characters
 --  -- if not characters[newchr] then -- xits needs an enforce
@@ -599,8 +494,10 @@ interfaces.implement {
 --                     if not fonts then
 --                         fonts = { }
 --                         target.fonts = fonts
+-- if not CONTEXTLMTXMODE or CONTEXTLMTXMODE == 0 then
 --                         target.type = "virtual"
 --                         target.properties.virtualized = true
+-- end
 --                     end
 --                     if #fonts == 0 then
 --                         fonts[1] = { id = 0, size = size } -- sel, will be resolved later
@@ -705,8 +602,10 @@ function mathematics.finishfallbacks(target,specification,fallbacks)
                 fonts = { }
                 target.fonts = fonts
             end
+            --
             target.type = "virtual"
             target.properties.virtualized = true
+            --
             if #fonts == 0 then
                 fonts[1] = { id = 0, size = size } -- self, will be resolved later
             end

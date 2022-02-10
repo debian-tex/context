@@ -38,7 +38,7 @@ if not modules then modules = { } end modules ['typo-lin'] = {
 -- But, maybe there are good reasons for having just that anchor (mostly for educational purposes
 -- I guess.)
 --
--- At this stage the localpar node is no longer of any use so we remove it (each line has the
+-- At this stage the par node is no longer of any use so we remove it (each line has the
 -- direction attached). We might at some point also strip the disc nodes as they no longer serve
 -- a purpose but that can better be a helper. Anchoring left has advantage of keeping page
 -- stream.
@@ -65,7 +65,7 @@ local hlist_code        = nodecodes.hlist
 local glue_code         = nodecodes.glue
 local kern_code         = nodecodes.kern
 local linelist_code     = listcodes.line
------ localpar_code     = nodecodes.localpar
+----- par_code          = nodecodes.par
 local leftskip_code     = gluecodes.leftskip
 local rightskip_code    = gluecodes.rightskip
 local parfillskip_code  = gluecodes.parfillskip
@@ -123,10 +123,10 @@ local getreserved       = jobpositions.getreserved
 local paragraphs        = { }
 typesetters.paragraphs  = paragraphs
 
-local addskips          = false
+local addskips          = false -- todo: use engine normalizer
 local noflines          = 0
 
--- This is the third version, a mix between immediate (prestice lines) and delayed
+-- This is the third version, a mix between immediate (prestine lines) and delayed
 -- as we don't want anchors that are not used.
 
 -- I will make a better variant once lmtx is stable i.e. less clutter.
@@ -185,7 +185,7 @@ local function normalize(line,islocal) -- assumes prestine lines, nothing pre/ap
         id      = getid(current)
     end
     -- no:
- -- if id == localpar_code then
+ -- if id == par_code then
  --     head = remove_node(head,head,true)
  -- end
     local tail    = find_tail(head)
@@ -235,6 +235,8 @@ end
 function paragraphs.checkline(n)
     return getprop(n,"line") or normalize(n,true)
 end
+
+-- do we still need this:
 
 function paragraphs.normalize(head,islocal)
     if texgetcount("pagebodymode") > 0 then
@@ -482,7 +484,7 @@ function paragraphs.calculatedelta(n,width,delta,atleft,islocal,followshape,area
                 addanchortoline(line,setanchor(number))
                 line.hanchor = true
             end
-            local blob = getposition(s_anchor,number)
+            local blob = getposition("md:h",number)
             if blob then
                 local reference = getreserved(area,blob.c)
                 if reference then

@@ -358,6 +358,8 @@ elseif name == "macosx" then
             platform = "osx-intel"
         elseif find(architecture,"x86_64",1,true) then
             platform = "osx-64"
+        elseif find(architecture,"arm64",1,true) then
+            platform = "osx-64"
         else
             platform = "osx-ppc"
         end
@@ -604,11 +606,19 @@ os.isleapyear = isleapyear
 
 local days = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 
-local function nofdays(year,month)
+local function nofdays(year,month,day)
     if not month then
         return isleapyear(year) and 365 or 364
-    else
+    elseif not day then
         return month == 2 and isleapyear(year) and 29 or days[month]
+    else
+        for i=1,month-1 do
+            day = day + days[i]
+        end
+        if month > 2 and isleapyear(year) then
+            day = day + 1
+        end
+        return day
     end
 end
 

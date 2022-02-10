@@ -243,10 +243,9 @@ end
 -- the check can go away
 
 function builders.buildpage_filter(groupcode)
-    -- the next check saves 1% runtime on 1000 tufte pages
     local head = texlists.contrib_head
-    local done = false
     if head then
+        local done = false
         -- called quite often ... maybe time to remove timing
         starttiming(builders)
         if trace_page_builder then

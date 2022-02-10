@@ -19,7 +19,7 @@ local helpinfo = [[
  <flags>
   <category name="basic">
    <subcategory>
-    <flag name="platform" value="string"><short>platform (windows, linux, linux-64, osx-intel, osx-ppc, linux-ppc)</short></flag>
+    <flag name="platform" value="string"><short>platform</short></flag>
     <flag name="server" value="string"><short>repository url (rsync://contextgarden.net)</short></flag>
     <flag name="modules" value="string"><short>extra modules (can be list or 'all')</short></flag>
     <flag name="fonts" value="string"><short>additional fonts (can be list or 'all')</short></flag>
@@ -79,6 +79,7 @@ local platforms = {
     ["mswin-64"]       = "win64",
     ["windows-64"]     = "win64",
     ["win64"]          = "win64",
+    ["arm64"]          = "windows-arm64",
     --
     ["linux"]          = "linux",
     ["linux-32"]       = "linux",
@@ -87,13 +88,14 @@ local platforms = {
     ["linux-64"]       = "linux-64",
     ["linux64"]        = "linux-64",
     --
-    ["linuxmusl-64"]   = "linuxmusl-64",
+    ["linuxmusl-64"]   = "linuxmusl",
+    ["linuxmusl"]      = "linuxmusl",
     --
     ["linux-armhf"]    = "linux-armhf",
     --
-    ["openbsd"]        = "openbsd6.6",
-    ["openbsd-i386"]   = "openbsd6.6",
-    ["openbsd-amd64"]  = "openbsd6.6-amd64",
+    ["openbsd"]        = "openbsd6.8",
+    ["openbsd-i386"]   = "openbsd6.8",
+    ["openbsd-amd64"]  = "openbsd6.8-amd64",
     --
     ["freebsd"]        = "freebsd",
     ["freebsd-i386"]   = "freebsd",
@@ -119,6 +121,10 @@ local platforms = {
     ["macosx"]         = "osx-64",
     ["osx"]            = "osx-64",
     ["osx-64"]         = "osx-64",
+--     ["osx-arm"]        = "osx-arm64",
+--     ["osx-arm64"]      = "osx-arm64",
+    ["osx-arm"]        = "osx-64",
+    ["osx-arm64"]      = "osx-64",
     --
  -- ["solaris-intel"]  = "solaris-intel",
     --
@@ -152,11 +158,16 @@ function install.identify()
                 local name  = files[i]
                 local size  = filesize(name)
                 local base  = gsub(name,pattern,"")
-                local stamp = hashdata(io.loaddata(name))
-                details[i]  = { base, size, stamp }
-                total       = total + size
+                local data  = io.loaddata(name)
+                if data and #data > 0 then
+                    local stamp = hashdata(data)
+                    details[i]  = { base, size, stamp }
+                    total       = total + size
+                else
+                    report("%-24s : bad file %a",tree,name)
+                end
             end
-            report("%-20s : %4i files, %3.0f MB",tree,#files,total/(1000*1000))
+            report("%-24s : %4i files, %3.0f MB",tree,#files,total/(1000*1000))
 
             savetable(path .. ".tma",details)
 
@@ -498,16 +509,19 @@ function install.update()
     local binpath = joinfile(targetroot,"tex",texmfplatform,"bin")
 
     local luametatex = "luametatex"
+    local luatex     = "luatex"
     local mtxrun     = "mtxrun"
     local context    = "context"
 
     if ostype == "windows" then
         luametatex = addsuffix(luametatex,"exe")
+        luatex     = addsuffix(luatex,"exe")
         mtxrun     = addsuffix(mtxrun,"exe")
         context    = addsuffix(context,"exe")
     end
 
     local luametatexbin = joinfile(binpath,luametatex)
+    local luatexbin     = joinfile(binpath,luatex)
     local mtxrunbin     = joinfile(binpath,mtxrun)
     local contextbin    = joinfile(binpath,context)
 
@@ -552,6 +566,11 @@ function install.update()
     else
      -- report("xbit bad : %s",luametatexbin)
     end
+    if lfs.setexecutable(luatexbin) then
+        report("xbit set : %s",luatexbin)
+    else
+     -- report("xbit bad : %s",luatexbin)
+    end
     if lfs.setexecutable(mtxrunbin) then
         report("xbit set : %s",mtxrunbin)
     else
@@ -569,7 +588,6 @@ function install.update()
         run("%s --generate",mtxrunbin)
     end
     run("%s --make en", contextbin)
-
 
     -- in calling script: update mtxrun.exe and mtxrun.lua
 

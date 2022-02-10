@@ -36,6 +36,7 @@ local helpinfo = [[
     <flag name="raw"><short>report commands to the console</short></flag>
     <flag name="check"><short>generate check file</short></flag>
     <flag name="meaning"><short>report the mening of commands</short></flag>
+    <flag name="tokens"><short>show the internal representation of commands</short></flag>
    </subcategory>
    <subcategory>
     <flag name="toutf"><short>replace named characters by utf</short></flag>
@@ -168,6 +169,10 @@ function flushers.raw(collected)
     end
 end
 
+function flushers.data(collected)
+    return collected -- table.save("cont-en-filenames.lua",collected.filenames)
+end
+
 local textpadcreator = "mtx-interface-textpad.lua"
 
 function flushers.text(collected)
@@ -256,9 +261,10 @@ end
 function scripts.interface.editor(editor,split,forcedinterfaces)
     require("char-def")
 
-    local interfaces = forcedinterfaces or environment.files
-    if #interfaces == 0 then
-        interfaces= userinterfaces
+    local interfaces = forcedinterfaces or environment.files or userinterfaces
+    if not interfaces.en then
+        -- loaded as script so we have "cont-yes.*" as name
+        interfaces = { "en" }
     end
     --
  -- local filename = "i-context.xml"
@@ -376,13 +382,13 @@ function scripts.interface.editor(editor,split,forcedinterfaces)
                     end
                     -- skip (for now)
                 elseif type ~= "environment" then
-                    i_commands[n] = true
+                    i_commands[n] = at.file or true
                 elseif split then
-                    i_environments[n] = true
+                    i_environments[n] = at.file or true
                 else
                     -- variables ?
-                    i_commands[start..n] = true
-                    i_commands[stop ..n] = true
+                    i_commands[start..n] = at.file or true
+                    i_commands[stop ..n] = at.file or true
                 end
             end
         end
@@ -416,6 +422,19 @@ function scripts.interface.editor(editor,split,forcedinterfaces)
                 if not commonenvironments[k] then
                     commonenvironments[k] = nil
                 end
+            end
+        end
+    end
+    local filenames = { }
+    if collected.en then
+        for k, v in next, collected.en.commands do
+            if v ~= true then
+                filenames[k] = v
+            end
+        end
+        for k, v in next, collected.en.environments do
+            if v ~= true then
+                filenames[k] = v
             end
         end
     end
@@ -460,9 +479,13 @@ function scripts.interface.editor(editor,split,forcedinterfaces)
         mathnames    = sortedkeys(mathnames),
         commands     = sortedkeys(commoncommands),
         environments = sortedkeys(commonenvironments),
+        filenames    = filenames,
     }
     --
-    flushers[editor](collected)
+    local flusher = flushers[editor]
+    if flusher then
+        return flusher(collected)
+    end
 end
 
 function scripts.interface.check()
@@ -690,6 +713,26 @@ function scripts.interface.meaning()
     end
 end
 
+function scripts.interface.tokens()
+    local runner  = "mtxrun --silent --script context --extra=meaning --tokens --once --noconsole --nostatistics"
+    local pattern = environment.arguments.pattern
+    local files   = environment.files
+    if type(pattern) == "string" then
+        runner = runner .. ' --pattern="' .. pattern .. '"'
+    elseif files and #files > 0 then
+        for i=1,#files do
+            runner = runner .. ' "' .. files[i] .. '"'
+        end
+    else
+        return
+    end
+    local r = os.resultof(runner)
+    if type(r) == "string" then
+        r = gsub(r,"^.-(tokens%s+>)","\n%1")
+        print(r)
+    end
+end
+
 local ea = environment.argument
 
 if ea("mkii") then
@@ -698,6 +741,8 @@ elseif ea("preprocess") then
     scripts.interface.preprocess()
 elseif ea("meaning") then
     scripts.interface.meaning()
+elseif ea("tokens") then
+    scripts.interface.tokens()
 elseif ea("toutf") then
     scripts.interface.toutf()
 elseif ea("bidi") then
