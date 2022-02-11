@@ -140,7 +140,6 @@ For example, here is the character \quote {f} (decimal 102) in the font \type
 }
 \stoptyping
 
-
 Two very special string indexes can be used also: \type {left_boundary} is a
 virtual character whose ligatures and kerns are used to handle word boundary
 processing. \type {right_boundary} is similar but not actually used for anything
@@ -269,9 +268,25 @@ third one is a previously defined font that is known to \LUATEX\ as font id~38.
 The array index numbers are used by the character command definitions that are
 part of each character.
 
-The \type {commands} array is a hash where each item is another small array,
-with the first entry representing a command and the extra items being the
-parameters to that command. The allowed commands and their arguments are:
+The \type {commands} array is a hash where each item is another small array, with
+the first entry representing a command and the extra items being the parameters
+to that command. The frontend is only interested in the dimensions, ligatures and
+kerns of a font, which is the reason why the \TEX\ engine didn't have to be
+extended when virtual fonts showed up: dealing with it is up to the driver that
+comes after the backend. In \PDFTEX\ and \LUATEX\ that driver is integrated so
+there the backend also deals with virtual fonts. The first block in the next
+table is what the standard mentions. The \type {special} command is indeed
+special because it is an extension container. The mentioned engines only support
+pseudo standards where the content starts with \type {pdf:}. The last block is
+\LUATEX\ specific and will not be found in native fonts. These entries can be
+used in virtual fonts that are constructed in \LUA.
+
+But \unknown\ in \LUAMETATEX\ there is no backend built in but we might assume
+that the one provided deals with these entries. However, a provided backend can
+provide more and that is indeed what happens in \CONTEXT. There, because we no
+longer have compacting (of passed tables) and unpacking (when embedding) of these
+tables going on we stay in the \LUA\ domain. None of the virtual specification is
+ever seen in the engine.
 
 \starttabulate[|l|l|l|p|]
 \DB command        \BC arguments \BC type      \BC description \NC \NR
@@ -279,16 +294,18 @@ parameters to that command. The allowed commands and their arguments are:
 \NC \type{font}    \NC 1         \NC number    \NC select a new font from the local \type {fonts} table \NC \NR
 \NC \type{char}    \NC 1         \NC number    \NC typeset this character number from the current font,
                                                    and move right by the character's width \NC \NR
-\NC \type{node}    \NC 1         \NC node      \NC output this node (list), and move right
-                                                   by the width of this list\NC \NR
-\NC \type{slot}    \NC 2         \NC 2 numbers \NC a shortcut for the combination of a font and char command\NC \NR
 \NC \type{push}    \NC 0         \NC           \NC save current position\NC \NR
-\NC \type{nop}     \NC 0         \NC           \NC do nothing \NC \NR
 \NC \type{pop}     \NC 0         \NC           \NC pop position \NC \NR
 \NC \type{rule}    \NC 2         \NC 2 numbers \NC output a rule $ht*wd$, and move right. \NC \NR
 \NC \type{down}    \NC 1         \NC number    \NC move down on the page \NC \NR
 \NC \type{right}   \NC 1         \NC number    \NC move right on the page \NC \NR
+\HL
 \NC \type{special} \NC 1         \NC string    \NC output a \prm {special} command \NC \NR
+\HL
+\NC \type{nop}     \NC 0         \NC           \NC do nothing \NC \NR
+\NC \type{slot}    \NC 2         \NC 2 numbers \NC a shortcut for the combination of a font and char command\NC \NR
+\NC \type{node}    \NC 1         \NC node      \NC output this node (list), and move right
+                                                   by the width of this list\NC \NR
 \NC \type{pdf}     \NC 2         \NC 2 strings \NC output a \PDF\ literal, the first string is one of \type {origin},
                                                    \type {page}, \type {text}, \type {font}, \type {direct} or \type {raw}; if you
                                                    have one string only \type {origin} is assumed \NC \NR
@@ -363,10 +380,6 @@ The special can have a \type {pdf:}, \type {pdf:origin:},  \type {pdf:page:},
 \type {pdf:direct:} or  \type {pdf:raw:} prefix. When you have to concatenate
 strings using the \type {pdf} command might be more efficient.
 
-The fields mentioned above can be found in external fonts. It is good to keep in
-mind that we can extend this model, given that the backend knows what to do with
-it.
-
 \stopsection
 
 \startsection[title={Additional \TEX\ commands}]
@@ -392,17 +405,19 @@ expansion takes place inside the argument.
 \fontid\font
 \stopsyntax
 
-This primitive expands into a number. It is not a register so there is no need to
-prefix with \prm {number} (and using \prm {the} gives an error). The currently
-used font id is \fontid\font. Here are some more:
+This primitive expands into a number. The currently used font id is
+\number\fontid\font. Here are some more: \footnote {Contrary to \LUATEX\ this is
+now a number so you need to use \type {\number} or \type {\the}. The same is true
+for some other numbers and dimensions that for some reason ended up in the
+serializer that produced a sequence of tokens.}
 
 \starttabulate[|l|c|c|]
 \DB style \BC command \BC font id \NC \NR
 \TB
-\NC normal      \NC \type {\tf} \NC \tf \fontid\font \NC \NR
-\NC bold        \NC \type {\bf} \NC \bf \fontid\font \NC \NR
-\NC italic      \NC \type {\it} \NC \it \fontid\font \NC \NR
-\NC bold italic \NC \type {\bi} \NC \bi \fontid\font \NC \NR
+\NC normal      \NC \type {\tf} \NC \tf \number\fontid\font \NC \NR
+\NC bold        \NC \type {\bf} \NC \bf \number\fontid\font \NC \NR
+\NC italic      \NC \type {\it} \NC \it \number\fontid\font \NC \NR
+\NC bold italic \NC \type {\bi} \NC \bi \number\fontid\font \NC \NR
 \LL
 \stoptabulate
 
@@ -417,29 +432,92 @@ which of course needs to be a valid one.
 
 \stopsubsection
 
-\startsubsection[title={\lpr {noligs} and \lpr {nokerns}}]
+\startsubsection[title={\lpr {glyphoptions}}]
 
 \topicindex {ligatures+suppress}
 \topicindex {kerns+suppress}
+\topicindex {expansion+suppress}
+\topicindex {protrusion+suppress}
 
-These primitives prohibit ligature and kerning insertion at the time when the
-initial node list is built by \LUATEX's main control loop. You can enable these
-primitives when you want to do node list processing of \quote {characters}, where
-\TEX's normal processing would get in the way.
+In \LUATEX\ the \type {\noligs} and \type {\nokerns} primitives suppress these
+features but in \LUAMETATEX\ these primitives are gone. They are replace by a more
+generic control primitive \lpr {glyphoptions}. This numerical parameter is a
+bitset with the following fields:
 
-\startsyntax
-\noligs <integer>!crlf
-\nokerns <integer>
-\stopsyntax
+\starttabulate[|l|pl|]
+\DB value       \BC effect \NC\NR
+\TB
+\NC \type{0x01} \NC prevent left ligature             \NC \NR
+\NC \type{0x02} \NC prevent right ligature            \NC \NR
+\NC \type{0x04} \NC block left kern                   \NC \NR
+\NC \type{0x08} \NC block right kern                  \NC \NR
+\NC \type{0x10} \NC don't apply  expansion            \NC \NR
+\NC \type{0x20} \NC don't apply protrusion            \NC \NR
+\NC \type{0x40} \NC apply xoffset to width            \NC \NR
+\NC \type{0x80} \NC apply yoffset to height and depth \NC \NR
+\LL
+\stoptabulate
 
-These primitives can also be implemented by overloading the ligature building and
-kerning functions, i.e.\ by assigning dummy functions to their associated
-callbacks. Keep in mind that when you define a font (using \LUA) you can also
-omit the kern and ligature tables, which has the same effect as the above.
+The effects speak for themselves. They provide detailed control over individual
+glyph, this because the current value of this option is stored with glyphs.
 
 \stopsubsection
 
-\startsubsection[title={\type{\nospaces}}]
+\startsubsection[title={\lpr {glyphxscale}, \lpr {glyphyscale} and \lpr {scaledfontdimen}}]
+
+The two scale parameters control the current scaling. They are traditional \TEX\
+integer parameters that operate independent of each other. The scaling is
+reflected in the dimensions of glyphs as well as in the related font dimensions,
+which means that units like \type {ex} and \type {em} work as expected. If you
+query a font dimensions with \prm {fontdimen} you get the raw value but with \lpr
+{scaledfontdimen} you get the useable value.
+
+\stopsubsection
+
+\startsubsection[title={\lpr {glyphxoffset}, \lpr {glyphyoffset}}]
+
+These two parameters control the horizontal and vertical shift of glyphs with,
+when applied to a stretch of them, the horizontal offset probably being the least
+useful.
+
+\stopsubsection
+
+\startsubsection[title={\lpr {glyph}}]
+
+This command is a variation in \prm {char} that takes keywords:
+
+\starttabulate[|l|p|]
+\DB keyword \BC effect \NC type \NC \NR
+\TB
+\NC \type {xoffset} \NC (virtual) horizontal shift \NC dimension  \NC \NR
+\NC \type {yoffset} \NC (virtual) vertical shift   \NC dimension  \NC \NR
+\NC \type {xscale}  \NC horizontal scaling         \NC integer    \NC \NR
+\NC \type {yscale}  \NC vertical scaling           \NC integer    \NC \NR
+\NC \type {options} \NC glyph options              \NC bitset     \NC \NR
+\NC \type {font}    \NC font                       \NC identifier \NC \NR
+\NC \type {id}      \NC font                       \NC integer    \NC \NR
+\LL
+\stoptabulate
+
+The values default to the currently set values. Here is a \CONTEXT\ example:
+
+\startbuffer
+\ruledhbox{
+    \ruledhbox{\glyph yoffset 1ex options 0 123}
+    \ruledhbox{\glyph xoffset .5em yoffset 1ex options "C0 125}
+    \ruledhbox{baseline\glyphyoffset 1ex \glyphxscale 800 \glyphyscale\glyphxscale raised}
+}
+\stopbuffer
+
+\typebuffer
+
+Visualized:
+
+\getbuffer
+
+\stopsubsection
+
+\startsubsection[title={\lpr{nospaces}}]
 
 \topicindex {spaces+suppress}
 
@@ -462,7 +540,7 @@ space.
 
 \stopsubsection
 
-\startsubsection[title={\type{\protrusionboundary}}]
+\startsubsection[title={\lpr{protrusionboundary}}]
 
 \topicindex {protrusion}
 \topicindex {boundaries}
@@ -581,13 +659,19 @@ font.current(<number> i)
 
 \stopsubsection
 
-% \startsubsection[title={Glyph data: \lpr {glyphdata}]
-%
-% This primitive can be used to set an additional glyph property. Of course it's very
-% macro package dependant what is done with that. Consider it an experiment (we had
-% some room left in the glyphs data structure). It's basically an single attribute.
-%
-% \stopsubsection
+\startsubsection[title={Glyph data: \lpr {glyphdata}, \lpr {glyphscript}, \lpr {glyphstate}}]
+
+These primitives can be used to set an additional glyph properties. Of course
+it's very macro package dependant what is done with that. It started with just
+the first one as experiment, simply because we had some room left in the glyph
+data structure. It's basically an single attribute. Then, when we got rid of the
+ligature pointer we could either drop it or use that extra field for some more,
+and because \CONTEXT\ already used the data field, that is what happened. The
+script and state fields are shorts, that is, they run from zero to \type {0xFFFF}
+where we assume that zero means \quote {unset}. Although they can be used for
+whatever purpose their use in \CONTEXT\ is fixed.
+
+\stopsubsection
 
 \stopsection
 

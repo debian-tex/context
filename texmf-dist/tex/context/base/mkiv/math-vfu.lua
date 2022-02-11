@@ -628,10 +628,6 @@ setmetatableindex(reverse, function(t,name)
     return r
 end)
 
--- use char and font hash
---
--- commands  = { { "font", slot }, { "char", unicode } },
-
 local function copy_glyph(main,target,original,unicode,slot)
     local addprivate = fonts.helpers.addprivate
     local olddata    = original[unicode]
@@ -837,7 +833,6 @@ function vfmath.define(specification,set,goodies)
         setmetatableindex(goodies,parent.goodies)
     end
     --
-    properties.virtualized = true
     properties.hasitalics  = true
     properties.hasmath     = true
     --
@@ -850,8 +845,10 @@ function vfmath.define(specification,set,goodies)
     -- we need to set some values in main as well (still?)
     --
     main.fullname      = properties.fullname
-    main.type          = "virtual"
     main.nomath        = false
+    --
+    properties.virtualized = true
+    main.type              = "virtual"
     --
     parameters.x_height = parameters.x_height or 0
     --
@@ -918,7 +915,7 @@ function vfmath.define(specification,set,goodies)
             else
                 local vectorname = ss.vector
                 if vectorname then
-                    local offset      = 0xFF000
+                    local offset      = 0xFF000 -- todo: -- private
                     local vector      = mathencodings[vectorname]
                     local rotcev      = reverse[vectorname]
                     local isextension = ss.extension
@@ -926,11 +923,11 @@ function vfmath.define(specification,set,goodies)
                         local fc       = fs.characters
                         local fd       = fs.descriptions
                         local si       = shared[s]
+                        local fontname = fs.properties.name or "unknown"
                         local skewchar = ss.skewchar
                         for unicode, index in next, vector do
                             local fci = fc[index]
                             if not fci then
-                                local fontname = fs.properties.name or "unknown"
                                 local rf = reported[fontname]
                                 if not rf then rf = { } reported[fontname] = rf end
                                 local rv = rf[vectorname]
@@ -1111,7 +1108,8 @@ function vfmath.define(specification,set,goodies)
     -- so better is to also reserve the id already which then involves some more
     -- management (so not now).
     fontlist[#fontlist+1] = {
-        id   = font.nextid(),
+     -- id   = font.nextid(),
+        id   = 0, -- self
         size = size,
     }
     vfmath.addmissing(main,#fontlist,size)

@@ -235,7 +235,7 @@
        fontsize             {\fontbody}%
        fontsymbol           {\fieldbodyparameter\c!symbol}%
        color                {\fieldbodyparameter\c!color}%
-       colorvalue           \attribute\colorattribute
+       colorvalue           \c_attr_color
    \ifx\currentfieldbackgroundcolor\empty \else
        backgroundcolor      {\currentfieldbackgroundcolor}%
        backgroundcolorvalue \numexpr\currentfieldbackgroundcolorvalue\relax
@@ -389,6 +389,8 @@
 \installparameterhandler     \??fieldlabel   {fieldlabelframed}
 \installparameterhandler     \??fieldcontent {fieldcontentframed}
 \installparameterhandler     \??fieldtotal   {fieldtotalframed}
+
+\installparametersethandler  \??fieldcontent {fieldcontentframed}
 
 \installsetuphandler         \??fieldlabel   {fieldlabelframed}
 \installsetuphandler         \??fieldcontent {fieldcontentframed}

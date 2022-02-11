@@ -1,5 +1,6 @@
 if not modules then modules = { } end modules ['node-par'] = {
     version   = 1.001,
+    optimize  = true,
     comment   = "companion to node-par.mkiv",
     author    = "Hans Hagen",
     copyright = "ConTeXt Development Team",
@@ -259,7 +260,6 @@ local nodepool                = nuts.pool
 
 local nodecodes               = nodes.nodecodes
 local kerncodes               = nodes.kerncodes
-local margincodes             = nodes.margincodes
 local disccodes               = nodes.disccodes
 local mathcodes               = nodes.mathcodes
 local fillcodes               = nodes.fillcodes
@@ -281,21 +281,17 @@ local unset_code              = nodecodes.unset
 local marginkern_code         = nodecodes.marginkern
 local dir_code                = nodecodes.dir
 local boundary_code           = nodecodes.boundary
-local localpar_code           = nodecodes.localpar
+local par_code                = nodecodes.par
 
 local protrusionboundary_code = nodes.boundarycodes.protrusion
-local leaders_code            = nodes.leadercodes.leaders
+local leaders_code            = nodes.gluecodes.leaders
 local indentlist_code         = nodes.listcodes.indent
-local ligatureglyph_code      = nodes.glyphcodes.ligature
 local cancel_code             = nodes.dircodes.cancel
 
 local userkern_code           = kerncodes.userkern
 local italickern_code         = kerncodes.italiccorrection
 local fontkern_code           = kerncodes.fontkern
 local accentkern_code         = kerncodes.accentkern
-
-local leftmargin_code         = margincodes.left
------ rightmargin_code        = margincodes.right
 
 local automaticdisc_code      = disccodes.automatic
 local regulardisc_code        = disccodes.regular
@@ -348,6 +344,11 @@ local new_rule                = nodepool.rule
 local new_hlist               = nodepool.hlist
 
 local getnormalizeline        = nodes.getnormalizeline
+
+local packing_exactly    = "exactly"
+local packing_additional = "additional"
+local packing_expanded   = CONTEXTLMTXMODE > 0 and "expanded"   or "cal_expand_ratio"
+local packing_substitute = CONTEXTLMTXMODE > 0 and "substiture" or "subst_ex_font"
 
 -- helpers --
 
@@ -1321,7 +1322,7 @@ do
 
         while current_break do
 
-            -- hm, here we have head == localpar and in the engine it's a temp node
+            -- hm, here we have head == par and in the engine it's a temp node
 
             head = inject_dirs_at_begin_of_line(dirstack,head)
 
@@ -1461,7 +1462,7 @@ do
                                     p = nil
                                 end
                                 break
-                            elseif id == localpar_code then
+                            elseif id == par_code then
                                 break
                             elseif id == temp_code then
                                 -- Go on.
@@ -1558,29 +1559,29 @@ do
                 start = insert_node_before(start,start,ls)
             end
             if normalize > 0 then
-                local localpar  = nil
-                local localdir  = nil
+                local par       = nil
+                local dir       = nil
                 local indent    = nil
-                local localpars = nil
+                local pars      = nil
                 local notflocal = 0
                 for n, id, subtype in nextnode, start do
                     if id == hlist_code then
                         if normalize > 1 and subtype == indentlist_code then
                             indent = n
                         end
-                    elseif id == localpar_code then
+                    elseif id == par_code then
                         if start_of_par(n) then --- maybe subtype check instead
-                            localpar = n
+                            par = n
                         elseif noflocals then
                             noflocals = noflocals + 1
-                            localpars[noflocals] = n
+                            pars[noflocals] = n
                         else
                             noflocals = 1
-                            localpars = { n }
+                            pars = { n }
                         end
                     elseif id == dir_code then
-                        if localpar and not localdir and subtype(n) == cancel_code then
-                            localdir = n
+                        if par and not dir and subtype(n) == cancel_code then
+                            dir = n
                         end
                     end
                 end
@@ -1589,14 +1590,14 @@ do
                     setattributelist(i,start)
                     replace_node(indent,i)
                 end
-                if localdir then
-                    local d = new_direction((getdirection(localpar)))
+                if dir then
+                    local d = new_direction((getdirection(par)))
                     setattributelist(d,start)
-                    replace_node(localpar,d)
+                    replace_node(par,d)
                 end
-                if localpars then
+                if pars then
                     for i=1,noflocals do
-                        start = remove_node(start,localpars[i],true)
+                        start = remove_node(start,pars[i],true)
                     end
                 end
             end
@@ -1651,9 +1652,9 @@ do
             local finished_line = nil
             if adjust_spacing > 0 then
                 statistics.nofadjustedlines = statistics.nofadjustedlines + 1
-                finished_line = xpack_nodes(start,cur_width,"cal_expand_ratio",par.par_break_dir,par.first_line,current_line) -- ,current_break.analysis)
+                finished_line = xpack_nodes(start,cur_width,packing_expanded,par.par_break_dir,par.first_line,current_line) -- ,current_break.analysis)
             else
-                finished_line = xpack_nodes(start,cur_width,"exactly",par.par_break_dir,par.first_line,current_line) -- ,current_break.analysis)
+                finished_line = xpack_nodes(start,cur_width,packing_exactly,par.par_break_dir,par.first_line,current_line) -- ,current_break.analysis)
             end
             if protrude_chars > 0 then
                 statistics.nofprotrudedlines = statistics.nofprotrudedlines + 1
@@ -1717,7 +1718,7 @@ do
                     local id = getid(next)
                     if id == glyph_code then
                         break
-                    elseif id == localpar_code then
+                    elseif id == par_code then
                         -- nothing
                     elseif id < math_code then
                         -- messy criterium
@@ -1754,7 +1755,7 @@ par.head = head
                 if getnext(h) then
                     report_parbuilders("something is left over")
                 end
-                if getid(h) ~= localpar_code then
+                if getid(h) ~= par_code then
                     report_parbuilders("no local par node")
                 end
             end
@@ -2452,7 +2453,7 @@ par.head = head
 
             if current then
                 local id = getid(current)
-                if id == localpar_code then
+                if id == par_code then
                     par.init_internal_left_box       = getfield(current,"box_left")
                     par.init_internal_left_box_width = getfield(current,"box_left_width")
                     par.internal_pen_inter           = getfield(current,"pen_inter")
@@ -2615,7 +2616,7 @@ par.head = head
                     p_active, n_active = try_break(getpenalty(current), unhyphenated_code, par, first_p, current, checked_expansion)
                 elseif id == dir_code then
                     par.line_break_dir = checked_line_dir(dirstack,current) or par.line_break_dir
-                elseif id == localpar_code then
+                elseif id == par_code then
                     par.internal_pen_inter       = getfield(current,"pen_inter")
                     par.internal_pen_broken      = getfield(current,"pen_broken")
                     par.internal_left_box        = getfield(current,"box_left")
@@ -2881,7 +2882,7 @@ do
 
     local function common_message(hlist,line,str)
         write_nl("")
-        if status.output_active then -- unset
+        if CONTEXTLMTXMODE > 0 and tex.getoutputactive() or status.output_active then
             write(str," has occurred while \\output is active")
         else
             write(str)
@@ -2961,7 +2962,7 @@ do
             setlist(hlist,head)
         end
 
-        local cal_expand_ratio  = method == "cal_expand_ratio" or method == "subst_ex_font"
+        local cal_expand_ratio  = method == packing_expanded or method == packing_substitute
 
         direction               = direction or texget("textdir")
 
@@ -3136,7 +3137,7 @@ do
         if pre_adjust_tail then
             pre_adjust_tail.next = nil -- todo
         end
-        if method == "additional" then
+        if method == packing_additional then
             width = width + natural
         end
         setwhd(hlist,width,height,depth)

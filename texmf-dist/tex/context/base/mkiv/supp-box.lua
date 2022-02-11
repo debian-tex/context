@@ -1,5 +1,6 @@
 if not modules then modules = { } end modules ['supp-box'] = {
     version   = 1.001,
+    optimize  = true,
     comment   = "companion to supp-box.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
@@ -28,6 +29,11 @@ local vlist_code    = nodecodes.vlist
 local glue_code     = nodecodes.glue
 local penalty_code  = nodecodes.penalty
 local glyph_code    = nodecodes.glyph
+local par_code      = nodecodes.par
+
+local indent_code   = nodes.listcodes.indent
+
+local hmode_code    = tex.modelevels.horizontal
 
 local nuts          = nodes.nuts
 local tonut         = nuts.tonut
@@ -39,11 +45,13 @@ local getprev       = nuts.getprev
 local getboth       = nuts.getboth
 local getdisc       = nuts.getdisc
 local getid         = nuts.getid
+local getsubtype    = nuts.getsubtype
 local getlist       = nuts.getlist
 local getattribute  = nuts.getattribute
 local getbox        = nuts.getbox
 local getdirection  = nuts.getdirection
 local getwidth      = nuts.getwidth
+local getwhd        = nuts.getwhd
 local takebox       = nuts.takebox
 
 ----- setfield      = nuts.setfield
@@ -70,6 +78,7 @@ local getdimensions = nuts.dimensions
 local hpack         = nuts.hpack
 local vpack         = nuts.vpack
 local traverse_id   = nuts.traverse_id
+local traverse      = nuts.traverse
 local free          = nuts.free
 local findtail      = nuts.tail
 
@@ -89,6 +98,7 @@ local setlistcolor  = nodes.tracers.colors.setlist
 local texget        = tex.get
 local texgetbox     = tex.getbox
 local texsetdimen   = tex.setdimen
+local texgetnest    = tex.getnest
 
 local function hyphenatedlist(head,usecolor)
     local current = head and tonut(head)
@@ -825,3 +835,68 @@ implement {
         context(limitate(t))
     end,
 }
+
+implement {
+    name      = "doifelseindented",
+    public    = true,
+    protected = true,
+    actions   = function()
+        local n = texgetnest()
+        local b = false
+        if n.mode == hmode_code then
+            n = tonut(n.head)
+            while n do
+                n = getnext(n)
+                if n then
+                    local id = getid(n)
+                    if id == hlist_code then
+                        if getsubtype(n) == indent_code then
+                            b = getwidth(n) > 0
+                            break
+                        end
+                    elseif id ~= par_code then
+                        break
+                    end
+                end
+            end
+        end
+        commands.doifelse(b)
+    end,
+}
+
+implement {
+    name      = "noflinesinbox",
+    public    = true,
+    protected = false,
+    arguments = "integer",
+    actions   = function(n)
+        local c = 0
+        local b = getbox(n)
+        if b then
+            b = getlist(b)
+            if b then
+                for n, id in traverse(b) do
+                    if id == hlist_code or id == vlist_code then
+                        c = c + 1
+                    end
+                end
+            end
+        end
+        context(c)
+    end,
+}
+
+do
+
+    local takebox = tex.takebox
+
+    interfaces.implement {
+        name      = "thebox",
+        public    = true,
+        arguments = "integer",
+        actions   = function(n)
+            context(takebox(n))
+        end
+    }
+
+end

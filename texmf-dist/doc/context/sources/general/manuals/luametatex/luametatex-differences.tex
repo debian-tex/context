@@ -10,7 +10,7 @@ As \LUAMETATEX\ is a leaner and meaner \LUATEX, this chapter will discuss
 what is gone. We start with the primitives that were dropped.
 
 \starttabulate[|l|pl|]
-\NC fonts       \NC \type {\letterspacefont}
+\BC fonts       \NC \type {\letterspacefont}
                     \type {\copyfont}
                     \type {\expandglyphsinfont}
                     \type {\ignoreligaturesinfont}
@@ -18,7 +18,7 @@ what is gone. We start with the primitives that were dropped.
                     \type {\leftghost}
                     \type {\rightghost}
                 \NC \NR
-\NC backend     \NC \type {\dviextension}
+\BC backend     \NC \type {\dviextension}
                     \type {\dvivariable }
                     \type {\dvifeedback}
                     \type {\pdfextension}
@@ -28,14 +28,14 @@ what is gone. We start with the primitives that were dropped.
                     \type {\draftmode}
                     \type {\outputmode}
                 \NC \NR
-\NC dimensions  \NC \type {\pageleftoffset}
+\BC dimensions  \NC \type {\pageleftoffset}
                     \type {\pagerightoffset}
                     \type {\pagetopoffset}
                     \type {\pagebottomoffset}
                     \type {\pageheight}
                     \type {\pagewidth}
                 \NC \NR
-\NC resources   \NC \type {\saveboxresource}
+\BC resources   \NC \type {\saveboxresource}
                     \type {\useboxresource}
                     \type {\lastsavedboxresourceindex}
                     \type {\saveimageresource}
@@ -43,11 +43,11 @@ what is gone. We start with the primitives that were dropped.
                     \type {\lastsavedimageresourceindex}
                     \type {\lastsavedimageresourcepages}
                 \NC \NR
-\NC positioning \NC \type {\savepos}
+\BC positioning \NC \type {\savepos}
                     \type {\lastxpos}
                     \type {\lastypos}
                 \NC \NR
-\NC directions  \NC \type {\textdir}
+\BC directions  \NC \type {\textdir}
                     \type {\linedir}
                     \type {\mathdir}
                     \type {\pardir}
@@ -56,21 +56,25 @@ what is gone. We start with the primitives that were dropped.
                     \type {\pagedirection}
                     \type {\bodydirection}
                 \NC \NR
-\NC randomizer  \NC \type {\randomseed}
+\BC randomizer  \NC \type {\randomseed}
                     \type {\setrandomseed}
                     \type {\normaldeviate}
                     \type {\uniformdeviate}
                 \NC \NR
-\NC utilities   \NC \type {\synctex}
+\BC utilities   \NC \type {\synctex}
                 \NC \NR
-\NC extensions  \NC \type {\latelua}
+\BC extensions  \NC \type {\latelua}
                     \type {\lateluafunction}
-                    \type {\immediate}
                     \type {\openout}
                     \type {\write}
                     \type {\closeout}
+                    \type {\openin}
+                    \type {\read}
+                    \type {\readline}
+                    \type {\closein}
+                    \type {\ifeof}
                 \NC \NR
-\NC control     \NC \type {\suppressfontnotfounderror}
+\BC control     \NC \type {\suppressfontnotfounderror}
                     \type {\suppresslongerror}
                     \type {\suppressprimitiveerror}
                     \type {\suppressmathparerror}
@@ -78,10 +82,11 @@ what is gone. We start with the primitives that were dropped.
                     \type {\suppressoutererror}
                     \type {\mathoption}
                 \NC \NR
-\NC whatever    \NC \type {\primitive}
+\BC system      \NC \type {\primitive}
                     \type {\ifprimitive}
+                    \type {\formatname}
                 \NC \NR
-\NC ignored     \NC \type {\long}
+\BC ignored     \NC \type {\long}
                     \type {\outer}
                     \type {\mag}
                 \NC \NR
@@ -96,48 +101,66 @@ and they don't work well in \LUATEX\ anyway. We only have two directions left.
 The primitive related extensions were not that useful and reliable so they have
 been removed. There are some new variants that will be discussed later. The \type
 {\outer} and \type {\long} prefixes are gone as they don't make much sense
-nowadays and them becoming dummies opened the way to something new, again to be
-discussed elsewhere. I don't think that (\CONTEXT) users will notice it. The
-\type {\suppress..} features are now default.
+nowadays and them becoming dummies opened the way to something new: control
+sequence properties that permit protection against as well as controlled
+overloading of definitions. I don't think that (\CONTEXT) users will notice these
+prefixed being gone. The definition and parsing related \type {\suppress..}
+features are now default and can't be changed so related primitives are gone.
 
 The \type {\shipout} primitive does no ship out but just erases the content of
-the box, if that hasn't happened already in another way.
-
-The extension primitives relate to the backend (when not immediate) and can be
-implemented as part of a backend design using generic whatsits. There is only one
-type of whatsit now. In fact we're now closer to original \TEX\ with respect to
-the extensions.
+the box, if that hasn't happened already in another way. A macropackage should
+implement its own backend and related shipout. Talking of backend, the extension
+primitives that relate to backends can be implemented as part of a backend design
+using generic whatsits. There is only one type of whatsit now. In fact we're now
+closer to original \TEX\ with respect to the extensions.
 
 The \type {img} library has been removed as it's rather bound to the backend. The
 \type {slunicode} library is also gone. There are some helpers in the string
 library that can be used instead and one can write additional \LUA\ code if
-needed. There is no longer a \type {pdf} backend library.
+needed. There is no longer a \type {pdf} backend library but we have an up to
+date \PDF\ parsing library on board.
 
 In the \type {node}, \type {tex} and \type {status} library we no longer have
 helpers and variables that relate to the backend. The \LUAMETATEX\ engine is in
-principle \DVI\ and \PDF\ unaware. There are only generic whatsit nodes that can
-be used for some management related tasks. For instance you can use them to
-implement user nodes.
+principle \DVI\ and \PDF\ unaware. There are, as mentioned, only generic whatsit
+nodes that can be used for some management related tasks. For instance you can
+use them to implement user nodes. More extensive status information is provided
+in the overhauled status library.
 
 The margin kern nodes are gone and we now use regular kern nodes for them. As a
 consequence there are two extra subtypes indicating the injected left or right
 kern. The glyph field served no real purpose so there was no reason for a special
 kind of node.
 
-The \KPSE\ library is no longer built|-|in. Because there is no backend, quite
-some file related callbacks could go away. The following file related callbacks
+The \KPSE\ library is no longer built|-|in, but one can use an external \KPSE\
+library, assuming that it is present on the system, because the engine has a so
+called optional library interface to it. Because there is no backend, quite some
+file related callbacks could go away. The following file related callbacks
 remained (till now):
 
 \starttyping
-find_write_file find_data_file find_format_file
-open_data_file read_data_file
+find_write_file find_format_file open_data_file
 \stoptyping
 
-Also callbacks related to errors stay:
+The callbacks related to errors are changed:
 
 \starttyping
-show_error_hook show_lua_error_hook,
+intercept_tex_error intercept_lua_error
 show_error_message show_warning_message
+\stoptyping
+
+There is a hook that gets called when one of the fundamental memory structures
+gets reallocated.
+
+\starttyping
+trace_memory
+\stoptyping
+
+When you use the overload protect mechanisms, a callback can be plugged in to handle
+exceptions:
+
+\starttyping
+handle_overload
 \stoptyping
 
 The (job) management hooks are kept:
@@ -158,19 +181,9 @@ show_whatsit
 Being the core of extensibility, the typesetting callbacks of course stayed. This
 is what we ended up with:
 
-% \ctxlua{inspect(table.sortedkeys(callbacks.list))}
-
-\starttyping
-find_log_file, find_data_file, find_format_file, open_data_file, read_data_file,
-process_jobname, start_run, stop_run, define_font, pre_output_filter,
-buildpage_filter, hpack_filter, vpack_filter, hyphenate, ligaturing, kerning,
-pre_linebreak_filter, linebreak_filter, post_linebreak_filter,
-append_to_vlist_filter, mlist_to_hlist, pre_dump, start_file, stop_file,
-handle_error_hook, show_error_hook, show_lua_error_hook, show_error_message,
-show_warning_message, hpack_quality, vpack_quality, insert_local_par,
-contribute_filter, build_page_insert, wrapup_run, new_graf, make_extensible,
-show_whatsit, terminal_input,
-\stoptyping
+\startalign[flushleft,nothyphenated]
+\tt \cldcontext{table.concat(table.sortedkeys(callbacks.list), ", ")}
+\stopalign
 
 As in \LUATEX\ font loading happens with the following callback. This time it
 really needs to be set because there is no built|-|in font loader.
@@ -182,10 +195,10 @@ define_font
 There are all kinds of subtle differences in the implementation, for instance we
 no longer intercept \type {*} and \type {&} as these were already replaced long
 ago in \TEX\ engines by command line options. Talking of options, only a few are
-left.
+left. All input goes via \LUA, even the console.
 
 We took our time for reaching a stable state in \LUATEX. Among the reasons is the
-fact that most was experimented with in \CONTEXT. It took many man|-|years to
+fact that most was experimented with in \CONTEXT. It took many years of work to
 decide what to keep and how to do things. Of course there are places when things
 can be improved and it might happen in \LUAMETATEX. Contrary to what is sometimes
 suggested, the \LUATEX|-|\CONTEXT\ \MKIV\ combination (assuming matched versions)
@@ -207,10 +220,71 @@ might be noticed that it is not possible to backtrack or inject something. Of
 course it is no big deal to implement all that in \LUA\ if needed. It removes a
 system dependency and makes for a bit cleaner code.
 
-There are new primitives too as well as some extensions to existing primitive
+There are new primitives as well as some extensions to existing primitive
 functionality. These are described in following chapters but there might be
 hidden treasures in the binary. If you locate them, don't automatically assume
-them to stay, some might be part of experiments!
+them to stay, some might be part of experiments! There are for instance a few
+csname related definers, we have integer and dimension constants, the macro
+argument parser can be brought in tolerant mode, the repertoire of conditionals
+has been extended, some internals can be controlled (think of normalization of
+lines, hyphenation etc.), and macros can be protected against user overload. Not
+all is discussed in detail in this manual but there are introductions in the
+\CONTEXT\ distribution that explain them. But the \TEX\ kernel is of course
+omnipresent.
+
+\startluacode
+
+local luametatex = tex.primitives()
+local luatex     = table.load("luatex-primitives.lua")
+
+if not luatex then
+    local tex = "\\starttext \\ctxlua {table.save(tex.jobname .. '.lua',tex.primitives())} \\stoptext"
+
+    io.savedata("luatex-primitives.tex",    tex)
+
+    os.execute("context --luatex --once luatex-primitives")
+
+    luatex = table.load("luatex-primitives.lua")
+end
+
+
+if luatex and luametatex then
+
+    luatex     = table.tohash(luatex)
+    luametatex = table.tohash(luametatex)
+
+ -- context.page()
+
+    context("The following primitives are available in \\LUATEX\\ but not in \\LUAMETATEX.  ")
+    context("Some of these are emulated in \\CONTEXT.")
+
+    context.startcolumns { n = 2 }
+        for k, v in table.sortedhash(luatex) do
+            if not luametatex[k] then
+                context.type(k)
+                context.crlf()
+            end
+        end
+    context.stopcolumns()
+
+
+ -- context.page()
+
+    context("The following primitives are available in \\LUAMETATEX\\ only. ")
+    context("At some point in time some might be added to \\LUATEX.")
+
+    context.startcolumns { n = 2 }
+        for k, v in table.sortedhash(luametatex) do
+            if not luatex[k] then
+                context.type(k)
+                context.crlf()
+            end
+        end
+    context.stopcolumns()
+
+end
+
+\stopluacode
 
 \stopchapter
 

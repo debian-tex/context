@@ -1,4 +1,4 @@
-if not modules then modules = { } end modules ['node-met'] = {
+if not modules then modules = { } end modules ['node-nut'] = {
     version   = 1.001,
     comment   = "companion to node-ini.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
@@ -200,11 +200,11 @@ nuts.unset_attribute         = direct.unset_attribute
 nuts.usedlist                = direct.usedlist
 nuts.uses_font               = direct.uses_font
 nuts.vpack                   = direct.vpack
-nuts.writable_spec           = direct.writable_spec
 nuts.write                   = direct.write
 nuts.mlist_to_hlist          = direct.mlist_to_hlist
 nuts.has_dimensions          = direct.has_dimensions
 nuts.start_of_par            = direct.start_of_par
+nuts.migrate                 = direct.migrate
 
 if not nuts.mlist_to_hlist then
 
@@ -295,6 +295,7 @@ nuts.getdepth         = direct.getdepth
 nuts.setdepth         = direct.setdepth
 nuts.getshift         = direct.getshift
 nuts.setshift         = direct.setshift
+nuts.gettotal         = direct.gettotal
 
 -- lmtx compatibility
 
@@ -307,6 +308,11 @@ nuts.setglyphdata     = direct.setglyphdata or function(n,d) set_attribute(n,0,d
 nuts.getruledata      = direct.getglyphdata and getdata or function(n)   return getfield(n,"transform")   end
 nuts.setruledata      = direct.setglyphdata and setdata or function(n,d) return setfield(n,"transform",d) end
 
+-- maybe some day: [g|s]etglyphoptions and then use attribute for mkiv / generic but not now
+
+nuts.getoptions       = direct.getoptions or function() return 0 end
+nuts.setoptions       = direct.setoptions or function() end
+
 -- so far
 
 nuts.getnucleus       = direct.getnucleus
@@ -315,6 +321,10 @@ nuts.getsup           = direct.getsup
 nuts.setsup           = direct.setsup
 nuts.getsub           = direct.getsub
 nuts.setsub           = direct.setsub
+nuts.getsuppre        = direct.getsuppre
+nuts.setsuppre        = direct.setsuppre
+nuts.getsubpre        = direct.getsubpre
+nuts.setsubpre        = direct.setsubpre
 
 nuts.getchar          = direct.getchar
 nuts.setchar          = direct.setchar
@@ -326,6 +336,8 @@ nuts.setfam           = direct.setfam
 nuts.getboth          = direct.getboth
 nuts.setboth          = direct.setboth
 nuts.setlink          = direct.setlink
+nuts.exchange         = direct.exchange
+nuts.reverse          = direct.reverse
 nuts.setsplit         = direct.setsplit
 
 nuts.getlist          = direct.getlist -- only hlist and vlist !
@@ -388,7 +400,7 @@ local d_setlink       = direct.setlink
 local d_setboth       = direct.setboth
 local d_getboth       = direct.getboth
 
-local remove = CONTEXTLMTXMODE > 0 and d_remove_node or function(head,current,free_too)
+local remove = function(head,current,free_too)
     if current then
         local h, c = d_remove_node(head,current)
         if free_too then
@@ -406,15 +418,40 @@ end
 
 if not nuts.start_of_par then
 
-    local localparcodes = nodes.localparcodes
-    local hmodepar_code = localparcodes.vmode_par
-    local vmodepar_code = localparcodes.hmode_par
+    local parcodes      = nodes.parcodes
+    local hmodepar_code = parcodes.vmode_par
+    local vmodepar_code = parcodes.hmode_par
 
     local getsubtype    = nuts.getsubtype
 
     function nuts.start_of_par(n)
         local s = getsubtype(n)
         return s == hmodepar_code or s == vmodepar_code
+    end
+
+end
+
+-- for now
+
+if not nuts.exchange then
+
+    local d_getprev = direct.getprev
+    local d_getnext = direct.getnext
+    local d_setlink = direct.setlink
+
+    function nuts.exchange(head,first,second)
+        if first then
+            if not second then
+                second = d_getnext(first)
+            end
+            if second then
+                d_setlink(d_getprev(first),second,first,d_getnext(second))
+                if first == head then
+                    return second
+                end
+            end
+        end
+        return head
     end
 
 end
@@ -433,6 +470,17 @@ if not nuts.getpre then
     function nuts.setpre    (n,h) d_setfield(d,"pre",    h) end
     function nuts.setpost   (n,h) d_setfield(d,"post",   h) end
     function nuts.setreplace(n,h) d_setfield(d,"replace",h) end
+
+end
+
+if not nuts.gettotal then
+
+    local d_getheight = direct.getheight
+    local d_getdepth  = direct.getdepth
+
+    function nuts.gettotal(n)
+        return (d_getheight(n) or 0) + (d_getdepth(n) or 0)
+    end
 
 end
 
@@ -768,8 +816,6 @@ nuts.tracedslide       = tracedslide
 nuts.untracedslide     = untracedslide
 nuts.nestedtracedslide = nestedtracedslide
 
--- nuts.slide          = tracedslide
-
 -- this might move
 
 local propertydata = direct.get_properties_table(true)
@@ -833,6 +879,7 @@ local getstate = direct.getstate
 local setstate = direct.setstate
 
 if not setstate or not getstate then
+
     setstate = function(n,v)
         local p = propertydata[n]
         if p then
@@ -841,6 +888,7 @@ if not setstate or not getstate then
             propertydata[n] = { state = v }
         end
     end
+
     getstate = function(n,v)
         local p = propertydata[n]
         if p then
@@ -853,11 +901,18 @@ if not setstate or not getstate then
             return nil
         end
     end
-    nuts.setstate = setstate
-    nuts.getstate = getstate
 end
 
-nuts.isdone = function(n,k)
+nuts.setstate = setstate
+nuts.getstate = getstate
+
+local getscript = direct.getscript or function(n,v) end -- elsewhere
+local setscript = direct.setscript or function(n,v) end -- elsewhere
+
+nuts.setscript = getscript
+nuts.getscript = setscript
+
+function nuts.isdone(n,k)
     local p = propertydata[n]
     if not p then
         propertydata[n] = { [k] = true }
@@ -870,9 +925,6 @@ nuts.isdone = function(n,k)
     end
     return v
 end
-
--- nodes.setprop = nodes.setproperty
--- nodes.getprop = nodes.getproperty
 
 function nuts.copy_properties(source,target,what)
     local newprops = propertydata[source]

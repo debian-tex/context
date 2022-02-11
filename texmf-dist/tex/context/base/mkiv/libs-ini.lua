@@ -13,10 +13,10 @@ if not modules then modules = { } end modules ['libs-ini'] = {
 -- is doing.
 
 local type, unpack = type, unpack
+local find = string.find
 
 -- here we implement the resolver
 
-local type = type
 
 local nameonly      = file.nameonly
 local joinfile      = file.join
@@ -30,8 +30,10 @@ local expandpaths   = resolvers.expandedpathlistfromvariable
 
 local report        = logs.reporter("resolvers","libraries")
 local trace         = false
+local silent        = false
 
-trackers.register("resolvers.lib", function(v) trace = v end)
+trackers.register("resolvers.lib",        function(v) trace  = v end)
+trackers.register("resolvers.lib.silent", function(v) silent = v end)
 
 local function findlib(required) -- todo: cache
     local suffix = os.libsuffix or "so"
@@ -143,16 +145,19 @@ function libraries.optionalloaded(name,libnames)
                     end
                 end
                 local initialized = thelib_initialize(unpack(libnames))
-                if initialized then
-                    report("using library '% + t'",libnames)
-                else
+                if not initialized then
                     report("unable to initialize library '% + t'",libnames)
+                elseif not silent then
+                    report("using library '% + t'",libnames)
                 end
                 return initialized
             end
         end
     end
 end
+
+-- For the moment the next blob is needed when we run \MTXRUN\ on top of \LUATEX\ and
+-- \LUAJITTEX\ but at some point we will {\em always} assume \LUAMETATEX\ as runner.
 
 if FFISUPPORTED and ffi and ffi.load then
 
@@ -194,3 +199,19 @@ end
 --         }
 --     end
 -- }
+
+local dofile       = dofile
+local savedrequire = require
+
+function require(name,version)
+    if find(name,"%.lua$") or find(name,"%.lmt$") then
+        local m = dofile(findfile(name))
+        if m then
+            package.loaded[name] = m
+            return m
+        end
+    else
+        return savedrequire(name)
+    end
+end
+

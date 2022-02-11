@@ -1,8 +1,8 @@
 name context.doc
 category Package
-revision 54364
+revision 58167
 shortdesc doc files of context
-docfiles size=27880
+docfiles size=29399
  texmf-dist/doc/context/documents/general/leaflets/leaflet-context.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-luametatex.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-mixing.pdf
@@ -15,6 +15,7 @@ docfiles size=27880
  texmf-dist/doc/context/documents/general/magazines/mag-1102-mkiv.pdf
  texmf-dist/doc/context/documents/general/magazines/mag-1103-mkiv.pdf
  texmf-dist/doc/context/documents/general/magazines/mag-1104-mkiv.pdf
+ texmf-dist/doc/context/documents/general/magazines/mag-1105-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/about.pdf
  texmf-dist/doc/context/documents/general/manuals/bidi.pdf
  texmf-dist/doc/context/documents/general/manuals/charts-mkiv.pdf
@@ -35,9 +36,15 @@ docfiles size=27880
  texmf-dist/doc/context/documents/general/manuals/languages-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/libraries-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-boxes.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-characters.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-conditionals.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-expansion.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-grouping.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-macros.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-paragraphs.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-registers.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-scope.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-security.pdf
  texmf-dist/doc/context/documents/general/manuals/lua-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/luametafun.pdf
  texmf-dist/doc/context/documents/general/manuals/luametatex.pdf
@@ -56,6 +63,7 @@ docfiles size=27880
  texmf-dist/doc/context/documents/general/manuals/notnow.pdf
  texmf-dist/doc/context/documents/general/manuals/onandon.pdf
  texmf-dist/doc/context/documents/general/manuals/pagecolumns.pdf
+ texmf-dist/doc/context/documents/general/manuals/primitives.pdf
  texmf-dist/doc/context/documents/general/manuals/rules-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/spacing-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/spreadsheets-mkiv.pdf
@@ -195,6 +203,27 @@ docfiles size=27880
  texmf-dist/doc/context/presentations/context/2017/context-2017-tables.tex
  texmf-dist/doc/context/presentations/context/2019/context-2019-lmtx.pdf
  texmf-dist/doc/context/presentations/context/2019/context-2019-lmtx.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-concepts.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-concepts.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-datatypes.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-datatypes.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-ecmascript.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-ecmascript.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-gpdemo.gp
+ texmf-dist/doc/context/presentations/context/2020/context-2020-gpdemo.svg
+ texmf-dist/doc/context/presentations/context/2020/context-2020-implementers.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-implementers.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-luametatex.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-luametatex.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-mkii-mkiv-mkxl.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-mkii-mkiv-mkxl.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-mp.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-mp.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-sin.svg
+ texmf-dist/doc/context/presentations/context/2020/context-2020-svg.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-svg.tex
+ texmf-dist/doc/context/presentations/context/2020/context-2020-tokens.pdf
+ texmf-dist/doc/context/presentations/context/2020/context-2020-tokens.tex
  texmf-dist/doc/context/presentations/examples/present-balls-001.pdf
  texmf-dist/doc/context/presentations/examples/present-balls-001.tex
  texmf-dist/doc/context/presentations/examples/present-colorful-001.pdf
@@ -397,6 +426,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/magazines/mag-1102-mkiv.tex
  texmf-dist/doc/context/sources/general/magazines/mag-1103-mkiv.tex
  texmf-dist/doc/context/sources/general/magazines/mag-1104-mkiv.tex
+ texmf-dist/doc/context/sources/general/magazines/mag-1105-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/about/about-calls.tex
  texmf-dist/doc/context/sources/general/manuals/about/about-contents.tex
  texmf-dist/doc/context/sources/general/manuals/about/about-environment.tex
@@ -469,10 +499,12 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/cld/cld-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-moreonfunctions.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-nicetoknow.tex
+ texmf-dist/doc/context/sources/general/manuals/cld/cld-scanners.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-somemoreexamples.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-specialcommands.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-summary.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/cld/cld-variables.tex
  texmf-dist/doc/context/sources/general/manuals/cld/cld-verbatim.tex
  texmf-dist/doc/context/sources/general/manuals/colors/colors-basics.tex
  texmf-dist/doc/context/sources/general/manuals/colors/colors-environment.tex
@@ -552,12 +584,17 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-expansion.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-fonts.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-keywords.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-libraries.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-normalization.tex
+ texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-numbers.tex
+ texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-parameters.tex
+ texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-parsing.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-pi.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-style.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-threesix.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-tokens.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore-whattex.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/evenmore.tex
  texmf-dist/doc/context/sources/general/manuals/evenmore/mozilla-svg-001.svg
@@ -568,6 +605,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-directions.tex
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-evolution.tex
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-feedback.tex
+ texmf-dist/doc/context/sources/general/manuals/followingup/followingup-fonts.tex
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-introduction.tex
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-logging.tex
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-lua.tex
@@ -685,14 +723,21 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/libraries/ecmascript-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/libraries/libraries-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-boxes.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-characters.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-conditionals.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-expansion.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-grouping.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-macros.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-paragraphs.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-registers.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-scope.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-security.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-style.tex
  texmf-dist/doc/context/sources/general/manuals/lua/lua-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-arrow.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-axis.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-chart.tex
+ texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-color.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-contents.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-contour.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-followtext.tex
@@ -706,16 +751,19 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-mesh.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-outline.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-placeholder.tex
+ texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-poisson.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-shade.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-style.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-surface.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-svg.tex
+ texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-technology.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-text.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-titlepage.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/mozilla-svg-001.svg
  texmf-dist/doc/context/sources/general/manuals/luametafun/mozilla-svg-002.svg
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-callbacks.tex
+ texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-codes.tex
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-contents.tex
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-differences.tex
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-enhancements.tex
@@ -737,6 +785,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-style.tex
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-tex.tex
  texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-titlepage.tex
+ texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-contents.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-enhancements.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-firstpage.tex
@@ -821,6 +870,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/mathml/wh-s-002.xml
  texmf-dist/doc/context/sources/general/manuals/mcommon.tex
  texmf-dist/doc/context/sources/general/manuals/metafun/cow-fun.mps
+ texmf-dist/doc/context/sources/general/manuals/metafun/gracht.mp
  texmf-dist/doc/context/sources/general/manuals/metafun/hacker.png
  texmf-dist/doc/context/sources/general/manuals/metafun/m-1.png
  texmf-dist/doc/context/sources/general/manuals/metafun/m-2.png
@@ -854,6 +904,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/metafun/metafun-sneaky.tex
  texmf-dist/doc/context/sources/general/manuals/metafun/metafun-styles.tex
  texmf-dist/doc/context/sources/general/manuals/metafun/metafun-syntax.tex
+ texmf-dist/doc/context/sources/general/manuals/metafun/metafun-text-lmtx.tex
  texmf-dist/doc/context/sources/general/manuals/metafun/metafun-text.tex
  texmf-dist/doc/context/sources/general/manuals/metafun/metafun-titlepage-paper.tex
  texmf-dist/doc/context/sources/general/manuals/metafun/metafun-titlepage-screen.tex
@@ -986,6 +1037,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/pagecolumns/pagecolumns-006.tex
  texmf-dist/doc/context/sources/general/manuals/pagecolumns/pagecolumns-007.tex
  texmf-dist/doc/context/sources/general/manuals/pagecolumns/pagecolumns.tex
+ texmf-dist/doc/context/sources/general/manuals/primitives/primitives.tex
  texmf-dist/doc/context/sources/general/manuals/publications/122176.pdf
  texmf-dist/doc/context/sources/general/manuals/publications/124484.mol
  texmf-dist/doc/context/sources/general/manuals/publications/124484.pdf
@@ -1174,6 +1226,7 @@ docfiles size=27880
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-injectors.tex
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-introduction.tex
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/workflows/workflows-parallel.tex
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-resources.tex
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-running.tex
  texmf-dist/doc/context/sources/general/manuals/workflows/workflows-setups.tex

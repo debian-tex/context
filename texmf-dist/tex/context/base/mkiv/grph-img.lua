@@ -97,6 +97,13 @@ do
         [0x01] = { name = "TEM",  zerolength = true }, -- temporary use
     }
 
+    setmetatableindex(tags, function(t,k)
+        -- we can add some tracing if needed (global) to get an idea
+        local v = "tag " .. k
+        t[k] = v
+        return v
+    end)
+
     -- More can be found in http://www.exif.org/Exif2-2.PDF but basically we have
     -- good old tiff tags here.
 
@@ -254,7 +261,7 @@ do
             local length    = 0
             local tagdata   = tags[category]
             if not tagdata then
-                specification.error = "invalid tag"
+                specification.error = "invalid tag " .. (category or "?")
                 break
             elseif tagdata.supported == false then
                 specification.error = "unsupported " .. tagdata.comment
@@ -602,8 +609,11 @@ do
                 local y = f:readcardinal4()
                 local u = f:readcardinal()
                 if u == 1 then -- meters
-                 -- x = round(0.0254 * x)
-                 -- y = round(0.0254 * y)
+                    -- there was a reason why this was commented
+                    x = round(0.0254 * x)
+                    y = round(0.0254 * y)
+                    if x == 0 then x = 1 end
+                    if y == 0 then y = 1 end
                 end
                 specification.xres = x
                 specification.yres = y

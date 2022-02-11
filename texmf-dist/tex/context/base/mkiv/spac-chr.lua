@@ -1,5 +1,6 @@
 if not modules then modules = { } end modules ['spac-chr'] = {
     version   = 1.001,
+    optimize  = true,
     comment   = "companion to spac-chr.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
@@ -32,12 +33,11 @@ local getnext            = nuts.getnext
 local getprev            = nuts.getprev
 local getattr            = nuts.getattr
 local setattr            = nuts.setattr
-local getlang            = nuts.getlang
+local getlanguage        = nuts.getlanguage
 local setchar            = nuts.setchar
 local setattrlist        = nuts.setattrlist
 local getfont            = nuts.getfont
 local setsubtype         = nuts.setsubtype
-local setdisc            = nuts.setdisc
 local isglyph            = nuts.isglyph
 
 local setcolor           = nodes.tracers.colors.set
@@ -57,7 +57,6 @@ local new_penalty        = nodepool.penalty
 local new_glue           = nodepool.glue
 local new_kern           = nodepool.kern
 local new_rule           = nodepool.rule
-local new_disc           = nodepool.disc
 
 local nodecodes          = nodes.nodecodes
 local gluecodes          = nodes.gluecodes
@@ -82,7 +81,7 @@ local fontquads          = fonthashes.quads
 
 local setmetatableindex  = table.setmetatableindex
 
-local a_character        = attributes.private("characters")
+local a_character        = attributes.private("characters") -- this will become a property (or maybe even a field)
 local a_alignstate       = attributes.private("alignstate")
 
 local c_zero   = byte('0')
@@ -130,7 +129,8 @@ end
 
 local function nbsp(head,current)
     local para = fontparameters[getfont(current)]
-    if getattr(current,a_alignstate) == 1 then -- flushright
+    local attr = getattr(current,a_alignstate) or 0
+    if attr >= 1 or attr <= 3 then -- flushright
         head, current = inject_nobreak_space(0x00A0,head,current,para.space,0,0)
     else
         head, current = inject_nobreak_space(0x00A0,head,current,para.space,para.spacestretch,para.spaceshrink)
@@ -294,30 +294,6 @@ local methods = {
 }
 
 characters.methods = methods
-
--- function characters.handler(head) -- todo: use traverse_id
---     local current = head
---     while current do
---         local char, id = isglyph(current)
---         if char then
---             local next   = getnext(current)
---             local method = methods[char]
---             if method then
---                 if trace_characters then
---                     report_characters("replacing character %C, description %a",char,lower(chardata[char].description))
---                 end
---                 local h = method(head,current)
---                 if h then
---                     head = remove_node(h,current,true)
---                 end
---             end
---             current = next
---         else
---             current = getnext(current)
---         end
---     end
---     return head
--- end
 
 -- this also works ok in math as we run over glyphs and these stay glyphs ... not sure
 -- about scripts and such but that is not important anyway ... some day we can consider

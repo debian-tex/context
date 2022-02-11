@@ -9,6 +9,8 @@ if not modules then modules = { } end modules ['font-chk'] = {
 -- possible optimization: delayed initialization of vectors
 -- move to the nodes namespace
 
+-- This is old code and I'll make a nicer one for lmtx some day.
+
 local next = next
 local floor = math.floor
 
@@ -248,11 +250,14 @@ local function addmissingsymbols(tfmdata) -- we can have an alternative with rul
             end
         end
     end
-    if #collected > 0 then
-        addcharacters(properties.id, {
-            type       = "real",
-            characters = collected,
-        })
+    if next(collected) then
+        local id = properties.id
+        if id then
+            addcharacters(properties.id, {
+                type       = "real",
+                characters = collected,
+            })
+        end
     end
 end
 
@@ -267,12 +272,6 @@ registerotffeature {
 
 fonts.loggers.add_placeholders        = function(id) addmissingsymbols(fontdata[id or true]) end
 fonts.loggers.category_to_placeholder = mapping
-
-function commands.getplaceholderchar(name)
-    local id = currentfont()
-    addmissingsymbols(fontdata[id])
-    context(getprivatenode(fontdata[id],name))
-end
 
 -- todo in luatex: option to add characters (just slots, no kerns etc)
 -- we can do that now so ...

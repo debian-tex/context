@@ -1292,13 +1292,26 @@ end
 
 xml.convert = xmlconvert
 
-function xml.inheritedconvert(data,xmldata) -- xmldata is parent
+function xml.inheritedconvert(data,xmldata,cleanup) -- xmldata is parent
     local settings = xmldata.settings
     if settings then
         settings.parent_root = xmldata -- to be tested
     end
  -- settings.no_root = true
     local xc = xmlconvert(data,settings) -- hm, we might need to locate settings
+    if cleanup then
+        local x = xc.dt
+        if x then
+            x = x[1]
+            if x and x.tg == "@pi@" then
+                local dt = x.dt
+                local pi = dt and dt[1]
+                if type(pi) == "string" and find(pi,"^xml") then
+                    remove(dt,1)
+                end
+            end
+        end
+    end
  -- xc.settings = nil
  -- xc.entities = nil
  -- xc.special = nil
@@ -1414,9 +1427,17 @@ local function copy(old,p)
                 new[k] = t
             elseif k == "dt" then
                 v.__p__ = nil
-                v = copy(v,new)
-                new[k] = v
-                v.__p__ = p
+                local t = { }
+                for i=1,#v do
+                    local vi = v[i]
+                    if type(vi) == "table" then
+                        t[i] = copy(vi,new)
+                    else
+                        t[i] = vi
+                    end
+                end
+                new[k] = t
+                t.__p__ = p
             else
                 new[k] = v -- so we also share entities, etc in root
             end

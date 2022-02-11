@@ -174,12 +174,12 @@ discussed here (yet).
 
 \stopsubsection
 
-\startsubsection[title={\nod {ins} nodes}]
+\startsubsection[title={\nod {insert} nodes}]
 
 \topicindex {nodes+insertions}
 \topicindex {insertions}
 
-This node relates to the \prm {insert} primitive and support the fields: \showfields{ins}.
+This node relates to the \prm {insert} primitive and support the fields: \showfields{insert}.
 
 \starttabulate[|l|l|p|]
 \DB field          \BC type   \BC explanation \NC \NR
@@ -455,7 +455,7 @@ fields: \showfields {glyph}.
 \NC \type{attr}             \NC node    \NC list of attributes \NC \NR
 \NC \type{char}             \NC number  \NC the character index in the font \NC \NR
 \NC \type{font}             \NC number  \NC the font identifier \NC \NR
-\NC \type{lang}             \NC number  \NC the language identifier \NC \NR
+\NC \type{language}         \NC number  \NC the language identifier \NC \NR
 \NC \type{left}             \NC number  \NC the frozen \type {\lefthyphenmnin} value \NC \NR
 \NC \type{right}            \NC number  \NC the frozen \type {\righthyphenmnin} value \NC \NR
 \NC \type{uchyph}           \NC boolean \NC the frozen \prm {uchyph} value \NC \NR
@@ -521,19 +521,19 @@ nodes: \showfields {boundary} are the only fields.
 \TB
 \NC \type{subtype} \NC number \NC \showsubtypes{boundary} \NC \NR
 \NC \type{attr}    \NC node   \NC list of attributes \NC \NR
-\NC \type{value}   \NC number \NC values 0--255 are reserved \NC \NR
+\NC \type{data}    \NC number \NC values 0--255 are reserved \NC \NR
 \LL
 \stoptabulate
 
 \stopsubsection
 
-\startsubsection[title={\nod {local_par} nodes}]
+\startsubsection[title={\nod {par} nodes}]
 
 \topicindex {nodes+paragraphs}
 \topicindex {paragraphs}
 
 This node is inserted at the start of a paragraph. You should not mess
-too much with this one. Valid fields are: \showfields {local_par}.
+too much with this one. Valid fields are: \showfields {par}.
 
 \starttabulate[|l|l|p|]
 \DB field                  \BC type   \BC explanation \NC \NR
@@ -613,7 +613,7 @@ into a single node type with separate subtypes for differentiation: \showfields
 
 Many object fields in math mode are either simple characters in a specific family
 or math lists or node lists: \type {math_char}, \type {math_text_char}, {sub_box}
-and \type {sub_mlist} and \type {delim}. These are endpoints and therefore the
+and \type {sub_mlist} and \type {delimiter}. These are endpoints and therefore the
 \type {next} and \type {prev} fields of these these subnodes are unused.
 
 Some of the more elaborate noads have an option field. The values in this bitset
@@ -681,11 +681,11 @@ its internal link structure is correct, otherwise an error is triggered.
 
 \stopsubsubsection
 
-\startsubsubsection[title={\nod {delim} subnodes}]
+\startsubsubsection[title={\nod {delimiter} subnodes}]
 
 There is a fifth subnode type that is used exclusively for delimiter fields. As
 before, the \type {next} and \type {prev} fields are unused, but we do have:
-\showfields {delim}.
+\showfields {delimiter}.
 
 \starttabulate[|l|l|p|]
 \DB field             \BC type   \BC explanation \NC \NR
@@ -854,14 +854,14 @@ renderer and might get adapted in the process.
 \starttabulate[|l|l|p|]
 \DB field          \BC type           \BC explanation \NC \NR
 \TB
-\NC \type{subtype} \NC number         \NC \showsubtypes{fence} \NC \NR
-\NC \type{attr}    \NC node           \NC list of attributes \NC \NR
-\NC \type{delim}   \NC delimiter node \NC delimiter specification \NC \NR
-\NC \type{italic}  \NC number         \NC italic correction \NC \NR
-\NC \type{height}  \NC number         \NC required height \NC \NR
-\NC \type{depth}   \NC number         \NC required depth \NC \NR
-\NC \type{options} \NC number         \NC bitset of rendering options \NC \NR
-\NC \type{class}   \NC number         \NC spacing related class \NC \NR
+\NC \type{subtype}   \NC number         \NC \showsubtypes{fence} \NC \NR
+\NC \type{attr}      \NC node           \NC list of attributes \NC \NR
+\NC \type{delimiter} \NC delimiter node \NC delimiter specification \NC \NR
+\NC \type{italic}    \NC number         \NC italic correction \NC \NR
+\NC \type{height}    \NC number         \NC required height \NC \NR
+\NC \type{depth}     \NC number         \NC required depth \NC \NR
+\NC \type{options}   \NC number         \NC bitset of rendering options \NC \NR
+\NC \type{class}     \NC number         \NC spacing related class \NC \NR
 \LL
 \stoptabulate
 
@@ -1182,12 +1182,9 @@ tail node.
 <node> tail = node.slide(<node> n)
 \stopfunctioncall
 
-After some callbacks automatic sliding takes place. This feature can be turned
-off with \type {node.fix_node_lists(false)} but you better make sure then that
-you don't mess up lists. In most cases \TEX\ itself only uses \type {next}
-pointers but your other callbacks might expect proper \type {prev} pointers too.
-Future versions of \LUATEX\ can add more checking but this will not influence
-usage.
+In most cases \TEX\ itself only uses \type {next} pointers but your other
+callbacks might expect proper \type {prev} pointers too. So, when you run into
+issues or are in doubt, apply the slide function before you return the list.
 
 \stopsubsubsection
 
@@ -1386,15 +1383,17 @@ The \type{traverse_char} iterator loops over the \nod {glyph} nodes in a list.
 Only nodes with a subtype less than 256 are seen.
 
 \startfunctioncall
-<node> n, font, char = node.traverse_char(<node> n)
+<direct> n, font, char = node.direct.traverse_char(<direct> n)
 \stopfunctioncall
 
 The \type{traverse_glyph} iterator loops over a list and returns the list and
 filters all glyphs:
 
 \startfunctioncall
-<node> n, font, char = node.traverse_glyph(<node> n)
+<direct> n, font, char = node.traverse_glyph(<direct> n)
 \stopfunctioncall
+
+These functions are only available for direct nodes.
 
 \stopsubsubsection
 
@@ -1405,14 +1404,99 @@ filters all glyphs:
 This iterator loops over the \nod {hlist} and \nod {vlist} nodes in a list.
 
 \startfunctioncall
-<node> n, id, subtype, list = node.traverse_list(<node> n)
+<direct> n, id, subtype, list = node.traverse_list(<direct> n)
 \stopfunctioncall
 
 The four return values can save some time compared to fetching these fields but
-in practice you seldom need them all. So consider it a (side effect of
-experimental) convenience.
+in practice you seldom need them all. This function is only available for direct
+nodes.
 
 \stopsubsubsection
+
+\startsubsubsection[title={\type {traverse_content}}]
+
+\libindex {traverse_content}
+
+This iterator loops over nodes that have content: \nod {hlist}, \nod {vlist}, \nod {glue}
+with leaders, \nod {glyphs}, \nod {disc} and \nod {rules} nodes.
+
+\startfunctioncall
+<direct> n, id, subtype[, list|leader] = node.traverse_list(<direct> n)
+\stopfunctioncall
+
+The four return values can save some time compared to fetching these fields but
+in practice you seldom need them all. This function is only available for direct
+nodes.
+
+\stopsubsubsection
+
+\startsubsubsection[title={Reverse traversing}]
+
+The traversers also support backward traversal. An optional extra boolean triggers
+this. Yet another optional boolean will automatically start at the end of the
+given list.
+
+\starttyping
+\setbox0\hbox{1 2 3 4 5}
+
+local l = tex.box[0].list
+for n in node.traverse(l) do
+    print("1>",n)
+end
+for n in node.traverse(l,true) do
+    print("2>",n)
+end
+for n in node.traverse(l,true,true) do
+    print("3>",n)
+end
+for n in node.traverse_id(nodes.nodecodes.glyph,l) do
+    print("4>",n)
+end
+for n in node.traverse_id(nodes.nodecodes.glyph,l,true) do
+    print("5>",n)
+end
+for n in node.traverse_id(nodes.nodecodes.glyph,l,true,true) do
+    print("6>",n)
+end
+\stoptyping
+
+This produces something similar to this (the glyph subtype indicates that it has
+been processed by the font handlers):
+
+\starttyping
+1>	<node :    nil <=   1112 =>    590 : glyph 32768>
+1>	<node :   1112 <=    590 =>   1120 : glue spaceskip>
+1>	<node :    590 <=   1120 =>    849 : glyph 32768>
+1>	<node :   1120 <=    849 =>   1128 : glue spaceskip>
+1>	<node :    849 <=   1128 =>    880 : glyph 32768>
+1>	<node :   1128 <=    880 =>   1136 : glue spaceskip>
+1>	<node :    880 <=   1136 =>   1020 : glyph 32768>
+1>	<node :   1136 <=   1020 =>   1144 : glue spaceskip>
+1>	<node :   1020 <=   1144 =>    nil : glyph 32768>
+2>	<node :    nil <=   1112 =>    590 : glyph 32768>
+3>	<node :   1020 <=   1144 =>    nil : glyph 32768>
+3>	<node :   1136 <=   1020 =>   1144 : glue spaceskip>
+3>	<node :    880 <=   1136 =>   1020 : glyph 32768>
+3>	<node :   1128 <=    880 =>   1136 : glue spaceskip>
+3>	<node :    849 <=   1128 =>    880 : glyph 32768>
+3>	<node :   1120 <=    849 =>   1128 : glue spaceskip>
+3>	<node :    590 <=   1120 =>    849 : glyph 32768>
+3>	<node :   1112 <=    590 =>   1120 : glue spaceskip>
+3>	<node :    nil <=   1112 =>    590 : glyph 32768>
+4>	<node :    nil <=   1112 =>    590 : glyph 32768>
+4>	<node :    590 <=   1120 =>    849 : glyph 32768>
+4>	<node :    849 <=   1128 =>    880 : glyph 32768>
+4>	<node :    880 <=   1136 =>   1020 : glyph 32768>
+4>	<node :   1020 <=   1144 =>    nil : glyph 32768>
+5>	<node :    nil <=   1112 =>    590 : glyph 32768>
+6>	<node :   1020 <=   1144 =>    nil : glyph 32768>
+6>	<node :    880 <=   1136 =>   1020 : glyph 32768>
+6>	<node :    849 <=   1128 =>    880 : glyph 32768>
+6>	<node :    590 <=   1120 =>    849 : glyph 32768>
+6>	<node :    nil <=   1112 =>    590 : glyph 32768>
+\stoptyping
+
+\stopsubsection
 
 \startsubsubsection[title={\type {find_node}}]
 
@@ -1436,8 +1520,8 @@ This helper returns the location of the first match at or after node \type {n}:
 
 \libindex {setglue}
 
-You can set the properties of a glue in one go. If you pass no values, the glue
-will become a zero glue.
+You can set the five properties of a glue in one go. If a non|-|numeric value is
+passed the property becomes zero.
 
 \startfunctioncall
 node.setglue(<node> n)
@@ -2095,6 +2179,16 @@ consistency. You can of course always define additional accessors using \type
 {getfield} and \type {setfield} with little overhead. When the second argument of
 \type {setattributelist} is \type {true} the current attribute list is assumed.
 
+The \type {reverse} function reverses a given list. The \type {exchange} function
+swaps two nodes; it takes upto three arguments: a head node, and one or two to be
+swapped nodes. When there is no third argument, it will assume that the node
+following node is to be used. So we have:
+
+\starttyping
+head = node.direct.reverse(head)
+head = node.direct.exchange(head,first,[second])
+\stoptyping
+
 In \CONTEXT\ some of the not performance|-|critical userdata variants are
 emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 
@@ -2112,22 +2206,23 @@ emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 \TB
 \supported {check_discretionaries}   \nop \yes \yes
 \supported {check_discretionary}     \nop \yes \yes
-\supported {copy}                    \yes \yes \relax
 \supported {copy_list}               \yes \yes \relax
 %supported {copy_only}               \nop \yes \relax
+\supported {copy}                    \yes \yes \relax
 \supported {count}                   \nop \yes \yes
-\supported {current_attr}            \yes \yes \relax
+\supported {current_attributes}      \yes \yes \relax
 \supported {dimensions}              \nop \yes \yes
 \supported {effective_glue}          \nop \yes \yes
 \supported {end_of_math}             \nop \yes \yes
+\supported {find_attribute_range}    \nop \yes \relax
 \supported {find_attribute}          \nop \yes \yes
-%supported {find_attribute_range}    \nop \yes \relax
-%supported {find_node}               \nop \yes \relax
+\supported {find_node}               \nop \yes \relax
 \supported {first_glyph}             \nop \yes \yes
 \supported {flatten_discretionaries} \nop \yes \yes
 \supported {flush_list}              \yes \yes \relax
 \supported {flush_node}              \yes \yes \relax
 \supported {free}                    \yes \yes \relax
+\supported {get_attributes}          \nop \yes \relax
 \supported {get_attribute}           \yes \yes \relax
 \supported {get_properties_table}    \yes \yes \relax
 \supported {get_synctex_fields}      \nop \yes \relax
@@ -2135,7 +2230,6 @@ emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 \supported {getboth}                 \nop \yes \relax
 \supported {getbox}                  \nop \yes \relax
 \supported {getchar}                 \nop \yes \relax
-\supported {getstate}                \nop \yes \relax
 \supported {getdata}                 \nop \yes \relax
 \supported {getdepth}                \nop \yes \relax
 \supported {getdirection}            \nop \yes \relax
@@ -2145,42 +2239,65 @@ emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 \supported {getfield}                \yes \yes \relax
 \supported {getfont}                 \nop \yes \relax
 \supported {getglue}                 \nop \yes \yes
-%supported {getglyphdata}            \nop \yes \relax % experiment
+\supported {getglyphdata}            \nop \yes \relax % old experiment
+\supported {getglyphdimensions}      \nop \yes \yes
+\supported {getglyphscript}          \nop \yes \relax % new experiment
+\supported {getglyphstate}           \nop \yes \relax % new experiment
 \supported {getheight}               \nop \yes \relax
 \supported {getid}                   \nop \yes \relax
+\supported {getindex}                \nop \yes \relax
+\supported {getkerndimension}        \nop \yes \yes
 \supported {getkern}                 \nop \yes \relax
-\supported {getlang}                 \nop \yes \relax
+\supported {getlanguage}             \nop \yes \relax
 \supported {getleader}               \nop \yes \relax
 \supported {getlist}                 \nop \yes \relax
 \supported {getnext}                 \nop \yes \relax
 \supported {getnormalizedline}       \nop \yes \relax
 \supported {getnucleus}              \nop \yes \relax
 \supported {getoffsets}              \nop \yes \relax
+\supported {getoptions}              \nop \yes \relax
 \supported {getorientation}          \nop \yes \relax
+\supported {getparstate}             \nop \yes \relax
 \supported {getpenalty}              \nop \yes \relax
 \supported {getpost}                 \nop \yes \relax
-\supported {getpre}                  \nop \yes \relax
 \supported {getprev}                 \nop \yes \relax
+\supported {getpre}                  \nop \yes \relax
 \supported {getproperty}             \yes \yes \relax
 \supported {getreplace}              \nop \yes \relax
+\supported {getscales}               \nop \yes \relax
+\supported {getscript}               \nop \yes \relax
 \supported {getshift}                \nop \yes \relax
-\supported {getsub}                  \nop \yes \relax
+\supported {getstate}                \nop \yes \relax
+\supported {getsubpre}               \nop \yes \relax
 \supported {getsubtype}              \nop \yes \relax
+\supported {getsub}                  \nop \yes \relax
+\supported {getsuppre}               \nop \yes \relax
 \supported {getsup}                  \nop \yes \relax
+\supported {gettotal}                \yes \yes \relax
+%supported {getwhatever}             \nop \yes \relax % experiment for myself
 \supported {getwhd}                  \nop \yes \relax
 \supported {getwidth}                \nop \yes \relax
+\supported {getxscale}               \nop \yes \relax
+\supported {getxyscale}              \nop \yes \relax
+\supported {getyscale}               \nop \yes \relax
 \supported {has_attribute}           \yes \yes \relax
 \supported {has_dimensions}          \nop \yes \relax
 \supported {has_field}               \yes \yes \relax
+\supported {has_glyph_option}        \nop \yes \yes
 \supported {has_glyph}               \nop \yes \yes
 \supported {hpack}                   \nop \yes \yes
-%supported {ignore_math_skip}        \nop \yes \relax
+\supported {hyphenating}             \nop \yes \yes
+\supported {ignore_math_skip}        \nop \yes \relax
 \supported {insert_after}            \yes \yes \relax
 \supported {insert_before}           \yes \yes \relax
 \supported {is_char}                 \nop \yes \relax
 \supported {is_direct}               \nop \yes \relax
 \supported {is_glyph}                \nop \yes \relax
+\supported {is_next_char}            \nop \yes \relax
+\supported {is_next_glyph}           \nop \yes \relax
 \supported {is_node}                 \yes \yes \relax
+\supported {is_prev_char}            \nop \yes \relax
+\supported {is_prev_glyph}           \nop \yes \relax
 \supported {is_valid}                \nop \yes \relax
 \supported {is_zero_glue}            \nop \yes \yes
 \supported {kerning}                 \nop \yes \yes
@@ -2188,22 +2305,23 @@ emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 \supported {length}                  \nop \yes \yes
 \supported {ligaturing}              \nop \yes \yes
 \supported {make_extensible}         \nop \yes \yes
+\supported {migrate}                 \nop \yes \relax
 \supported {mlist_to_hlist}          \nop \yes \yes
 \supported {naturalwidth}            \nop \yes \yes
 \supported {new}                     \yes \yes \relax
-\supported {prepend_prevdepth}       \nop \yes \yes
+%supported {prepend_prevdepth}       \nop \yes \yes
 \supported {protect_glyphs}          \nop \yes \yes
 \supported {protect_glyph}           \nop \yes \yes
 \supported {protrusion_skippable}    \nop \yes \yes
 \supported {rangedimensions}         \nop \yes \yes
 \supported {remove}                  \yes \yes \relax
+\supported {set_attributes}          \nop \yes \relax
 \supported {set_attribute}           \yes \yes \relax
 \supported {set_synctex_fields}      \nop \yes \relax
 \supported {setattributelist}        \nop \yes \relax
 \supported {setboth}                 \nop \yes \relax
 \supported {setbox}                  \nop \yes \relax
 \supported {setchar}                 \nop \yes \relax
-\supported {setstate}                \nop \yes \relax
 \supported {setdata}                 \nop \yes \relax
 \supported {setdepth}                \nop \yes \relax
 \supported {setdirection}            \nop \yes \relax
@@ -2213,24 +2331,36 @@ emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 \supported {setfield}                \yes \yes \relax
 \supported {setfont}                 \nop \yes \relax
 \supported {setglue}                 \yes \yes \relax
-%supported {setglyphdata}            \nop \yes \relax % experiment
+\supported {setglyphdata}            \nop \yes \relax % old experiment
+\supported {setglyphscript}          \nop \yes \relax % new experiment
+\supported {setglyphstate}           \nop \yes \relax % new experiment
 \supported {setheight}               \nop \yes \relax
+\supported {setindex}                \nop \yes \relax
 \supported {setkern}                 \nop \yes \relax
-\supported {setlang}                 \nop \yes \relax
+\supported {setlanguage}             \nop \yes \relax
 \supported {setleader}               \nop \yes \relax
 \supported {setlink}                 \nop \yes \relax
 \supported {setlist}                 \nop \yes \relax
 \supported {setnext}                 \nop \yes \relax
 \supported {setnucleus}              \nop \yes \relax
 \supported {setoffsets}              \nop \yes \relax
+\supported {setoptions}              \nop \yes \relax
 \supported {setorientation}          \nop \yes \relax
 \supported {setpenalty}              \nop \yes \relax
+\supported {setpost}                 \nop \yes \relax
 \supported {setprev}                 \nop \yes \relax
+\supported {setpre}                  \nop \yes \relax
 \supported {setproperty}             \yes \yes \relax
+\supported {setreplace}              \nop \yes \relax
+\supported {setscales}               \nop \yes \relax
+\supported {setscript}               \nop \yes \relax
 \supported {setshift}                \nop \yes \relax
 \supported {setsplit}                \nop \yes \relax
-\supported {setsub}                  \nop \yes \relax
+\supported {setstate}                \nop \yes \relax
+\supported {setsubpre}               \nop \yes \relax
 \supported {setsubtype}              \nop \yes \relax
+\supported {setsub}                  \nop \yes \relax
+\supported {setsuppre}               \nop \yes \relax
 \supported {setsup}                  \nop \yes \relax
 \supported {setwhd}                  \nop \yes \relax
 \supported {setwidth}                \nop \yes \relax
@@ -2241,17 +2371,22 @@ emulated in \LUA\ and not in the engine, so we retain downward compatibility.
 \supported {todirect}                \nop \yes \relax
 \supported {tonode}                  \nop \yes \relax
 \supported {tostring}                \yes \nop \relax
-\supported {traverse}                \yes \yes \relax
+\supported {total}                   \nop \yes \relax
+\supported {tovaliddirect}           \nop \yes \relax
 \supported {traverse_char}           \yes \yes \relax
+\supported {traverse_content}        \yes \yes \relax
 \supported {traverse_glyph}          \yes \yes \relax
 \supported {traverse_id}             \yes \yes \relax
 \supported {traverse_list}           \yes \yes \relax
+\supported {traverse}                \yes \yes \relax
 \supported {type}                    \yes \nop \relax
 \supported {unprotect_glyphs}        \nop \yes \yes
 \supported {unprotect_glyph}         \nop \yes \yes
+\supported {unset_attributes}        \nop \yes \relax
 \supported {unset_attribute}         \yes \yes \relax
 \supported {usedlist}                \nop \yes \yes
 \supported {uses_font}               \nop \yes \yes
+\supported {vertical_break}          \nop \yes \relax
 \supported {vpack}                   \nop \yes \yes
 \supported {write}                   \yes \yes \relax
 \LL

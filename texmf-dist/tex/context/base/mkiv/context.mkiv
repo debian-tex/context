@@ -45,8 +45,7 @@
 %D {YYYY.MM.DD HH:MM} format.
 
 \edef\contextformat {\jobname}
-\edef\contextversion{2020.03.10 14:44}
-\edef\contextkind   {beta}
+\edef\contextversion{2021.03.05 19:11}
 
 %D Kind of special:
 
@@ -92,7 +91,6 @@
 %D now put it into the environment.
 
 \newtoks\contextversiontoks \contextversiontoks\expandafter{\contextversion}
-\newtoks\contextkindtoks    \contextkindtoks   \expandafter{\contextkind}
 
 % \normaleverypar{\wait} % uncomment for test of funny injections
 
@@ -135,7 +133,7 @@
 
 \loadmkvifile{file-ini}
 \loadmkvifile{file-res}
-\loadmkvifile{file-lib}
+\loadmkivfile{file-lib}
 
 %D This needs more checking for clashes:
 %D
@@ -162,7 +160,7 @@
 
 % \loadmarkfile{luat-ini}
 
-\loadmarkfile{toks-tra}
+%loadmarkfile{toks-tra}
 \loadmarkfile{toks-aux}
 %loadmarkfile{toks-map} % obsolete, never used
 
@@ -195,8 +193,6 @@
 
 \loadmarkfile{trac-tex}
 \loadmarkfile{trac-deb} % will move up
-
-%loadmarkfile{blob-ini} % not to be used, we only use a helper
 
 \loadmarkfile{supp-box}
 
@@ -264,6 +260,7 @@
 \loadmarkfile{lxml-sor}
 
 \loadmkvifile{typo-prc}
+\loadmkivfile{typo-plc}
 
 % \loadmarkfile{anch-pos}
 
@@ -429,7 +426,7 @@
 
 \loadmarkfile{spac-chr} % depends on fonts
 
-\loadmarkfile{blob-ini} % not to be used, we only use a helper
+\loadmarkfile{blob-ini}
 
 \loadmarkfile{trac-vis}
 \loadmarkfile{trac-jus}
@@ -461,10 +458,9 @@
 
 \loadmarkfile{symb-emj}
 
+\loadmarkfile{lang-tra}
 \loadmarkfile{lang-wrd} % can be optional (discussion with mm sideeffect)
 \loadmarkfile{lang-rep} % can be optional (bt 2013 side effect)
-
-\loadmarkfile{prop-ini} % only for downward compatibility
 
 \loadmarkfile{mlib-ctx} % messy order
 
@@ -618,7 +614,7 @@
 % \to \everyjob
 
 \appendtoks
-    \ctxlua{statistics.savefmtstatus("\jobname","\contextversion","context.mkiv","\contextkind","\contextbanner")}% can become automatic
+    \ctxlua{statistics.savefmtstatus("\jobname","\contextversion","context.mkiv","\contextbanner")}% can become automatic
 \to \everydump
 
 \errorstopmode \dump \endinput

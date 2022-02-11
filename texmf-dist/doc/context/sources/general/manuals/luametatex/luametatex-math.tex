@@ -143,7 +143,8 @@ It is possible to discover the math style that will be used for a formula in an
 expandable fashion (while the math list is still being read). To make this
 possible, \LUATEX\ adds the new primitive: \lpr {mathstyle}. This is a \quote
 {convert command} like e.g. \prm {romannumeral}: its value can only be read,
-not set.
+not set. Beware that contrary to \LUATEX\ this is now a proper number so you need
+to use \type {\number} o r\type {\the} in order to serialize it.
 
 The returned value is between 0 and 7 (in math mode), or $-1$ (all other modes).
 For easy testing, the eight math style commands have been altered so that they can
@@ -178,55 +179,55 @@ differ from the used style (second pass). In the case of a math choice used
 ungrouped, the chosen style is used after the choice too, unless you group.
 
 \startbuffer[1]
-    [a:\mathstyle]\quad
+    [a:\number\mathstyle]\quad
     \bgroup
     \mathchoice
-        {\bf \scriptstyle       (x:d :\mathstyle)}
-        {\bf \scriptscriptstyle (x:t :\mathstyle)}
-        {\bf \scriptscriptstyle (x:s :\mathstyle)}
-        {\bf \scriptscriptstyle (x:ss:\mathstyle)}
+        {\bf \scriptstyle       (x:d :\number\mathstyle)}
+        {\bf \scriptscriptstyle (x:t :\number\mathstyle)}
+        {\bf \scriptscriptstyle (x:s :\number\mathstyle)}
+        {\bf \scriptscriptstyle (x:ss:\number\mathstyle)}
     \egroup
-    \quad[b:\mathstyle]\quad
+    \quad[b:\number\mathstyle]\quad
     \mathchoice
-        {\bf \scriptstyle       (y:d :\mathstyle)}
-        {\bf \scriptscriptstyle (y:t :\mathstyle)}
-        {\bf \scriptscriptstyle (y:s :\mathstyle)}
-        {\bf \scriptscriptstyle (y:ss:\mathstyle)}
-    \quad[c:\mathstyle]\quad
+        {\bf \scriptstyle       (y:d :\number\mathstyle)}
+        {\bf \scriptscriptstyle (y:t :\number\mathstyle)}
+        {\bf \scriptscriptstyle (y:s :\number\mathstyle)}
+        {\bf \scriptscriptstyle (y:ss:\number\mathstyle)}
+    \quad[c:\number\mathstyle]\quad
     \bgroup
     \mathchoice
-        {\bf \scriptstyle       (z:d :\mathstyle)}
-        {\bf \scriptscriptstyle (z:t :\mathstyle)}
-        {\bf \scriptscriptstyle (z:s :\mathstyle)}
-        {\bf \scriptscriptstyle (z:ss:\mathstyle)}
+        {\bf \scriptstyle       (z:d :\number\mathstyle)}
+        {\bf \scriptscriptstyle (z:t :\number\mathstyle)}
+        {\bf \scriptscriptstyle (z:s :\number\mathstyle)}
+        {\bf \scriptscriptstyle (z:ss:\number\mathstyle)}
     \egroup
-    \quad[d:\mathstyle]
+    \quad[d:\number\mathstyle]
 \stopbuffer
 
 \startbuffer[2]
-    [a:\mathstyle]\quad
+    [a:\number\mathstyle]\quad
     \begingroup
     \mathchoice
-        {\bf \scriptstyle       (x:d :\mathstyle)}
-        {\bf \scriptscriptstyle (x:t :\mathstyle)}
-        {\bf \scriptscriptstyle (x:s :\mathstyle)}
-        {\bf \scriptscriptstyle (x:ss:\mathstyle)}
+        {\bf \scriptstyle       (x:d :\number\mathstyle)}
+        {\bf \scriptscriptstyle (x:t :\number\mathstyle)}
+        {\bf \scriptscriptstyle (x:s :\number\mathstyle)}
+        {\bf \scriptscriptstyle (x:ss:\number\mathstyle)}
     \endgroup
-    \quad[b:\mathstyle]\quad
+    \quad[b:\number\mathstyle]\quad
     \mathchoice
-        {\bf \scriptstyle       (y:d :\mathstyle)}
-        {\bf \scriptscriptstyle (y:t :\mathstyle)}
-        {\bf \scriptscriptstyle (y:s :\mathstyle)}
-        {\bf \scriptscriptstyle (y:ss:\mathstyle)}
-    \quad[c:\mathstyle]\quad
+        {\bf \scriptstyle       (y:d :\number\mathstyle)}
+        {\bf \scriptscriptstyle (y:t :\number\mathstyle)}
+        {\bf \scriptscriptstyle (y:s :\number\mathstyle)}
+        {\bf \scriptscriptstyle (y:ss:\number\mathstyle)}
+    \quad[c:\number\mathstyle]\quad
     \begingroup
     \mathchoice
-        {\bf \scriptstyle       (z:d :\mathstyle)}
-        {\bf \scriptscriptstyle (z:t :\mathstyle)}
-        {\bf \scriptscriptstyle (z:s :\mathstyle)}
-        {\bf \scriptscriptstyle (z:ss:\mathstyle)}
+        {\bf \scriptstyle       (z:d :\number\mathstyle)}
+        {\bf \scriptscriptstyle (z:t :\number\mathstyle)}
+        {\bf \scriptscriptstyle (z:s :\number\mathstyle)}
+        {\bf \scriptscriptstyle (z:ss:\number\mathstyle)}
     \endgroup
-    \quad[d:\mathstyle]
+    \quad[d:\number\mathstyle]
 \stopbuffer
 
 \typebuffer[1]
@@ -423,6 +424,7 @@ has resulted in turning some hard codes properties into parameters.
 \NC \lpr {Umathsupsubbottommax}    \NC the bottom of the superscript of a combined super- and subscript
                                        be at least as high as this above the baseline \NC \NR
 \NC \lpr {Umathsubsupvgap}         \NC vertical clearance between super- and subscript \NC \NR
+\NC \lpr {Umathspacebeforescript}  \NC additional space added before a super- or subprescript (bonus setting) \NC \NR
 \NC \lpr {Umathspaceafterscript}   \NC additional space added after a super- or subscript \NC \NR
 \NC \lpr {Umathconnectoroverlapmin}\NC minimum overlap between parts in an extensible recipe \NC \NR
 \LL
@@ -734,7 +736,7 @@ marked \type {*} in the \TEX book. These will not actually be used as those
 combinations of atoms cannot actually happen, but it seemed better not to break
 orthogonality. They are initialized to zero.
 
-\subsection{Local settings}
+\subsection{Local \lpr {frozen} settings with}
 
 Math is processed in two passes. The first pass is needed to intercept for
 instance \type {\over}, one of the few \TEX\ commands that actually has a
@@ -750,7 +752,7 @@ front.
 
 \startbuffer
 $
-                                            x \Usubscript  {-}
+                                               x \Usubscript  {-}
      \frozen\Umathsubshiftdown\textstyle  0pt  x \Usubscript  {0}
     {\frozen\Umathsubshiftdown\textstyle  5pt  x \Usubscript  {5}}
                                                x \Usubscript  {0}
@@ -775,7 +777,22 @@ unprocessed math list. The result looks as follows:
 
 \blank \getbuffer \blank
 
+\subsection{Checking a state with \lpr {ifmathparameter}}
 
+When you adapt math parameters it might make sense to see if they are set at all.
+When a parameter is unset its value has the maximum dimension value and you might
+for instance mistakenly multiply that value to open up things a bit, which gives
+unexpected side effects. For that reason there is a convenient checker: \lpr
+{ifmathparameter}. This test primitive behaves like an \prm {ifcase}, with:
+
+\starttabulate[|c|l|]
+\DB value \BC meaning \NC \NR
+\TB
+\NC 0 \NC the parameter value is zero \NC \NR
+\NC 1 \NC the parameter is set \NC \NR
+\NC 2 \NC the parameter is unset \NC \NR
+\LL
+\stoptabulate
 
 \subsection{Skips around display math and \lpr {mathdisplayskipmode}}
 
@@ -788,7 +805,7 @@ to fully control spacing. Therefore \LUATEX\ comes with a new directive: \lpr
 {mathdisplayskipmode}. The following values apply:
 
 \starttabulate[|c|l|]
-\DB value  \BC meaning \NC \NR
+\DB value \BC meaning \NC \NR
 \TB
 \NC 0 \NC normal \TEX\ behaviour \NC \NR
 \NC 1 \NC always (same as 0) \NC \NR
@@ -1096,7 +1113,34 @@ with in the engine). The full list of flags is given in the next table:
 \LL
 \stoptabulate
 
-The effect can depend on the font (and for Cambria one can use for instance \type {"16}).
+The effect can depend on the font (and for Cambria one can use for instance \type
+{"16}).
+
+Sometimes you might want to act upon the size of a delimiter, something that is
+not really possible because of the fact that they are calculated {\em after} most
+has been typeset already. For this we have two keyword: \type {phantom} and
+\type {void}. In both cases the symbol is replaced by an empty rule, in the first
+case all three dimensions are preserved in the last case only the height and depth.
+
+\startbuffer
+\startformula
+    x\mathlimop{\Uvextensible         \Udelimiter 5 0 "222B}_1^2 x
+\stopformula
+\vskip-9ex
+\startformula \red
+    x\mathlimop{\Uvextensible phantom \Udelimiter 5 0 "222B}_1^2 x
+\stopformula
+\vskip-9ex
+\startformula \blue
+    x\mathlimop{\Uvextensible void    \Udelimiter 5 0 "222B}_1^2 x
+\stopformula
+\stopbuffer
+
+\typebuffer
+
+In typeset form this looks like:
+
+\getbuffer
 
 \subsection[mathacc]{Accent handling with \lpr {Umathaccent}}
 
@@ -1350,7 +1394,80 @@ For Latin Modern the result looks as follows:
     \stoptabulate
 \stop
 
-\subsection {Delimiters: \type{\Uleft}, \prm {Umiddle} and \prm {Uright}}
+The \type {\over} and related primitives have the form:
+
+\starttyping
+{{top}\over{bottom}}
+\stoptyping
+
+For convenience, which also avoids some of the trickery that makes this
+\quote {looking back} possible, the \LUAMETATEX\ also provides this variant:
+
+\starttyping
+\Uover{top}{bottom}
+\stoptyping
+
+The optional arguments are also supported but we have one extra option: \type
+{style}. The style is applied to the numerator and denominator.
+
+\starttyping
+\Uover style \scriptstyle {top} {bottom}
+\stoptyping
+
+The complete list of these commands is: \lpr {Uabove}, \lpr {Uatop}, \lpr
+{Uover}, \lpr {Uabovewithdelims}, \lpr {Uatopwithdelims}, \lpr {Uoverwithdelims},
+\lpr {UUskewed}, \lpr {UUskewedwithdelims}. As with other extensions we use a
+leading \type {U} and because we already had extra skew related primitives we end
+up with a \type {UU} there. This obscurity is not that big an issue because
+normally such primitives are wrapped in a macro. Here are a few examples:
+
+\startbuffer
+$\Uover {                   1234} {                   5678} $\quad
+$\Uover {\textstyle         1234} {\textstyle         5678} $\quad
+$\Uover {\scriptstyle       1234} {\scriptstyle       5678} $\quad
+$\Uover {\scriptscriptstyle 1234} {\scriptscriptstyle 5678} $\blank
+
+$\Uover                          {1234} {5678} $\quad
+$\Uover style \textstyle         {1234} {5678} $\quad
+$\Uover style \scriptstyle       {1234} {5678} $\quad
+$\Uover style \scriptscriptstyle {1234} {5678} $\blank
+\stopbuffer
+
+\typebuffer
+
+These render as: \getbuffer
+
+\subsection {Math styles: \lpr {Ustyle}}
+
+This primitive accepts a style identifier:
+
+\starttyping
+\Ustyle \displaystyle
+\stoptyping
+
+This in itself is not spectacular because it is equivalent to
+
+\starttyping
+\displaystyle
+\stoptyping
+
+Both commands inject a style node and change the current style. However, as in other
+places where \LUAMETATEX\ expects a style you can also pass a number in the range
+zero upto seven (like the ones reported by the primitive \lpr {mathstyle}). So, the
+next few lines give identical results:
+
+\startbuffer
+$\Ustyle0             \number\mathstyle \Ustyle7                         \number\mathstyle$
+$\Ustyle\displaystyle \number\mathstyle \Ustyle\crampedscriptscriptstyle \number\mathstyle$
+$       \displaystyle \number\mathstyle        \crampedscriptscriptstyle \number\mathstyle$
+\stopbuffer
+
+Like: \inlinebuffer . Values outside the valid range are ignored.
+
+There is an extra option \type {norule} that can be used to suppress the rule while
+keeping the spacing compatible.
+
+\subsection {Delimiters: \type{\Uleft}, \lpr {Umiddle} and \lpr {Uright}}
 
 \topicindex {math+delimiters}
 
@@ -1430,9 +1547,15 @@ These commands are provided as convenience. Before they come available you could
 do the following:
 
 \starttyping
-\def\Umathcharclass{\directlua{tex.print(tex.getmathcode(token.scan_int())[1])}}
-\def\Umathcharfam  {\directlua{tex.print(tex.getmathcode(token.scan_int())[2])}}
-\def\Umathcharslot {\directlua{tex.print(tex.getmathcode(token.scan_int())[3])}}
+\def\Umathcharclass{\numexpr
+    \directlua{tex.print(tex.getmathcode(token.scan_int())[1])}
+\relax}
+\def\Umathcharfam{\numexpr
+    \directlua{tex.print(tex.getmathcode(token.scan_int())[2])}
+\relax}
+\def\Umathcharslot{\numexpr
+    \directlua{tex.print(tex.getmathcode(token.scan_int())[3])}
+\relax}
 \stoptyping
 
 \subsection {Last lines and \lpr{predisplaygapfactor}}
@@ -1569,6 +1692,7 @@ mode parameter. The default value is~1.
 \LL
 \stoptabulate
 
+
 \subsection {Less Tracing}
 
 \topicindex {math+tracing}
@@ -1576,6 +1700,79 @@ mode parameter. The default value is~1.
 Because there are quite some math related parameters and values, it is possible
 to limit tracing. Only when \type {tracingassigns} and|/|or \type
 {tracingrestores} are set to~2 or more they will be traced.
+
+\stopsection
+
+\startsection[title={Experiments}]
+
+There are a couple of experimental features. They will stay but details might
+change, for instance more control over spacing. We just show some examples and
+let your imagination work it out. First we have prescripts:
+
+\subsection {Prescripts with \lpr {Usuperprescript} and {Usubprescript}}
+
+\startbuffer
+\hbox{$
+    {\tf X}^1_2^^3__4 \quad
+    {\tf X}^1  ^^3    \quad
+    {\tf X}  _1   __4 \quad
+    {\tf X}    ^^3    \quad
+    {\tf X}       __4 \quad
+    {\tf X}^^3    __4
+$}
+\stopbuffer
+
+\typebuffer
+
+The question is: are these double super and subscript triggers the way to go?
+Anyway, you need to have them either being active (which in \CONTEXT\ then boils
+down to them being other characters), or say \type {\supmarkmode = 1} to disable
+the normal multiple \type {^} treatment (a value larger than 1 will also disable
+that in text mode).
+
+\blank \getbuffer \blank
+
+The more explicit commands are:
+
+\startbuffer
+\hbox{$
+{\tf X}\Usuperscript{1}                                                  \quad
+{\tf X}                \Usubscript{2}                                    \quad
+{\tf X}\Usuperscript{1}\Usubscript{2}                                    \quad
+{\tf X}\Usuperscript{1}              \Usuperprescript{3}                 \quad
+{\tf X}                \Usubscript{2}                   \Usubprescript{4}\quad
+{\tf X}\Usuperscript{1}\Usubscript{2}\Usuperprescript{3}\Usubprescript{4}\quad
+{\tf X}                              \Usuperprescript{3}                 \quad
+{\tf X}                                                 \Usubprescript{4}\quad
+{\tf X}                              \Usuperprescript{3}\Usubprescript{4}
+$}
+\stopbuffer
+
+\typebuffer
+
+These more verbose triggers can be used to build interfaces:
+
+\blank \getbuffer \blank
+
+\subsection {Prescripts with \lpr {Usuperprescript} and {Usubprescript}}
+
+You can change the class of a math character on the fly:
+
+\startbuffer
+$x\mathopen   {!}+123+\mathclose  {!}x$
+$x\Umathclass4 ! +123+\Umathclass5 ! x$
+$x             ! +123+             ! x$
+$x\mathclose  {!}+123+\mathopen   {!}x$
+$x\Umathclass5 ! +123+\Umathclass4 ! x$
+\stopbuffer
+
+\typebuffer
+
+Watch how the spacing changes:
+
+\startlines
+\getbuffer
+\stoplines
 
 \stopsection
 

@@ -188,7 +188,11 @@ blobs.strht = strht
 blobs.strdp = strdp
 blobs.strhd = strhd
 
-implement { name = "strwd", arguments = "string", actions = { strwd, context } }
-implement { name = "strht", arguments = "string", actions = { strht, context } }
-implement { name = "strdp", arguments = "string", actions = { strdp, context } }
-implement { name = "strhd", arguments = "string", actions = { strhd, context } }
+-- upgraded
+
+local scan_hbox = tokens.scanners.hbox
+
+implement { name = "strwd", actions = function() local l = scan_hbox() context(l.width)            flush_node_list(l) end }
+implement { name = "strht", actions = function() local l = scan_hbox() context(l.height)           flush_node_list(l) end }
+implement { name = "strdp", actions = function() local l = scan_hbox() context(l.depth)            flush_node_list(l) end }
+implement { name = "strhd", actions = function() local l = scan_hbox() context(l.height + l.depth) flush_node_list(l) end }
