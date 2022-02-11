@@ -3,11 +3,12 @@ context (2021.03.05.20220211-1) UNRELEASED; urgency=medium
   [ Hilmar Preusse ]
   * New upstream release, suitable for TL 2021.
   * Add me to Uploaders field.
+  * Add Lintian fixes & Overrides.
 
+  [ Debian Janitor ]
   * Add missing build dependency on dh addon.
   * Set upstream metadata fields: Repository.
 
-  [ Debian Janitor ]
   * Remove 1 obsolete maintscript entry.
   * Bump debhelper from old 12 to 13.
   * Remove Section on context that duplicates source.

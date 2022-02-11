@@ -5,18 +5,18 @@ Maintainer: Debian TeX Task Force <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <norbert@preining.info>,
 	   Hilmar Preusse <hille42@web.de>
 Build-Depends: debhelper-compat (= 13), tex-common
-Build-Depends-Indep: tex-common
 Standards-Version: 4.2.1
 Vcs-Git: https://github.com/debian-tex/context.git
 Vcs-Browser: https://github.com/debian-tex/context
 
 Package: context
 Architecture: all
-Depends: ruby | ruby-interpreter, texlive-binaries (>= 2019), texlive-base (>= 2019), texlive-metapost (>= 2019), lmodern, tex-gyre, ${misc:Depends}
+Depends: ruby, texlive-binaries (>= 2019), texlive-base (>= 2019), texlive-metapost (>= 2019), lmodern, tex-gyre, ${misc:Depends}
 Recommends: fonts-gfs-artemisia, fonts-gfs-baskerville, fonts-gfs-bodoni-classic, fonts-gfs-didot-classic, fonts-gfs-didot, fonts-gfs-olga, fonts-gfs-porson, fonts-gfs-gazis, fonts-gfs-neohellenic, fonts-gfs-solomos, fonts-gfs-theokritos, fonts-freefont, fonts-sil-gentium, context-modules
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree
-Conflicts: texlive-context, tetex-bin (<< 2007)
-Replaces: texlive-context
+Conflicts: texlive-context
+Replaces: texlive-context, tetex-bin (<< 2007)
+Breaks: tetex-bin (<< 2007)
 Provides: texlive-context
 Description: powerful TeX format
  ConTeXt is a document-production system based, like LaTeX, on the TeX
