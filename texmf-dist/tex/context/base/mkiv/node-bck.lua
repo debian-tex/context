@@ -1,5 +1,6 @@
 if not modules then modules = { } end modules ['node-bck'] = {
     version   = 1.001,
+    optimize  = true,
     comment   = "companion to node-bck.mkiv",
     author    = "Hans Hagen, PRAGMA-ADE, Hasselt NL",
     copyright = "PRAGMA ADE / ConTeXt Development Team",
@@ -62,9 +63,6 @@ local unsetvalue         = attributes.unsetvalue
 
 local linefillers        = nodes.linefillers
 
-local a_color            = privateattributes("color")
-local a_transparency     = privateattributes("transparency")
-local a_colormodel       = privateattributes("colormodel")
 local a_background       = privateattributes("background")
 local a_alignbackground  = privateattributes("alignbackground")
 local a_linefiller       = privateattributes("linefiller")

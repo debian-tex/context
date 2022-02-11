@@ -35,6 +35,8 @@ local stopapplyprocessor  = processors.stopapply
 local texsetcount         = tex.setcount
 local texgetcount         = tex.getcount
 
+local texconditionals     = tex.conditionals
+
 local ctx_convertnumber   = context.convertnumber
 
 -- storage
@@ -82,6 +84,7 @@ function pages.save(prefixdata,numberdata,extradata)
             block        = sections.currentblock(),
             prefixdata   = prefixdata and helpers.simplify(prefixdata),
             numberdata   = numberdata and helpers.simplify(numberdata),
+            marked       = pages.markedlist(realpage), -- not yet defined
         }
         tobesaved[realpage] = data
         if not collected[realpage] then
@@ -319,6 +322,10 @@ function pages.on_right(n)
     end
 end
 
+function pages.has_changed()
+    return texconditionals.layouthaschanged
+end
+
 function pages.in_body(n)
     return texgetcount("pagebodymode") > 0
 end
@@ -440,6 +447,6 @@ implement { -- weird place
 
 interfaces.implement {
     name      = "pageofinternal",
-    arguments = { "integer" },
+    arguments = "integer",
     actions   = helpers.pageofinternal,
 }

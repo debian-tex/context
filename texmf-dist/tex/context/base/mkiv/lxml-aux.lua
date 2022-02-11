@@ -22,7 +22,7 @@ local xmlapplylpath = xml.applylpath
 
 local type, next, setmetatable, getmetatable = type, next, setmetatable, getmetatable
 local insert, remove, fastcopy, concat = table.insert, table.remove, table.fastcopy, table.concat
-local gmatch, gsub, format, find, strip = string.gmatch, string.gsub, string.format, string.find, string.strip
+local gmatch, gsub, format, find, strip, match = string.gmatch, string.gsub, string.format, string.find, string.strip, string.match
 local utfbyte = utf.byte
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 local striplinepatterns = utilities.strings.striplinepatterns
@@ -176,7 +176,7 @@ local function xmltoelement(whatever,root)
     end
     local element
     if type(whatever) == "string" then
-        element = xmlinheritedconvert(whatever,root) -- beware, not really a root
+        element = xmlinheritedconvert(whatever,root,true) -- beware, not really a root
     else
         element = whatever -- we assume a table
     end
@@ -195,16 +195,29 @@ end
 
 xml.toelement = xmltoelement
 
+-- local function copiedelement(element,newparent)
+--     if type(element) ~= "string" then
+--         element = xmlcopy(element).dt
+--         if newparent and type(element) == "table" then
+--             element.__p__ = newparent
+--         end
+--     end
+--     return element
+-- end
+
 local function copiedelement(element,newparent)
-    if type(element) == "string" then
-        return element
-    else
+    if type(element) ~= "string" then
         element = xmlcopy(element).dt
         if newparent and type(element) == "table" then
-            element.__p__ = newparent
+            for i=1,#element do
+                local e = element[i]
+                if type(e) == "table" then
+                    e.__p__ = newparent
+                end
+            end
         end
-        return element
     end
+    return element
 end
 
 function xml.delete(root,pattern)
@@ -240,6 +253,33 @@ function xml.delete(root,pattern)
                         end
                     else
                         -- disturbing
+                    end
+                end
+            end
+        end
+    end
+end
+
+function xml.wipe(root,pattern) -- not yet in manual
+    local collected = xmlapplylpath(root,pattern)
+    if collected then
+        for c=1,#collected do
+            local e = collected[c]
+            local p = e.__p__
+            if p then
+                local d  = p.dt
+                local ni = e.ni
+                if ni <= #d then
+                    local dt = e.dt
+                    if #dt == 1 then
+                        local d1 = dt[1]
+                        if type(d1) == "string" and match(d1,"^%s*$") then
+                            if trace_manipulations then
+                                report('wiping',pattern,c,e)
+                            end
+                            remove(d,ni)
+                            redo_ni(d) -- can be made faster and inlined
+                        end
                     end
                 end
             end
@@ -430,10 +470,10 @@ local function include(xmldata,pattern,attribute,recursive,loaddata,level)
                         -- for the moment hard coded
                         epdt[ek.ni] = xml.escaped(data) -- d[k] = xml.escaped(data)
                     else
-local settings = xmldata.settings
-local savedresource = settings.currentresource
-settings.currentresource = name
-                        local xi = xmlinheritedconvert(data,xmldata)
+                        local settings = xmldata.settings
+                        local savedresource = settings.currentresource
+                        settings.currentresource = name
+                        local xi = xmlinheritedconvert(data,xmldata,true)
                         if not xi then
                             epdt[ek.ni] = "" -- xml.empty(d,k)
                         else
@@ -443,7 +483,7 @@ settings.currentresource = name
                             local child = xml.body(xi) -- xml.assign(d,k,xi)
                             child.__p__ = ekrt
                             child.__f__ = name -- handy for tracing
-child.cf = name
+                            child.cf = name
                             epdt[ek.ni] = child
                             local settings   = xmldata.settings
                             local inclusions = settings and settings.inclusions
@@ -517,30 +557,49 @@ end
 local b_collapser  = lpegpatterns.b_collapser
 local m_collapser  = lpegpatterns.m_collapser
 local e_collapser  = lpegpatterns.e_collapser
+local x_collapser  = lpegpatterns.x_collapser
 
 local b_stripper   = lpegpatterns.b_stripper
 local m_stripper   = lpegpatterns.m_stripper
 local e_stripper   = lpegpatterns.e_stripper
+local x_stripper   = lpegpatterns.x_stripper
 
-local function stripelement(e,nolines,anywhere)
+local function stripelement(e,nolines,anywhere,everything)
     local edt = e.dt
     if edt then
         local n = #edt
         if n == 0 then
             return e -- convenient
+        elseif everything then
+            local t = { }
+            local m = 0
+            for i=1,n do
+                local str = edt[i]
+                if type(str) ~= "string" then
+                    m = m + 1
+                    t[m] = str
+                elseif str ~= "" then
+                    str = lpegmatch(x_collapser,str)
+                    if str ~= "" then
+                        m = m + 1
+                        t[m] = str
+                    end
+                end
+            end
+            e.dt = t
         elseif anywhere then
             local t = { }
             local m = 0
-            for e=1,n do
-                local str = edt[e]
+            for i=1,n do
+                local str = edt[i]
                 if type(str) ~= "string" then
                     m = m + 1
                     t[m] = str
                 elseif str ~= "" then
                     if nolines then
-                        str = lpegmatch((n == 1 and b_collapser) or (n == m and e_collapser) or m_collapser,str)
+                        str = lpegmatch((i == 1 and b_collapser) or (i == m and e_collapser) or m_collapser,str)
                     else
-                        str = lpegmatch((n == 1 and b_stripper) or (n == m and e_stripper) or m_stripper,str)
+                        str = lpegmatch((i == 1 and b_stripper) or (i == m and e_stripper) or m_stripper,str)
                     end
                     if str ~= "" then
                         m = m + 1
@@ -584,14 +643,50 @@ end
 
 xml.stripelement = stripelement
 
-function xml.strip(root,pattern,nolines,anywhere) -- strips all leading and trailing spacing
+function xml.strip(root,pattern,nolines,anywhere,everything) -- strips all leading and trailing spacing
     local collected = xmlapplylpath(root,pattern) -- beware, indices no longer are valid now
     if collected then
         for i=1,#collected do
-            stripelement(collected[i],nolines,anywhere)
+            stripelement(collected[i],nolines,anywhere,everything)
         end
     end
+--  return root
 end
+
+-- local function compactelement(e)
+--     local edt = e.dt
+--     if edt then
+--         local t = { }
+--         local m = 0
+--         for e=1,#edt do
+--             local str = edt[e]
+--             if type(str) ~= "string" then
+--                 m = m + 1
+--                 t[m] = str
+--             elseif str ~= "" and find(str,"%S") then
+--                 m = m + 1
+--                 t[m] = str
+--             end
+--         end
+--         e.dt = t
+--     end
+--     return e -- convenient
+-- end
+
+local function compactelement(e)
+    local edt = e.dt
+    if edt then
+        for e=1,#edt do
+            local str = edt[e]
+            if type(str) == "string" and not find(str,"%S") then
+                edt[e] = ""
+            end
+        end
+    end
+    return e -- convenient
+end
+
+xml.compactelement = compactelement
 
 local function renamespace(root, oldspace, newspace) -- fast variant
     local ndt = #root.dt

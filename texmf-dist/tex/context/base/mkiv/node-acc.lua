@@ -129,10 +129,9 @@ end)
 --     local done = false
 --     for n, id in nextnode, tonuts(head) do
 --         if id == disc then
---             local r = getfield(n,"replace")
---             local p = getfield(n,"pre")
---             if r and p then
---                 local str = compact(r)
+--             local pre, post, replace = getdisc(n)
+--             if replace and pre then
+--                 local str = compact(replace)
 --                 local hsh = hyphenated[str]
 --                 if not hsh then
 --                     hsh = #codes + 1

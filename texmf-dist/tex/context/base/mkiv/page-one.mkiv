@@ -82,7 +82,12 @@
 
 % 1 = partial page, 2 = whole page, 3 = partial page
 
-\setnewconstant\kindofpagetextareas\plustwo % \plusone can become default some day
+% We really need a setting! Todo, what key to use?
+
+\pushoverloadmode
+    \setnewconstant\kindofpagetextareas\plustwo % \plusone can become default some day
+    \overloaded\let\kindofpagetextareas\kindofpagetextareas
+\popoverloadmode
 
 \def\page_one_registered_text_area_a % two arguments: (un)vbox n
   {\ifconditional\c_page_areas_enabled
@@ -184,8 +189,7 @@
        \scratchoffset\ht\b_page_one_contents
      \fi
      \setbox\b_page_one_bottom_notes\hpack
-       {\checksinglecolumnfootnotes % why this check? ***
-        \lower\scratchoffset\vbox{\placebottomnotes\par\kern\zeropoint}}% kerns makes notes sit on bottom % pack ?
+       {\lower\scratchoffset\vbox{\placebottomnotes\par\kern\zeropoint}}% kerns makes notes sit on bottom % pack ?
      \smashbox\b_page_one_bottom_notes
      \ht\b_page_one_contents\zeropoint
      \page_one_registered_text_area_b
@@ -486,11 +490,24 @@
      \fi\fi
    \fi}
 
+% \def\page_one_place_float_here_indeed
+%   {\ifgridsnapping
+%      % otherwise real bad outcome
+%    \else
+%      \baselinecorrection % this has to be done better (and definitely not in column mode)
+%    \fi
+%    \doplacefloatbox
+%    \page_floats_report_total
+%    \dohandlenextfloatindent}
+
 \def\page_one_place_float_here_indeed
   {\ifgridsnapping
      % otherwise real bad outcome
    \else
-     \baselinecorrection % this has to be done better (and definitely not in column mode)
+    % this was not really applied (delayed)
+    % \baselinecorrection % this has to be done better (and definitely not in column mode)
+    % so we now use this:
+      \checkprevdepth
    \fi
    \doplacefloatbox
    \page_floats_report_total

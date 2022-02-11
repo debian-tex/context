@@ -76,7 +76,7 @@ local getheight         = nuts.getheight
 local getdepth          = nuts.getdepth
 
 local nodecodes         = nodes.nodecodes
-local localpar_code     = nodecodes.localpar
+local par_code          = nodecodes.par
 
 local start_of_par      = nuts.start_of_par
 local insert_before     = nuts.insert_before
@@ -165,7 +165,7 @@ local function flush(head,f,l,a,parent,depth)
             ln = new_hlist(setlink(new_rule(65536,65536*4,0),new_kern(-65536),ln))
             rn = new_hlist(setlink(new_rule(65536,0,65536*4),new_kern(-65536),rn))
         end
-        if getid(f) == localpar_code and start_of_par(f) then -- we need to clean this mess
+        if getid(f) == par_code and start_of_par(f) then -- we need to clean this mess
             insert_after(head,f,ln)
         else
             head, f = insert_before(head,f,ln)
@@ -1210,7 +1210,7 @@ posregions[%s] := (%p,%p)--(%p,%p)--(%p,%p)--(%p,%p)--cycle ;
 implement {
     name      = "fetchposboxes",
     arguments = { "string", "string", "integer" },
-    actions   = function(tags,anchor,page)  -- no caching (yet) / todo: anchor, page
+    actions   = function(tags,anchor,page)  -- no caching (yet) / page
         local collected = jobpositions.collected
         if type(tags) == "string" then
             tags = utilities.parsers.settings_to_array(tags)
@@ -1222,6 +1222,9 @@ implement {
             local c = collected[tag]
             if c then
                 local r = c.r
+                if anchor ~= r then
+                    r = anchor
+                end
                 if r then
                     r = collected[r]
                     if r then
@@ -1231,7 +1234,7 @@ implement {
                         local rh = r.h
                         local rd = r.d
                         local cx = c.x - rx
-                        local cy = c.y
+                        local cy = c.y - ry
                         local cw = cx + c.w
                         local ch = cy + c.h
                         local cd = cy - c.d

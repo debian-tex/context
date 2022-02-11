@@ -9,9 +9,7 @@
   [title=boxes,
    color=middlered]
 
-\startsection[title=Preamble]
-
-\startsubsection[title=Introduction]
+\startsection[title=Introduction]
 
 An average \CONTEXT\ user will not use the low level box primitives but a basic
 understanding of how \TEX\ works doesn't hurt. In fact, occasionally using a box
@@ -25,9 +23,9 @@ about all kind of glues, kerns and penalties, just boxes it is.
 This explanation will be extended when I feel the need (or users have questions
 that can be answered here).
 
-\stopsubsection
+\stopsection
 
-\startsubsection[title=Boxes]
+\startsection[title=Boxes]
 
 This paragraph of text is made from lines that contain words that themselves
 contain symbolic representations of characters. Each line is wrapped in a so
@@ -68,7 +66,7 @@ other hand wraps a linked list of so called nodes: glyphs, kerns, glue,
 penalties, rules, boxes, etc. It is a container with properties like width,
 height, depth and shift.
 
-\stopsubsection
+\stopsection
 
 \stopsection
 
@@ -469,10 +467,10 @@ a private attribute we define one.
 \startbuffer
 \newattribute\MyAt
 \setbox\scratchbox\hbox attr \MyAt 123 {whatever}
-[\the\boxattr\scratchbox\MyAt]
-\boxattr\scratchbox\MyAt 456
-[\the\boxattr\scratchbox\MyAt]
-[\ifnum\boxattr\scratchbox\MyAt>400 okay\fi]
+[\the\boxattribute\scratchbox\MyAt]
+\boxattribute\scratchbox\MyAt 456
+[\the\boxattribute\scratchbox\MyAt]
+[\ifnum\boxattribute\scratchbox\MyAt>400 okay\fi]
 \stopbuffer
 
 \typebuffer[option=TEX]

@@ -26,7 +26,6 @@ local gluecodes      = nodes.gluecodes
 local kerncodes      = nodes.kerncodes
 local rulecodes      = nodes.rulecodes
 local nodecodes      = nodes.nodecodes
-local leadercodes    = nodes.leadercodes
 local boundarycodes  = nodes.boundarycodes
 local usercodes      = nodes.usercodes
 
@@ -36,6 +35,7 @@ local glyph_code     = nodecodes.glyph
 local rule_code      = nodecodes.rule
 local kern_code      = nodecodes.kern
 local glue_code      = nodecodes.glue
+local gluespec_code  = nodecodes.gluespec
 local whatsit_code   = nodecodes.whatsit
 
 local currentfont    = font.current
@@ -163,6 +163,7 @@ local fontkern          = register_nut(new_nut(kern_code,kerncodes.fontkern))
 local italickern        = register_nut(new_nut(kern_code,kerncodes.italiccorrection))
 local penalty           = register_nut(new_nut(nodecodes.penalty))
 local glue              = register_nut(new_nut(glue_code))
+local gluespec          = register_nut(new_nut(gluespec_code))
 local glyph             = register_nut(new_nut(glyph_code,0))
 
 local textdir           = register_nut(new_nut(nodecodes.dir))
@@ -198,7 +199,7 @@ local correctionskip    = register_nut(new_nut(glue_code,gluecodes.correctionski
 local temp              = register_nut(new_nut(nodecodes.temp,0))
 
 local noad              = register_nut(new_nut(nodecodes.noad))
-local delimiter         = register_nut(new_nut(nodecodes.delim))
+local delimiter         = register_nut(new_nut(nodecodes.delimiter))
 local fence             = register_nut(new_nut(nodecodes.fence))
 local submlist          = register_nut(new_nut(nodecodes.submlist))
 local accent            = register_nut(new_nut(nodecodes.accent))
@@ -212,7 +213,7 @@ local choice            = register_nut(new_nut(nodecodes.choice))
 local boundary          = register_nut(new_nut(nodecodes.boundary,boundarycodes.user))
 local wordboundary      = register_nut(new_nut(nodecodes.boundary,boundarycodes.word))
 
-local cleader           = register_nut(copy_nut(glue)) setsubtype(cleader,leadercodes.cleaders) setglue(cleader,0,65536,0,2,0)
+local cleader           = register_nut(copy_nut(glue)) setsubtype(cleader,gluecodes.cleaders) setglue(cleader,0,65536,0,2,0)
 
 -- the dir field needs to be set otherwise crash:
 
@@ -279,6 +280,14 @@ function nutpool.italickern(k)
     local n = copy_nut(italickern)
     if k and k ~= 0 then
         setkern(n,k)
+    end
+    return n
+end
+
+function nutpool.gluespec(width,stretch,shrink,stretch_order,shrink_order)
+    local n = copy_nut(gluespec)
+    if width or stretch or shrink or stretch_order or shrink_order then
+        setglue(n,width,stretch,shrink,stretch_order,shrink_order)
     end
     return n
 end
@@ -574,11 +583,16 @@ local usage = CONTEXTLMTXMODE > 0 and node.inuse or function()
     return t
 end
 
+local stock = CONTEXTLMTXMODE > 0 and node.instock or { }
+
 nutpool .cleanup = cleanup
 nodepool.cleanup = cleanup
 
 nutpool .usage   = usage
 nodepool.usage   = usage
+
+nutpool .stock   = stock
+nodepool.stock   = stock
 
 -- end
 
@@ -612,10 +626,10 @@ do
         return v
     end)
 
-                                traversers.node  = nodes.traverse      (glyph)
-                                traversers.char  = nodes.traverse_char (glyph)
-    if nuts.traverse_glyph then traversers.glyph = nodes.traverse_glyph(glyph) end
-    if nuts.traverse_list  then traversers.list  = nodes.traverse_list (glyph) end
+                                 traversers.node  = nodes.traverse      (glyph)
+                                 traversers.char  = nodes.traverse_char (glyph)
+    if nodes.traverse_glyph then traversers.glyph = nodes.traverse_glyph(glyph) end
+    if nodes.traverse_list  then traversers.list  = nodes.traverse_list (glyph) end
 
     nodes.traversers = traversers
 
@@ -632,10 +646,11 @@ do
         return v
     end)
 
-                                traversers.node  = nuts.traverse      (glyph)
-                                traversers.char  = nuts.traverse_char (glyph)
-    if nuts.traverse_glyph then traversers.glyph = nuts.traverse_glyph(glyph) end
-    if nuts.traverse_list  then traversers.list  = nuts.traverse_list (glyph) end
+                                  traversers.node    = nuts.traverse        (glyph)
+                                  traversers.char    = nuts.traverse_char   (glyph)
+    if nuts.traverse_glyph   then traversers.glyph   = nuts.traverse_glyph  (glyph) end
+    if nuts.traverse_list    then traversers.list    = nuts.traverse_list   (glyph) end
+    if nuts.traverse_content then traversers.content = nuts.traverse_content(glyph) end
 
     nuts.traversers = traversers
 

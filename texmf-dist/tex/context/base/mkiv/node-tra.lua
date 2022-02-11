@@ -77,7 +77,7 @@ local glue_code       = nodecodes.glue
 local kern_code       = nodecodes.kern
 local rule_code       = nodecodes.rule
 local dir_code        = nodecodes.dir
-local localpar_code   = nodecodes.localpar
+local par_code        = nodecodes.par
 local whatsit_code    = nodecodes.whatsit
 
 local dimenfactors    = number.dimenfactors
@@ -113,19 +113,6 @@ function nodes.handlers.checkglyphs(head,message)
         report_nodes("%s glyphs: % t",n,t)
     end
     return false
-end
-
-function nodes.handlers.checkforleaks(sparse)
-    local l = { }
-    local q = used_nodes()
-    for p, id in nextnode, q do
-        local s = table.serialize(nodes.astable(p,sparse),nodecodes[id])
-        l[s] = (l[s] or 0) + 1
-    end
-    flush_list(q)
-    for k, v in next, l do
-        report_nodes("%s * %s",v,k)
-    end
 end
 
 local fontcharacters -- = fonts.hashes.descriptions
@@ -167,7 +154,7 @@ local function tosequence(start,stop,compact)
             elseif id == dir_code then
                 local d, p = getdirection(start)
                 n = n + 1 ; t[n] = "[<" .. (p and "-" or "+") .. d .. ">]" -- todo l2r etc
-            elseif id == localpar_code and start_of_par(current) then
+            elseif id == par_code and start_of_par(current) then
                 n = n + 1 ; t[n] = "[<" .. getdirection(start) .. ">]" -- todo l2r etc
             elseif compact then
                 n = n + 1 ; t[n] = "[]"
@@ -314,14 +301,6 @@ local function showsimplelist(h,depth,n)
         h = getnext(h)
     end
 end
-
--- \startluacode
--- callbacks.register('buildpage_filter',function() nodes.show_simple_list(tex.lists.contrib_head) end)
--- \stopluacode
--- \vbox{b\footnote{n}a}
--- \startluacode
--- callbacks.register('buildpage_filter',nil)
--- \stopluacode
 
 nodes.showsimplelist = function(h,depth) showsimplelist(h,depth,0) end
 
@@ -503,8 +482,8 @@ function number.tobasepoints  (n,fmt) return numbertodimen(n,"bp",fmt) end
 function number.topicas       (n,fmt) return numbertodimen(n "pc",fmt) end
 function number.todidots      (n,fmt) return numbertodimen(n,"dd",fmt) end
 function number.tociceros     (n,fmt) return numbertodimen(n,"cc",fmt) end
-function number.tonewdidots   (n,fmt) return numbertodimen(n,"nd",fmt) end
-function number.tonewciceros  (n,fmt) return numbertodimen(n,"nc",fmt) end
+-------- number.tonewdidots   (n,fmt) return numbertodimen(n,"nd",fmt) end
+-------- number.tonewciceros  (n,fmt) return numbertodimen(n,"nc",fmt) end
 
 function nodes.topoints      (n,fmt) return nodetodimen(n,"pt",fmt) end
 function nodes.toinches      (n,fmt) return nodetodimen(n,"in",fmt) end
@@ -516,8 +495,8 @@ function nodes.tobasepoints  (n,fmt) return nodetodimen(n,"bp",fmt) end
 function nodes.topicas       (n,fmt) return nodetodimen(n "pc",fmt) end
 function nodes.todidots      (n,fmt) return nodetodimen(n,"dd",fmt) end
 function nodes.tociceros     (n,fmt) return nodetodimen(n,"cc",fmt) end
-function nodes.tonewdidots   (n,fmt) return nodetodimen(n,"nd",fmt) end
-function nodes.tonewciceros  (n,fmt) return nodetodimen(n,"nc",fmt) end
+-------- nodes.tonewdidots   (n,fmt) return nodetodimen(n,"nd",fmt) end
+-------- nodes.tonewciceros  (n,fmt) return nodetodimen(n,"nc",fmt) end
 
 -- stop redefinition
 

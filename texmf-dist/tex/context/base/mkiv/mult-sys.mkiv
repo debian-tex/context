@@ -34,6 +34,7 @@
 
 \definesystemconstant {hans}
 \definesystemconstant {taco}
+\definesystemconstant {wolfgang}
 
 %D First we define some system constants used for both the multi||lingual
 %D interface and multi||linguag typesetting.
@@ -46,9 +47,9 @@
 \definesystemconstant {ancientgreek}   \definesystemconstant {agr}
 \definesystemconstant {ancientlatin}   \definesystemconstant {ala}
 \definesystemconstant {arabic}         \definesystemconstant {ar}
+\definesystemconstant {belarussian}    \definesystemconstant {be}
 \definesystemconstant {bokmal}         \definesystemconstant {nb}
 \definesystemconstant {catalan}        \definesystemconstant {ca}
-\definesystemconstant {chinese}        \definesystemconstant {cn}
 \definesystemconstant {chinese}        \definesystemconstant {cn}
 \definesystemconstant {croatian}       \definesystemconstant {hr}
 \definesystemconstant {czech}          \definesystemconstant {cs}
@@ -56,6 +57,7 @@
 \definesystemconstant {dutch}          \definesystemconstant {nl}
 \definesystemconstant {english}        \definesystemconstant {en}
 \definesystemconstant {estonian}       \definesystemconstant {et}
+\definesystemconstant {esperanto}    % \definesystemconstant {eo}
 \definesystemconstant {farsi}          \definesystemconstant {fa} % just persian
 \definesystemconstant {finnish}        \definesystemconstant {fi}
 \definesystemconstant {french}         \definesystemconstant {fr}
@@ -63,6 +65,7 @@
 \definesystemconstant {german}         \definesystemconstant {de}
 \definesystemconstant {greek}          \definesystemconstant {gr}
 \definesystemconstant {hebrew}         \definesystemconstant {he}
+\definesystemconstant {yiddish}        \definesystemconstant {yi}
 \definesystemconstant {hungarian}      \definesystemconstant {hu}
 \definesystemconstant {italian}        \definesystemconstant {it}
 \definesystemconstant {japanese}       \definesystemconstant {ja}
@@ -70,6 +73,7 @@
 \definesystemconstant {latin}          \definesystemconstant {la}
 \definesystemconstant {lithuanian}     \definesystemconstant {lt}
 \definesystemconstant {malayalam}      \definesystemconstant {ml}
+\definesystemconstant {macedonian}     \definesystemconstant {mk}
 \definesystemconstant {norwegian}      \definesystemconstant {no}
 \definesystemconstant {nynorsk}        \definesystemconstant {nn}
 \definesystemconstant {persian}        \definesystemconstant {pe}
@@ -79,6 +83,7 @@
 \definesystemconstant {russian}        \definesystemconstant {ru}
 \definesystemconstant {slovak}         \definesystemconstant {sk}
 \definesystemconstant {slovenian}      \definesystemconstant {sl}
+\definesystemconstant {serbian}        \definesystemconstant {sr}
 \definesystemconstant {spanish}        \definesystemconstant {es}
 \definesystemconstant {swedish}        \definesystemconstant {sv}
 \definesystemconstant {thai}           \definesystemconstant {th} % mojca mentioned it at BT2013 but we need more info
@@ -274,6 +279,7 @@
 \definesystemconstant {start}
 \definesystemconstant {stop}
 \definesystemconstant {unknown}
+\definesystemconstant {unexpanded}
 
 % translating setups is asking for a mess so we keep them as-is:
 
@@ -407,8 +413,11 @@
 \definesystemconstant {text}
 \definesystemconstant {paragraph}
 \definesystemconstant {margintext}
+\definesystemconstant {themaintextcolor}
 \definesystemconstant {line}
+\definesystemconstant {itemgroupcolumns}
 
+\definesystemconstant {vfrac}
 \definesystemconstant {number}
 \definesystemconstant {symbol}
 \definesystemconstant {format}
@@ -573,19 +582,19 @@
 \defineinterfaceconstant {e} {e} % can go
 \defineinterfaceconstant {f} {f} % can go
 
-\defineinterfaceconstant {s} {s}
+%defineinterfaceconstant {s} {s}
 \defineinterfaceconstant {r} {r}
 \defineinterfaceconstant {g} {g}
-\defineinterfaceconstant {b} {b}
-\defineinterfaceconstant {c} {c}
+%defineinterfaceconstant {b} {b}
+%defineinterfaceconstant {c} {c}
 \defineinterfaceconstant {m} {m}
-\defineinterfaceconstant {y} {y}
+%defineinterfaceconstant {y} {y}
 \defineinterfaceconstant {k} {k}
-\defineinterfaceconstant {a} {a} % alternative
-\defineinterfaceconstant {t} {t} % transparency
+%defineinterfaceconstant {a} {a} % alternative
+%defineinterfaceconstant {t} {t} % transparency
 \defineinterfaceconstant {p} {p} % percentage
-\defineinterfaceconstant {h} {h}
-\defineinterfaceconstant {s} {s}
+%defineinterfaceconstant {h} {h}
+%defineinterfaceconstant {s} {s}
 \defineinterfaceconstant {v} {v}
 
 \defineinterfaceconstant {rgb}  {rgb}
@@ -672,7 +681,7 @@
 
 \selectinterface
 
-%D Ok, here are some more, because we've got ouselves some extensions to \CONTEXT.
+%D Ok, here are some more, because we've got ourselves some extensions to \CONTEXT.
 
 \definemessageconstant {addresses}
 \definemessageconstant {documents}

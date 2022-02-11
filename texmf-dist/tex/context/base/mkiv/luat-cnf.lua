@@ -19,20 +19,79 @@ texconfig.shell_escape = 't'
 luatex       = luatex or { }
 local luatex = luatex
 
-texconfig.error_line      =     79 -- frozen / large values can crash
-texconfig.expand_depth    =  10000
-texconfig.half_error_line =     50 -- frozen
-texconfig.hash_extra      = 100000
-texconfig.max_in_open     =   1000 -- frozen
-texconfig.max_print_line  = 100000 -- frozen
-texconfig.max_strings     = 500000
-texconfig.nest_size       =   1000
-texconfig.param_size      =  25000
-texconfig.save_size       = 100000
-texconfig.stack_size      =  10000
-texconfig.function_size   =  32768
-texconfig.properties_size =  10000
-texconfig.fix_mem_init    = 750000
+texconfig.error_line      =      250
+texconfig.expand_depth    =    10000
+texconfig.half_error_line =      125
+texconfig.max_print_line  =   100000
+texconfig.max_strings     =   500000
+texconfig.hash_extra      =   200000
+texconfig.function_size   =    32768
+texconfig.properties_size =    10000
+texconfig.level_max       =      500
+texconfig.level_chr       =       46 -- period
+
+if CONTEXTLMTXMODE > 0 then
+
+texconfig.max_in_open     =     2000
+texconfig.nest_size       =    10000
+texconfig.param_size      =   100000
+texconfig.save_size       =   500000
+texconfig.stack_size      =   100000
+texconfig.buffer_size     = 10000000
+texconfig.token_size      = 10000000
+texconfig.node_size       = 50000000
+texconfig.max_pool        = 10000000
+
+else
+
+texconfig.max_in_open     =     1000
+texconfig.nest_size       =     1000
+texconfig.param_size      =    25000
+texconfig.save_size       =   100000
+texconfig.stack_size      =    10000
+texconfig.buf_size        = 10000000
+texconfig.fix_mem_init    =  1000000
+
+end
+
+local variablenames = CONTEXTLMTXMODE > 0 and {
+    error_line      = false,
+    half_error_line = false,
+    max_print_line  = false,
+    max_in_open     = false,
+    expand_depth    = true,
+    hash_extra      = true,
+    nest_size       = true,
+    max_strings     = true,
+    max_pool        = true,
+    param_size      = true,
+    save_size       = true,
+    stack_size      = true,
+    function_size   = true,
+    properties_size = true,
+    token_size      = true,
+    node_size       = true,
+    buffer_size     = true,
+    level_max       = true,
+    level_chr       = true,
+} or {
+    error_line      = false,
+    half_error_line = false,
+    max_print_line  = false,
+    max_in_open     = false,
+    expand_depth    = true,
+    hash_extra      = true,
+    nest_size       = true,
+    max_strings     = true,
+    param_size      = true,
+    save_size       = true,
+    stack_size      = true,
+    function_size   = true,
+    properties_size = true,
+    fix_mem_init    = true,
+    level_max       = true,
+    level_chr       = true,
+}
 
 local stub = [[
 
@@ -68,15 +127,17 @@ function texconfig.init()
         },
         basictex = {
             -- always
-            "callback", "font", "lang", "lua", "node", "status", "tex", "texconfig", "texio", "token",
-             -- not in luametatex
-            "img", "pdf",
+            "callback", "font", "lua", "node", "status", "tex", "texconfig", "texio", "token",
+            -- not in luametatex
+            "img", "pdf", "lang",
+            -- in luametatex
+            "language",
         },
         extralua = {
             -- not in luametatex
             "unicode", "utf", "gzip",  "zip", "zlib",
             -- in luametatex
-            "xzip", "xmath", "xcomplex", "basexx",
+            "xzip", "xmath", "xcomplex", "xdecimal", "basexx",
             -- maybe some day in luametatex
             "lz4", "lzo",
             -- always (mime can go)
@@ -200,22 +261,6 @@ end)
 
 -- done, from now on input and callbacks are internal
 ]]
-
-local variablenames = {
-    error_line      = false,
-    half_error_line = false,
-    max_print_line  = false,
-    max_in_open     = false,
-    expand_depth    = true,
-    hash_extra      = true,
-    nest_size       = true,
-    max_strings     = true,
-    param_size      = true,
-    save_size       = true,
-    stack_size      = true,
-    function_size   = true,
-    properties_size = true,
-}
 
 local function makestub()
     name = name or (environment.jobname .. ".lui")

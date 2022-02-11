@@ -2,7 +2,7 @@ return {
     internals = {
         --
         "nocolormodel", "greycolormodel", "graycolormodel", "rgbcolormodel", "cmykcolormodel",
-        "shadefactor",
+        "shadefactor", "shadeoffset",
         "textextoffset", "textextanchor",
         "normaltransparent", "multiplytransparent", "screentransparent", "overlaytransparent",
         "softlighttransparent", "hardlighttransparent", "colordodgetransparent", "colorburntransparent",
@@ -17,7 +17,7 @@ return {
         "drawoptionsfactor",
         "dq", "sq",
         "crossingscale", "crossingoption",
-        "contextlmtxmode",
+        "contextlmtxmode", "metafunversion", "minifunversion",
         --
         -- for the moment we put these here as they need to stand out
         --
@@ -74,6 +74,7 @@ return {
         "withshadedomain", "withshademethod", "withshadefactor", "withshadevector",
         "withshadecenter", "withshadedirection", "withshaderadius", "withshadetransform",
         "withshadestep", "withshadefraction", "withshadeorigin", "shownshadevector", "shownshadeorigin",
+        "shownshadedirection", "shownshadecenter",
         "cmyk", "spotcolor", "multitonecolor", "namedcolor",
         "drawfill", "undrawfill",
         "inverted", "uncolored", "softened", "grayed", "greyed",
@@ -85,11 +86,12 @@ return {
         "withmask", "bitmapimage",
         "colordecimals", "ddecimal", "dddecimal", "ddddecimal", "colordecimalslist",
         "textext", "thetextext", "rawtextext", "textextoffset", "texbox", "thetexbox", "rawtexbox", "istextext",
+        "rawmadetext", "validtexbox", "onetimetextext", "rawfmttext", "thefmttext", "fmttext", "onetimefmttext",
         "notcached", "keepcached",
         "verbatim",
         "thelabel", "label",
         "autoalign",
-        "transparent", "withtransparency",
+        "transparent", "withtransparency", "withopacity",
         "property", "properties", "withproperties",
         "asgroup",
         "infont", -- redefined using textext
@@ -174,6 +176,7 @@ return {
         "isarray", "prefix", "dimension",
         "getmacro", "getdimen", "getcount", "gettoks",
         "setmacro", "setdimen", "setcount", "settoks",
+        "setglobalmacro", "setglobaldimen", "setglobalcount", "setglobaltoks",
         --
         "positionpath", "positioncurve", "positionxy", "positionpxy",
         "positionwhd", "positionpage", "positionregion", "positionbox",
@@ -185,16 +188,21 @@ return {
         --
         "inpath", "pointof", "leftof", "rightof",
         --
-        "utflen", "utfsub",
+        "utfnum", "utflen", "utfsub",
         --
         "newhash", "disposehash", "inhash", "tohash",
         --
         "isarray", "prefix", "isobject",
         --
-        "comment", "report", "lua", "mp", "MP", "luacall",
+        "comment", "report", "lua", "lualist", "mp", "MP", "luacall",
         --
         "mirrored", "mirroredabout",
         --
-        "scriptindex",
+        "scriptindex", "newscriptindex",
+        --
+        "newcolor", "newrgbcolor", "newcmykcolor",
+        "newnumeric", "newboolean", "newtransform", "newpath", "newpicture", "newstring", "newpair",
+
+        "mpvar",
     },
 }

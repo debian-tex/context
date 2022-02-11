@@ -24,8 +24,8 @@
 \registerctxluafile{util-dim}{}
 
 \registerctxluafile{trac-set}{}
-\registerctxluafile{trac-log}{}
-\registerctxluafile{trac-inf}{}
+\registerctxluafile{luat-log}{autosuffix}
+\registerctxluafile{trac-inf}{autosuffix}
 \registerctxluafile{util-lua}{}
 \registerctxluafile{util-deb}{} % could also be done in trac-deb.mkiv
 
@@ -44,10 +44,6 @@
 \registerctxluafile{util-soc-imp-headers}{}
 \registerctxluafile{util-soc-imp-http}   {}
 \registerctxluafile{util-soc-imp-tp}     {}
-
-\ifcase\contextlmtxmode\else
-    \registerctxluafile{util-zip}{}
-\fi
 
 \registerctxluafile{data-ini}{}
 \registerctxluafile{data-exp}{}
@@ -73,13 +69,9 @@
 \registerctxluafile{data-use}{}
 \registerctxluafile{data-aux}{}
 
-% \ifcase\contextlmtxmode
-%     \registerctxluafile{util-lib}{}
-% \fi
-
 \registerctxluafile{luat-cbk}{}
 \registerctxluafile{luat-run}{}
-\registerctxluafile{luat-fio}{}
+\registerctxluafile{luat-fio}{autosuffix}
 \registerctxluafile{luat-cnf}{}
 \registerctxluafile{luat-lua}{}
 \registerctxluafile{luat-sto}{}
@@ -99,8 +91,8 @@
 \registerctxluafile{lxml-aux}{}
 \registerctxluafile{lxml-mis}{}
 
-\normalprotected\def\writestatus#1#2{\ctxlua{logs.status([==[#1]==],[==[#2]==])}}
-\normalprotected\def\writestring  #1{\ctxlua{logs.writer([==[#1]==],"\string\n")}}
-\normalprotected\def\writeline      {\ctxlua{logs.newline()}}
+\protected\def\writestatus#1#2{\ctxlua{logs.status([==[#1]==],[==[#2]==])}}
+\protected\def\writestring  #1{\ctxlua{logs.writer([==[#1]==],"\string\n")}}
+\protected\def\writeline      {\ctxlua{logs.newline()}}
 
 \endinput
