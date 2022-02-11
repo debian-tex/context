@@ -1,1 +1,5 @@
 context: license-problem-font-adobe-copyrighted-fragment
+context: script-not-executable
+context: extra-license-file usr/share/doc/context/manuals/reference/en/pr-copying.tex.gz
+context: missing-dep-for-interpreter texlua => luatex (usr/bin/mtxrun)
+context: missing-dep-for-interpreter texlua => luatex (usr/share/texmf/scripts/context/lua/mtxrun.lua)
