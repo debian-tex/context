@@ -17,4 +17,4 @@ Index: context-2008.01.02/scripts/context/perl/texfont.pl
 +    report ("pre-processing with : fontforge") ;
      print CONVERT "Open('$infont');\n Generate('$pfbfont', '', 1) ;\n" ;
      close (CONVERT) }
- 
+
