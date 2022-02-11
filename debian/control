@@ -6,8 +6,10 @@ Uploaders: Norbert Preining <norbert@preining.info>,
 	   Hilmar Preusse <hille42@web.de>
 Build-Depends: debhelper-compat (= 13), tex-common
 Standards-Version: 4.2.1
+Rules-Requires-Root: no
 Vcs-Git: https://github.com/debian-tex/context.git
 Vcs-Browser: https://github.com/debian-tex/context
+Homepage: https://www.pragma-ade.nl/
 
 Package: context
 Architecture: all
