@@ -1,7 +1,7 @@
 
 tlnet=${1:-/home/norbert/public_html/tlnet}
 
-basever=2021.03.05
+basever=2020.03.10
 
 verstr=`date +%Y%m%d`
 pkg="context-${basever}.$verstr"
