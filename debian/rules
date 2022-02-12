@@ -52,17 +52,8 @@ binary-indep: build-indep
 	####(echo "#!/usr/bin/perl"; tail -n +3 texmf-dist/scripts/context/perl/pdftrimwhite.pl ) > $(instbase)/usr/bin/pdftrimwhite
 
 	# install man pages
-	dh_installman texmf-dist/doc/man/man1/*.1
-	dh_installman debian/manpages/texfont.man debian/manpages/texfind.man
-
-
-	dh_installdocs debian/changelog.Debian.prerelease	\
-			debian/MANIFEST.nonfree	debian/MANIFEST.doc-nonfree \
-			debian/README.MarkIV debian/Release_Notes
-
-	# lintian override for script-not-executable
-	#install -D --mode=644 debian/override $(instbase)/usr/share/lintian/overrides/$(package)
-
+	dh_installman
+	dh_installdocs
 	dh_installmenu
 	dh_lintian
 	dh_installchangelogs
