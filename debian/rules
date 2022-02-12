@@ -21,9 +21,7 @@ binary-indep: build-indep
 	dh_testdir
 	dh_testroot
 	dh_clean
-	dh_installdirs usr/share/texmf/web2c usr/share/doc/$(package)	\
-		var/lib/texmf/web2c/pdftex	\
-		etc/texmf/tex/context/user
+	dh_installdirs
 	cp -a texmf-dist/* $(instbase)/usr/share/texmf
 	rm -rf $(instbase)/usr/share/texmf/tlpkg
 	# move user config file to /etc
@@ -38,7 +36,6 @@ binary-indep: build-indep
 	#rm $(instbase)/usr/share/texmf/fonts/map/pdftex/context/koeieletters.map
 
 	dh_installtex --flavor=format:no_links
-	dh_installdirs usr/bin
 
 	#
 	# scripts dealing
