@@ -27,7 +27,7 @@ texfind \- graphical tool to search for text in TeX input files
 searching through TeX input files, including subdirectories, and
 allows you to do search/replace tasks using \fBperl\fP(1) regular
 expressions. It opens two windows: One displays the directory
-hierarchy and allows to select different search directories. The
+hierarchy and allows you to select different search directories. The
 second window is used to enter the query and display the results.
 
 .SH "SEARCHING"
