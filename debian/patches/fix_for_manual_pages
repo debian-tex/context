@@ -1,3 +1,9 @@
+Description: Small fixes for manual pages.
+Origin: Hilmar Preusse <hille42@web.de>
+Forwarded: Not done, could be done.
+Author: Hilmar Preusse <hille42@web.de>
+Last-Update: 20220212
+
 --- context.orig/texmf-dist/doc/man/man1/context.1
 +++ context/texmf-dist/doc/man/man1/context.1
 @@ -129,7 +129,7 @@
