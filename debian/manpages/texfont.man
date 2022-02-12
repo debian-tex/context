@@ -89,7 +89,7 @@ The TeXExec manual, \fImtexexec.pdf\fP.
 .IP \(bu
 .URL "http://www.contextgarden.net" "ConTeXt wiki" .
 .IP \(bu
-Donald E. Knuth\'s \fIThe TeXbook\fP.
+Donald E. Knuth's \fIThe TeXbook\fP.
 
 .SH "AUTHOR"
 
