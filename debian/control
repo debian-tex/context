@@ -5,7 +5,7 @@ Maintainer: Debian TeX Task Force <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <norbert@preining.info>,
 	   Hilmar Preusse <hille42@web.de>
 Build-Depends: debhelper-compat (= 13), tex-common
-Standards-Version: 4.2.1
+Standards-Version: 4.6.0
 Rules-Requires-Root: no
 Vcs-Git: https://github.com/debian-tex/context.git
 Vcs-Browser: https://github.com/debian-tex/context
