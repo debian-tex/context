@@ -6,3 +6,7 @@ context: script-not-executable
 context: spare-manual-page
 # Some input files need local encoding.
 context: national-encoding
+# We are a TeX package.
+context: font-in-non-font-package
+context: font-outside-font-dir
+context: repeated-path-segment
