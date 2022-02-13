@@ -1,4 +1,4 @@
-context (2021.03.05.20220211-1) UNRELEASED; urgency=medium
+context (2021.03.05.20220211-1) unstable; urgency=medium
 
   [ Hilmar Preusse ]
   * New upstream release, suitable for TL 2021.
@@ -21,7 +21,7 @@ context (2021.03.05.20220211-1) UNRELEASED; urgency=medium
     + context: Drop versioned constraint on lmodern in Depends.
     + context: Drop versioned constraint on texlive-xetex in Conflicts.
 
- -- Hilmar Preusse <hille42@web.de>  Fri, 11 Feb 2022 09:52:40 +0100
+ -- Hilmar Preusse <hille42@web.de>  Sun, 13 Feb 2022 23:32:13 +0100
 
 context (2020.03.10.20200331-1) unstable; urgency=medium
 

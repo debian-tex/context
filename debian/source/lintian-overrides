@@ -1,4 +1,4 @@
 # There are no versioned upstream files, one could track.
 context source: debian-watch-file-is-missing
-# Upstream metadata files does not denote real upstream
+# Upstream metadata files does not denote real upstream.
 context source: upstream-metadata-missing-bug-tracking
