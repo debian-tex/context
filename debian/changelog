@@ -4,7 +4,7 @@ context (2021.03.05.20220211-1) UNRELEASED; urgency=medium
   * New upstream release, suitable for TL 2021.
   * Add me to Uploaders field.
   * Add Lintian fixes & Overrides.
-  * Improvements for d/rules file.
+  * Introduce dh sequencer for debian/rules file.
 
   [ Adam Reviczky ]
   * Bump standards version, no changes necessary
