@@ -1,3 +1,9 @@
+context (2021.03.05.20220211-2) UNRELEASED; urgency=medium
+
+  * Replace "fonts-freefont" by "fonts-freefont-otf" in Recommends.
+
+ -- Hilmar Preusse <hille42@web.de>  Wed, 03 Aug 2022 12:25:04 +0200
+
 context (2021.03.05.20220211-1) unstable; urgency=medium
 
   [ Hilmar Preusse ]
