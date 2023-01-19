@@ -4,8 +4,8 @@ tlnet=${1:-/home/norbert/public_html/tlnet}
 basever=2021.03.05
 
 verstr=`date +%Y%m%d`
-pkg="context-${basever}.$verstr"
-orig="context_${basever}.$verstr.orig.tar.gz"
+pkg="context-${basever}.${verstr}"
+orig="context_${basever}.${verstr}+dfsg.orig.tar.gz"
 
 if [ -r $pkg ] ; then
   echo "already here: $pkg"
