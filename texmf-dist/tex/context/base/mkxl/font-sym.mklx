@@ -56,19 +56,17 @@
 
 % potential generalization:
 %
-% \letvalue{\??fontfile:t:\s!rm}\s!Serif
-% \letvalue{\??fontfile:t:\s!ss}\s!Sans
-% \letvalue{\??fontfile:t:\s!tt}\s!Mono
-%
-% \letvalue{\??fontfile:a:\s!rm}\s!Regular
-% \letvalue{\??fontfile:a:\s!ss}\s!Support
-% \letvalue{\??fontfile:a:\s!tt}\s!Type
-%
-% \letvalue{\??fontfile:s:\s!bf}\s!Bold
-% \letvalue{\??fontfile:s:\s!sl}\s!Slanted
-% \letvalue{\??fontfile:s:\s!it}\s!Italic
-% \letvalue{\??fontfile:s:\s!bs}\s!BoldSlanted
-% \letvalue{\??fontfile:s:\s!bi}\s!BoldItalic
+% \letcsname\??fontfile:t:\s!rm\endcsname\s!Serif
+% \letcsname\??fontfile:t:\s!ss\endcsname\s!Sans
+% \letcsname\??fontfile:t:\s!tt\endcsname\s!Mono
+% \letcsname\??fontfile:a:\s!rm\endcsname\s!Regular
+% \letcsname\??fontfile:a:\s!ss\endcsname\s!Support
+% \letcsname\??fontfile:a:\s!tt\endcsname\s!Type
+% \letcsname\??fontfile:s:\s!bf\endcsname\s!Bold
+% \letcsname\??fontfile:s:\s!sl\endcsname\s!Slanted
+% \letcsname\??fontfile:s:\s!it\endcsname\s!Italic
+% \letcsname\??fontfile:s:\s!bs\endcsname\s!BoldSlanted
+% \letcsname\??fontfile:s:\s!bi\endcsname\s!BoldItalic
 %
 % \def\v_font_string_a{\executeifdefined{\??fontfile:t:\fontstyle}\s!Serif}
 % \def\v_font_string_a{\executeifdefined{\??fontfile:t:\fontstyle}\s!Serif}
@@ -129,9 +127,9 @@
 
 \installcorenamespace{symbolfont}
 
-\mutable\let\skedsymbolfont   \empty % for diagnostics
-\mutable\let\currentsymbolfont\empty
-\mutable\let\askedsymbolfont  \empty
+\mutable\lettonothing\skedsymbolfont    % for diagnostics
+\mutable\lettonothing\currentsymbolfont
+\mutable\lettonothing\askedsymbolfont
 
 \permanent\protected\def\setscaledstyledsymbolicfont#1#2#3% quite a slowdown, glyphfontfile
   {\edef\askedsymbolfont{\truefontname{\glyphfontfile{#3}} at \the\dimexpr#2\dimexpr\currentfontbodyscale\dimexpr#1}%
@@ -170,12 +168,26 @@
    \currentsymbolfont
    \gletcsname\??symbolfont\askedsymbolfont\endcsname\lastrawfontcall}
 
+% \definefontfeature[colored][colr=yes]
+% \definefontsynonym[flags][file:BabelStoneFlagsDual.ttf*colored]
+% \definesymbol[BR][{\getnamedglyphdirect          {flags}{br}}]
+% \definesymbol[PT][{\getnamedglyphdirect          {flags}{pt}}]
+% \definesymbol[BR][{\getnamedglyphdirectscaled{.7}{flags}{br}}]
+% \definesymbol[PT][{\getnamedglyphdirectscaled{.7}{flags}{pt}}]
+%
+% \def\glyphscaled#1{\cldcontext{math.floor(\the\glyphscale*#1)}\relax}
+% \definesymbol[BR][{\glyphscale\glyphscaled{.7}\getnamedglyphdirect{flags}{br}}]
+% \definesymbol[PT][{\glyphscale\glyphscaled{.7}\getnamedglyphdirect{flags}{pt}}]
+
 \permanent\protected\def\getnamedglyphstyled#fontname#character{{\setstyledsymbolicfont{#fontname}\clf_fontchar{#character}}}
 \permanent\protected\def\getnamedglyphdirect#fontname#character{{\setdirectsymbolicfont{#fontname}\clf_fontchar{#character}}}
 \permanent\protected\def\getglyphstyled     #fontname#character{{\setstyledsymbolicfont{#fontname}\doifelsenumber{#character}\char\donothing#character}}
 \permanent\protected\def\getglyphdirect     #fontname#character{{\setdirectsymbolicfont{#fontname}\doifelsenumber{#character}\char\donothing#character}}
 \permanent\protected\def\resolvedglyphstyled#fontname#character{{\setstyledsymbolicfont{#fontname}\clf_tochar{#character}}}
 \permanent\protected\def\resolvedglyphdirect#fontname#character{{\setdirectsymbolicfont{#fontname}\clf_tochar{#character}}}
+
+\permanent\protected\def\getnamedglyphdirectscaled#scale#fontname#character%
+  {{\setscaleddirectsymbolicfont\fontbody{#scale}{#fontname}\clf_fontchar{#character}}}
 
 % this one is wrong:
 

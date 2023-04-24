@@ -23,9 +23,6 @@ local context         = context
 
 local allocate        = utilities.storage.allocate
 
-local copy_node       = node.copy
-local write_node      = node.write
-
 local pen_info        = mplib.pen_info
 local getfields       = mplib.getfields or mplib.fields -- todo: in lmtx get them once and then use gettype
 
@@ -91,7 +88,7 @@ end
 
 function metapost.flushliteral(d)
     if savedliterals then
-        write_node(mpsliteral(savedliterals[d]))
+        context(mpsliteral(savedliterals[d]))
     else
         report_metapost("problem flushing literal %a",d)
     end
@@ -217,7 +214,7 @@ local function flushnormalpath(path, t, open)
     return t
 end
 
-local function flushconcatpath(path, t, open)
+local function flushconcatpath(path, t, open, transform)
     local pth, ith, nt
     local length = #path
     if t then
@@ -226,8 +223,10 @@ local function flushconcatpath(path, t, open)
         t = { }
         nt = 0
     end
-    nt = nt + 1
-    t[nt] = f_cm(sx,rx,ry,sy,tx,ty)
+    if transform then
+        nt = nt + 1
+        t[nt] = f_cm(sx,rx,ry,sy,tx,ty)
+    end
     for i=1,length do
         nt = nt + 1
         pth = path[i]
@@ -602,7 +601,7 @@ function metapost.flush(specification,result)
                                                     for i=1,#savedpath do
                                                         local path = savedpath[i]
                                                         if transformed then
-                                                            flushconcatpath(path,result,open)
+                                                            flushconcatpath(path,result,open,i==1)
                                                         else
                                                             flushnormalpath(path,result,open)
                                                         end
@@ -612,7 +611,7 @@ function metapost.flush(specification,result)
                                                 if flush then
                                                     -- ignore this path
                                                 elseif transformed then
-                                                    flushconcatpath(path,result,open)
+                                                    flushconcatpath(path,result,open,true)
                                                 else
                                                     flushnormalpath(path,result,open)
                                                 end
@@ -642,7 +641,7 @@ function metapost.flush(specification,result)
                                                     for i=1,#savedhtap do
                                                         local path = savedhtap[i]
                                                         if transformed then
-                                                            flushconcatpath(path,result,open)
+                                                            flushconcatpath(path,result,open,i==1)
                                                         else
                                                             flushnormalpath(path,result,open)
                                                         end
@@ -651,7 +650,7 @@ function metapost.flush(specification,result)
                                                     evenodd   = true
                                                 end
                                                 if transformed then
-                                                    flushconcatpath(path,result,open)
+                                                    flushconcatpath(path,result,open,true)
                                                 else
                                                     flushnormalpath(path,result,open)
                                                 end

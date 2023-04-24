@@ -18,7 +18,6 @@
 %D Maybe we need a more clever system: either command or style mode etc. so
 %D that we can avoid the grouped mess in a simple style switch.
 
-% \registerctxluafile{typo-cap}{autosuffix,optimize}
 \registerctxluafile{typo-cap}{autosuffix}
 
 % \definesystemattribute[case][public] % already predefined
@@ -74,7 +73,10 @@
 % test \word{test TEST \TeX} test
 % test \Word{test TEST \TeX} test
 
-\permanent\protected\def\setcharactercasing[#1]{\clf_setcharactercasing{#1}} % can be public implementor
+\permanent\tolerant\protected\def\setcharactercasing[#1]{\clf_setcharactercasing{#1}} % can be public implementor
+
+\protected\def\casing[#1]{\groupedcommand{\clf_setcharactercasing{#1}}{}}
+\protected\def\nocasing  {\groupedcommand{\clf_setcharactercasing  {}}{}}
 
 \protected\def\typo_capitale_WORD {\clf_setcharactercasing\v!WORD }
 \protected\def\typo_capitale_word {\clf_setcharactercasing\v!word }
@@ -163,7 +165,7 @@
 
 \def\typo_capitals_set_real#1%
   {\edef\currentcapitals{#1}%
-   \sc
+   \sc % \smallcaps
    \clf_setcharactercasing\currentcapitals}
 
 \permanent\protected\def\pseudosmallcapped{\triggergroupedcommandcs\font_style_pseudosmallcapped}
@@ -251,6 +253,8 @@
 \definefont
   [MixedCaps]
   [CurrentFont*default cp 1.2\exheight]
+% [CurrentFont*default at 1.5\exheight] % better adaptation to slanted but still not nice
+% [CurrentFont*default ht 1.2\exheight] % maybe this is better indeed
 
 \setupcapitals
   [\v!mixed]

@@ -114,14 +114,15 @@
    \c!ownerpassword  =,
    \c!compact        =,
    \c!cmyk           =,
+   \c!crop           =\v!yes,
   ]
 
 %D Defining figures.
 
-\newcount\c_grph_include_nesting
+\newinteger\c_grph_include_nesting
 
-\newtoks \everyexternalfigureresets % for the moment still public
-\newtoks \everyexternalfigurechecks % for the moment still public
+\newtoks   \everyexternalfigureresets % for the moment still public
+\newtoks   \everyexternalfigurechecks % for the moment still public
 
 % \useexternalfigure[alpha][cow]
 % \useexternalfigure[beta] [cow]       [width=1cm]
@@ -210,12 +211,12 @@
    \fi}
 
 \def\grph_include_use_indeed#1#2#3#4%
-  {\dodoglobal\setvalue{\??externalfigureinstance#1}{\grph_include_setup{#2}{#3}{#4}}%
+  {\dodoglobal\defcsname\??externalfigureinstance#1\endcsname{\grph_include_setup{#2}{#3}{#4}}%
    \grph_include_analyze_collection[#2][#4]}
 
 % inclusion
 
-\permanent\tolerant\protected\def\externalfigure[#1]#*[#2]#*[#3]%
+\permanent\tolerant\protected\def\externalfigure[#1]#,[#2]#,[#3]%
   {\ifhastok={#2}%
      \grph_include_place[#1][][#2]%
    \else
@@ -273,7 +274,7 @@
 
 \def\grph_include_place[#1][#2][#3]% [label][file][settings] | [file][settings] | [file][parent][settings]
   {\bgroup
-   \advance\c_grph_include_nesting\plusone
+   \advanceby\c_grph_include_nesting\plusone
    \edef\currentexternalfigure{\the\c_grph_include_nesting}%
    \checkexternalfigureparent % each inherits from the root
    %
@@ -332,6 +333,7 @@
         compact      {\externalfigureparameter\c!compact}% experiment, share fonts
         userpassword {\externalfigureparameter\c!userpassword}%
         ownerpassword{\externalfigureparameter\c!ownerpassword}%
+        crop         {\externalfigureparameter\c!crop}%
     \ifempty\p_width \else
         width  \dimexpr\p_width\relax
     \fi
@@ -404,6 +406,9 @@
    %
    \dostoptagged
    \egroup}
+
+\permanent\protected\def\setfigureconversion[#1]#*[#2]%
+  {\clf_setfigureconversion{#1}{#2}}
 
 %D Next we provide a cross referenced scale-up mechanism:
 
@@ -601,11 +606,17 @@
 
 %D Internal graphics are handled at the \TEX\ end:
 
+% strut=none also avoids the \noindent! otherwise we're in hmode when
+% blank happens and we get a lineskip
+
 \def\grph_include_process_tex#1%
   {\framed
-     [\c!strut=\v!no,\c!align=\v!normal,\c!frame=\v!off,
+     [\c!strut=\v!none,\c!align=\v!normal,\c!frame=\v!off,
       \c!offset=\v!overlay,\c!width=\v!fit,\c!height=\v!fit]
-     {\blank[\v!disable]#1\endgraf\removelastskip}} % disable should stay here!
+     {\blank[\v!disable]%
+      #1\endgraf
+      \removelastskip}} % disable should stay here!
+
 
 % used al lua end:
 
@@ -709,11 +720,8 @@
 
 \mutable\let\feedbackexternalfigure\relax % hook
 
-\permanent\protected\def\getfiguredimensions
-  {\dodoubleempty\grph_include_get_dimensions}
-
-\def\grph_include_get_dimensions[#1][#2]%
-  {\startnointerference
+\permanent\tolerant\protected\def\getfiguredimensions[#1]#*[#2]%
+  {\startnointerference % we can use \nospaces\plusone
      \settrue\c_grph_include_test_only
      \externalfigure[#1][#2,\c!display=,\c!mask=,\c!object=\v!no]%
    \stopnointerference}
@@ -780,10 +788,10 @@
 
 \newconditional\c_grph_include_in_collection
 
-\newdimen\d_grph_include_collection_minwidth
-\newdimen\d_grph_include_collection_maxwidth
-\newdimen\d_grph_include_collection_minheight
-\newdimen\d_grph_include_collection_maxheight
+\newdimension  \d_grph_include_collection_minwidth
+\newdimension  \d_grph_include_collection_maxwidth
+\newdimension  \d_grph_include_collection_minheight
+\newdimension  \d_grph_include_collection_maxheight
 
 \def\grph_include_analyze_collection[#1][#2]%
   {\ifconditional\c_grph_include_in_collection
@@ -798,7 +806,7 @@
       \ifdim\scratchdimen<\d_grph_include_collection_minheight \d_grph_include_collection_minheight\scratchdimen \fi
    \fi}
 
-\mutable\let\currentexternalfigurecollection\empty
+\mutable\lettonothing\currentexternalfigurecollection
 
 \permanent\protected\def\startexternalfigurecollection[#1]%
   {\begingroup
@@ -855,16 +863,16 @@
 % Experimental (will become cleaner):
 
 \permanent\tolerant\protected\def\includesvgfile[#1]#*[#2]%
-  {\dontleavehmode\begingroup
+  {\hbox\bgroup % no \dontleavehmode
    \getdummyparameters[\c!offset=\zeropoint,#2]%
    \clf_includesvgfile{#1}\dimexpr\dummyparameter\c!offset\relax
-   \endgroup}
+   \egroup}
 
 \permanent\tolerant\protected\def\includesvgbuffer[#1]#*[#2]%
-  {\dontleavehmode\begingroup
+  {\hbox\bgroup % no \dontleavehmode
    \getdummyparameters[\c!offset=\zeropoint,#2]%
    \clf_includesvgbuffer{#1}\dimexpr\dummyparameter\c!offset\relax
-   \endgroup}
+   \egroup}
 
 % Bonus:
 

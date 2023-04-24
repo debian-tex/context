@@ -328,8 +328,8 @@
 
 \aliased\let\setupinteractionmenus\setupinteractionmenu
 
-\mutable\let\currentinteractionmenudistance\empty
-\mutable\let\currentinteractionmenustate   \empty
+\mutable\lettonothing\currentinteractionmenudistance
+\mutable\lettonothing\currentinteractionmenustate
 
 \let\scrn_menu_action\relax
 
@@ -418,23 +418,23 @@
 %D After all, menus need some setup anyway. The offsets are added to the width or
 %D height (this is different from \MKII).
 
-\newbox  \b_scrn_menu
+\newbox      \b_scrn_menu
 
-\newdimen\d_scrn_menu_next_distance
-\newdimen\d_scrn_menu_final_width
-\newdimen\d_scrn_menu_final_height
-\newdimen\d_scrn_menu_used_width
-\newdimen\d_scrn_menu_used_height
-\newdimen\d_scrn_menu_asked_width
-\newdimen\d_scrn_menu_asked_height
-\newdimen\d_scrn_menu_offset_top
-\newdimen\d_scrn_menu_offset_bottom
-\newdimen\d_scrn_menu_offset_left
-\newdimen\d_scrn_menu_offset_right
+\newdimension\d_scrn_menu_next_distance
+\newdimension\d_scrn_menu_final_width
+\newdimension\d_scrn_menu_final_height
+\newdimension\d_scrn_menu_used_width
+\newdimension\d_scrn_menu_used_height
+\newdimension\d_scrn_menu_asked_width
+\newdimension\d_scrn_menu_asked_height
+\newdimension\d_scrn_menu_offset_top
+\newdimension\d_scrn_menu_offset_bottom
+\newdimension\d_scrn_menu_offset_left
+\newdimension\d_scrn_menu_offset_right
 
 \newconditional\c_scrn_menu_zerodimensions
 
-\mutable\let\currentinteractionmenulocation\empty
+\mutable\lettonothing\currentinteractionmenulocation
 
 \def\scrn_menu_set_used
   {\d_scrn_menu_offset_left  \ifchkdim\interactionmenuparameter\c!leftoffset  \or\lastchkdim\else\zeropoint\fi
@@ -475,14 +475,14 @@
    \ht\b_scrn_menu\d_scrn_menu_asked_height
    \dp\b_scrn_menu\zeropoint}
 
-\setvalue{\??menualign\v!right     }{\let\scrn_menu_left_align\raggedright}
-\setvalue{\??menualign\v!left      }{\let\scrn_menu_left_align\raggedleft}
-\setvalue{\??menualign\v!flushright}{\let\scrn_menu_left_align\raggedleft}
-\setvalue{\??menualign\v!flushleft }{\let\scrn_menu_left_align\raggedright}
-\setvalue{\??menualign\v!middle    }{\let\scrn_menu_left_align\raggedcenter}
-\setvalue{\??menualign\v!low       }{\let\scrn_menu_top_align\vss\let\scrn_menu_bottom_align\relax}
-\setvalue{\??menualign\v!high      }{\let\scrn_menu_top_align\relax\let\scrn_menu_bottom_align\vss}
-\setvalue{\??menualign\v!lohi      }{\let\scrn_menu_top_align\vss\let\scrn_menu_bottom_align\vss}
+\defcsname\??menualign\v!right     \endcsname{\let\scrn_menu_left_align\raggedright}
+\defcsname\??menualign\v!left      \endcsname{\let\scrn_menu_left_align\raggedleft}
+\defcsname\??menualign\v!flushright\endcsname{\let\scrn_menu_left_align\raggedleft}
+\defcsname\??menualign\v!flushleft \endcsname{\let\scrn_menu_left_align\raggedright}
+\defcsname\??menualign\v!middle    \endcsname{\let\scrn_menu_left_align\raggedcenter}
+\defcsname\??menualign\v!low       \endcsname{\let\scrn_menu_top_align\vss\let\scrn_menu_bottom_align\relax}
+\defcsname\??menualign\v!high      \endcsname{\let\scrn_menu_top_align\relax\let\scrn_menu_bottom_align\vss}
+\defcsname\??menualign\v!lohi      \endcsname{\let\scrn_menu_top_align\vss\let\scrn_menu_bottom_align\vss}
 
 \let\scrn_menu_left_align  \relax
 \let\scrn_menu_right_align \relax
@@ -490,7 +490,7 @@
 \let\scrn_menu_bottom_align\relax
 
 \def\scrn_menu_set_align
-  {\csname\??menualign\interactionmenuparameter\c!itemalign\endcsname}
+  {\begincsname\??menualign\interactionmenuparameter\c!itemalign\endcsname}
 
 %D Hook into the pagebuilder (as less testing as possible):
 
@@ -523,13 +523,13 @@
 
 \let\scrn_menu_packager\relax
 
-\setvalue{\??menupacker\v!vertical}% all menus
+\defcsname\??menupacker\v!vertical\endcsname % all menus
   {\let\scrn_menu_packager\scrn_menu_packager_vertical
    \setbox\b_scrn_menu\hbox{\scrn_menu_actions\currentinteractionmenulocation}%
    \scrn_menu_apply_final
    \box\b_scrn_menu}
 
-\setvalue{\??menupacker\v!horizontal}% all menus
+\defcsname\??menupacker\v!horizontal\endcsname % all menus
   {\let\scrn_menu_packager\scrn_menu_packager_horizontal
    \setbox\b_scrn_menu\vbox{\scrn_menu_actions\currentinteractionmenulocation}%
    \scrn_menu_apply_final
@@ -608,7 +608,7 @@
 %D positional info. The status variable is 0, 1 or~2: not found, found and found but
 %D current page.
 
-\newcount      \c_scrn_menu_position
+\newinteger    \c_scrn_menu_position
 \newconstant   \c_scrn_menu_page_mode % 0=notfound  1=found  2=currentpage
 \newconditional\c_scrn_menu_positioning
 \newtoks       \t_scrn_menu_meta_data
@@ -682,13 +682,13 @@
    \endgroup
    \ignorespaces}
 
-\aliased\let\startraw \aliased\let\stopraw\relax \ifdefined\raw\else \aliased\let\raw\relax \fi
-\aliased\let\startbut \aliased\let\stopbut\relax \ifdefined\but\else \aliased\let\but\relax \fi
-\aliased\let\startgot \aliased\let\stopgot\relax \ifdefined\got\else \aliased\let\got\relax \fi
-\aliased\let\startnop \aliased\let\stopnop\relax \ifdefined\nop\else \aliased\let\nop\relax \fi
-\aliased\let\starttxt \aliased\let\stoptxt\relax \ifdefined\txt\else \aliased\let\txt\relax \fi
-\aliased\let\startrul \aliased\let\stoprul\relax \ifdefined\rul\else \aliased\let\rul\relax \fi
-\aliased\let\startcom \aliased\let\stopcom\relax \ifdefined\com\else \aliased\let\com\relax \fi
+\aliased\let\startraw\relax \aliased\let\stopraw\relax \ifdefined\raw\else \aliased\let\raw\relax \fi
+\aliased\let\startbut\relax \aliased\let\stopbut\relax \ifdefined\but\else \aliased\let\but\relax \fi
+\aliased\let\startgot\relax \aliased\let\stopgot\relax \ifdefined\got\else \aliased\let\got\relax \fi
+\aliased\let\startnop\relax \aliased\let\stopnop\relax \ifdefined\nop\else \aliased\let\nop\relax \fi
+\aliased\let\starttxt\relax \aliased\let\stoptxt\relax \ifdefined\txt\else \aliased\let\txt\relax \fi
+\aliased\let\startrul\relax \aliased\let\stoprul\relax \ifdefined\rul\else \aliased\let\rul\relax \fi
+\aliased\let\startcom\relax \aliased\let\stopcom\relax \ifdefined\com\else \aliased\let\com\relax \fi
 
 \protected\def\scrn_menu_raw_start[#action]#text\stopraw
   {\scrn_menu_action_start
@@ -711,7 +711,7 @@
    \scrn_menu_action_stop}
 
 \def\scrn_button_make_position#currentparameter#inheritedframed#letparameter#setparameter#text#action%
-  {\global\advance\c_scrn_menu_position\plusone
+  {\global\advanceby\c_scrn_menu_position\plusone
    \doifelsereferencefound{#action}% 0=not found, 1=same page, >1=elsewhere
      {\c_scrn_menu_page_mode\ifnum\currentreferencerealpage=\realpageno\plusone\else\plustwo\fi}%
      {\c_scrn_menu_page_mode\plustwo}%
@@ -729,7 +729,7 @@
 \permanent\protected\def\scrn_menu_got_start[#action]#text\stopgot
   {\scrn_menu_action_start
    \letinteractionmenuparameter\c!frame\v!off
-   \letinteractionmenuparameter\c!background\empty
+   \resetinteractionmenuparameter\c!background
    \scrn_button_make
      \interactionmenuparameter
      \inheritedinteractionmenuframed
@@ -742,7 +742,7 @@
 \permanent\protected\def\scrn_menu_nop_start#text\stopnop
   {\scrn_menu_action_start
    \letinteractionmenuparameter\c!frame\v!off
-   \letinteractionmenuparameter\c!background\empty
+   \resetinteractionmenuparameter\c!background
    \letinteractionmenuparameter\c!empty\v!yes
    \inheritedinteractionmenuframed{\ignorespaces#text\removeunwantedspaces}%
    \scrn_menu_action_stop}
@@ -750,7 +750,7 @@
 \permanent\protected\def\scrn_menu_txt_start#text\stoptxt
   {\scrn_menu_action_start
    \letinteractionmenuparameter\c!frame\v!off
-   \letinteractionmenuparameter\c!background\empty
+   \resetinteractionmenuparameter\c!background
    \inheritedinteractionmenuframed{\ignorespaces#text\removeunwantedspaces}%
    \scrn_menu_action_stop}
 
@@ -763,13 +763,13 @@
   {\ignorespaces#text\removeunwantedspaces
    \ignorespaces}
 
-\permanent\protected\def\scrn_menu_raw#content\\{\scrn_menu_raw_start#content\stopraw} \aliased\let\stopraw\relax
-\permanent\protected\def\scrn_menu_but#content\\{\scrn_menu_but_start#content\stopbut} \aliased\let\stopbut\relax
-\permanent\protected\def\scrn_menu_got#content\\{\scrn_menu_got_start#content\stopgot} \aliased\let\stopgot\relax
-\permanent\protected\def\scrn_menu_nop#content\\{\scrn_menu_nop_start#content\stopnop} \aliased\let\stopnop\relax
-\permanent\protected\def\scrn_menu_txt#content\\{\scrn_menu_txt_start#content\stoptxt} \aliased\let\stoptxt\relax
-\permanent\protected\def\scrn_menu_rul#content\\{\scrn_menu_rul_start#content\stoprul} \aliased\let\stoprul\relax
-\permanent\protected\def\scrn_menu_com#content\\{\scrn_menu_com_start#content\stopcom} \aliased\let\stopcom\relax
+\permanent\protected\def\scrn_menu_raw#content\\{\scrn_menu_raw_start#content\stopraw}
+\permanent\protected\def\scrn_menu_but#content\\{\scrn_menu_but_start#content\stopbut}
+\permanent\protected\def\scrn_menu_got#content\\{\scrn_menu_got_start#content\stopgot}
+\permanent\protected\def\scrn_menu_nop#content\\{\scrn_menu_nop_start#content\stopnop}
+\permanent\protected\def\scrn_menu_txt#content\\{\scrn_menu_txt_start#content\stoptxt}
+\permanent\protected\def\scrn_menu_rul#content\\{\scrn_menu_rul_start#content\stoprul}
+\permanent\protected\def\scrn_menu_com#content\\{\scrn_menu_com_start#content\stopcom}
 
 \newtoks\everysetmenucommands % public
 
@@ -1005,7 +1005,7 @@
 
 \def\scrn_menu_menu_button_b#settings#dummy#text#action%
   {\dontleavehmode \begingroup
-     \let\currentbutton\empty
+     \lettonothing\currentbutton
      \setupcurrentbutton[#settings]%
      \scrn_button_make
        \buttonparameter

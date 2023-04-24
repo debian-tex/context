@@ -9,11 +9,6 @@ if not modules then modules = { } end modules ['luat-fio'] = {
 local format = string.format
 local concat = table.concat
 
-texconfig.kpse_init      = false  -- can go away
-texconfig.shell_escape   = 't'    -- can go away
-texconfig.max_print_line = 100000 -- can go away
-texconfig.max_in_open    = 1000   -- can go away
-
 if not resolvers.initialized() then
 
     resolvers.reset()
@@ -32,7 +27,7 @@ if not resolvers.initialized() then
 
         local ioflush     = io.flush
         local ioread      = io.read
-        local writenl     = texio.write_nl
+        local writenl     = texio.writenl
 
         local function terminal()
             writenl("\ntex console > ")
@@ -85,8 +80,8 @@ if not resolvers.initialized() then
             return name
         end
 
-        register('find_log_file'   , find_any_file,  true)
-        register('find_format_file', find_any_file,  true)
+        register('find_log_file'   , find_any_file,  true) -- why do we have this callback if we just return the name
+        register('find_format_file', find_any_file,  true) -- why do we have this callback if we just return the name
      -- register('find_data_file'  , find_data_file, true)
         register('open_data_file'  , open_data_file, true)
 

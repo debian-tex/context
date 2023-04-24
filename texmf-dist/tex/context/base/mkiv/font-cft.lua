@@ -6,7 +6,7 @@ if not modules then modules = { } end modules ['font-cft'] = {
     license   = "see context related readme files"
 }
 
--- context font tables (needs updating)
+-- context font tables (needs updating, only okay for mkiv)
 --
 -- todo: extra:
 --
@@ -439,7 +439,7 @@ do
         },
         colorschemes = {
             default = {
-                [1] = { t_string },
+                { t_string },
             }
         },
         files = {

@@ -78,9 +78,10 @@ local resolveprefix     = resolvers.resolve
 local texgetbox         = tex.getbox
 local texsetbox         = tex.setbox
 
-local hpack             = node.hpack
+local hpack             = nodes.hpack
 
 local new_latelua       = nodes.pool.latelua
+local new_hlist         = nodes.pool.hlist
 
 local context           = context
 
@@ -174,8 +175,8 @@ local imagekeys  = {
 }
 
 local imagesizes = {
-    art   = true, bleed = true,  crop = true,
-    media = true, none  = true,  trim = true,
+    art   = true, bleed = true, crop = true,
+    media = true, none  = true, trim = true,
 }
 
 local imagetypes = { [0] =
@@ -190,26 +191,28 @@ images.keys  = imagekeys
 images.types = imagetypes
 images.sizes = imagesizes
 
+local codeinjections = backends.codeinjections
+
 local function createimage(specification)
-    return backends.codeinjections.newimage(specification)
+    return codeinjections.newimage(specification)
 end
 
 local function copyimage(specification)
-    return backends.codeinjections.copyimage(specification)
+    return codeinjections.copyimage(specification)
 end
 
 local function scanimage(specification)
-    return backends.codeinjections.scanimage(specification)
+    return codeinjections.scanimage(specification)
 end
 
 local function embedimage(specification)
-    -- write the image to file
-    return backends.codeinjections.embedimage(specification)
+   -- write the image to file
+    return codeinjections.embedimage(specification)
 end
 
 local function wrapimage(specification)
     -- create an image rule
-    return backends.codeinjections.wrapimage(specification)
+    return codeinjections.wrapimage(specification)
 end
 
 images.create = createimage
@@ -303,9 +306,10 @@ local remappers         = allocate()   figures.remappers   = remappers
 local converters        = allocate()   figures.converters  = converters
 local identifiers       = allocate()   figures.identifiers = identifiers
 local programs          = allocate()   figures.programs    = programs
+local conversions       = allocate()   figures.conversions = conversions
 
-local defaultformat     = "pdf"
-local defaultprefix     = "m_k_i_v_"
+local defaultformat <const> = "pdf"
+local defaultprefix <const> = "m_k_i_v_"
 
 figures.localpaths = allocate {
     ".", "..", "../.."
@@ -321,7 +325,8 @@ local figure_paths = allocate(table.copy(figures.localpaths))
 figures.paths      = figure_paths
 
 local figures_order =  allocate {
-    "pdf", "mps", "jpg", "png", "jp2", "jbig", "svg", "eps", "tif", "gif", "mov", "buffer", "tex", "cld", "auto",
+    -- "mov" is gone
+    "pdf", "mps", "jpg", "png", "jp2", "jbig", "svg", "eps", "tif", "gif", "buffer", "tex", "cld", "auto",
 }
 
 local figures_formats = allocate { -- magic and order will move here
@@ -335,7 +340,7 @@ local figures_formats = allocate { -- magic and order will move here
     ["eps"]    = { list = { "eps", "ai" } },
     ["gif"]    = { list = { "gif" } },
     ["tif"]    = { list = { "tif", "tiff" } },
-    ["mov"]    = { list = { "mov", "flv", "mp4" } }, -- "avi" is not supported
+ -- ["mov"]    = { list = { "mov", "flv", "mp4" } }, -- "avi" is not supported
     ["buffer"] = { list = { "tmp", "buffer", "buf" } },
     ["tex"]    = { list = { "tex" } },
     ["cld"]    = { list = { "cld" } },
@@ -440,14 +445,14 @@ function figures.setorder(list) -- can be table or string
     end
 end
 
-local function guessfromstring(str)
+local function guessfromstring(str,name)
     if str then
         for i=1,#figures_magics do
             local pattern = figures_magics[i]
             if lpegmatch(pattern.pattern,str) then
                 local format = pattern.format
-                if trace_figures then
-                    report_inclusion("file %a has format %a",filename,format)
+                if trace_figures and name then
+                    report_inclusion("file %a has format %a",name,format)
                 end
                 return format
             end
@@ -554,6 +559,11 @@ function figures.setpaths(locationset,pathlist)
             end
         end
     end
+    -- new
+    if environment.arguments.path then
+        table.insert(t,1,environment.arguments.path)
+    end
+    --
     figure_paths  = t
     last_pathlist = pathlist
     figures.paths = figure_paths
@@ -587,6 +597,7 @@ local function new() -- we could use metatables status -> used -> request but it
         controls   = false,
         display    = false,
         mask       = false,
+        crop       = false,
         conversion = false,
         resolution = false,
         color      = false,
@@ -669,6 +680,13 @@ end
 
 function figures.current()
     return callstack[#callstack] or lastfiguredata
+end
+
+function figures.setconversion(format,conversion)
+    if conversion == "reset" or conversion == "" then
+        conversion = nil
+    end
+    conversions[format] = conversion
 end
 
 local function get(category,tag,default)
@@ -766,18 +784,23 @@ local function register(askedname,specification)
             local conversion = wipe(specification.conversion)
             local resolution = wipe(specification.resolution)
             local arguments  = wipe(specification.arguments)
+            local crop       = wipe(specification.crop)
             local newformat  = conversion
             if not newformat or newformat == "" then
                 newformat = defaultformat
             end
+            --
+            conversion = conversions[format] or conversion
+            --
             if trace_conversion then
-                report_inclusion("checking conversion of %a, fullname %a, old format %a, new format %a, conversion %a, resolution %a, arguments %a",
+                report_inclusion("checking conversion of %a, fullname %a, old format %a, new format %a, conversion %a, resolution %a, crop %a, arguments %a",
                     askedname,
                     specification.fullname,
                     format,
                     newformat,
                     conversion or "default",
                     resolution or "default",
+                    crop       or "default",
                     arguments  or ""
                 )
             end
@@ -793,7 +816,7 @@ local function register(askedname,specification)
                 end
             end
             -- end of quick hack
-            local converter = (not remapper) and (newformat ~= format or resolution or arguments) and converters[format]
+            local converter = (not remapper) and (newformat ~= format or resolution or arguments) and converters[format] -- no crop here
             if converter then
                 local okay = converter[newformat]
                 if okay then
@@ -813,6 +836,10 @@ local function register(askedname,specification)
                 local oldname = specification.fullname
                 local newpath = file.dirname(oldname)
                 local oldbase = file.basename(oldname)
+                local runpath = environment.arguments.runpath
+                if runpath and runpath ~= "" and newpath == environment.arguments.path then
+                    newpath = runpath
+                end
                 --
                 -- problem: we can have weird filenames, like a.b.c (no suffix) and a.b.c.gif
                 -- so we cannot safely remove a suffix (unless we do that for known suffixes)
@@ -853,6 +880,10 @@ local function register(askedname,specification)
                 if arguments then
                     hash = hash .. "[a:" .. arguments .. "]"
                 end
+                if crop then
+                    hash = hash .. "[c:" .. crop .. "]"
+                end
+                newbase = gsub(newbase,"%.","_") -- nicer to have no suffix in the name
                 if hash ~= "" then
                     newbase = newbase .. "_" .. md5.hex(hash)
                 end
@@ -877,7 +908,7 @@ local function register(askedname,specification)
                     if trace_conversion then
                         report_inclusion("converting %a (%a) from %a to %a",askedname,oldname,format,newformat)
                     end
-                    converter(oldname,newname,resolution or "", arguments or "")
+                    converter(oldname,newname,resolution or "", arguments or "",specification) -- in retrospect a table
                 else
                     if trace_conversion then
                         report_inclusion("no need to convert %a (%a) from %a to %a",askedname,oldname,format,newformat)
@@ -971,17 +1002,18 @@ local function locate(request) -- name, format, cache
     local askedconversion = request.conversion
     local askedresolution = request.resolution
     local askedarguments  = request.arguments
+    local askedcrop       = request.crop
     local askedhash       = f_hash_part(
         askedname,
         askedconversion or "default",
         askedresolution or "default",
+        askedcrop       or "default",
         askedarguments  or ""
     )
-    local foundname       = figures_found[askedhash]
+    local foundname = figures_found[askedhash]
     if foundname then
         return foundname
     end
-    --
     --
     local askedformat = request.format
     if not askedformat or askedformat == "" or askedformat == "unknown" then
@@ -1004,14 +1036,30 @@ local function locate(request) -- name, format, cache
         end
     else
         local foundname = resolvers.findbinfile(askedname)
-        if not foundname or not isfile(foundname) then -- foundname can be dummy
+        -- we need a neutral isfile
+        if foundname then
+            if hashed.scheme == "file" and not isfile(foundname) then
+                foundname = false
+            end
+        end
+        if not foundname then -- foundname can be dummy
             if trace_figures then
                 report_inclusion("unknown url %a",askedname)
             end
             -- url not found
             return register(askedname)
         end
-        local guessedformat = figures.guess(foundname)
+        -- ok for now but we need a loadbinfile option to emulate a file
+        -- so that we justy share it .. we now rely on os caching of files
+        -- but normally scheme based files are not that large anyway
+        local guessedformat = false
+        if hashed.scheme == "file" then
+            guessedformat = figures.guess(foundname)
+        else
+            -- kind of costly: todo pseudo file and just acccess
+            local found, data = resolvers.loadbinfile(foundname)
+            guessedformat = figures.guessfromstring(data)
+        end
         if askedformat ~= guessedformat then
             if trace_figures then
                 report_inclusion("url %a has unknown format",askedname)
@@ -1029,6 +1077,7 @@ local function locate(request) -- name, format, cache
                 cache      = askedcache,
                 conversion = askedconversion,
                 resolution = askedresolution,
+                crop       = askedcrop,
                 arguments  = askedarguments,
             })
         end
@@ -1066,6 +1115,7 @@ local function locate(request) -- name, format, cache
                     conversion = askedconversion,
                     resolution = askedresolution,
                     arguments  = askedarguments,
+                    crop       = askedcrop,
                     internal   = internal,
                 })
             elseif quitscanning then
@@ -1086,6 +1136,7 @@ local function locate(request) -- name, format, cache
                     cache      = askedcache,
                     conversion = askedconversion,
                     resolution = askedresolution,
+                    crop       = askedcrop,
                     arguments  = askedarguments,
                 })
             end
@@ -1105,6 +1156,7 @@ local function locate(request) -- name, format, cache
                         cache      = askedcache,
                         conversion = askedconversion,
                         resolution = askedresolution,
+                        crop       = askedcrop,
                         arguments  = askedarguments,
                     })
                 end
@@ -1119,6 +1171,7 @@ local function locate(request) -- name, format, cache
                         cache      = askedcache,
                         conversion = askedconversion,
                         resolution = askedresolution,
+                        crop       = askedcrop,
                         arguments  = askedarguments,
                     })
                 end
@@ -1143,6 +1196,7 @@ local function locate(request) -- name, format, cache
                         cache      = askedcache,
                         conversion = askedconversion,
                         resolution = askedresolution,
+                        crop       = askedcrop,
                         arguments  = askedarguments,
                     })
                 end
@@ -1178,6 +1232,7 @@ local function locate(request) -- name, format, cache
                                     cache      = askedcache,
                                     conversion = askedconversion,
                                     resolution = askedresolution,
+                                    crop       = askedcrop,
                                     arguments  = askedarguments
                                 })
                             end
@@ -1206,6 +1261,7 @@ local function locate(request) -- name, format, cache
                                 cache      = askedcache,
                                 conversion = askedconversion,
                                 resolution = askedresolution,
+                                crop       = askedcrop,
                                 arguments  = askedarguments,
                             })
                         end
@@ -1231,6 +1287,7 @@ local function locate(request) -- name, format, cache
                             cache      = askedcache,
                             conversion = askedconversion,
                             resolution = askedresolution,
+                            crop       = askedcrop,
                             arguments  = askedarguments,
                         })
                     end
@@ -1241,6 +1298,7 @@ local function locate(request) -- name, format, cache
     return register(askedname, { -- these two are needed for hashing 'found'
         conversion = askedconversion,
         resolution = askedresolution,
+        crop       = askedcrop,
         arguments  = askedarguments,
     })
 end
@@ -1269,8 +1327,7 @@ function figures.identify(data)
         for i=1,#list do
             local identifier = list[i]
             local data = identifier(data)
---             if data and (not data.status and data.status.status > 0) then
-            if data and (not data.status and data.status.status > 0) then
+            if data and data.status and (not data.status and data.status.status > 0) then
                 break
             end
         end
@@ -1373,7 +1430,7 @@ end
 function figures.dummy(data)
     data = data or callstack[#callstack] or lastfiguredata
     local dr, du, nr = data.request, data.used, figures.boxnumber
-    local box  = hpack(node.new("hlist")) -- we need to set the dir (luatex 0.60 buglet)
+    local box  = hpack(new_hlist()) -- we need to set the dir (luatex 0.60 buglet)
     du.width   = du.width  or figures.defaultwidth
     du.height  = du.height or figures.defaultheight
     du.depth   = du.depth  or figures.defaultdepth
@@ -1448,13 +1505,14 @@ end
 
 local pagecount = { }
 
-function checkers.generic(data)
+function checkers.generic(data) -- called by checkers.pdf/png/jpg
     local dr, du, ds    = data.request, data.used, data.status
     local name          = du.fullname or "unknown generic"
     local page          = du.page or dr.page
     local size          = dr.size or "crop"
     local color         = dr.color or "natural"
     local mask          = dr.mask or "none"
+    local crop          = dr.crop or "none"
     local conversion    = dr.conversion
     local resolution    = dr.resolution
     local arguments     = dr.arguments
@@ -1476,6 +1534,7 @@ function checkers.generic(data)
         size,
         color,
         mask,
+        crop,
         conversion,
         resolution,
         arguments
@@ -1643,35 +1702,35 @@ includers.nongeneric = includers_nongeneric
 
 -- -- -- mov -- -- --
 
-function checkers.mov(data)
-    local dr, du, ds = data.request, data.used, data.status
-    local width = todimen(dr.width or figures.defaultwidth)
-    local height = todimen(dr.height or figures.defaultheight)
-    local foundname = du.fullname
-    dr.width, dr.height = width, height
-    du.width, du.height, du.foundname = width, height, foundname
-    if trace_inclusion then
-        report_inclusion("including movie %a, width %p, height %p",foundname,width,height)
-    end
-    -- we need to push the node.write in between ... we could make a shared helper for this
-    ctx_startfoundexternalfigure(width .. "sp",height .. "sp")
-    context(function()
-        nodeinjections.insertmovie {
-            width      = width,
-            height     = height,
-            factor     = bpfactor,
-            ["repeat"] = dr["repeat"],
-            controls   = dr.controls,
-            preview    = dr.preview,
-            label      = dr.label,
-            foundname  = foundname,
-        }
-    end)
-    ctx_stopfoundexternalfigure()
-    return data
-end
-
-includers.mov = includers.nongeneric
+-- function checkers.mov(data)
+--     local dr, du, ds = data.request, data.used, data.status
+--     local width = todimen(dr.width or figures.defaultwidth)
+--     local height = todimen(dr.height or figures.defaultheight)
+--     local foundname = du.fullname
+--     dr.width, dr.height = width, height
+--     du.width, du.height, du.foundname = width, height, foundname
+--     if trace_inclusion then
+--         report_inclusion("including movie %a, width %p, height %p",foundname,width,height)
+--     end
+--     -- we need to push the node.write in between ... we could make a shared helper for this
+--     ctx_startfoundexternalfigure(width .. "sp",height .. "sp")
+--     context(function()
+--         nodeinjections.insertmovie {
+--             width      = width,
+--             height     = height,
+--             factor     = bpfactor,
+--             ["repeat"] = dr["repeat"],
+--             controls   = dr.controls,
+--             preview    = dr.preview,
+--             label      = dr.label,
+--             foundname  = foundname,
+--         }
+--     end)
+--     ctx_stopfoundexternalfigure()
+--     return data
+-- end
+--
+-- includers.mov = includers.nongeneric
 
 -- -- -- mps -- -- --
 
@@ -2071,6 +2130,7 @@ implement {
             { "preview" },
             { "display" },
             { "mask" },
+            { "crop" },
             { "conversion" },
             { "resolution" },
             { "color" },
@@ -2158,3 +2218,94 @@ implement {
         end
     end
 }
+
+implement {
+    name      = "setfigureconversion",
+    arguments = "2 strings",
+    actions   = figures.setconversion
+}
+
+-- for the moment we keep this here:
+
+do
+
+    local stores       = setmetatableindex("table")
+    local defaultwidth = 6553600 -- maybe bp
+
+    function images.resetstore(name)
+        stores[name] = { }
+    end
+
+    local function resetdata(name,n)
+        local store = stores[name]
+        store[n] = false
+    end
+
+    local function storedata(name,data)
+        local store = stores[name]
+        store[#store+1] = data
+        return #store
+    end
+
+    local function fetchdata(name,n)
+        local store = stores[name]
+        return store and store[n]
+    end
+
+    images.storedata = storedata
+    images.fetchdata = fetchdata
+    images.resetdata = resetdata
+
+ -- function images.filetostore(name,kind,filename)
+ --     return storedata(name, {
+ --         data = io.loaddata(filename),
+ --         kind = kind or file.suffix(filename),
+ --     })
+ -- end
+ --
+ -- function images.datatostore(name,kind,data)
+ --     return storedata(name, {
+ --         data = data,
+ --         kind = kind,
+ --     })
+ -- end
+
+ -- local embedimage = images.embed
+ -- local wrapimage  = images.wrap
+
+    function images.embedfromstore(name,n,reset)
+        local blob = fetchdata(name,n)
+        if blob then
+            local kind = blob.kind
+            if kind then
+                local identify = graphics.identifiers[kind]
+                local inject   = backends.codeinjections[kind]
+                if identify and inject then
+                    local info = blob.info or identify(blob.data,"string") -- could already be done
+                    if info then
+                        info.width  = defaultwidth
+                        info.height = (info.ysize /info.xsize) * defaultwidth
+                        local image = blob.image
+                        if not image then
+                            image = inject(info,"string")
+                            blob.image = image
+                        end
+                        image.width  = info.width
+                        image.height = info.height
+                        context(wrapimage(image))
+                     -- if reset then
+                     --     resetdata(name,n)
+                     -- end
+                    end
+                end
+            end
+        end
+    end
+
+    implement {
+        name      = "embedimagefromstore",
+        arguments = { "string", "integer", "boolean" },
+        actions   = images.embedfromstore,
+    }
+
+end

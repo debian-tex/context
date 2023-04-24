@@ -36,7 +36,6 @@ local is_letter             = characters.is_letter
 local is_command            = characters.is_command
 local is_spacing            = characters.is_spacing
 local is_mark               = characters.is_mark
-local is_punctuation        = characters.is_punctuation
 
 local data                  = characters.data  if not data then return end
 local blocks                = characters.blocks
@@ -584,7 +583,7 @@ implement {
 
 implement {
     name      = "uchar",
-    arguments = { "integer", "integer" },
+    arguments = "2 integers",
     actions   = function(h,l)
         context(utfchar(h*256+l))
     end
@@ -770,24 +769,36 @@ if not csletters then
         storage.register("characters/csletters", csletters, "characters.csletters")
     end
 
+    local function setname(category,chr,u,contextname)
+        if is_character[category] then
+            if chr.unicodeslot < 128 then
+                if is_letter[category] then
+                    texsetmacro(contextname,utfchar(u),"immutable")
+                else
+                    texsetchar(contextname,u,"immutable")
+                end
+            else
+                texsetmacro(contextname,utfchar(u),"immutable")
+            end
+        elseif is_command[category] and not forbidden[u] then
+            texsetmacro(contextname,utfchar(u),"immutable")
+        end
+    end
+
     function characters.setcharacternames(ctt)
         for u, chr in next, data do -- will move up
             local contextname = chr.contextname
+            local contextspec = chr.contextspec
             local category    = chr.category
-            local isletter    = is_letter[category]
             if contextname then
-                if is_character[category] then
-                    if chr.unicodeslot < 128 then
-                        if isletter then
-                            texsetmacro(contextname,utfchar(u),"immutable")
-                        else
-                            texsetchar(contextname,u,"immutable")
-                        end
-                    else
-                        texsetmacro(contextname,utfchar(u),"immutable")
+                setname(category,chr,u,contextname)
+            end
+            if contextspec then
+                for i=1,#contextspec do
+                    local extraname = contextspec[i]
+                    if extraname ~= contextname then
+                        setname(category,chr,u,extraname)
                     end
-                elseif is_command[category] and not forbidden[u] then
-                    texsetmacro(contextname,utfchar(u),"immutable")
                 end
             end
         end

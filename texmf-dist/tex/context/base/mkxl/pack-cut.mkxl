@@ -13,6 +13,8 @@
 
 \unprotect
 
+% to be redone in a more modern way
+
 %D \macros
 %D   {makecutbox, cuthbox, cutvbox, cutvtop}
 %D
@@ -47,21 +49,22 @@
 %D By setting the next macros one can influence the length of the marks as well as
 %D the horizontal and vertical divisions.
 
-\newdimen\d_pack_cutmarks_width
-\newdimen\d_pack_cutmarks_height
-\newdimen\d_pack_cutmarks_depth
+\newdimension\d_pack_cutmarks_width
+\newdimension\d_pack_cutmarks_height
+\newdimension\d_pack_cutmarks_depth
 
-\newcount\horizontalcutmarks \horizontalcutmarks \plustwo
-\newcount\verticalcutmarks   \verticalcutmarks   \plustwo
-\newcount\cutmarkoffset      \cutmarkoffset      \plusone
+\newinteger  \horizontalcutmarks   \horizontalcutmarks \plustwo
+\newinteger  \verticalcutmarks     \verticalcutmarks   \plustwo
+\newinteger  \cutmarkoffset        \cutmarkoffset      \plusone
 
 \mutable\let\cutmarksymbol       \relax
-\mutable\let\cutmarktoptext      \empty
-\mutable\let\cutmarkbottomtext   \empty
-\mutable\let\cutmarkhoffset      \empty
-\mutable\let\cutmarkvoffset      \empty
 \mutable\def\cutmarklength       {2\bodyfontsize}
 \mutable\def\cutmarkrulethickness{\onepoint}
+
+\mutable\lettonothing\cutmarktoptext
+\mutable\lettonothing\cutmarkbottomtext
+\mutable\lettonothing\cutmarkhoffset
+\mutable\lettonothing\cutmarkvoffset
 
 \permanent\protected\def\horizontalcuts
   {\hpack to \d_pack_cutmarks_width
@@ -101,9 +104,8 @@
          \vss}%
       \hss}}
 
-\permanent\protected\def\makecutbox#1%
-  {\bgroup
-   \d_pack_cutmarks_height\ht#1%
+\permanent\protected\def\makecutbox#1% not grouped !
+  {\d_pack_cutmarks_height\ht#1%
    \d_pack_cutmarks_depth \dp#1%
    \d_pack_cutmarks_width \wd#1%
    \setbox#1\hpack
@@ -121,7 +123,7 @@
            {\scratchskip\ifempty\cutmarkhoffset\cutmarkoffset\scratchdimen\else\cutmarkhoffset\fi
             \setbox\scratchbox\hpack{\verticalcuts}%
             \llap{\copy\scratchbox\hskip\scratchskip}%
-            \ifdim\d_pack_cutmarks_depth=\zeropoint
+            \ifzeropt\d_pack_cutmarks_depth
               \hfill
             \else
               \bgroup
@@ -155,7 +157,7 @@
    \wd#1\d_pack_cutmarks_width
    \ht#1\d_pack_cutmarks_height
    \dp#1\d_pack_cutmarks_depth
-   \egroup}
+   \box#1}
 
 \permanent\protected\def\cuthbox{\hpack\bgroup\dowithnextbox{\makecutbox\nextbox\flushnextbox\egroup}\hbox}
 \permanent\protected\def\cutvbox{\vpack\bgroup\dowithnextbox{\makecutbox\nextbox\flushnextbox\egroup}\vbox}

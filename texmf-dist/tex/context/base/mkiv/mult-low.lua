@@ -14,19 +14,24 @@ return {
         "zerocount", "minusone", "minustwo", "plusone", "plustwo", "plusthree", "plusfour", "plusfive",
         "plussix", "plusseven", "pluseight", "plusnine", "plusten", "pluseleven", "plustwelve", "plussixteen",
         "plusfifty", "plushundred", "plusonehundred", "plustwohundred", "plusfivehundred",
-        "plusthousand", "plustenthousand", "plustwentythousand", "medcard", "maxcard", "maxcardminusone",
+        "plusthousand", "plustenthousand", "plustwentythousand", "medcard", "maxcard", "maxcardminusone", "maxiterator",
         "zeropoint", "onepoint", "halfapoint", "onebasepoint", "maxcount", "maxdimen", "scaledpoint", "thousandpoint",
         "points", "halfpoint",
-        "zeroskip",
+        "zeroskip", "centeringskip", "stretchingskip", "shrinkingskip",
+        "centeringfillskip", "stretchingfillskip", "shrinkingfillskip",
         "zeromuskip", "onemuskip",
         "pluscxxvii", "pluscxxviii", "pluscclv", "pluscclvi",
         "normalpagebox",
+        "binaryshiftedten", "binaryshiftedtwenty", "binaryshiftedthirty",
+        "thickermuskip",
         --
         "directionlefttoright", "directionrighttoleft",
         --
         "endoflinetoken", "outputnewlinechar",
         --
         "emptytoks", "empty", "undefined",
+        --
+        "prerollrun",
         --
         "voidbox", "emptybox", "emptyvbox", "emptyhbox",
         --
@@ -61,7 +66,7 @@ return {
         "tabasciicode", "newlineasciicode", "formfeedasciicode", "endoflineasciicode", "endoffileasciicode",
         "commaasciicode", "spaceasciicode", "periodasciicode",
         "hashasciicode", "dollarasciicode", "commentasciicode", "ampersandasciicode",
-        "colonasciicode", "backslashasciicode", "circumflexasciicode", "underscoreasciicode",
+        "colonasciicode", "semicolonasciicode", "backslashasciicode", "circumflexasciicode", "underscoreasciicode",
         "leftbraceasciicode", "barasciicode", "rightbraceasciicode", "tildeasciicode", "delasciicode",
         "leftparentasciicode", "rightparentasciicode",
         "lessthanasciicode", "morethanasciicode", "doublecommentsignal",
@@ -69,12 +74,13 @@ return {
         "doublequoteasciicode", "singlequoteasciicode", "forwardslashasciicode",
         "primeasciicode", "hyphenasciicode", "percentasciicode", "leftbracketasciicode", "rightbracketasciicode",
         --
-        "frozenhsizecode", "frozenskipcode", "frozenhangcode", "frozenindentcode", "frozenparfillcode",
-        "frozenadjustcode", "frozenprotrudecode", "frozentolerancecode", "frozenstretchcode",
-        "frozenloosenesscode", "frozenlastlinecode", "frozenlinepenaltycode", "frozenclubpenaltycode",
-        "frozenwidowpenaltycode", "frozendisplaypenaltycode", "frozenbrokenpenaltycode",
-        "frozendemeritscode", "frozenshapecode", "frozenlinecode", "frozenhyphenationcode",
-        "frozenallcode",
+        "hsizefrozenparcode", "skipfrozenparcode", "hangfrozenparcode", "indentfrozenparcode", "parfillfrozenparcode",
+        "adjustfrozenparcode", "protrudefrozenparcode", "tolerancefrozenparcode", "stretchfrozenparcode",
+        "loosenessfrozenparcode", "lastlinefrozenparcode", "linepenaltyfrozenparcode", "clubpenaltyfrozenparcode",
+        "widowpenaltyfrozenparcode", "displaypenaltyfrozenparcode", "brokenpenaltyfrozenparcode",
+        "demeritsfrozenparcode", "shapefrozenparcode", "linefrozenparcode", "hyphenationfrozenparcode",
+        "shapingpenaltyfrozenparcode", "orphanpenaltyfrozenparcode", "allfrozenparcode",
+        "mathpenaltyfrozenparcode",
         --
         "activemathcharcode",
         --
@@ -85,17 +91,45 @@ return {
         "bottomlevelgroupcode", "simplegroupcode", "hboxgroupcode", "adjustedhboxgroupcode", "vboxgroupcode",
         "vtopgroupcode", "aligngroupcode", "noaligngroupcode", "outputgroupcode", "mathgroupcode",
         "discretionarygroupcode", "insertgroupcode", "vadjustgroupcode", "vcentergroupcode", "mathabovegroupcode",
-        "mathchoicegroupcode", "semisimplegroupcode", "mathshiftgroupcode", "mathleftgroupcode",
+        "mathchoicegroupcode", "alsosimplegroupcode", "semisimplegroupcode", "mathshiftgroupcode", "mathleftgroupcode",
         "localboxgroupcode", "splitoffgroupcode", "splitkeepgroupcode", "preamblegroupcode",
         "alignsetgroupcode", "finrowgroupcode", "discretionarygroupcode",
+        --
+        "markautomigrationcode", "insertautomigrationcode", "adjustautomigrationcode", "preautomigrationcode", "postautomigrationcode",
         --
         "charnodecode", "hlistnodecode", "vlistnodecode", "rulenodecode", "insertnodecode", "marknodecode",
         "adjustnodecode", "ligaturenodecode", "discretionarynodecode", "whatsitnodecode", "mathnodecode",
         "gluenodecode", "kernnodecode", "penaltynodecode", "unsetnodecode", "mathsnodecode",
         --
-        "charifcode", "catifcode", "numifcode", "dimifcode", "oddifcode", "vmodeifcode", "hmodeifcode",
-        "mmodeifcode", "innerifcode", "voidifcode", "hboxifcode", "vboxifcode", "xifcode", "eofifcode",
-        "trueifcode", "falseifcode", "caseifcode", "definedifcode", "csnameifcode", "fontcharifcode",
+     -- "charifcode", "catifcode", "numifcode", "dimifcode", "oddifcode", "vmodeifcode", "hmodeifcode",
+     -- "mmodeifcode", "innerifcode", "voidifcode", "hboxifcode", "vboxifcode", "xifcode", "eofifcode",
+     -- "trueifcode", "falseifcode", "caseifcode", "definedifcode", "csnameifcode", "fontcharifcode",
+        --
+        "overrulemathcontrolcode", "underrulemathcontrolcode", "radicalrulemathcontrolcode", "fractionrulemathcontrolcode",
+        "accentskewhalfmathcontrolcode", "accentskewapplymathcontrolcode", "applyordinarykernpairmathcontrolcode",
+        "applyverticalitalickernmathcontrolcode", "applyordinaryitalickernmathcontrolcode", "applycharitalickernmathcontrolcode",
+        "reboxcharitalickernmathcontrolcode", "applyboxeditalickernmathcontrolcode", "staircasekernmathcontrolcode",
+        "applytextitalickernmathcontrolcode", "applyscriptitalickernmathcontrolcode",
+        "checkspaceitalickernmathcontrolcode", "checktextitalickernmathcontrolcode",
+        "analyzescriptnucleuscharmathcontrolcode", "analyzescriptnucleuslistmathcontrolcode", "analyzescriptnucleusboxmathcontrolcode",
+        "accenttopskewwithoffsetmathcontrolcode", "ignorekerndimensionsmathcontrolcode", "ignoreflataccentsmathcontrolcode",
+        "extendaccentsmathcontrolcode", "extenddelimitersmathcontrolcode",
+        --
+        "noligaturingglyphoptioncode", "nokerningglyphoptioncode", "noexpansionglyphoptioncode", "noprotrusionglyphoptioncode",
+        "noleftkerningglyphoptioncode", "noleftligaturingglyphoptioncode", "norightkerningglyphoptioncode", "norightligaturingglyphoptioncode",
+        "noitaliccorrectionglyphoptioncode", "islargeoperatorglyphoptioncode", "hasitalicshapeglyphoptioncode",
+        --
+        "normalparcontextcode", "vmodeparcontextcode", "vboxparcontextcode", "vtopparcontextcode", "vcenterparcontextcode",
+        "vadjustparcontextcode", "insertparcontextcode", "outputparcontextcode", "alignparcontextcode",
+        "noalignparcontextcode", "spanparcontextcode", "resetparcontextcode",
+        --
+        "leftoriginlistanchorcode", "leftheightlistanchorcode", "leftdepthlistanchorcode",
+        "rightoriginlistanchorcode", "rightheightlistanchorcode", "rightdepthlistanchorcode",
+        "centeroriginlistanchorcode", "centerheightlistanchorcode", "centerdepthlistanchorcode",
+        "halfwaytotallistanchorcode", "halfwayheightlistanchorcode", "halfwaydepthlistanchorcode",
+        "halfwayleftlistanchorcode", "halfwayrightlistanchorcode",
+        --
+        "negatexlistsigncode", "negateylistsigncode", "negatelistsigncode",
         --
         "fontslantperpoint", "fontinterwordspace", "fontinterwordstretch", "fontinterwordshrink",
         "fontexheight", "fontemwidth", "fontextraspace", "slantperpoint",
@@ -130,13 +164,20 @@ return {
         --
         "typescriptone", "typescripttwo", "typescriptthree", "mathsizesuffix",
         --
-        "mathordcode", "mathopcode", "mathbincode", "mathrelcode", "mathopencode", "mathclosecode",
-        "mathpunctcode", "mathalphacode", "mathinnercode", "mathnothingcode", "mathlimopcode",
-        "mathnolopcode", "mathboxcode", "mathchoicecode", "mathaccentcode", "mathradicalcode",
+        "mathordinarycode", "mathordcode", "mathoperatorcode", "mathopcode", "mathbinarycode", "mathbincode",
+        "mathrelationcode", "mathrelcode", "mathopencode", "mathclosecode", "mathpunctuationcode",
+        "mathpunctcode", "mathovercode", "mathundercode", "mathinnercode", "mathradicalcode",
+        "mathfractioncode", "mathmiddlecode", "mathaccentcode", "mathfencedcode", "mathghostcode",
+        "mathvariablecode",  "mathactivecode", "mathvcentercode", "mathconstructcode", "mathwrappedcode",
+        "mathbegincode", "mathendcode", "mathexplicitcode", "mathdivisioncode", "mathfactorialcode",
+        "mathdimensioncode", "mathexperimentalcode", "mathtextpunctuationcode",
+        "mathimaginarycode", "mathdifferentialcode", "mathexponentialcode", "mathellipsiscode", "mathfunctioncode", "mathdigitcode",
+     -- "mathtopaccentcode", "mathbottomaccentcode", "mathdelimitercode", "mathrootcode", "mathprintcode",        --
+        "mathalphacode", "mathboxcode", "mathchoicecode", "mathnothingcode", "mathlimopcode", "mathnolopcode",
+        "mathunsetcode", "mathunspacedcode", "mathallcode", "mathfakecode", "mathunarycode",
+        "mathmaybeordinarycode", "mathmayberelationcode", "mathmaybebinarycode", "mathnumbergroupcode",
         --
         "constantnumber", "constantnumberargument", "constantdimen", "constantdimenargument", "constantemptyargument",
-        --
-        "continueifinputfile",
         --
         "luastringsep", "!!bs", "!!es",
         --
@@ -148,9 +189,9 @@ return {
         "twoperemspace", "threeperemspace", "fourperemspace", "fiveperemspace", "sixperemspace",
         "figurespace", "punctuationspace", "hairspace", "enquad", "emquad",
         "zerowidthspace", "zerowidthnonjoiner", "zerowidthjoiner", "zwnj", "zwj",
-        "optionalspace", "asciispacechar", "softhyphen",
+        "optionalspace", "asciispacechar", "softhyphen", "autoinsertedspace",
         --
-        "Ux", "eUx", "Umathaccents",
+        "Ux", "eUx",
         --
         "parfillleftskip", "parfillrightskip",
         --
@@ -158,22 +199,42 @@ return {
         --
         "wildcardsymbol",
         --
-        "normalhyphenationmodecode", "automatichyphenationmodecode", "explicithyphenationmodecode",
-        "syllablehyphenationmodecode", "uppercasehyphenationmodecode", "completehyphenationmodecode",
-        "compoundhyphenationmodecode", "strictstarthyphenationmodecode", "strictendhyphenationmodecode",
-        "automaticpenaltyhyphenationmodecode", "explicitpenaltyhyphenationmodecode",
-        "permitgluehyphenationmodecode", "permitallhyphenationmodecode", "permitmathreplacehyphenationmodecode",
-        "forcecheckhyphenationmodecode", "lazyligatureshyphenationmodecode",
+        "normalhyphenationcode", "automatichyphenationcode", "explicithyphenationcode", "syllablehyphenationcode", "uppercasehyphenationcode",
+        "collapsehyphenationcode", "compoundhyphenationcode", "strictstarthyphenationcode", "strictendhyphenationcode",
+        "automaticpenaltyhyphenationcode", "explicitpenaltyhyphenationcode", "permitgluehyphenationcode", "permitallhyphenationcode",
+        "permitmathreplacehyphenationcode", "forcecheckhyphenationcode", "lazyligatureshyphenationcode", "forcehandlerhyphenationcode",
+        "feedbackcompoundhyphenationcode", "ignoreboundshyphenationcode", "partialhyphenationcode", "completehyphenationcode",
         --
-        "normalizelinecode", "parindentskipcode", "swaphangindentcode", "swapparsshapecode", "breakafterdircode", "removemarginkernscode", "clipwidthcode",
+        "normalizelinenormalizecode", "parindentskipnormalizecode", "swaphangindentnormalizecode", "swapparsshapenormalizecode",
+        "breakafterdirnormalizecode", "removemarginkernsnormalizecode", "clipwidthnormalizecode", "flattendiscretionariesnormalizecode",
+        "discardzerotabskipsnormalizecode", "flattenhleadersnormalizecode",
         --
-        "noligaturingcode", "nokerningcode", "noleftligaturecode", "noleftkerncode", "norightligaturecode", "norightkerncode",
-        "noexpansioncode", "noprotrusioncode",
+        "normalizeparnormalizeparcode", "flattenvleadersnormalizeparcode",
         --
-        "frozenflagcode", "tolerantflagcode", "protectedflagcode", "primitiveflagcode", "permanentflagcode", "noalignedflagcode", "immutableflagcode", "mutableflagcode",
-        "globalflagcode", "overloadedflagcode", "immediateflagcode", "conditionalflagcode", "valueflagcode", "instanceflagcode",
+        "nopreslackclassoptioncode", "nopostslackclassoptioncode",
+        "lefttopkernclassoptioncode", "righttopkernclassoptioncode", "leftbottomkernclassoptioncode", "rightbottomkernclassoptioncode",
+        "lookaheadforendclassoptioncode", "noitaliccorrectionclassoptioncode",  "defaultmathclassoptions",
+     -- "openfenceclassoptioncode", "closefenceclassoptioncode", "middlefenceclassoptioncode",
+        "checkligatureclassoptioncode", "checkitaliccorrectionclassoptioncode", "checkkernpairclassoptioncode",
+        "flattenclassoptioncode", "omitpenaltyclassoptioncode", "unpackclassoptioncode", "raiseprimeclassoptioncode",
+        "carryoverlefttopkernclassoptioncode", "carryoverleftbottomkernclassoptioncode", "carryoverrighttopkernclassoptioncode", "carryoverrightbottomkernclassoptioncode",
+        "preferdelimiterdimensionsclassoptioncode", "autoinjectclassoptioncode", "removeitaliccorrectionclassoptioncode",
+        "operatoritaliccorrectionclassoptioncode",
         --
-        "continuewhenlmtxmode"
+        "noligaturingglyphoptioncode", "nokerningglyphoptioncode", "noleftligatureglyphoptioncode",
+        "noleftkernglyphoptioncode", "norightligatureglyphoptioncode", "norightkernglyphoptioncode",
+        "noexpansionglyphoptioncode", "noprotrusionglyphoptioncode", "noitaliccorrectionglyphoptioncode",
+        -- extras:
+        "nokerningcode", "noligaturingcode",
+        --
+        "frozenflagcode", "tolerantflagcode", "protectedflagcode", "primitiveflagcode", "permanentflagcode", "noalignedflagcode", "immutableflagcode",
+        "mutableflagcode", "globalflagcode", "overloadedflagcode", "immediateflagcode", "conditionalflagcode", "valueflagcode", "instanceflagcode",
+        --
+        "ordmathflattencode", "binmathflattencode", "relmathflattencode", "punctmathflattencode", "innermathflattencode",
+        --
+        "normalworddiscoptioncode", "preworddiscoptioncode", "postworddiscoptioncode",
+        --
+        "continueifinputfile", "continuewhenlmtxmode", "continuewhenmkivmode",
     },
     ["helpers"] = {
         --
@@ -201,6 +262,9 @@ return {
         "newcount", "newdimen", "newskip", "newmuskip", "newbox", "newtoks", "newread", "newwrite", "newmarks", "newinsert", "newattribute", "newif",
         "newlanguage", "newfamily", "newfam", "newhelp", -- not used
         --
+        "newinteger", "newdimension", "newgluespec", "newmugluespec",
+        "aliasinteger", "aliasdimension",
+        --
         "then",
         "begcsname",
         --
@@ -221,11 +285,12 @@ return {
         --
         "doglobal", "dodoglobal", "redoglobal", "resetglobal",
         --
-        "donothing", "dontcomplain", "forgetall",
+        "donothing", "untraceddonothing", "dontcomplain", "moreboxtracing", "lessboxtracing", "noboxtracing", "forgetall",
         --
         "donetrue", "donefalse", "foundtrue", "foundfalse",
         --
-        "inlineordisplaymath","indisplaymath","forcedisplaymath","startforceddisplaymath","stopforceddisplaymath","startpickupmath","stoppickupmath","reqno",
+        "inlineordisplaymath", "indisplaymath", "forcedisplaymath", "startforceddisplaymath", "stopforceddisplaymath",
+        "startpickupmath", "stoppickupmath", "reqno", "forceinlinemath",
         --
         "mathortext",
         --
@@ -243,10 +308,13 @@ return {
         --
         "hglue", "vglue", "hfillneg", "vfillneg", "hfilllneg", "vfilllneg",
         --
+        "hsplit",
+        --
         "ruledhss", "ruledhfil", "ruledhfill", "ruledhfilll", "ruledhfilneg", "ruledhfillneg", "normalhfillneg",  "normalhfilllneg",
         "ruledvss", "ruledvfil", "ruledvfill", "ruledvfilll", "ruledvfilneg", "ruledvfillneg", "normalvfillneg",  "normalvfilllneg",
-        "ruledhbox", "ruledvbox", "ruledvtop", "ruledvcenter", "ruledmbox",
-        "ruledhpack", "ruledvpack", "ruledtpack",
+        "ruledhbox", "ruledvbox", "ruledvtop", "ruleddbox", "ruledvcenter", "ruledmbox",
+        "ruledhpack", "ruledvpack", "ruledtpack", "ruleddpack",
+        "ruledvsplit", "ruledtsplit", "ruleddsplit",
         "ruledhskip", "ruledvskip", "ruledkern", "ruledmskip", "ruledmkern",
         "ruledhglue", "ruledvglue", "normalhglue", "normalvglue",
         "ruledpenalty",
@@ -270,7 +338,9 @@ return {
         --
         "groupedcommand", "groupedcommandcs",
         "triggergroupedcommand", "triggergroupedcommandcs",
-        "simplegroupedcommand", "pickupgroupedcommand",
+        "simplegroupedcommand", "simplegroupedcommandcs",
+        "pickupgroupedcommand", "pickupgroupedcommandcs",
+        "mathgroupedcommandcs",
         --
         "usedbaselineskip", "usedlineskip", "usedlineskiplimit",
         --
@@ -283,7 +353,7 @@ return {
         --
         "givenwidth", "givenheight", "givendepth", "scangivendimensions",
         --
-        "scratchwidth", "scratchheight", "scratchdepth", "scratchoffset", "scratchdistance", "scratchtotal",
+        "scratchwidth", "scratchheight", "scratchdepth", "scratchoffset", "scratchdistance", "scratchtotal", "scratchitalic",
         "scratchhsize", "scratchvsize",
         "scratchxoffset", "scratchyoffset", "scratchhoffset", "scratchvoffset",
         "scratchxposition", "scratchyposition",
@@ -333,7 +403,7 @@ return {
         --
         "quitcondition", "truecondition", "falsecondition",
         --
-        "tracingall", "tracingnone", "loggingall",
+        "tracingall", "tracingnone", "loggingall", "tracingcatcodes",
         "showluatokens",
         --
         "aliasmacro",
@@ -372,7 +442,8 @@ return {
         --
         "getparameters", "geteparameters", "getgparameters", "getxparameters", "forgetparameters", "copyparameters",
         --
-        "getdummyparameters", "dummyparameter", "directdummyparameter", "setdummyparameter", "letdummyparameter", "setexpandeddummyparameter",
+        "getdummyparameters", "dummyparameter", "directdummyparameter", "setdummyparameter", "letdummyparameter",
+        "setexpandeddummyparameter", "resetdummyparameter",
         "usedummystyleandcolor", "usedummystyleparameter", "usedummycolorparameter",
         --
         "processcommalist", "processcommacommand", "quitcommalist", "quitprevcommalist",
@@ -400,8 +471,7 @@ return {
         "newconstant", "setnewconstant", "setconstant", "setconstantvalue",
         "newconditional", "settrue", "setfalse", "settruevalue", "setfalsevalue", "setconditional",
         --
-        "newmacro", "setnewmacro", "newfraction",
-        "newsignal",
+        "newmacro", "setnewmacro", "newfraction", "newsignal", "newboundary",
         --
         "dosingleempty", "dodoubleempty", "dotripleempty", "doquadrupleempty", "doquintupleempty", "dosixtupleempty", "doseventupleempty",
         "dosingleargument", "dodoubleargument", "dotripleargument", "doquadrupleargument", "doquintupleargument", "dosixtupleargument", "doseventupleargument",
@@ -414,6 +484,8 @@ return {
         --
         "getfirstcharacter", "doifelsefirstchar", "doiffirstcharelse",
         --
+        "mathclassvalue",
+        --
         "startnointerference", "stopnointerference",
         --
         "twodigits","threedigits",
@@ -425,42 +497,68 @@ return {
         "strut", "halfstrut", "quarterstrut", "depthstrut", "halflinestrut", "noheightstrut", "setstrut", "strutbox", "strutht", "strutdp", "strutwd", "struthtdp", "strutgap", "begstrut", "endstrut", "lineheight",
         "leftboundary", "rightboundary", "signalcharacter",
         --
+        "aligncontentleft", "aligncontentmiddle", "aligncontentright",
+        --
         "shiftbox", "vpackbox", "hpackbox", "vpackedbox", "hpackedbox",
         --
-        "ordordspacing", "ordopspacing", "ordbinspacing", "ordrelspacing",
-        "ordopenspacing", "ordclosespacing", "ordpunctspacing", "ordinnerspacing",
-        --
-        "opordspacing", "opopspacing", "opbinspacing", "oprelspacing",
-        "opopenspacing", "opclosespacing", "oppunctspacing", "opinnerspacing",
-        --
-        "binordspacing", "binopspacing", "binbinspacing", "binrelspacing",
-        "binopenspacing", "binclosespacing", "binpunctspacing", "bininnerspacing",
-        --
-        "relordspacing", "relopspacing", "relbinspacing", "relrelspacing",
-        "relopenspacing", "relclosespacing", "relpunctspacing", "relinnerspacing",
-        --
-        "openordspacing", "openopspacing", "openbinspacing", "openrelspacing",
-        "openopenspacing", "openclosespacing", "openpunctspacing", "openinnerspacing",
-        --
-        "closeordspacing", "closeopspacing", "closebinspacing", "closerelspacing",
-        "closeopenspacing", "closeclosespacing", "closepunctspacing", "closeinnerspacing",
-        --
-        "punctordspacing", "punctopspacing", "punctbinspacing", "punctrelspacing",
-        "punctopenspacing", "punctclosespacing", "punctpunctspacing", "punctinnerspacing",
-        --
-        "innerordspacing", "inneropspacing", "innerbinspacing", "innerrelspacing",
-        "inneropenspacing", "innerclosespacing", "innerpunctspacing", "innerinnerspacing",
+     -- "ordordspacing", "ordopspacing", "ordbinspacing", "ordrelspacing",
+     -- "ordopenspacing", "ordclosespacing", "ordpunctspacing", "ordinnerspacing",
+     -- "ordfracspacing", "ordradspacing", "ordmiddlespacing", "ordaccentspacing",
+     -- --
+     -- "opordspacing", "opopspacing", "opbinspacing", "oprelspacing",
+     -- "opopenspacing", "opclosespacing", "oppunctspacing", "opinnerspacing",
+     -- "opfracspacing", "opradspacing", "opmiddlespacing", "opaccentspacing",
+     -- --
+     -- "binordspacing", "binopspacing", "binbinspacing", "binrelspacing",
+     -- "binopenspacing", "binclosespacing", "binpunctspacing", "bininnerspacing",
+     -- "binfracspacing", "binradspacing", "binmiddlespacing", "binaccentspacing",
+     -- --
+     -- "relordspacing", "relopspacing", "relbinspacing", "relrelspacing",
+     -- "relopenspacing", "relclosespacing", "relpunctspacing", "relinnerspacing",
+     -- "relfracspacing", "relradspacing", "relmiddlespacing", "relaccentspacing",
+     -- --
+     -- "openordspacing", "openopspacing", "openbinspacing", "openrelspacing",
+     -- "openopenspacing", "openclosespacing", "openpunctspacing", "openinnerspacing",
+     -- "openfracspacing", "openradspacing", "openmiddlespacing", "openaccentspacing",
+     -- --
+     -- "closeordspacing", "closeopspacing", "closebinspacing", "closerelspacing",
+     -- "closeopenspacing", "closeclosespacing", "closepunctspacing", "closeinnerspacing",
+     -- "closefracspacing", "closeradspacing", "closemiddlespacing", "closeaccentspacing",
+     -- --
+     -- "punctordspacing", "punctopspacing", "punctbinspacing", "punctrelspacing",
+     -- "punctopenspacing", "punctclosespacing", "punctpunctspacing", "punctinnerspacing",
+     -- "punctfracspacing", "punctradspacing", "punctmiddlespacing", "punctaccentspacing",
+     -- --
+     -- "innerordspacing", "inneropspacing", "innerbinspacing", "innerrelspacing",
+     -- "inneropenspacing", "innerclosespacing", "innerpunctspacing", "innerinnerspacing",
+     -- "innerfracspacing", "innerradspacing", "innermiddlespacing", "inneraccentspacing",
+     -- --
+     -- "fracordspacing", "fracopspacing", "fracbinspacing", "fracrelspacing",
+     -- "fracopenspacing", "fracclosespacing", "fracpunctspacing", "fracinnerspacing",
+     -- "fracfracspacing", "fracradspacing", "fracmiddlespacing", "fracaccentspacing",
+     -- --
+     -- "radordspacing", "radopspacing", "radbinspacing", "radrelspacing",
+     -- "radopenspacing", "radclosespacing", "radpunctspacing", "radinnerspacing",
+     -- "radfracspacing", "radradspacing", "radmiddlespacing", "radaccentspacing",
+     -- --
+     -- "middleordspacing", "middleopspacing", "middlebinspacing", "middlerelspacing",
+     -- "middleopenspacing", "middleclosespacing", "middlepunctspacing", "middleinnerspacing",
+     -- "middlefracspacing", "middleradspacing", "middlemiddlespacing", "middleaccentspacing",
+     -- --
+     -- "accentordspacing", "accentopspacing", "accentbinspacing", "accentrelspacing",
+     -- "accentopenspacing", "accentclosespacing", "accentpunctspacing", "accentinnerspacing",
+     -- "accentfracspacing", "accentradspacing", "accentmiddlespacing", "accentaccentspacing",
         --
         "normalreqno",
         --
         "startimath", "stopimath", "normalstartimath", "normalstopimath",
         "startdmath", "stopdmath", "normalstartdmath", "normalstopdmath",
-        "normalsuperscript", "normalsubscript", "normalnosuperscript", "normalnosubscript",
-        "superscript", "subscript", "nosuperscript", "nosubscript",
+        "normalsuperscript", "normalsubscript", "normalnosuperscript", "normalnosubscript", "normalprimescript",
+        "superscript", "subscript", "nosuperscript", "nosubscript", "primescript",
         "superprescript", "subprescript", "nosuperprescript", "nosubsprecript",
         --
         "uncramped", "cramped",
-        "mathstyletrigger", "triggermathstyle",
+        "mathstyletrigger", "triggermathstyle", "triggeredmathstyle",
         "mathstylefont", "mathsmallstylefont", "mathstyleface", "mathsmallstyleface", "mathstylecommand", "mathpalette",
         "mathstylehbox", "mathstylevbox", "mathstylevcenter", "mathstylevcenteredhbox", "mathstylevcenteredvbox",
         "mathtext", "setmathsmalltextbox", "setmathtextbox",
@@ -499,8 +597,6 @@ return {
         --
         "assumelongusagecs",
         --
-        "Umathbotaccent", "Umathtopaccent",
-        --
         "righttolefthbox", "lefttorighthbox", "righttoleftvbox", "lefttorightvbox", "righttoleftvtop", "lefttorightvtop",
         "rtlhbox", "ltrhbox", "rtlvbox", "ltrvbox", "rtlvtop", "ltrvtop",
         "autodirhbox", "autodirvbox", "autodirvtop",
@@ -508,8 +604,9 @@ return {
         "lefttoright", "righttoleft", "checkedlefttoright", "checkedrighttoleft",
         "synchronizelayoutdirection","synchronizedisplaydirection","synchronizeinlinedirection",
         "dirlre", "dirrle", "dirlro", "dirrlo",
+        "rtltext", "ltrtext",
         --
-        "lesshyphens", "morehyphens", "nohyphens", "dohyphens",
+        "lesshyphens", "morehyphens", "nohyphens", "dohyphens", "dohyphencollapsing", "nohyphencollapsing",
         "compounddiscretionary",
         --
         "Ucheckedstartdisplaymath", "Ucheckedstopdisplaymath",
@@ -548,7 +645,7 @@ return {
         "prelistbox", "postlistbox", "prelistcopy", "postlistcopy", "setprelistbox", "setpostlistbox",
         --
         "noligaturing", "nokerning", "noexpansion", "noprotrusion",
-        "noleftkerning", "noleftligaturing", "norightkerning", "norightligaturing",
+        "noleftkerning", "noleftligaturing", "norightkerning", "norightligaturing", "noitaliccorrection",
          --
         "futureletnexttoken", "defbackslashbreak", "letbackslashbreak",
         --
@@ -556,8 +653,16 @@ return {
         --
         "suggestedalias",
         --
+        "showboxhere",
+        --
+        "discoptioncodestring", "flagcodestring", "frozenparcodestring", "glyphoptioncodestring", "groupcodestring",
+        "hyphenationcodestring", "mathcontrolcodestring", "mathflattencodestring", "normalizecodestring",
+        "parcontextcodestring",
+        --
         "newlocalcount", "newlocaldimen", "newlocalskip", "newlocalmuskip", "newlocaltoks", "newlocalbox",
         "newlocalwrite", "newlocalread",
         "setnewlocalcount", "setnewlocaldimen", "setnewlocalskip", "setnewlocalmuskip", "setnewlocaltoks", "setnewlocalbox",
+        --
+        "ifexpression"
     }
 }

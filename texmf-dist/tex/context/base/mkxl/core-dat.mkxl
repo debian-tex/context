@@ -30,6 +30,16 @@
 %D \stoplines
 %D \stoptyping
 
+%D \starttyping
+%D \definedataset[nofpages]
+%D
+%D \dorecurse{16}{whatever\page}
+%D
+%D \setdataset [nofpages] [pagetotal=\lastpagenumber]
+%D
+%D \testfeatureonce{100}{test \datasetvariable[todo-datasets]{nofpages}{1}{pagetotal} }
+%D \stoptyping
+
 \unprotect
 
 \registerctxluafile{core-dat}{}
@@ -58,8 +68,15 @@
    \fi
    \endgroup}
 
-\permanent\def\datasetvariable#1#2#3%
-  {\clf_datasetvariable{#1}{#2}{#3}}
+% \permanent\def\datasetvariable#1#2#3%
+%   {\clf_datasetvariable{#1}{#2}{#3}}
+
+\permanent\tolerant\def\datasetvariable[#1]%
+  {\ifparameter#1\or
+     \expandafter\clf_datasetvariablefromjob{#1\expandafter}%
+   \else
+     \expandafter\clf_datasetvariable
+   \fi}
 
 \installcorenamespace{pagestate}
 \installcorenamespace{pagestatecounter}
@@ -67,7 +84,7 @@
 \installcommandhandler \??pagestate {pagestate} \??pagestate
 
 \def\syst_pagestates_allocate
-  {\expandafter\newcount\csname\??pagestatecounter\currentpagestate\endcsname}
+  {\expandafter\newinteger\csname\??pagestatecounter\currentpagestate\endcsname}
 
 \appendtoks
     \syst_pagestates_allocate
@@ -81,7 +98,7 @@
    \edef\currentpagestate{#1}%
    \ifcsname\??pagestatecounter\currentpagestate\endcsname
      \scratchcounter\lastnamedcs
-     \advance\scratchcounter\plusone
+     \advanceby\scratchcounter\plusone
    \else
      \scratchcounter\plusone
      \syst_pagestates_allocate

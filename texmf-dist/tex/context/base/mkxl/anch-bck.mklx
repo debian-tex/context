@@ -31,14 +31,14 @@
 
 % Paragraph positions:
 
-\newcount\c_anch_backgrounds_text_n
+\newinteger\c_anch_backgrounds_text_n
 
 \def\v_anch_backgrounds_text_current    {tbg:0}
 \def\v_anch_backgrounds_anchor_current_b{b:\v_anch_backgrounds_text_current}
 \def\v_anch_backgrounds_anchor_current_e{e:\v_anch_backgrounds_text_current}
 
 \def\anch_backgrounds_text_initialize_next
-  {\global\advance\c_anch_backgrounds_text_n\plusone
+  {\global\advanceby\c_anch_backgrounds_text_n\plusone
    \edef\v_anch_backgrounds_text_current{tbg:\number\c_anch_backgrounds_text_n}}
 
 % The first position can be used in the middle of a paragraph in which case we're
@@ -57,7 +57,7 @@
 
 %D Some MP
 
-\newcount\MPparcounter
+\newinteger\MPparcounter
 
 \permanent\def\MPself     {\MPvar{self}}
 \permanent\def\MPbself    {b:\MPvar{self}}
@@ -89,7 +89,7 @@
 %   \readfile{ward}{}{}
 % \stoptextbackground
 
-\newcount\c_anch_backgrounds_text_level
+\newinteger\c_anch_backgrounds_text_level
 
 \installcorenamespace{textbackground}
 \installcorenamespace{textbackgroundlevel}
@@ -97,9 +97,9 @@
 \installcommandhandler \??textbackground {textbackground} \??textbackground
 
 \appendtoks
-    \frozen\instance\setuevalue{\currenttextbackground}{\groupedcommand{\starttextbackground[\currenttextbackground]}{\stoptextbackground}}%
-    \frozen\instance\setuevalue{\e!start\currenttextbackground}{\starttextbackground[\currenttextbackground]}%
-    \frozen\instance\setuevalue{\e!stop \currenttextbackground}{\stoptextbackground}%
+    \frozen\instance\protected\edefcsname        \currenttextbackground\endcsname{\groupedcommand{\starttextbackground[\currenttextbackground]}{\stoptextbackground}}%
+    \frozen\instance\protected\edefcsname\e!start\currenttextbackground\endcsname{\starttextbackground[\currenttextbackground]}%
+    \frozen\instance\protected\edefcsname\e!stop \currenttextbackground\endcsname{\stoptextbackground}%
 \to \everydefinetextbackground
 
 \newconstant   \c_anch_backgrounds_pos_state
@@ -119,37 +119,26 @@
      \eposkind\v_anch_backgrounds_text_current\c_anch_backgrounds_pos_state
    \fi}
 
-% \permanent\tolerant\protected\def\starttextbackground[#tag]#spacer[#settings]%
-%   {\begingroup
-%    \advance\c_anch_backgrounds_text_level\plusone
-%    \def\currenttextbackground{#tag}%
-%    \anch_backgrounds_text_initialize_next
-%    \ifparameter#settings\or
-%      \setupcurrenttextbackground[#settings]%
-%    \fi
-%    \doifelse{\textbackgroundparameter\c!state}\v!start
-%      \anch_backgrounds_text_preset_yes
-%      \anch_backgrounds_text_preset_nop
-%    \anch_backgrounds_text_start_indeed}
-
 % ugly hack to register usage
 
-\newcount   \c_anch_backgrounds_text_count
-\newcount   \c_anch_backgrounds_text_check
+\newinteger \c_anch_backgrounds_text_count
+\newinteger \c_anch_backgrounds_text_check
 \newconstant\c_anch_backgrounds_text_state
 
 \permanent\tolerant\protected\def\starttextbackground[#tag]#spacer[#settings]%
   {\begingroup
-   \global\advance\c_anch_backgrounds_text_count\plusone
-   \advance\c_anch_backgrounds_text_level\plusone
+   \global\advanceby\c_anch_backgrounds_text_count\plusone
+   \advanceby\c_anch_backgrounds_text_level\plusone
    \def\currenttextbackground{#tag}%
    \anch_backgrounds_text_initialize_next
    \ifparameter#settings\or
      \setupcurrenttextbackground[#settings]%
    \fi
-   \doifelse{\textbackgroundparameter\c!state}\v!start
+   \ifcstok{\textbackgroundparameter\c!state}\v!start
      \anch_backgrounds_text_preset_yes
+   \else
      \anch_backgrounds_text_preset_nop
+   \fi
    \anch_backgrounds_text_start_indeed}
 
 \def\anch_backgrounds_text_level_start
@@ -171,11 +160,11 @@
 \let\anch_backgrounds_text_start_indeed\relax
 \let\anch_backgrounds_text_stop_indeed \relax
 
-\setvalue{\??textbackgroundlevel\v!text}%
+\defcsname\??textbackgroundlevel\v!text\endcsname
   {\let\anch_backgrounds_text_start_indeed\anch_backgrounds_text_start_txt
    \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_txt}
 
-\setvalue{\??textbackgroundlevel\v!paragraph}%
+\defcsname\??textbackgroundlevel\v!paragraph\endcsname
   {\ifnum\c_anch_backgrounds_text_level>\textbackgroundparameter\c!criterium\relax
      \let\anch_backgrounds_text_start_indeed\anch_backgrounds_text_start_txt
      \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_txt
@@ -184,11 +173,11 @@
      \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_par
    \fi}
 
-\setvalue{\??textbackgroundlevel\v!always}%
+\defcsname\??textbackgroundlevel\v!always\endcsname
   {\let\anch_backgrounds_text_start_indeed\anch_backgrounds_text_start_par
    \let\anch_backgrounds_text_stop_indeed \anch_backgrounds_text_stop_par}
 
-\setvalue{\??textbackgroundlevel\v!none}%
+\defcsname\??textbackgroundlevel\v!none\endcsname
   {\anch_backgrounds_text_preset_nop}
 
 \def\anch_backgrounds_text_preset_nop
@@ -256,7 +245,7 @@
    \carryoverpar\endgroup}
 
 \def\anch_backgrounds_text_start_txt
-  {\ifvmode \dontleavehmode \fi
+  {\ifvmode\dontleavehmode\fi
    \begingroup
    \c_anch_backgrounds_pos_state\plusone
    \usetextbackgroundstyleandcolor\c!style\c!color
@@ -266,7 +255,7 @@
   {\anch_backgrounds_epos
    \carryoverpar\endgroup}
 
-\newskip\textbackgroundskip
+\newgluespec\textbackgroundskip
 
 % maybe we should have a resetter for such compensation struts
 
@@ -305,10 +294,8 @@
         \kern\textbackgroundskip\nobreak
      \fi
    \fi
-   \dosetleftskipadaption{\textbackgroundparameter\c!leftoffset}%
-   \advance\leftskip\leftskipadaption
-   \dosetleftskipadaption{\textbackgroundparameter\c!rightoffset}%
-   \advance\rightskip\leftskipadaption
+   \doadaptleftskip {\textbackgroundparameter\c!leftoffset}%
+   \doadaptrightskip{\textbackgroundparameter\c!rightoffset}%
    % new
    \dosetraggedcommand{\textbackgroundparameter\c!align}%
    \raggedcommand
@@ -324,7 +311,7 @@
    \removelastskip % new
    \spac_helpers_assign_skip\textbackgroundskip{\textbackgroundparameter\c!bottomoffset}%
    \ifdim\lastskip>\zeropoint
-     \advance\textbackgroundskip-\lastskip
+     \advanceby\textbackgroundskip-\lastskip
    \fi
    \ifgridsnapping
    \orelse\ifdim\textbackgroundskip>\zeropoint
@@ -366,9 +353,6 @@
 
 \definesystemattribute[textbackground][public]
 
-% \def\page_prepare_backgrounds#1%
-%   {\clf_collectbackgrounds\realpageno#1\relax}
-
 \def\anch_backgrounds_bpos
   {\ifconditional\c_anch_backgrounds_pos_no_shape
      \c_attr_textbackground\attributeunsetvalue
@@ -408,10 +392,10 @@
 \newconditional\c_strc_floats_mark_as_free
 \newconditional\c_strc_floats_trace_free
 \newconstant   \c_free_offset_kind
-\newdimen      \d_free_offset_left
-\newdimen      \d_free_offset_right
-\newdimen      \d_free_offset_top
-\newdimen      \d_free_offset_bottom
+\newdimension  \d_free_offset_left
+\newdimension  \d_free_offset_right
+\newdimension  \d_free_offset_top
+\newdimension  \d_free_offset_bottom
 
 \installtextracker{floats.freeregion}
   {\settrue \c_strc_floats_trace_free}
@@ -558,34 +542,13 @@
    gridcolor=red,
    linecolor=blue,
    fillcolor=lightgray,
-   filloffset=\!!zeropoint,
+   filloffset=\zeropoint,
    linewidth=\linewidth,
    gridwidth=\linewidth,
-   gridshift=\!!zeropoint,
+   gridshift=\zeropoint,
    lineradius=.5\bodyfontsize,
-   lineoffset=\!!zeropoint,
+   lineoffset=\zeropoint,
    dashtype=1]
-
-\startuseMPgraphic{mpos:region:setup}
-    boxgridtype   := \MPvar{gridtype} ;
-    boxlinetype   := \MPvar{linetype} ;
-    boxfilltype   := \MPvar{filltype} ;
-    boxdashtype   := \MPvar{dashtype} ;
-    boxfilloffset := \MPvar{filloffset} ;
-    boxlinewidth  := \MPvar{linewidth} ;
-    boxgridwidth  := \MPvar{gridwidth} ;
-    boxgridshift  := \MPvar{gridshift} ;
-    boxlineradius := \MPvar{lineradius} ;
-    boxlineoffset := \MPvar{lineoffset} ;
-    %
-    def boxgridcolor = \MPvar{gridcolor} enddef ;
-    def boxlinecolor = \MPvar{linecolor} enddef ;
-    def boxfillcolor = \MPvar{fillcolor} enddef ;
-    %
-    def boxgridoptions = withcolor boxgridcolor enddef ;
-    def boxlineoptions = withcolor boxlinecolor enddef ;
-    def boxfilloptions = withcolor boxfillcolor enddef ;
-\stopuseMPgraphic
 
 \startuseMPgraphic{mpos:region:extra}
     % user stuff
@@ -598,8 +561,7 @@
 \startMPpositiongraphic{mpos:region}{fillcolor,filloffset,linecolor,gridcolor,linewidth,gridwidth,gridshift,lineradius,lineoffset}
     \includeMPgraphic{mpos:region:setup} ;
     \includeMPgraphic{mpos:region:extra} ;
-  % \getmultipars("self","anchor") ;
-    \MPgetmultipars{\MPvar{self}}{\MPanchorid} ;
+    getmultipars("self", "anchor") ;
     \includeMPgraphic{\MPvar{mp}} ;
     \includeMPgraphic{mpos:region:anchor} ;
 \stopMPpositiongraphic
@@ -670,21 +632,12 @@
    lineoffset=5pt,
    linewidth=1pt]
 
-% \startMPpositiongraphic{mpos:encircle}{linecolor,fillcolor,linewidth,lineoffset}
-%     getposboxes("self","anchor") ;
-%     if nofposboxes = 1 :
-%         posboxes[1] := posboxes[1] enlarged \MPvar{lineoffset} cornered \MPvar{lineoffset}  ;
-%         fill posboxes[1] withcolor \MPvar{fillcolor} ;
-%         draw posboxes[1] withpen pencircle scaled \MPvar{linewidth} withcolor \MPvar{linecolor} ;
-%     fi ;
-% \stopMPpositiongraphic
-
 \startMPpositiongraphic{mpos:encircle}{linecolor,fillcolor,linewidth,lineoffset}
     getposboxes("self","anchor") ;
     if nofposboxes = 1 :
         posboxes[1] := (posboxes[1] enlarged mpvar "lineoffset") cornered mpvar "lineoffset" ;
         fill posboxes[1] withcolor mpvar "fillcolor" ;
-        draw posboxes[1] withpen pencircle scaled mpvar "linewidth"  withcolor mpvar "linecolor"  ;
+        draw posboxes[1] withpen pencircle scaled mpvar "linewidth" withcolor mpvar "linecolor"  ;
     fi ;
 \stopMPpositiongraphic
 
@@ -693,14 +646,6 @@
   [linecolor=red,
    lineoffset=.25ex,
    linewidth=1pt]
-
-% \startMPpositiongraphic{mpos:connect}{linecolor,lineoffset,linewidth}
-%     boxlinewidth  := \MPvar{linewidth} ;
-%     boxlineoffset := \MPvar{lineoffset} ;
-%     def boxlineoptions = withcolor \MPvar{linecolor} enddef ;
-%     getposboxes("from,to","anchor") ;
-%     connect_positions ;
-% \stopMPpositiongraphic
 
 \startMPpositiongraphic{mpos:connect}{linecolor,lineoffset,linewidth}
     boxlinewidth  := mpvar "linewidth" ;

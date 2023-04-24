@@ -10,8 +10,8 @@ if not modules then modules = { } end modules ['file-job'] = {
 -- and push/poppign at the tex end
 
 local next, rawget, tostring, tonumber = next, rawget, tostring, tonumber
-local gsub, match, find = string.gsub, string.match, string.find
-local insert, remove, concat = table.insert, table.remove, table.concat
+local gsub, match, gmatch, ind = string.gsub, string.match, string.gmatch, string.find
+local insert, remove, concat, unique, imerged = table.insert, table.remove, table.concat, table.unique, table.imerged
 local validstring, formatters = string.valid, string.formatters
 local sortedhash = table.sortedhash
 local setmetatableindex, setmetatablenewindex = table.setmetatableindex, table.setmetatablenewindex
@@ -48,6 +48,8 @@ local is_qualified_path = file.is_qualified_path
 local cleanpath         = resolvers.cleanpath
 local toppath           = resolvers.toppath
 local resolveprefix     = resolvers.resolve
+
+local currentfile       = luatex.currentfile
 
 local hasscheme         = url.hasscheme
 
@@ -189,8 +191,8 @@ implement {
 
 -- moved from tex to lua:
 
-local texpatterns = { "%s.mkvi", "%s.mkiv", "%s.mklx", "%s.mkxl", "%s.tex" }
-local luapatterns = { "%s" .. utilities.lua.suffixes.luc, "%s.lua", "%s.lmt" }
+local texpatterns = { "%s.mklx", "%s.mkxl", "%s.mkvi", "%s.mkiv", "%s.tex" }
+local luapatterns = { "%s" .. utilities.lua.suffixes.luc, "%s.lmt", "%s.lua" }
 local cldpatterns = { "%s.cld" }
 local xmlpatterns = { "%s.xml" }
 
@@ -395,6 +397,8 @@ end
 
 local textlevel = 0 -- inaccessible for user, we need to define counter textlevel at the tex end
 
+local c_textlevel = tex.iscount("textlevel")
+
 local function dummyfunction() end
 
 local function startstoperror()
@@ -412,7 +416,7 @@ local function starttext()
         context.dostarttext()
     end
     textlevel = textlevel + 1
-    texsetcount("global","textlevel",textlevel)
+    texsetcount("global",c_textlevel,textlevel)
 end
 
 local function stoptext()
@@ -422,7 +426,7 @@ local function stoptext()
         elseif textlevel > 0 then
             textlevel = textlevel - 1
         end
-        texsetcount("global","textlevel",textlevel)
+        texsetcount("global",c_textlevel,textlevel)
         if textlevel <= 0 then
             if trace_jobfiles then
                 report_jobfiles("stopping text")
@@ -548,7 +552,9 @@ end
 
 local function poptree()
     top = remove(treestack)
- -- inspect(top)
+    if #top[#top].branches == 0 then
+        top[#top].branches = nil -- saves space in tuc
+    end
 end
 
 do
@@ -556,10 +562,15 @@ do
     local function log_tree(report,top,depth)
         report("%s%s: %s",depth,top.type,top.name)
         local branches = top.branches
-        if #branches > 0 then
-            depth = depth .. "  "
-            for i=1,#branches do
-                log_tree(report,branches[i],depth)
+        if branches then
+            local n = #branches
+            if n > 0 then
+                depth = depth .. "  "
+                for i=1,n do
+                    log_tree(report,branches[i],depth)
+                end
+            else
+                top.brances = nil -- saves space in tuc
             end
         end
     end
@@ -811,18 +822,32 @@ implement { name = "usecomponent",   public = true, protected = true, actions = 
 -- todo: setsystemmode to currenttype
 -- todo: make start/stop commands at the tex end
 
+-- local start = {
+--     [v_project]     = context.startprojectindeed,
+--     [v_product]     = context.startproductindeed,
+--     [v_component]   = context.startcomponentindeed,
+--     [v_environment] = context.startenvironmentindeed,
+-- }
+
+-- local stop = {
+--     [v_project]     = context.stopprojectindeed,
+--     [v_product]     = context.stopproductindeed,
+--     [v_component]   = context.stopcomponentindeed,
+--     [v_environment] = context.stopenvironmentindeed,
+-- }
+
 local start = {
-    [v_project]     = context.startprojectindeed,
-    [v_product]     = context.startproductindeed,
-    [v_component]   = context.startcomponentindeed,
-    [v_environment] = context.startenvironmentindeed,
+    [v_project]     = "startprojectindeed",
+    [v_product]     = "startproductindeed",
+    [v_component]   = "startcomponentindeed",
+    [v_environment] = "startenvironmentindeed",
 }
 
 local stop = {
-    [v_project]     = context.stopprojectindeed,
-    [v_product]     = context.stopproductindeed,
-    [v_component]   = context.stopcomponentindeed,
-    [v_environment] = context.stopenvironmentindeed,
+    [v_project]     = "stopprojectindeed",
+    [v_product]     = "stopproductindeed",
+    [v_component]   = "stopcomponentindeed",
+    [v_environment] = "stopenvironmentindeed",
 }
 
 local function gotonextlevel(what,name) -- todo: something with suffix name
@@ -831,25 +856,27 @@ local function gotonextlevel(what,name) -- todo: something with suffix name
     currenttype = what
     pushtree(what,name)
     if start[what] then
-        start[what]()
+     -- start[what]()
+        token.expandmacro(start[what])
     end
 end
 
 local function gotopreviouslevel(what)
     if stop[what] then
-        stop[what]()
+        token.expandmacro(stop[what])
+     -- stop[what]() -- not immediate
     end
     poptree()
     currenttype = remove(typestack) or v_text
     remove(stacks[what]) -- not currenttype ... weak recovery
-context.endinput() -- does not work
---     context.signalendofinput(what)
+ -- context.endinput() -- now at the tex end !
 end
 
 local function autoname()
     local name = scan_delimited(91,93) or scan_delimited(0,32) -- [name] or name<space>
     if name == "*" then
-        name = nameonly(toppath() or name)
+     -- name = nameonly(toppath() or name)
+        name = nameonly(currentfile() or name)
     end
     return name
 end
@@ -898,6 +925,7 @@ end
 
 function environment.loadexamodes(filename)
     if not filename or filename == "" then
+        -- todo: environment.fulljobnmame
         filename = removesuffix(tex.jobname)
     end
     filename = resolvers.findfile(addsuffix(filename,'ctm')) or ""
@@ -1026,6 +1054,7 @@ function document.setcommandline() -- has to happen at the tex end in order to e
 
     -- in the new mtx=context approach we always pass a stub file so we need to
     -- to trick the files table which actually only has one entry in a tex job
+
 
     if arguments.timing then
         context.usemodule { "timing" }
@@ -1280,4 +1309,60 @@ implement {
         end
 --         ctx_doifelse(continue)
     end
+}
+
+-- data-hsh.lmt:
+
+local helpers            = resolvers.finders.helpers
+local validhashed        = helpers.validhashed
+local registerhashed     = helpers.registerhashed
+local registerfilescheme = helpers.registerfilescheme
+
+implement {
+    name      = "registerhashedfiles",
+    public    = true,
+    protected = true,
+    arguments = "optional",
+    actions   = function(list)
+        for name in gmatch(list,"[^, ]+") do
+            registerhashed(name)
+        end
+    end,
+}
+
+implement {
+    name      = "registerfilescheme",
+    public    = true,
+    protected = true,
+    arguments = "optional",
+    actions   = function(list)
+        for name in gmatch(list,"[^, ]+") do
+            registerfilescheme(name)
+        end
+    end,
+}
+
+implement {
+    name      = "doifelsevalidhashedfiles",
+    public    = true,
+    protected = true,
+    arguments = "string",
+    actions   = function(name)
+        ctx_doifelse(validhashed(name))
+    end,
+}
+
+implement {
+    name      = "adddefaultsuffix",
+    public    = true,
+    protected = true,
+    actions   = function(list)
+                    resolvers.defaultsuffixes = unique(
+                        imerged(
+                            resolvers.defaultsuffixes,
+                            list
+                        )
+                    )
+                end,
+    arguments = "array",
 }

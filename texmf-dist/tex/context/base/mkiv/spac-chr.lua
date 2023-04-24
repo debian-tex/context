@@ -28,7 +28,10 @@ local nodes, node = nodes, node
 
 local nuts               = nodes.nuts
 
+local getid              = nuts.getid
 local getboth            = nuts.getboth
+local getsubtype         = nuts.getsubtype
+local setsubtype         = nuts.setsubtype
 local getnext            = nuts.getnext
 local getprev            = nuts.getprev
 local getattr            = nuts.getattr
@@ -37,16 +40,13 @@ local getlanguage        = nuts.getlanguage
 local setchar            = nuts.setchar
 local setattrlist        = nuts.setattrlist
 local getfont            = nuts.getfont
-local setsubtype         = nuts.setsubtype
 local isglyph            = nuts.isglyph
 
 local setcolor           = nodes.tracers.colors.set
 
-local insert_node_before = nuts.insert_before
-local insert_node_after  = nuts.insert_after
+local insertnodebefore   = nuts.insertbefore
+local insertnodeafter    = nuts.insertafter
 local remove_node        = nuts.remove
------ traverse_id        = nuts.traverse_id
------ traverse_char      = nuts.traverse_char
 local nextchar           = nuts.traversers.char
 local nextglyph          = nuts.traversers.glyph
 
@@ -62,10 +62,12 @@ local nodecodes          = nodes.nodecodes
 local gluecodes          = nodes.gluecodes
 
 local glyph_code         = nodecodes.glyph
+local glue_code          = nodecodes.glue
 local spaceskip_code     = gluecodes.spaceskip
 
 local chardata           = characters.data
-local is_punctuation     = characters.is_punctuation
+local ispunctuation      = characters.is_punctuation
+local canhavespace       = characters.can_have_space
 
 local typesetters        = typesetters
 
@@ -95,7 +97,7 @@ local function inject_quad_space(unicode,head,current,fraction)
     setattrlist(glue,current)
     setattrlist(current) -- why reset all
     setattr(glue,a_character,unicode)
-    return insert_node_after(head,current,glue)
+    return insertnodeafter(head,current,glue)
 end
 
 local function inject_char_space(unicode,head,current,parent)
@@ -105,7 +107,7 @@ local function inject_char_space(unicode,head,current,parent)
     setattrlist(glue,current)
     setattrlist(current) -- why reset all
     setattr(glue,a_character,unicode)
-    return insert_node_after(head,current,glue)
+    return insertnodeafter(head,current,glue)
 end
 
 local function inject_nobreak_space(unicode,head,current,space,spacestretch,spaceshrink)
@@ -114,23 +116,23 @@ local function inject_nobreak_space(unicode,head,current,space,spacestretch,spac
     setattrlist(glue,current)
     setattrlist(current) -- why reset all
     setattr(glue,a_character,unicode) -- bombs
-    head, current = insert_node_after(head,current,penalty)
+    head, current = insertnodeafter(head,current,penalty)
     if trace_nbsp then
         local rule    = new_rule(space)
         local kern    = new_kern(-space)
         local penalty = new_penalty(10000)
         setcolor(rule,"orange")
-        head, current = insert_node_after(head,current,rule)
-        head, current = insert_node_after(head,current,kern)
-        head, current = insert_node_after(head,current,penalty)
+        head, current = insertnodeafter(head,current,rule)
+        head, current = insertnodeafter(head,current,kern)
+        head, current = insertnodeafter(head,current,penalty)
     end
-    return insert_node_after(head,current,glue)
+    return insertnodeafter(head,current,glue)
 end
 
 local function nbsp(head,current)
     local para = fontparameters[getfont(current)]
     local attr = getattr(current,a_alignstate) or 0
-    if attr >= 1 or attr <= 3 then -- flushright
+    if attr >= 1 and attr <= 3 then -- flushright
         head, current = inject_nobreak_space(0x00A0,head,current,para.space,0,0)
     else
         head, current = inject_nobreak_space(0x00A0,head,current,para.space,para.spacestretch,para.spaceshrink)
@@ -148,7 +150,7 @@ end
 
 function characters.replacenbspaces(head)
     local wipe = false
-    for current, char, font in nextglyph, head do -- can be anytime so no traverse_char
+    for current, char, font in nextglyph, head do -- can be anytime so no traversechar
         if char == 0x00A0 then
             if wipe then
                 head = remove_node(h,current,true)
@@ -184,18 +186,34 @@ local methods = {
 
     -- maybe also 0x0008 : backspace
 
+    -- Watch out: a return value means "remove"!
+
+    [0x001E] = function(head,current) -- kind of special
+        local next = getnext(current)
+        if next and getid(next) == glue_code and getsubtype(next) == spaceskip_code then
+            local nextnext = getnext(next)
+            if nextnext then
+                local char, font = isglyph(nextnext)
+                if char and not canhavespace[char] then
+                    head, current = remove_node(head,next,true)
+                end
+            end
+        end
+        return head, current
+    end,
+
     [0x001F] = function(head,current) -- kind of special
         local next = getnext(current)
         if next then
             local char, font = isglyph(next)
             if char then
-                head, current = remove_node(head,current,true)
-                if not is_punctuation[char] then
+                if not ispunctuation[char] then
                     local p = fontparameters[font]
-                    head, current = insert_node_before(head,current,new_glue(p.space,p.space_stretch,p.space_shrink))
+                    head, current = insertnodebefore(head,current,new_glue(p.space,p.space_stretch,p.space_shrink))
                 end
             end
         end
+        return head, current
     end,
 
     [0x00A0] = function(head,current) -- nbsp
@@ -226,7 +244,7 @@ local methods = {
     end,
 
     [0x00AD] = function(head,current) -- softhyphen
-        return insert_node_after(head,current,languages.explicithyphen(current))
+        return insertnodeafter(head,current,languages.explicithyphen(current))
     end,
 
     [0x2000] = function(head,current) -- enquad
@@ -322,3 +340,30 @@ function characters.handler(head)
     end
     return head
 end
+
+-- function characters.handler(head)
+--     local wiped = false
+--     for current, char in nextchar, head do
+--         local method = methods[char]
+--         if method then
+--             if wiped then
+--                 wiped[#wiped+1] = current
+--             else
+--                 wiped = { current }
+--             end
+--             if trace_characters then
+--                 report_characters("replacing character %C, description %a",char,lower(chardata[char].description))
+--             end
+--             local h = method(head,current)
+--             if h then
+--                 head = h
+--             end
+--         end
+--     end
+--     if wiped then
+--         for i=1,#wiped do
+--             head = remove_node(head,wiped[i],true)
+--         end
+--     end
+--     return head
+-- end

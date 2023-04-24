@@ -93,7 +93,7 @@ scripts.patterns.list = {
  -- { "ar",  "hyph-ar",            "arabic" },
  -- { "as",  "hyph-as",            "assamese" },
     { "bg",  "hyph-bg",            "bulgarian" },
- -- { "bn",  "hyph-bn",            "bengali" },
+    { "bn",  "hyph-bn",            "bengali" },
     { "ca",  "hyph-ca",            "catalan" },
  -- { "??",  "hyph-cop",           "coptic" },
     { "cs",  "hyph-cs",            "czech" },
@@ -102,8 +102,8 @@ scripts.patterns.list = {
     { "deo", "hyph-de-1901",       "german, old spelling" },
     { "de",  "hyph-de-1996",       "german, new spelling" },
  -- { "??",  "hyph-de-ch-1901",    "swiss german" },
- -- { "??",  "hyph-el-monoton",    "greek" },
- -- { "gr",  "hyph-el-polyton",    "greek" },
+ -- { "??",  "hyph-el-polyton",    "greek" },
+    { "gr",  "hyph-el-monoton",    "greek" },
     { "agr", "hyph-grc",           "ancient greek", ignored_ancient_greek },
     { "gb",  "hyph-en-gb",         "british english" },
     { "us",  "hyph-en-us",         "american english" },
@@ -116,8 +116,8 @@ scripts.patterns.list = {
     { "fr",  "hyph-fr",            "french", ignored_french },
  -- { "??",  "hyph-ga",            "irish" },
  -- { "??",  "hyph-gl",            "galician" },
- -- { "gu",  "hyph-gu",            "gujarati" },
- -- { "hi",  "hyph-hi",            "hindi" },
+    { "gu",  "hyph-gu",            "gujarati" },
+    { "hi",  "hyph-hi",            "hindi" },
     { "hr",  "hyph-hr",            "croatian" },
  -- { "??",  "hyph-hsb",           "upper sorbian" },
     { "hu",  "hyph-hu",            "hungarian" },
@@ -127,7 +127,7 @@ scripts.patterns.list = {
     { "is",  "hyph-is",            "icelandic" },
     { "it",  "hyph-it",            "italian" },
  -- { "??",  "hyph-kmr",           "kurmanji" },
- -- { "kn",  "hyph-kn",            "kannada" },
+    { "kn",  "hyph-kn",            "kannada" },
     { "la",  "hyph-la",            "latin" },
     { "ala", "hyph-la-x-classic",  "ancient latin" },
  -- { "lo",  "hyph-lo",            "lao" },
@@ -147,15 +147,16 @@ scripts.patterns.list = {
     { "pt",  "hyph-pt",            "portuguese" },
     { "ro",  "hyph-ro",            "romanian" },
     { "ru",  "hyph-ru",            "russian" },
- -- { "sa",  "hyph-sa",            "sanskrit" },
+    { "sa",  "hyph-sa",            "sanskrit" },
     { "sk",  "hyph-sk",            "slovak" },
     { "sl",  "hyph-sl",            "slovenian" },
-    { "sr",  "hyph-sr",            "serbian", false, { "hyph-sr-cyrl", "hyph-sr-latn" }, },
+    { "sq",  "hyph-sq",            "albanian" },
+    { "sr",  "hyph-sr",            "serbian", false, { "hyph-sh-cyrl", "hyph-sh-latn" }, },
  -- { "sr",  "hyph-sr-cyrl",       "serbian", false },
  -- { "sr",  "hyph-sr-latn",       "serbian" },
     { "sv",  "hyph-sv",            "swedish" },
- -- { "ta",  "hyph-ta",            "tamil" },
- -- { "te",  "hyph-te",            "telugu" },
+    { "ta",  "hyph-ta",            "tamil" },
+    { "te",  "hyph-te",            "telugu" },
     { "th",  "hyph-th",            "thai" },
     { "tk",  "hyph-tk",            "turkmen" },
     { "tr",  "hyph-tr",            "turkish" },
@@ -186,6 +187,7 @@ function scripts.patterns.load(path,name,mnemonic,ignored, merged)
     local splitpatternsold, splithyphenationsold = { }, { }
     local usedpatterncharactersnew, usedhyphenationcharactersnew = { }, { }
     if merged then
+        -- no version info
         report("using merged txt files %s.[hyp|pat|lic].txt",name)
         for i=1,#merged do
             local fullname = file.join(path,merged[i])
@@ -194,11 +196,13 @@ function scripts.patterns.load(path,name,mnemonic,ignored, merged)
             hyphenations = hyphenations  .. (io.loaddata(addsuffix(fullname,"hyp.txt")) or "") .. "\n\n"
         end
     elseif lfs.isfile(patfile) then
+        -- no version info
         report("using txt files %s.[hyp|pat|lic].txt",name)
         comment      = io.loaddata(licfile) or ""
         patterns     = io.loaddata(patfile) or ""
         hyphenations = io.loaddata(hypfile) or ""
     elseif lfs.isfile(texfile) then
+        -- version info in comment blob
         report("using tex file %s.txt",name)
         local data = io.loaddata(texfile) or ""
         if data ~= "" then

@@ -13,29 +13,73 @@
 
 \writestatus{loading}{ConTeXt Language Macros / Transliteration}
 
-\registerctxluafile{lang-tra}{}
+\registerctxluafile{lang-tra}{autosuffix}
 
 \unprotect
 
-\definesystemattribute[transliteration][public,global]
-
 \installcorenamespace {transliteration}
 
-\permanent\tolerant\protected\def\definetransliteration[#1]#*[#2]%
-  {\clf_definedtransliteration{#1}{#2}}
+\installcommandhandler \??transliteration {transliteration} \??transliteration
 
-\permanent\protected\def\settransliteration[#1]%
-  {\clf_settransliteration{#1}}
+\definesystemattribute[transliteration][public,global]
 
-\permanent\protected\def\starttransliteration[#1]%
+\newtoks\everytransliterations
+
+\appendtoks
+    \disablediscretionaries
+  % \let~=\lettertilde
+    \enforced\letcharcode\tildeasciicode\lettertilde
+  % \let|=\letterbar
+  % \enforced\letcharcode\barasciicode\letterbar
+\to \everytransliterations
+
+\def\lang_transliteration_common
+  {\usetransliterationstyleandcolor\c!style\c!color
+   \uselanguageparameter\transliterationparameter
+   \clf_settransliteration{\currenttransliteration}{\transliterationparameter\c!vector}%
+   \the\everytransliterations}
+
+\permanent\tolerant\protected\def\settransliteration[#1]#;#2%
+  {\edef\currenttransliteration{#1#2}%
+   \lang_transliteration_common}
+
+\permanent\protected\def\transliterationexception[#1]#2#3%
+  {\clf_transliterationexception{#1}{#2}{#3}}
+
+\permanent\tolerant\protected\def\starttransliteration[#1]#*[#2]%
   {\begingroup
-   \clf_settransliteration{#1}}
+   \edef\currenttransliteration{#1}%
+   \ifparameter#2\or
+      \setupcurrenttransliteration[#2]%
+   \fi
+   \transliterationparameter\c!before\relax
+   \lang_transliteration_common}
 
 \permanent\protected\def\stoptransliteration
-  {\endgroup}
+  {\transliterationparameter\c!after\relax
+   \endgroup}
+
+\permanent\tolerant\protected\def\transliteration[#1]#;#2%
+  {\groupedcommand
+     {\edef\currenttransliteration{#1#2}%
+      \lang_transliteration_common
+      \transliterationparameter\c!left\relax}
+     {\transliterationparameter\c!right\relax}}
+
+\appendtoks
+    \clf_registertransliteration{\currenttransliterationparent}{\currenttransliteration}%
+    \ifcstok{\transliterationparameter\c!define}\v!yes
+      \frozen\protected\instance\edefcsname\e!start\currenttransliteration\endcsname{\starttransliteration[\currenttransliteration]}%
+      \frozen\protected\instance\edefcsname\e!stop \currenttransliteration\endcsname{\stoptransliteration}%
+      \frozen\protected\instance\edefcsname        \currenttransliteration\endcsname{\transliteration[\currenttransliteration]}%
+    \fi
+\to \everydefinetransliteration
 
 \permanent\protected\def\resettransliteration
   {\c_attr_transliteration\attributeunsetvalue}
+
+\setuptransliteration
+  [\c!define=\v!yes]
 
 \appendtoks
     \resettransliteration

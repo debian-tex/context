@@ -39,34 +39,54 @@
 
 \installcorenamespace {objects}
 
-\newif   \ifinobject
-\newbox  \objectbox
+\mutable\def\objectoffset{1cm} % Still public but use with care!
 
-\mutable\def\objectoffset{1cm}
-
-\newdimen\objectoff  \permanent\def\objectmargin{\the\objectoff}
-\newdimen\objectwd   \permanent\def\objectwidth {\the\objectwd}
-\newdimen\objectht   \permanent\def\objectheight{\the\objectht}
-\newdimen\objectdp   \permanent\def\objectdepth {\the\objectdp}
+\newif       \ifinobject
+\newbox      \b_pack_objects
+\newdimension\d_pack_objects_offset \permanent\def\objectmargin{\the\d_pack_objects_offset}
+\newdimension\d_pack_objects_width  \permanent\def\objectwidth {\the\d_pack_objects_width}
+\newdimension\d_pack_objects_height \permanent\def\objectheight{\the\d_pack_objects_height}
+\newdimension\d_pack_objects_depth  \permanent\def\objectdepth {\the\d_pack_objects_depth}
 
 %D If I have time I will use the unreferenced variant for e.g. mp reuse. This can be
 %D rewritten in \LUA\ anyway.
 
-\permanent\protected\def\setreferencedobject       #1#2{\begingroup\synctexpause\objectoff\objectoffset\inobjecttrue\dowithnextbox{\pack_objects_set_yes{#1}{#2}}}
-\permanent\protected\def\settightreferencedobject  #1#2{\begingroup\synctexpause\objectoff\zeropoint   \inobjecttrue\dowithnextbox{\pack_objects_set_yes{#1}{#2}}}
-\permanent\protected\def\setunreferencedobject     #1#2{\begingroup\synctexpause\objectoff\objectoffset\inobjecttrue\dowithnextbox{\pack_objects_set_nop{#1}{#2}}}
-\permanent\protected\def\settightunreferencedobject#1#2{\begingroup\synctexpause\objectoff\zeropoint   \inobjecttrue\dowithnextbox{\pack_objects_set_nop{#1}{#2}}}
+\permanent\protected\def\setreferencedobject       #1#2{\begingroup\synctexpause\d_pack_objects_offset\objectoffset\inobjecttrue\dowithnextbox{\pack_objects_set_yes{#1}{#2}}}
+\permanent\protected\def\settightreferencedobject  #1#2{\begingroup\synctexpause\d_pack_objects_offset\zeropoint   \inobjecttrue\dowithnextbox{\pack_objects_set_yes{#1}{#2}}}
+\permanent\protected\def\setunreferencedobject     #1#2{\begingroup\synctexpause\d_pack_objects_offset\objectoffset\inobjecttrue\dowithnextbox{\pack_objects_set_nop{#1}{#2}}}
+\permanent\protected\def\settightunreferencedobject#1#2{\begingroup\synctexpause\d_pack_objects_offset\zeropoint   \inobjecttrue\dowithnextbox{\pack_objects_set_nop{#1}{#2}}}
 
 \aliased\let\setobject     \setreferencedobject
 \aliased\let\settightobject\settightreferencedobject
 
 %D We can get subtle differences in boundingboxes but both methods work ok.
 
+% How useful is this ... delayed but refered objects .. messy concept.
+%
+% \def\InitIt{%
+%     \c_pack_objects_delay\plusone
+%     \setobject{test}{1}\hbox{test me 1}
+%     \c_pack_objects_delay\zerocount
+% }
+%
+% \def\GetIt{%
+%     \c_pack_objects_delay\plusone
+%     \getobject{test}{1}
+%     \c_pack_objects_delay\zerocount
+% }
+%
+% \def\SetIt{%
+%     \c_pack_objects_delay\plustwo
+%     \setobject{test}{1}\hbox{\bf HERE}% we cannot have interactivity in xforms
+%     \c_pack_objects_delay\zerocount
+% }
+
 \newconstant\c_pack_objects_offset_mode % 0=tex 1=box
+\newconstant\c_pack_objects_delay       % 0=immediate 1=delay
 
 \protected\def\pack_objects_set_yes#1#2%
   {\ifcase\c_pack_objects_offset_mode
-     \ifzeropt\objectoff
+     \ifzeropt\d_pack_objects_offset
        \pack_objects_package_nop\nextbox
      \else
        \pack_objects_package_yes\nextbox
@@ -74,13 +94,18 @@
    \else
      \pack_objects_package_nop\nextbox
    \fi
-   \clf_registerreferencedobject{#1}{#2}\objectbox\objectoff\c_pack_objects_offset_mode
+   \clf_registerreferencedobject
+     {#1}{#2}%
+     \b_pack_objects
+     \d_pack_objects_offset
+     \c_pack_objects_offset_mode
+     \c_pack_objects_delay
    \synctexresume
    \endgroup}
 
 \protected\def\pack_objects_set_nop#1#2%
   {\ifcase\c_pack_objects_offset_mode
-     \ifzeropt\objectoff
+     \ifzeropt\d_pack_objects_offset
        \pack_objects_package_nop\nextbox
      \else
        \pack_objects_package_yes\nextbox
@@ -88,33 +113,36 @@
    \else
      \pack_objects_package_nop\nextbox
    \fi
-   \clf_registerobject{#1}{#2}\objectbox\objectoff\c_pack_objects_offset_mode
+   \clf_registerobject
+     {#1}{#2}%
+     \b_pack_objects
+     \d_pack_objects_offset
+     \c_pack_objects_offset_mode
+     \c_pack_objects_delay
    \synctexresume
    \endgroup}
 
 \def\pack_objects_package_nop#1% we pack because otherwise \ruledhbox is still tight
-  {\setbox\objectbox\hpack{\box#1}}
+  {\setbox\b_pack_objects\hpack{\box#1}}
 
 \def\pack_objects_package_yes#1%
-  {\objectwd\dimexpr\wd#1+2\objectoff\relax
-   \objectht\dimexpr\ht#1+ \objectoff\relax
-   \objectdp\dimexpr\dp#1+ \objectoff\relax
-   \setbox\objectbox\hpack
-     {\hskip\objectoff
-      \box#1}%
-   \wd\objectbox\objectwd
-   \ht\objectbox\objectht
-   \dp\objectbox\objectdp}
+  {\d_pack_objects_width \dimexpr\wd#1+2\d_pack_objects_offset\relax
+   \d_pack_objects_height\dimexpr\ht#1+ \d_pack_objects_offset\relax
+   \d_pack_objects_depth \dimexpr\dp#1+ \d_pack_objects_offset\relax
+   \setbox\b_pack_objects\hpack{\hskip\d_pack_objects_offset\box#1}%
+   \wd\b_pack_objects\d_pack_objects_width
+   \ht\b_pack_objects\d_pack_objects_height
+   \dp\b_pack_objects\d_pack_objects_depth}
 
 \permanent\protected\def\getobject#1#2%
   {\begingroup
    \synctexpause
    \clf_restoreobject{#1}{#2}%
-   \ifzeropt\objectoff\else
-     \objectoff-\objectoff
-     \pack_objects_package_yes\objectbox
+   \ifzeropt\d_pack_objects_offset\else
+     \d_pack_objects_offset-\d_pack_objects_offset
+     \pack_objects_package_yes\b_pack_objects
    \fi
-   \box\objectbox
+   \box\b_pack_objects
    \synctexresume
    \endgroup}
 
@@ -155,7 +183,7 @@
 
 %D For the moment here:
 
-\mutable\let\lastpredefinedsymbol\empty % some day we can do more at the lua end
+\mutable\lettonothing\lastpredefinedsymbol % some day we can do more at the lua end
 
 \permanent\protected\def\predefinesymbol[#1]%
   {\begingroup

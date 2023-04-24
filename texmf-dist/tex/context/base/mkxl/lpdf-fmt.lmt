@@ -19,15 +19,16 @@ local trace_variables = false  trackers.register("backend.variables", function(v
 
 local report_backend = logs.reporter("backend","profiles")
 
-local backends, lpdf = backends, lpdf
-
-local codeinjections           = backends.pdf.codeinjections
+local pdfbackend               = backends.registered.pdf
+----- nodeinjections           = pdfbackend.nodeinjections
+local codeinjections           = pdfbackend.codeinjections
 
 local variables                = interfaces.variables
 local viewerlayers             = attributes.viewerlayers
 local colors                   = attributes.colors
 local transparencies           = attributes.transparencies
 
+local lpdf                     = lpdf
 local pdfdictionary            = lpdf.dictionary
 local pdfarray                 = lpdf.array
 local pdfconstant              = lpdf.constant
@@ -903,12 +904,6 @@ function codeinjections.setformat(s)
                     majorversion,minorversion)
             end
             --
-            -- cid sets can always omitted now, but those validators still complain so let's
-            -- for a while keep it (for luigi):
-            --
-            lpdf.setomitcidset (formatspecification.include_cidsets  == false and 1 or 0) -- why a number
-            lpdf.setomitcharset(formatspecification.include_charsets == false and 1 or 0) -- why a number
-            --
             -- maybe block by pdf version
             --
             codeinjections.settaggingsupport(formatspecification.tagging)
@@ -918,6 +913,11 @@ function codeinjections.setformat(s)
             --     cmyk = spec.cmyk_colors and variables.yes or variables.no,
             --     rgb  = spec.rgb_colors  and variables.yes or variables.no,
             -- }
+            --
+            local rgb = spec.rgb_colors  and variables.yes or variables.no
+            local cmy = spec.cmyk_colors and variables.yes or variables.no
+            report_backend("permitted colorspaces: rgb %a, cmyk %a",rgb,cmy)
+         -- token.expandmacro ("colo_force_colormodel",true,rgb,true,cmy)
             --
             colors.forcesupport(
                 spec.gray_scale          or false,
@@ -958,6 +958,8 @@ function codeinjections.setformat(s)
                     report_backend("error, format is already set to %a, ignoring %a",formatname,noname.format)
                 end
             end
+            -- we could just pass the spec to the backend
+            lpdf.setincludecidset(spec.include_cidsets)
         else
             report_backend("error, format %a is not supported",format)
         end

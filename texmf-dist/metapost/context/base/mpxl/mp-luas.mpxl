@@ -112,8 +112,12 @@ vardef MP@#(text t) =
     mlib_luas_lualist("MP." & str @#,t)
 enddef ;
 
-def message expr t =
-    lua.mp.report(tostring(t)) ;
+% todo: runner
+
+newscriptindex mfun_message ; mfun_message := scriptindex("message") ;
+
+def message text t =
+    runscript mfun_message tostring(t) ; % todo: scananything
 enddef ;
 
 permanent newscriptindex, scriptindex, luacall, lua, lualist, mp, MP  ;
@@ -134,18 +138,30 @@ permanent resolvedcolor ;
 
 % Modes:
 
-vardef texmode   (expr s) = lua.mp("mode",      s) enddef ;
-vardef systemmode(expr s) = lua.mp("systemmode",s) enddef ;
+newscriptindex mfid_mode       ; mfid_mode       := scriptindex "mode" ;
+newscriptindex mfid_systemmode ; mfid_systemmode := scriptindex "systemmode" ;
+
+vardef texmode    (expr s) = runscript mfid_mode       s enddef ;
+vardef systemmode (expr s) = runscript mfid_systemmode s enddef ;
+
+% let processingmode = systemmode ;
 
 permanent texmode, systemmode ;
 
 % A few helpers
 
-vardef isarray   suffix a = lua.mp.isarray  (str a) enddef ;
-vardef prefix    suffix a = lua.mp.prefix   (str a) enddef ;
-vardef dimension suffix a = lua.mp.dimension(str a) enddef ;
+newscriptindex mfid_isarray   ; mfid_isarray   := scriptindex "isarray"   ;
+newscriptindex mfid_prefix    ; mfid_prefix    := scriptindex "prefix"    ;
+newscriptindex mfid_dimension ; mfid_dimension := scriptindex "dimension" ;
+newscriptindex mfid_isobject  ; mfid_isobject  := scriptindex "isobject"  ;
 
-permanent isarray, prefix, dimension ;
+vardef isarray   suffix a = runscript mfid_isarray  (str a) enddef ;
+vardef prefix    suffix a = runscript mfid_prefix   (str a) enddef ;
+vardef dimension suffix a = runscript mfid_dimension(str a) enddef ;
+
+vardef isobject  expr p = if picture p : runscript mfid_isobject prescriptpart p else : false fi enddef ;
+
+permanent isarray, prefix, dimension, isobject ;
 
 % More access
 
@@ -171,15 +187,38 @@ permanent
     setmacro, setdimen, setcount, settoks,
     setglobalmacro, setglobaldimen, setglobalcount, setglobaltoks ;
 
-vardef positionpath  (expr name) = lua.mp.positionpath  (name) enddef ;
-vardef positioncurve (expr name) = lua.mp.positioncurve (name) enddef ;
-vardef positionxy    (expr name) = lua.mp.positionxy    (name) enddef ;
-vardef positionpxy   (expr name) = lua.mp.positionpxy   (name) enddef ;
-vardef positionwhd   (expr name) = lua.mp.positionwhd   (name) enddef ;
-vardef positionpage  (expr name) = lua.mp.positionpage  (name) enddef ;
-vardef positionregion(expr name) = lua.mp.positionregion(name) enddef ;
-vardef positionbox   (expr name) = lua.mp.positionbox   (name) enddef ;
-vardef positionanchor            = lua.mp.positionanchor()     enddef ;
+newscriptindex mfid_positionpath        ; mfid_positionpath        := scriptindex("positionpath") ;
+newscriptindex mfid_positioncurve       ; mfid_positioncurve       := scriptindex("positioncurve") ;
+newscriptindex mfid_positionxy          ; mfid_positionxy          := scriptindex("positionxy") ;
+newscriptindex mfid_positionx           ; mfid_positionx           := scriptindex("positionx") ;
+newscriptindex mfid_positiony           ; mfid_positiony           := scriptindex("positiony") ;
+newscriptindex mfid_positionposition    ; mfid_positionparagraph   := scriptindex("positionparagraph") ;
+newscriptindex mfid_positionwhd         ; mfid_positionwhd         := scriptindex("positionwhd") ;
+newscriptindex mfid_positionpage        ; mfid_positionpage        := scriptindex("positionpage") ;
+newscriptindex mfid_positioncolumn      ; mfid_positioncolumn      := scriptindex("positioncolumn") ;
+newscriptindex mfid_positionregion      ; mfid_positionregion      := scriptindex("positionregion") ;
+newscriptindex mfid_positionbox         ; mfid_positionbox         := scriptindex("positionbox") ;
+newscriptindex mfid_positionanchor      ; mfid_positionanchor      := scriptindex("positionanchor") ;
+newscriptindex mfid_positioncolumnfromx ; mfid_positioncolumnfromx := scriptindex("positioncolumnfromx") ;
+newscriptindex mfid_positioncolumnbox   ; mfid_positioncolumnbox   := scriptindex("positioncolumnbox") ;
+newscriptindex mfid_overlaycolumnbox    ; mfid_overlaycolumnbox    := scriptindex("overlaycolumnbox") ;
+
+vardef positionpath     (expr name)   = runscript mfid_positionpath     (name)   enddef ;
+vardef positioncurve    (expr name)   = runscript mfid_positioncurve    (name)   enddef ;
+vardef positionxy       (expr name)   = runscript mfid_positionxy       (name)   enddef ;
+vardef positionx        (expr name)   = runscript mfid_positionx        (name)   enddef ;
+vardef positiony        (expr name)   = runscript mfid_positiony        (name)   enddef ;
+vardef positionwhd      (expr name)   = runscript mfid_positionwhd      (name)   enddef ;
+vardef positionpage     (expr name)   = runscript mfid_positionpage     (name)   enddef ;
+vardef positioncolumn   (expr name)   = runscript mfid_positioncolumn   (name)   enddef ;
+vardef positionparagraph(expr name)   = runscript mfid_positionparagraph(name)   enddef ;
+vardef positionpar      (expr name)   = runscript mfid_positionparagraph(name)   enddef ;
+vardef positionregion   (expr name)   = runscript mfid_positionregion   (name)   enddef ;
+vardef positionbox      (expr name)   = runscript mfid_positionbox      (name)   enddef ;
+vardef positionanchor                 = runscript mfid_positionanchor            enddef ;
+vardef positioncolumnatx(expr name)   = runscript mfid_positioncolumnatx(name)   enddef ;
+vardef positioncolumnbox(expr column) = runscript mfid_positioncolumnbox(column) enddef ;
+vardef overlaycolumnbox (expr column) = runscript mfid_overlaycolumnbox (column) enddef ;
 
 vardef positioninregion =
     currentpicture := currentpicture shifted - positionxy(positionanchor) ;
@@ -189,8 +228,10 @@ vardef positionatanchor(expr name) =
     currentpicture := currentpicture shifted - positionxy(name) ;
 enddef ;
 
-permanent positionpath, positioncurve, positionxy, positionpxy, positionwhd, positionpage,
-    positionregion, positionbox, positionanchor, positioninregion, positionatanchor ;
+permanent positionpath, positioncurve, positionxy, positionwhd,
+    positionpage, positionregion, positioncolumn, positionparagraph,
+    positionbox, positionanchor, positioninregion, positionatanchor,
+    positioncolumnatx, positioncolumnbox, overlaycolumnbox ;
 
 let wdpart = redpart ;
 let htpart = greenpart ;
@@ -198,8 +239,16 @@ let dppart = bluepart ;
 
 permanent wdpart, htpart, dppart;
 
-vardef texvar(expr name) = lua.mp.texvar(name) enddef ;
-vardef texstr(expr name) = lua.mp.texstr(name) enddef ;
+newscriptindex mfid_sortedpath ; mfid_sortedpath := scriptindex "sortedpath" ;
+newscriptindex mfid_uniquepath ; mfid_uniquepath := scriptindex "uniquepath" ;
+
+def sortedpath = runscript mfid_sortedpath enddef ;
+def uniquepath = runscript mfid_uniquepath enddef ;
+
+permanent sortpath, uniquepath ;
+
+newscriptindex mfid_texvar ; mfid_texvar := scriptindex "texvar" ; vardef texvar(expr s) = runscript mfid_texvar s enddef ;
+newscriptindex mfid_texstr ; mfid_texstr := scriptindex "texstr" ; vardef texstr(expr s) = runscript mfid_texstr s enddef ;
 
 newscriptindex mfid_path_lengthof ; mfid_path_lengthof := scriptindex "pathlengthof" ;
 newscriptindex mfid_path_pointof  ; mfid_path_pointof  := scriptindex "pathpointof" ;
@@ -233,8 +282,8 @@ newscriptindex mfid_utfsub ; mfid_utfsub := scriptindex "utfsub" ;
 % def utflen = runscript mfid_utflen enddef ;
 % def utfsub = runscript mfid_utfsub enddef ;
 
-vardef utfnum expr s  = runscript mfid_utfnum s enddef ; % str
-vardef utflen expr s  = runscript mfid_utflen s enddef ; % str
+vardef utfnum(expr s) = runscript mfid_utfnum s enddef ; % str
+vardef utflen(expr s) = runscript mfid_utflen s enddef ; % str
 vardef utfsub(text t) = runscript mfid_utfsub t enddef ; % str, first, (optional) last
 
 permanent utfnum, utflen, utfsub ;
@@ -252,8 +301,10 @@ newscriptindex mfid_getparameterpen      ; mfid_getparameterpen      := scriptin
 newscriptindex mfid_getparametertext     ; mfid_getparametertext     := scriptindex "getparametertext" ;
 %              mfid_getparameteroption   ; mfid_getparameteroption   := scriptindex "getparameteroption" ;
 newscriptindex mfid_applyparameters      ; mfid_applyparameters      := scriptindex "applyparameters" ;
+newscriptindex mfid_mergeparameters      ; mfid_mergeparameters      := scriptindex "mergeparameters" ;
 newscriptindex mfid_pushparameters       ; mfid_pushparameters       := scriptindex "pushparameters" ;
 newscriptindex mfid_popparameters        ; mfid_popparameters        := scriptindex "popparameters" ;
+newscriptindex mfid_setluaparameter      ; mfid_setluaparameter      := scriptindex "setluaparameter" ;
 
 def getparameters        = runscript mfid_getparameters        enddef ;
 def presetparameters     = runscript mfid_presetparameters     enddef ;
@@ -268,12 +319,31 @@ def getparameterpen      = runscript mfid_getparameterpen      enddef ;
 def getparametertext     = runscript mfid_getparametertext     enddef ;
 %   getparameteroption   = runscript mfid_getparameteroption   enddef ;
 def applyparameters      = runscript mfid_applyparameters      enddef ;
+def mergeparameters      = runscript mfid_mergeparameters      enddef ;
 def pushparameters       = runscript mfid_pushparameters       enddef ;
 def popparameters        = runscript mfid_popparameters        enddef ;
+def setluaparameter      = runscript mfid_setluaparameter      enddef ;
 
 permanent getparameters, presetparameters, hasparameter, hasoption, getparameter, getparameterdefault,
     getparametercount, getmaxparametercount, getparameterpath, getparameterpen, getparametertext, % getparameteroption,
-    applyparameters, pushparameters, popparameters ;
+    applyparameters, mergeparameters, pushparameters, popparameters, setluaparameter ;
+
+newscriptindex mfun_newrecord ; mfun_newrecord := scriptindex "newrecord" ;
+newscriptindex mfun_setrecord ; mfun_setrecord := scriptindex "setrecord" ;
+newscriptindex mfun_getrecord ; mfun_getrecord := scriptindex "getrecord" ;
+newscriptindex mfun_cntrecord ; mfun_cntrecord := scriptindex "cntrecord" ;
+
+% let record = runscript ; % We need to use "let" because we don't expand!
+
+def record    = newinternal numeric runscript enddef ;
+
+def newrecord = runscript mfun_newrecord ; enddef ; % semicolon prevents lookahead
+def setrecord = runscript mfun_setrecord ; enddef ;
+def getrecord = runscript mfun_getrecord   enddef ;
+def cntrecord = runscript mfun_cntrecord   enddef ;
+
+permanent
+    record, newrecord, setrecord, getrecord, cntrecord ;
 
 % No vardef's because we need to scan for an assignment too and we'll see
 % an endgroup otherwise.
@@ -310,10 +380,59 @@ permanent showproperty, showhashentry ;
 
 newscriptindex mfid_textextanchor ; mfid_textextanchor := scriptindex("textextanchor") ;
 
-def textextanchor = runscript mfid_textextanchor enddef ;
+% def textextanchor = runscript mfid_textextanchor enddef ;
 
 vardef textextanchor(expr p) =
     runscript mfid_textextanchor (prescriptpart p)
 enddef ;
 
 permanent textextanchor ;
+
+newscriptindex mfid_anchorxy   ; mfid_anchorxy   := scriptindex "anchorxy"   ;
+newscriptindex mfid_anchorx    ; mfid_anchorx    := scriptindex "anchorx"    ;
+newscriptindex mfid_anchory    ; mfid_anchory    := scriptindex "anchory"    ;
+newscriptindex mfid_anchorht   ; mfid_anchorht   := scriptindex "anchorht"   ;
+newscriptindex mfid_anchordp   ; mfid_anchordp   := scriptindex "anchordp"   ;
+newscriptindex mfid_anchorul   ; mfid_anchorul   := scriptindex "anchorul"   ;
+newscriptindex mfid_anchorll   ; mfid_anchorll   := scriptindex "anchorll"   ;
+newscriptindex mfid_anchorlr   ; mfid_anchorlr   := scriptindex "anchorlr"   ;
+newscriptindex mfid_anchorur   ; mfid_anchorur   := scriptindex "anchorur"   ;
+newscriptindex mfid_anchorbox  ; mfid_anchorbox  := scriptindex "anchorbox"  ;
+newscriptindex mfid_anchorspan ; mfid_anchorspan := scriptindex "anchorspan" ;
+
+def anchorxy (expr name, x, y) = runscript mfid_anchorxy  name x y enddef ;
+def anchorx  (expr name, x, y) = runscript mfid_anchorx   name x y enddef ;
+def anchory  (expr name, x, y) = runscript mfid_anchory   name x y enddef ;
+def anchorht (expr name, x, y) = runscript mfid_anchorht  name x y enddef ;
+def anchordp (expr name, x, y) = runscript mfid_anchordp  name x y enddef ;
+def anchorul (expr name, x, y) = runscript mfid_anchorul  name x y enddef ;
+def anchorll (expr name, x, y) = runscript mfid_anchorll  name x y enddef ;
+def anchorlr (expr name, x, y) = runscript mfid_anchorlr  name x y enddef ;
+def anchorur (expr name, x, y) = runscript mfid_anchorur  name x y enddef ;
+
+% todo: matrix =
+
+string mfun_local_anchor_tag ; mfun_local_anchor_tag := "matrix" ; % todo: push pop
+
+
+vardef localanchorbox (expr lname, fx, fy, rname, tx, ty) = (runscript mfid_anchorbox  lname fx fy rname tx ty) enddef ;
+vardef localanchorspan(expr lname, fx, fy, rname, tx, ty) = (runscript mfid_anchorspan lname fx fy rname tx ty) enddef ;
+vardef localanchorcell(expr  name,  x,  y               ) = (runscript mfid_anchorspan  name  x  y  name  x  y) enddef ;
+
+vardef anchorbox (expr fx, fy, tx, ty) = (runscript mfid_anchorbox  mfun_local_anchor_tag fx fy mfun_local_anchor_tag tx ty) enddef ;
+vardef anchorspan(expr fx, fy, tx, ty) = (runscript mfid_anchorspan mfun_local_anchor_tag fx fy mfun_local_anchor_tag tx ty) enddef ;
+vardef anchorcell(expr  x,  y        ) = (runscript mfid_anchorspan mfun_local_anchor_tag  x  y mfun_local_anchor_tag  x  y) enddef ;
+
+vardef matrixbox (expr fx, fy, tx, ty) = (runscript mfid_anchorbox  mfun_local_anchor_tag fx fy mfun_local_anchor_tag (tx+1) ty) enddef ;
+vardef matrixspan(expr fx, fy, tx, ty) = (runscript mfid_anchorspan mfun_local_anchor_tag fx fy mfun_local_anchor_tag (tx+1) ty) enddef ;
+vardef matrixcell(expr  x,  y        ) = (runscript mfid_anchorbox  mfun_local_anchor_tag  x  y mfun_local_anchor_tag ( x+1)  y) enddef ;
+
+permanent
+    anchorxy, anchorx, anchory,
+    anchorht, anchordp,
+    anchorul, anchorll, anchorlr, anchorur, anchorbox,
+    anchorspan ;
+
+permanent
+    matrixbox, matrixspan, matrixcell
+

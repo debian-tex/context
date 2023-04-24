@@ -32,7 +32,7 @@ local sortedkeys, sortedhash = table.sortedkeys, table.sortedhash
 local setmetatableindex = table.setmetatableindex
 local lpegmatch = lpeg.match
 local P, S, C, Ct, Cs, R, Carg = lpeg.P, lpeg.S, lpeg.C, lpeg.Ct, lpeg.Cs, lpeg.R, lpeg.Carg
-local upper = characters.upper
+local upper, lower = characters.upper, characters.lower
 
 local report             = logs.reporter("publications")
 local report_cite        = logs.reporter("publications","cite")
@@ -53,6 +53,8 @@ local casters            = publications.casters
 local detailed           = publications.detailed
 local enhancer           = publications.enhancer
 local enhancers          = publications.enhancers
+
+if not publications.btx then publications.btx = { } end -- user space
 
 local tracers            = publications.tracers or { }
 publications.tracers     = tracers
@@ -688,6 +690,49 @@ local findallused do
                 end
             end
             secondoftwoarguments()
+        end
+    }
+
+    implement {
+        name      = "btxmissing",
+        arguments = "2 strings",
+        actions   = function(dataset,tag)
+            local dataset = datasets[dataset]
+            if dataset then
+                local missing = dataset.missing
+                local message = missing[tag]
+                if message == nil then
+                    local luadata = dataset.luadata
+                    local entry   = luadata[tag]
+                    if not entry then
+                        local t = lower(tag)
+                        if luadata[t] then
+                            message = t
+                        else
+                            t = upper(tag)
+                            if luadata[t] then
+                                message = t
+                            else
+                                for k, v in next, luadata do
+                                    if t == upper(k) then
+                                        message = k
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    if not message then
+                        message = false
+                    end
+                    missing[tag] = message
+                end
+                if message then
+                    context("%s vs %s",tag,message)
+                    return
+                end
+            end
+            context(tag)
         end
     }
 
@@ -2166,18 +2211,18 @@ do
 
     function lists.combiinlist(dataset,tag)
         local rendering = renderings[dataset]
-        local list      = rendering.list
+     -- local list      = rendering.list
         local toindex   = rendering.tagtolistindex
         return toindex and toindex[tag]
     end
 
     function lists.flushcombi(dataset,tag)
         local rendering = renderings[dataset]
-        local list      = rendering.list
         local toindex   = rendering.tagtolistindex
         local listindex = toindex and toindex[tag]
         if listindex then
-            local li = list[listindex]
+            local list = rendering.list
+            local li   = list[listindex]
             if li then
                 local data      = datasets[dataset]
                 local luadata   = data.luadata
@@ -2405,6 +2450,10 @@ do
             for k, v in sortedhash(s) do
                 s = k
                 break
+            end
+            -- weird
+            if type(s) == "table" then
+                return citevariants.default
             end
         end
         if s then
@@ -2650,6 +2699,8 @@ do
 
     -- a bit redundant access to datasets
 
+    local creported = setmetatableindex("table")
+
     local function processcite(presets,specification)
         --
         if specification then
@@ -2676,9 +2727,15 @@ do
         --
         if not found or #found == 0 then
 --         if not list or #list == 0 then
-            report("no entry %a found in dataset %a",reference,dataset)
+            if not creported[dataset][reference] then
+                report("no entry %a found in dataset %a",reference,dataset)
+                creported[dataset][reference] = true
+            end
         elseif not setup then
-            report("invalid reference for %a",reference)
+            if not creported[""][reference] then
+                report("invalid reference for %a",reference)
+                creported[""][reference] = true
+            end
         else
             if trace_cite then
                 report("processing reference %a",reference)
@@ -3503,5 +3560,36 @@ do
         tex.runlocal("t_btx_cmd")
         return nodes.toutf(tex.getbox("b_btx_cmd").list) or str
     end
+
+end
+
+do
+
+    -- no caching for now
+
+    interfaces.implement { -- shared with mkiv so no public
+        name      = "btxdoifelsecitedone",
+        protected = true,
+     -- public    = true,
+     -- arguments = "2 arguments",
+        arguments = "2 strings",
+        actions   = function(dataset,tag)
+            -- dataset ignored
+            local list = structures.lists.tobesaved
+            local done = false
+            for i=1,#list do
+                local l = list[i]
+                local m = l.metadata
+                if m and m.kind == "btx" then
+                    local u = l.userdata
+                    if u and u.btxref == tag then
+                        done = true
+                        break
+                    end
+                end
+            end
+            ctx_doifelse(done)
+        end
+    }
 
 end

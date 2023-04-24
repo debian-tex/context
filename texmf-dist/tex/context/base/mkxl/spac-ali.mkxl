@@ -19,7 +19,7 @@
 %D variants. Starting at the last day of 2011 both methods are merged into one and
 %D caching has been added, which makes switching twice as fast.
 
-\registerctxluafile{spac-ali}{autosuffix,optimize}
+\registerctxluafile{spac-ali}{autosuffix}
 
 % Used once so ... replace it or use if more frequently ...
 
@@ -192,6 +192,9 @@
 \permanent\protected\def\leftorrightvbox{\ifconditional\displaylefttoright\expandafter\lefttorightvbox\else\expandafter\righttoleftvbox\fi}
 \permanent\protected\def\leftorrightvtop{\ifconditional\displaylefttoright\expandafter\lefttorightvtop\else\expandafter\righttoleftvtop\fi}
 
+\permanent\protected\def\rtltext{\groupedcommand{\dontleavehmode\righttoleft\ignorespaces}\removeunwantedspaces}
+\permanent\protected\def\ltrtext{\groupedcommand{\dontleavehmode\lefttoright\ignorespaces}\removeunwantedspaces}
+
 % Tolerance and hyphenation
 
 \ifdefined\lesshyphens \else \let\lesshyphens\relax \fi
@@ -294,8 +297,8 @@
 \let\v_spac_align_space_amount        \interwordspace
 \def\v_spac_align_space_amount_x          {.5\emwidth}
 
-\newskip\s_zero_plus_one_fil \s_zero_plus_one_fil = 0pt plus 1fil
-\newskip\s_zero_plus_zero    \s_zero_plus_zero    = 0pt plus 0pt
+\newgluespec\s_zero_plus_one_fil \s_zero_plus_one_fil = 0pt plus 1fil
+\newgluespec\s_zero_plus_zero    \s_zero_plus_zero    = 0pt plus 0pt
 
 % \s!plus ... slower than inline
 
@@ -306,6 +309,8 @@
    \rightskip        \plusone\rightskip
    \spaceskip        \zeropoint
    \xspaceskip       \zeropoint
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_one_fil % new
    \setfalse         \raggedonelinerstate % now here
@@ -319,6 +324,8 @@
    \rightskip        \plusone\rightskip\s!plus\zeropoint
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
    \parindent        \zeropoint
@@ -332,6 +339,8 @@
    \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_middle
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
    \parindent        \zeropoint
@@ -345,6 +354,8 @@
    \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_right
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_one_fil
   %\parindent        \parindent
@@ -357,6 +368,8 @@
    \rightskip        \plusone\rightskip\s!plus\zeropoint
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
    \parindent        \zeropoint
@@ -369,6 +382,8 @@
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
    \parindent        \zeropoint
@@ -381,6 +396,8 @@
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
   %\parindent        \parindent
@@ -394,6 +411,8 @@
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount_half
    \spaceskip        \v_spac_align_space_amount
    \xspaceskip       \v_spac_align_space_amount_x
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
    \parindent        \zeropoint
@@ -404,8 +423,10 @@
    \c_attr_alignstate\attributeunsetvalue
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount\relax
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount_negative\relax
-   \spaceskip        \zeropoint\relax
-   \xspaceskip       \zeropoint\relax
+   \spaceskip        \zeropoint
+   \xspaceskip       \zeropoint
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \zeropoint\s!plus\v_spac_align_fill_amount_double\relax
    \parindent        \zeropoint
@@ -416,8 +437,10 @@
    \c_attr_alignstate\attributeunsetvalue
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount\relax
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount_negative\relax
-   \spaceskip        \zeropoint\relax
-   \xspaceskip       \zeropoint\relax
+   \spaceskip        \zeropoint
+   \xspaceskip       \zeropoint
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillskip      \zeropoint
    \parfillleftskip  \zeropoint\s!plus\v_spac_align_fill_amount_extreme\relax
    \parindent        \zeropoint
@@ -429,11 +452,28 @@
    \c_attr_alignstate\plusthree
    \leftskip         \plusone\leftskip \s!plus\zeropoint\relax
    \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_right\relax
-   \spaceskip        \zeropoint\relax
-   \xspaceskip       \zeropoint\relax
+   \spaceskip        \zeropoint
+   \xspaceskip       \zeropoint
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint
    \parfillleftskip  \zeropoint
    \parfillskip      \s_zero_plus_zero
   %\parindent        \parindent
+   \relax}
+
+\permanent\protected\def\spac_align_set_horizontal_slanted
+  {\raggedstatus     \zerocount
+  %\c_attr_alignstate\attributeunsetvalue
+   \c_attr_alignstate\plustwo
+   \leftskip         \plusone\leftskip \s!plus\spac_align_set_raggedness_middle
+   \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_middle
+   \spaceskip        \zeropoint
+   \xspaceskip       \zeropoint
+   \parinitleftskip  \zeropoint
+   \parinitrightskip \zeropoint\s!plus\v_spac_align_fill_amount_extreme\relax
+   \parfillleftskip  \zeropoint\s!plus\v_spac_align_fill_amount_extreme\relax
+   \parfillskip      \zeropoint
+   \parindent        \zeropoint
    \relax}
 
 \permanent\protected\def\spac_align_set_horizontal_extra
@@ -495,6 +535,9 @@
    \or
      % 9 paragraph
      \parfillskip\zeropoint
+   \or
+     % 10 slanted
+     \spac_align_set_horizontal_slanted
    \fi
    \relax}
 
@@ -567,27 +610,57 @@
    \c_spac_align_state_direction \zerocount % what is default ?
    \c_spac_align_state_page      \zerocount
    \c_spac_align_state_par_fill  \zerocount
-   \ifcsname\??aligncommand\m_spac_align_asked\endcsname
+   \ifcsname\??aligncommand\m_spac_align_named\endcsname
      \lastnamedcs
    \else
      \rawprocesscommacommand[\m_spac_align_asked]\spac_align_collect
    \fi
-   \normalexpanded{\t_spac_align_collected
-     {\setfalse\raggedonelinerstate % bad
-      \the\t_spac_align_collected
-      \spac_align_flush_horizontal
-      \spac_align_flush_vertical
-      \spac_align_flush_direction
-      \spac_align_flush_page
-      \spac_align_flush_parfill
-      }}% kept, nice for tracing
+ % % kept, nice for tracing
+ %
+ % \normalexpanded{\t_spac_align_collected
+ %   {\setfalse\raggedonelinerstate % bad
+ %    \the\t_spac_align_collected
+ %    \spac_align_flush_horizontal
+ %    \spac_align_flush_vertical
+ %    \spac_align_flush_direction
+ %    \spac_align_flush_page
+ %    \spac_align_flush_parfill
+ %    }}%
+ %
+ %  \etoksapp\t_spac_align_collected
+ %    {\spac_align_flush_horizontal
+ %     \spac_align_flush_vertical
+ %     \spac_align_flush_direction
+ %     \spac_align_flush_page
+ %     \spac_align_flush_parfill}%
+ %  \etokspre\t_spac_align_collected
+ %    {\setfalse\raggedonelinerstate}% bad
+ %
+    \etoks\t_spac_align_collected
+      {\setfalse\raggedonelinerstate % bad
+       \the\t_spac_align_collected
+       \spac_align_flush_horizontal
+       \spac_align_flush_vertical
+       \spac_align_flush_direction
+       \spac_align_flush_page
+       \spac_align_flush_parfill}%
+ %
    \enforced\permanent\protected\edef\raggedcommand    {\the\t_spac_align_collected }%
    \enforced\permanent\protected\edef\updateraggedskips{\spac_align_flush_horizontal}%
-   \enforced\aliased\gletcsname\??alignmentnormalcache\m_spac_align_asked\endcsname\raggedcommand
-   \enforced\aliased\gletcsname\??alignmentraggedcache\m_spac_align_asked\endcsname\updateraggedskips}
+   \enforced\aliased\gletcsname\??alignmentnormalcache\m_spac_align_named\endcsname\raggedcommand
+   \enforced\aliased\gletcsname\??alignmentraggedcache\m_spac_align_named\endcsname\updateraggedskips}
+
+\mutable\def\m_spac_align_named{\m_spac_align_asked}
 
 \def\spac_align_collect#1%
   {\csname\??aligncommand#1\endcsname}
+
+\permanent\protected\tolerant\def\definealign[#1]#*[#2]%
+  {\pushmacro\m_spac_align_named
+   \edef\m_spac_align_named{#1}%
+   \edef\m_spac_align_asked{#2}%
+   \spac_align_add_to_cache
+   \popmacro\m_spac_align_named}
 
 % The local (key driven) setter:
 
@@ -652,7 +725,7 @@
 % Maybe we need something different in columns.
 
 \permanent\protected\def\installalign#1#2% beware: commands must be unexpandable!
-  {\ifcsname\??aligncommand#1\endcsname \else
+  {\ifcsname\??aligncommand#1\endcsname \else  % : so maybe we should use \etoksapp
      \defcsname\??aligncommand#1\endcsname{\toksapp\t_spac_align_collected{#2}}%
    \fi}
 
@@ -699,6 +772,11 @@
 \defcsname\??aligncommand               l2r\endcsname{\c_spac_align_state_direction \plusone  }
 \defcsname\??aligncommand               r2l\endcsname{\c_spac_align_state_direction \plustwo  }
 
+
+\defcsname\??aligncommand\v!slanted        \endcsname{\c_spac_align_state_horizontal\plusten
+                                                      \c_spac_align_state_broad     \plustwo  }
+
+
 \defcsname\??aligncommand\v!table          \endcsname{\c_spac_align_state_vertical  \plusthree
                                                       \c_spac_align_state_broad     \plusone
                                                       \c_spac_align_state_horizontal\plustwo  }
@@ -716,30 +794,42 @@
 %defcsname\??aligncommand\v!nospacing      \endcsname{\toksapp\t_spac_align_collected{\normalspacing\plusone}}   % not yet
 \defcsname\??aligncommand\v!hyphenated     \endcsname{\toksapp\t_spac_align_collected{\dohyphens}}
 \defcsname\??aligncommand\v!nothyphenated  \endcsname{\toksapp\t_spac_align_collected{\nohyphens}}
+\defcsname\??aligncommand\v!collapsed      \endcsname{\toksapp\t_spac_align_collected{\dohyphencollapsing}}
+\defcsname\??aligncommand\v!notcollapsed   \endcsname{\toksapp\t_spac_align_collected{\nohyphencollapsing}}
+\defcsname\??aligncommand\v!explicit       \endcsname{\toksapp\t_spac_align_collected{\nohyphens\doexplicithyphens}}
 
 \defcsname\??aligncommand\v!tolerant       \endcsname{\toksapp\t_spac_align_collected{\spac_align_set_tolerant}}
 \defcsname\??aligncommand\v!verytolerant   \endcsname{\toksapp\t_spac_align_collected{\spac_align_set_very_tolerant}}
 \defcsname\??aligncommand\v!stretch        \endcsname{\toksapp\t_spac_align_collected{\spac_align_set_stretch}}
 \defcsname\??aligncommand\v!extremestretch \endcsname{\toksapp\t_spac_align_collected{\spac_align_set_extreme_stretch}}
 
-\defcsname\??aligncommand  \v!final\endcsname{\c_spac_align_state_par_fill\plusone}
-\defcsname\??aligncommand1*\v!final\endcsname{\c_spac_align_state_par_fill\plusone}
-\defcsname\??aligncommand2*\v!final\endcsname{\c_spac_align_state_par_fill\plustwo}      % hardcoded multiplier
-\defcsname\??aligncommand3*\v!final\endcsname{\c_spac_align_state_par_fill\plusthree}
-\defcsname\??aligncommand4*\v!final\endcsname{\c_spac_align_state_par_fill\plusfour}
+\defcsname\??aligncommand          \v!final\endcsname{\c_spac_align_state_par_fill\plusone}
+\defcsname\??aligncommand        1*\v!final\endcsname{\c_spac_align_state_par_fill\plusone}
+\defcsname\??aligncommand        2*\v!final\endcsname{\c_spac_align_state_par_fill\plustwo}      % hardcoded multiplier
+\defcsname\??aligncommand        3*\v!final\endcsname{\c_spac_align_state_par_fill\plusthree}
+\defcsname\??aligncommand        4*\v!final\endcsname{\c_spac_align_state_par_fill\plusfour}
 
 % a one shot (only usefull in e.g. framed, also needs tolerance and stretch)
 
-\defcsname\??aligncommand  \v!more\endcsname{\toksapp\t_spac_align_collected{\looseness\plusone}}
-\defcsname\??aligncommand1*\v!more\endcsname{\toksapp\t_spac_align_collected{\looseness\plusone}}
-\defcsname\??aligncommand2*\v!more\endcsname{\toksapp\t_spac_align_collected{\looseness\plustwo}}
+\defcsname\??aligncommand          \v!more\endcsname{\toksapp\t_spac_align_collected{\looseness\plusone}}
+\defcsname\??aligncommand        1*\v!more\endcsname{\toksapp\t_spac_align_collected{\looseness\plusone}}
+\defcsname\??aligncommand        2*\v!more\endcsname{\toksapp\t_spac_align_collected{\looseness\plustwo}}
 
 %defcsname\??aligncommand ...\endcsname{\toksapp\t_spac_align_collected{\nopenalties}}
 %defcsname\??aligncommand ...\endcsname{\toksapp\t_spac_align_collected{\setdefaultpenalties}}
 
 % experiment
 
-\defcsname\??aligncommand\v!always\endcsname{\toksapp\t_spac_align_collected{\bitwiseflip\hyphenationmode\forcecheckhyphenationmodecode}}
+\defcsname\??aligncommand \v!flushforward\endcsname{\c_spac_align_state_horizontal\ifconditional\inlinelefttoright\plustwo\else\plusthree\fi}
+\defcsname\??aligncommand\v!flushbackward\endcsname{\c_spac_align_state_horizontal\ifconditional\inlinelefttoright\plusthree\else\plustwo\fi}
+
+% experiment
+
+\defcsname\??aligncommand\v!always\endcsname{\toksapp\t_spac_align_collected{\bitwiseflip\hyphenationmode\forcecheckhyphenationcode}}
+
+% experiment
+
+\defcsname\??aligncommand\v!profile\endcsname{\toksapp\t_spac_align_collected{\setmainlineprofile}}
 
 \definehspace [\v!final] [\emspaceamount]
 
@@ -782,6 +872,7 @@
 \aliased\let\flushedrightlastline\spac_align_set_horizontal_flushedright_last_line
 \aliased\let\ttraggedright       \spac_align_set_horizontal_right_tt            % a plain command
 \aliased\let\forgetragged        \spac_align_set_horizontal_none
+\aliased\let\raggedslanted       \spac_align_set_horizontal_slanted
 
 \appendtoks
     \spac_align_set_horizontal_none
@@ -865,7 +956,7 @@
 \defcsname\??alignhorizontal\v!flushright\endcsname{\enforced\let\raggedbox\spac_align_horizontal_flushright}
 \defcsname\??alignhorizontal\v!center    \endcsname{\enforced\let\raggedbox\spac_align_horizontal_center}
 
-% The next one can be in use so we keep it around but oen should
+% The next one can be in use so we keep it around but one should
 % be aware of possible interference.
 
 \permanent\protected\def\setraggedskips#1#2#3#4#5#6#7% never change this name (todo: inline this one .. less tracingall)
@@ -1073,6 +1164,28 @@
      {\normalexpanded{\spac_word_right_indeed{#1}{\hpack{\thebox\nextbox}}}}
      \hbox}
 
+% \protected\def\spac_word_right_indeed#1#2%
+%   {\registerparwrapper
+%      {\v!word:\v!right}
+%      {\begingroup
+%       \frozen\parfillskip        \zeropoint
+%       \frozen\finalhyphendemerits\zerocount
+%       \endgroup}
+%      {\doifelseparwrapper{\v!word:\v!right}%
+%         {\doifelse{#1}\v!right{\kern-\rightskip}{\doifsomething{#1}{\kern-#1}}%
+%          \strut \removeunwantedspaces
+%          \hfill
+%          \allowbreak % changed back from \hskip\zeropoint
+%          \quad}%
+%         {\allowbreak % changed back from \hskip\zeropoint
+%          \break}%
+%       \unregisterparwrapper{\v!word:\v!right}%
+%       \strut
+%       \hfill
+%       \nobreak
+%       #2%
+%       \allowbreak}}
+
 \protected\def\spac_word_right_indeed#1#2%
   {\registerparwrapper
      {\v!word:\v!right}
@@ -1080,20 +1193,14 @@
       \frozen\parfillskip        \zeropoint
       \frozen\finalhyphendemerits\zerocount
       \endgroup}
-     {\doifelseparwrapper{\v!word:\v!right}%
-        {\doifelse{#1}\v!right{\kern-\rightskip}{\doifsomething{#1}{\kern-#1}}%
-         \strut \removeunwantedspaces
-         \hfill
-         \allowbreak % changed back from \hskip\zeropoint
-         \quad}%
-        {\allowbreak % changed back from \hskip\zeropoint
-         \break}%
-      \unregisterparwrapper{\v!word:\v!right}%
-      \strut
-      \hfill
-      \nobreak
-      #2%
-      \allowbreak}}
+     {\doifelseparwrapper{\v!word:\v!right}{\unregisterparwrapper{\v!word:\v!right}}\donothing
+      \removeunwantedspaces
+      \doifelse{#1}\v!right{\kern-\rightskip}{\doifsomething{#1}{\kern-#1}}%
+      \hfilll
+      \discretionary{\strut}{\strut}{\strut}% \allowbreak % changed back from \hskip\zeropoint
+      \hfilll
+      \quad % decent spacing
+      #2}}
 
 % \dorecurse{5}{something} \wordright{--someone} \endgraf
 % \dorecurse{6}{something} \wordright{--someone} \endgraf
@@ -1149,6 +1256,9 @@
 \letcsname\??alignsimplereverse\v!inner     \endcsname\spac_align_simple_left  % not managed! see linenumbers
 \letcsname\??alignsimplereverse\v!flushright\endcsname\spac_align_simple_left
 \letcsname\??alignsimplereverse\v!middle    \endcsname\spac_align_simple_middle
+
+\protected\def\spac_align_simple#1%
+  {\begincsname\??alignsimple#1\endcsname}
 
 \permanent\protected\def\simplealignedbox#1#2%
   {\hbox \ifdim#1>\zeropoint to #1

@@ -13,7 +13,6 @@ local insert, remove, concat = table.insert, table.remove, table.concat
 local Cs, Cf, C, Cg, Ct, P, S, V, Carg = lpeg.Cs, lpeg.Cf, lpeg.C, lpeg.Cg, lpeg.Ct, lpeg.P, lpeg.S, lpeg.V, lpeg.Carg
 local lpegmatch, tsplitat, tsplitter = lpeg.match, lpeg.tsplitat, lpeg.tsplitter
 local formatters = string.formatters
-local exists, savedata = io.exists, io.savedata
 
 local mplib                = mplib
 local metapost             = metapost
@@ -26,8 +25,8 @@ local setmacro             = interfaces.setmacro
 local texsetbox            = tex.setbox
 local textakebox           = tex.takebox -- or: nodes.takebox
 local texrunlocal          = tex.runlocal
-local copy_list            = node.copy_list
-local flush_list           = node.flush_list
+local copylist             = nodes.copylist
+local flushlist            = nodes.flushlist
 local setmetatableindex    = table.setmetatableindex
 local sortedhash           = table.sortedhash
 
@@ -271,7 +270,7 @@ local function stopjob()
     if top then
         for slot, content in next, top.textexts do
             if content then
-                flush_list(content)
+                flushlist(content)
                 if trace_textexts then
                     report_textexts("freeing text %s",slot)
                 end
@@ -377,7 +376,7 @@ function models.rgb(cr)
     elseif metapost.reducetogray then
         if n == 1 then
             local s = cr[1]
-            checked_color_pair(f_gray,s,s)
+            return checked_color_pair(f_gray,s,s)
         elseif n == 3 then
             local r = cr[1]
             local g = cr[2]
@@ -1078,7 +1077,7 @@ local tx_reset, tx_process  do
                 end
                 box = cache[mp_hash]
                 if box then
-                    box = copy_list(box)
+                    box = copylist(box)
                 else
                     texrunlocal("mptexttoks")
                     box = textakebox("mptextbox")
@@ -1463,6 +1462,8 @@ local function tr_process(object,prescript,before,after)
                 sp_specs = concat(sp_specs,",")
                 definemultitonecolor(sp_name,sp_specs,"","")
                 sp_type = "named"
+            elseif sp_type == "named" then
+                cs = { 1 } -- factor 1
             end
             if sp_type == "named" then
                 -- we might move this to another namespace .. also, named can be a spotcolor

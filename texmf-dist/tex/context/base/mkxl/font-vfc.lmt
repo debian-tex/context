@@ -18,25 +18,35 @@ local setmetatableindex = table.setmetatableindex
 -- Helpers dealing with virtual fonts: beware, these are final values so
 -- don't change the content of tables fetched from here!
 
-local push  = { "push" }
-local pop   = { "pop" }
-local dummy = { "comment" }
+local pushcommand  = { "push" }
+local popcommand   = { "pop" }
+local dummycommand = { "comment" }
+
+local slotcommand = setmetatableindex(function(t,k)
+    local v = setmetatableindex(function(tt,kk)
+        local vv = { "slot", k, kk }
+        tt[kk] = vv
+        return vv
+    end)
+    t[k] = v
+    return v
+end)
 
 function helpers.prependcommands(commands,...)
-    insert(commands,1,push)
+    insert(commands,1,pushcommand)
     for i=select("#",...),1,-1 do
         local s = (select(i,...))
         if s then
             insert(commands,1,s)
         end
     end
-    insert(commands,pop)
+    insert(commands,popcommand)
     return commands
 end
 
 function helpers.appendcommands(commands,...)
-    insert(commands,1,push)
-    insert(commands,pop)
+    insert(commands,1,pushcommand)
+    insert(commands,popcommand)
     for i=1,select("#",...) do
         local s = (select(i,...))
         if s then
@@ -47,20 +57,20 @@ function helpers.appendcommands(commands,...)
 end
 
 function helpers.prependcommandtable(commands,t)
-    insert(commands,1,push)
+    insert(commands,1,pushcommand)
     for i=#t,1,-1 do
         local s = t[i]
         if s then
             insert(commands,1,s)
         end
     end
-    insert(commands,pop)
+    insert(commands,popcommand)
     return commands
 end
 
 function helpers.appendcommandtable(commands,t)
-    insert(commands,1,push)
-    insert(commands,pop)
+    insert(commands,1,pushcommand)
+    insert(commands,popcommand)
     for i=1,#t do
         local s = t[i]
         if s then
@@ -71,19 +81,37 @@ function helpers.appendcommandtable(commands,t)
 end
 
 helpers.commands = utilities.storage.allocate {
-    char  = setmetatableindex(function(t,k) local v = { "slot",  0, k } t[k] = v return v end),
-    right = setmetatableindex(function(t,k) local v = { "right", k    } t[k] = v return v end),
-    left  = setmetatableindex(function(t,k) local v = { "left",  k    } t[k] = v return v end),
-    down  = setmetatableindex(function(t,k) local v = { "down",  k    } t[k] = v return v end),
-    up    = setmetatableindex(function(t,k) local v = { "up",    k    } t[k] = v return v end),
-    push  = push,
-    pop   = pop,
-    dummy = dummy,
+    char  = setmetatableindex(function(t,k) local v = { "char",  k } t[k] = v return v end),
+    stay  = setmetatableindex(function(t,k) local v = { "stay",  k } t[k] = v return v end),
+    right = setmetatableindex(function(t,k) local v = { "right", k } t[k] = v return v end),
+    left  = setmetatableindex(function(t,k) local v = { "left",  k } t[k] = v return v end),
+    down  = setmetatableindex(function(t,k) local v = { "down",  k } t[k] = v return v end),
+    up    = setmetatableindex(function(t,k) local v = { "up",    k } t[k] = v return v end),
+    push  = pushcommand,
+    pop   = popcommand,
+    dummy = dummycommand,
+    slot  = slotcommand,
 }
 
+local codeinjections = backends.codeinjections
+local vfstartcolor   = codeinjections.vfstartcolor
+local vfstopcolor    = codeinjections.vfstopcolor
+----- vfliteral      = codeinjections.vfliteral
+
 helpers.vfinjectors = {
-    -- backend specific: startcolor, stopcolor etc
+ -- startcolor = function(h,v,packet) codeinjections.vfstartcolor(h,v,packet) end,
+ -- stopcolor  = function(h,v,packet) codeinjections.vfstartcolor(h,v,packet) end,
+ -- literal    = function(h,v,packet) codeinjections.vfliteral   (h,v,packer) end,
+    startcolor = function(h,v,packet) vfstartcolor(h,v,packet) end,
+    stopcolor  = function(h,v,packet) vfstopcolor (h,v,packet) end,
+ -- literal    = function(h,v,packet) vfliteral   (h,v,packer) end,
 }
+
+updaters.register("backends.injections.latebindings",function()
+    vfstartcolor = backends.codeinjections.vfstartcolor
+    vfstopcolor  = backends.codeinjections.vfstopcolor
+ -- vfliteral    = backends.codeinjections.vfliteral
+end)
 
 -- maybe round()
 
@@ -94,7 +122,7 @@ helpers.vfspecials = {
     backgrounds = setmetatableindex(function(t,h)
         local v = setmetatableindex(function(t,d)
             local v = setmetatableindex(function(t,w)
-                local v = { "frame", w, h, d, defaultline, true, true }
+                local v = { "frame", w, h, d, defaultline, false, false }
                 t[w] = v
                 return v
             end)
@@ -108,7 +136,7 @@ helpers.vfspecials = {
     outlines = setmetatableindex(function(t,h)
         local v = setmetatableindex(function(t,d)
             local v = setmetatableindex(function(t,w)
-                local v = { "frame", w, h, d, defaultline, false, true }
+                local v = { "frame", w, h, d, defaultline, true, false }
                 t[w] = v
                 return v
             end)
@@ -153,21 +181,28 @@ local scaled = {
     -- additional ones are never scaled (color etc)
 }
 
+-- normally we don't have these, and if so, only in old school fonts
+-- in which case we don't have extensions so ...
+
 function helpers.scalecommands(list,hdelta,vdelta)
     local n = #list
     for i=1,n do
-        local key = list[i][1]
-        if scaled[list[i][1]] then
+        local cmd = list[i]
+        if scaled[cmd[1]] then
             local result = { }
             for i=1,n do
                 local cmd = list[i]
-                local key = ivc[1]
+                local key = cmd[1]
                 if key == "right" or key == "left" then
                     result[i] = { key, cmd[2]*hdelta }
                 elseif key == "down" or key == "up" then
                     result[i] = { key, cmd[2]*vdelta }
-                elseif key == "offset" or key == "rule" then
+                elseif key == "offset" then
+                    result[i] = { key, cmd[2]*hdelta, cmd[3]*vdelta, cmd[4], cmd[5], cmd[6] }
+                elseif key == "rule" then
                     result[i] = { key, cmd[2]*hdelta, cmd[3]*vdelta }
+                elseif key == "line" then
+                    result[i] = { key, cmd[2]*hdelta, cmd[3]*vdelta, cmd[4]*vdelta, cmd[5] }
              -- elseif key == "frame" then
              --     result[i] = cmd -- already scaled, for now
                 else

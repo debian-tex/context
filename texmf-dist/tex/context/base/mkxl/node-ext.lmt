@@ -18,7 +18,8 @@ local allocate            = utilities.storage.allocate
 
 local formatters          = string.formatters
 
-local get                 = token.get_index -- getters
+local get                 = tokens.accessors.index
+
 local scanners            = tokens.scanners
 local scaninteger         = scanners.integer
 local scanstring          = scanners.string
@@ -50,7 +51,8 @@ local whatsitcodes        = allocate { }
 nodes.whatsitcodes        = whatsitcodes
 local lastwhatsit         = 0
 
-nodes.subtypes.whatsit    = whatsitcodes
+nodes.subtypes.whatsit       = whatsitcodes
+nodes.subtypes[whatsit_code] = whatsitcodes
 
 local function registerwhatsit(name)
     lastwhatsit = lastwhatsit + 1
@@ -131,14 +133,10 @@ do
     end
 
     function backends.latelua(current,pos_h,pos_v) -- todo: pass pos_h and pos_v (more efficient in lmtx)
-        local p = nodeproperties[current]
-        if p then
-            data = p.data
-        else
-            data = getdata(current)
-        end
-        noflatelua = noflatelua + 1
+        local prop = nodeproperties[current]
+        local data = prop and prop.data or getdata(current)
         local kind = type(data)
+        noflatelua = noflatelua + 1
         if kind == "table" then
             data.action(data.specification or data)
         elseif kind == "function" then
@@ -147,7 +145,7 @@ do
             if kind ~= "string" then
                 data = serialize(data)
             end
-            if #data ~= "" then
+            if data and #data ~= "" then
                 local code = loadstring(data)
                 if code then
                     code()
@@ -164,6 +162,7 @@ do
         name      = "latelua",
         public    = true,
         protected = true,
+        untraced  = true,
         actions   = function()
             local node = copynut(lateluanode)
             local name = "latelua"
@@ -616,7 +615,7 @@ do
         end,
     }
 
-    -- why ...
+    -- so we have them defined and can use them at the tex end .. still needed?
 
     local open_command  = get(token.create("openout"))
     local write_command = get(token.create("write"))

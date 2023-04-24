@@ -1,4 +1,4 @@
-% language=us
+% language=us runpath=texruns:manuals/lowlevel
 
 \environment lowlevel-style
 
@@ -6,7 +6,7 @@
   [title=paragraphs,
    color=middlecyan]
 
-\startsection[title=Introduction]
+\startsectionlevel[title=Introduction]
 
 This manual is mostly discussing a few low level wrappers around low level \TEX\
 features. Its writing is triggered by an update to the \METAFUN\ and \LUAMETAFUN\
@@ -29,9 +29,9 @@ they get enabled by default. \footnote {For this we have \type
 them, make sure they don't interfere; they are not part of the updates, contrary
 to \type {cont-new.mkxl}.}
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Paragraphs]
+\startsectionlevel[title=Paragraphs]
 
 Before we demonstrate some trickery, let's see what a paragraph is. Normally a
 document source is formatted like this:
@@ -200,9 +200,9 @@ program it using macros: pickup a token, check and push it back when it's not a
 par equivalent token. The primitive is is just nicer (and easier on the log when
 tracing is enabled).
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Properties]
+\startsectionlevel[title=Properties]
 
 A paragraph is just a collection of lines that result from one input line that
 got broken. This process of breaking into lines is influenced by quite some
@@ -218,45 +218,44 @@ longer interferes with the line break algorithm. The magic primitive is \type
 {\snapshotpar} which takes a number made from categories mentioned below:
 
 \starttabulate[|l|l|r|]
-\BC variable                       \BC category        \BC code                                     \NC \NR
-\NC \type {\hsize}                 \NC hsize           \NC 0x\uchexnumbers\frozenhsizecode          \NC \NR
-\NC \type {\leftskip}              \NC skip            \NC 0x\uchexnumbers\frozenskipcode           \NC \NR
-\NC \type {\rightskip}             \NC skip            \NC 0x\uchexnumbers\frozenskipcode           \NC \NR
-\NC \type {\hangindent}            \NC hang            \NC 0x\uchexnumbers\frozenhangcode           \NC \NR
-\NC \type {\hangafter}             \NC hang            \NC 0x\uchexnumbers\frozenhangcode           \NC \NR
-\NC \type {\parindent}             \NC indent          \NC 0x\uchexnumbers\frozenindentcode         \NC \NR
-\NC \type {\parfillleftskip}       \NC par fill        \NC 0x\uchexnumbers\frozenparfillcode        \NC \NR
-\NC \type {\parfillrightskip}      \NC par fill        \NC 0x\uchexnumbers\frozenparfillcode        \NC \NR
-\NC \type {\adjustspacing}         \NC adjust          \NC 0x\uchexnumbers\frozenadjustcode         \NC \NR
-\NC \type {\adjustspacingstep}     \NC adjust          \NC 0x\uchexnumbers\frozenadjustcode         \NC \NR
-\NC \type {\adjustspacingshrink}   \NC adjust          \NC 0x\uchexnumbers\frozenadjustcode         \NC \NR
-\NC \type {\adjustspacingstretch}  \NC adjust          \NC 0x\uchexnumbers\frozenadjustcode         \NC \NR
-\NC \type {\protrudechars}         \NC protrude        \NC 0x\uchexnumbers\frozenprotrudecode       \NC \NR
-\NC \type {\pretolerance}          \NC tolerance       \NC 0x\uchexnumbers\frozentolerancecode      \NC \NR
-\NC \type {\tolerance}             \NC tolerance       \NC 0x\uchexnumbers\frozentolerancecode      \NC \NR
-\NC \type {\emergencystretch}      \NC stretch         \NC 0x\uchexnumbers\frozenstretchcode        \NC \NR
-\NC \type {\looseness}             \NC looseness       \NC 0x\uchexnumbers\frozenloosenesscode      \NC \NR
-\NC \type {\lastlinefit}           \NC last line       \NC 0x\uchexnumbers\frozenlastlinecode       \NC \NR
-\NC \type {\linepenalty}           \NC line penalty    \NC 0x\uchexnumbers\frozenlinepenaltycode    \NC \NR
-\NC \type {\interlinepenalty}      \NC line penalty    \NC 0x\uchexnumbers\frozenlinepenaltycode    \NC \NR
-\NC \type {\interlinepenalties}    \NC line penalty    \NC 0x\uchexnumbers\frozenlinepenaltycode    \NC \NR
-\NC \type {\clubpenalty}           \NC club penalty    \NC 0x\uchexnumbers\frozenclubpenaltycode    \NC \NR
-\NC \type {\clubpenalties}         \NC club penalty    \NC 0x\uchexnumbers\frozenclubpenaltycode    \NC \NR
-\NC \type {\widowpenalty}          \NC widow penalty   \NC 0x\uchexnumbers\frozenwidowpenaltycode   \NC \NR
-\NC \type {\widowpenalties}        \NC widow penalty   \NC 0x\uchexnumbers\frozenwidowpenaltycode   \NC \NR
-\NC \type {\displaywidowpenalty}   \NC display penalty \NC 0x\uchexnumbers\frozendisplaypenaltycode \NC \NR
-\NC \type {\displaywidowpenalties} \NC display penalty \NC 0x\uchexnumbers\frozendisplaypenaltycode \NC \NR
-\NC \type {\brokenpenalty}         \NC broken penalty  \NC 0x\uchexnumbers\frozenbrokenpenaltycode  \NC \NR
-\NC \type {\adjdemerits}           \NC demerits        \NC 0x\uchexnumbers\frozendemeritscode       \NC \NR
-\NC \type {\doublehyphendemerits}  \NC demerits        \NC 0x\uchexnumbers\frozendemeritscode       \NC \NR
-\NC \type {\finalhyphendemerits}   \NC demerits        \NC 0x\uchexnumbers\frozendemeritscode       \NC \NR
-\NC \type {\parshape}              \NC shape           \NC 0x\uchexnumbers\frozenshapecode          \NC \NR
-\NC \type {\baselineskip}          \NC line            \NC 0x\uchexnumbers\frozenlinecode           \NC \NR
-\NC \type {\lineskip}              \NC line            \NC 0x\uchexnumbers\frozenlinecode           \NC \NR
-\NC \type {\lineskiplimit}         \NC line            \NC 0x\uchexnumbers\frozenlinecode           \NC \NR
-\NC \type {\hyphenationmode}       \NC hyphenation     \NC 0x\uchexnumbers\frozenhyphenationcode    \NC \NR
+\BC variable                       \BC category        \BC code                                        \NC \NR
+\NC \type {\hsize}                 \NC hsize           \NC 0x\uchexnumbers\hsizefrozenparcode          \NC \NR
+\NC \type {\leftskip}              \NC skip            \NC 0x\uchexnumbers\skipfrozenparcode           \NC \NR
+\NC \type {\rightskip}             \NC skip            \NC 0x\uchexnumbers\skipfrozenparcode           \NC \NR
+\NC \type {\hangindent}            \NC hang            \NC 0x\uchexnumbers\hangfrozenparcode           \NC \NR
+\NC \type {\hangafter}             \NC hang            \NC 0x\uchexnumbers\hangfrozenparcode           \NC \NR
+\NC \type {\parindent}             \NC indent          \NC 0x\uchexnumbers\indentfrozenparcode         \NC \NR
+\NC \type {\parfillleftskip}       \NC par fill        \NC 0x\uchexnumbers\parfillfrozenparcode        \NC \NR
+\NC \type {\parfillrightskip}      \NC par fill        \NC 0x\uchexnumbers\parfillfrozenparcode        \NC \NR
+\NC \type {\adjustspacing}         \NC adjust          \NC 0x\uchexnumbers\adjustfrozenparcode         \NC \NR
+\NC \type {\adjustspacingstep}     \NC adjust          \NC 0x\uchexnumbers\adjustfrozenparcode         \NC \NR
+\NC \type {\adjustspacingshrink}   \NC adjust          \NC 0x\uchexnumbers\adjustfrozenparcode         \NC \NR
+\NC \type {\adjustspacingstretch}  \NC adjust          \NC 0x\uchexnumbers\adjustfrozenparcode         \NC \NR
+\NC \type {\protrudechars}         \NC protrude        \NC 0x\uchexnumbers\protrudefrozenparcode       \NC \NR
+\NC \type {\pretolerance}          \NC tolerance       \NC 0x\uchexnumbers\tolerancefrozenparcode      \NC \NR
+\NC \type {\tolerance}             \NC tolerance       \NC 0x\uchexnumbers\tolerancefrozenparcode      \NC \NR
+\NC \type {\emergencystretch}      \NC stretch         \NC 0x\uchexnumbers\stretchfrozenparcode        \NC \NR
+\NC \type {\looseness}             \NC looseness       \NC 0x\uchexnumbers\loosenessfrozenparcode      \NC \NR
+\NC \type {\lastlinefit}           \NC last line       \NC 0x\uchexnumbers\lastlinefrozenparcode       \NC \NR
+\NC \type {\linepenalty}           \NC line penalty    \NC 0x\uchexnumbers\linepenaltyfrozenparcode    \NC \NR
+\NC \type {\interlinepenalty}      \NC line penalty    \NC 0x\uchexnumbers\linepenaltyfrozenparcode    \NC \NR
+\NC \type {\interlinepenalties}    \NC line penalty    \NC 0x\uchexnumbers\linepenaltyfrozenparcode    \NC \NR
+\NC \type {\clubpenalty}           \NC club penalty    \NC 0x\uchexnumbers\clubpenaltyfrozenparcode    \NC \NR
+\NC \type {\clubpenalties}         \NC club penalty    \NC 0x\uchexnumbers\clubpenaltyfrozenparcode    \NC \NR
+\NC \type {\widowpenalty}          \NC widow penalty   \NC 0x\uchexnumbers\widowpenaltyfrozenparcode   \NC \NR
+\NC \type {\widowpenalties}        \NC widow penalty   \NC 0x\uchexnumbers\widowpenaltyfrozenparcode   \NC \NR
+\NC \type {\displaywidowpenalty}   \NC display penalty \NC 0x\uchexnumbers\displaypenaltyfrozenparcode \NC \NR
+\NC \type {\displaywidowpenalties} \NC display penalty \NC 0x\uchexnumbers\displaypenaltyfrozenparcode \NC \NR
+\NC \type {\brokenpenalty}         \NC broken penalty  \NC 0x\uchexnumbers\brokenpenaltyfrozenparcode  \NC \NR
+\NC \type {\adjdemerits}           \NC demerits        \NC 0x\uchexnumbers\demeritsfrozenparcode       \NC \NR
+\NC \type {\doublehyphendemerits}  \NC demerits        \NC 0x\uchexnumbers\demeritsfrozenparcode       \NC \NR
+\NC \type {\finalhyphendemerits}   \NC demerits        \NC 0x\uchexnumbers\demeritsfrozenparcode       \NC \NR
+\NC \type {\parshape}              \NC shape           \NC 0x\uchexnumbers\shapefrozenparcode          \NC \NR
+\NC \type {\baselineskip}          \NC line            \NC 0x\uchexnumbers\linefrozenparcode           \NC \NR
+\NC \type {\lineskip}              \NC line            \NC 0x\uchexnumbers\linefrozenparcode           \NC \NR
+\NC \type {\lineskiplimit}         \NC line            \NC 0x\uchexnumbers\linefrozenparcode           \NC \NR
+\NC \type {\hyphenationmode}       \NC hyphenation     \NC 0x\uchexnumbers\hyphenationfrozenparcode    \NC \NR
 \stoptabulate
-
 
 As you can see here, there are more paragraph related parameters than in for
 instance \PDFTEX\ and \LUATEX\ and these are (to be) explained in the
@@ -319,9 +318,9 @@ this new mechanism has been active for a while. Actually, when you now change a
 parameter inside the paragraph its new value will not be applied (unless you
 prefix it with \type {\frozen} or snapshot it) but no one did that anyway.
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Wrapping up]
+\startsectionlevel[title=Wrapping up]
 
 In \CONTEXT\ \LMTX\ we have a mechanism to exercise macros (or content) before a
 paragraph ends. This is implemented using the \type {\wrapuppar} primitive. The
@@ -343,9 +342,23 @@ question is: where do we apply it in old mechanisms and where not.
 % $$x = \vcenter{vcenter : \wrapuppar{1}test\par x\wrapuppar{2}test}$$\blank
 % x\vadjust{vadjust : \wrapuppar{1}test\par x\wrapuppar{2}test}x\blank
 
-\stopsection
+% \starttext
+% \starttabulate[|||]
+%     \NC test \NC test \NC \NR
+%     \NC test \NC \hbox{\hbox{\hbox{\vadjust pre {\kern-12pt}}}}test \NC \NR
+%     \NC test \NC \hbox{\hbox{\hbox{\vadjust     {\kern-12pt}}}}test \NC \NR
+%     \NC test \NC test \NC \NR
+% \stoptabulate
+% \starttabulate[||p|]
+%     \NC test \NC test \NC \NR
+%     \NC test \NC \hbox{\vadjust{\kern-22pt}}test \NC \NR
+%     \NC test \NC test \NC \NR
+% \stoptabulate
+% \stoptext
 
-\startsection[title=Hanging]
+\stopsectionlevel
+
+\startsectionlevel[title=Hanging]
 
 There are two mechanisms for getting a specific paragraph shape: rectangular
 hanging and arbitrary shapes. Both mechanisms work top|-|down. The first
@@ -377,9 +390,9 @@ uses at the same time).
 \stopcombination
 \stopplacefigure
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Shapes]
+\startsectionlevel[title=Shapes]
 
 In \CONTEXT\ we don't use \type {\parshape} a lot. It is used in for instance
 side floats but even there not in all cases. It's more meant for special
@@ -907,10 +920,72 @@ keyword in the next code. The result is shown in \in {figure} [fig:shape:skips].
 \stopcombination
 \stopplacefigure
 
-\stopsection
+The shape mechanism has a few more tricks but these are really meant for usage
+in specific situations, where one knows what one deals with. The following
+examples are visualized in \in {figure} [fig:flow].
 
-% \startsection[title=Linebreaks]
-\startsection[title=Modes]
+\startbuffer[jano]
+\useMPlibrary[dum]
+\usemodule[article-basics]
+
+\startbuffer
+    \externalfigure[dummy][width=6cm]
+\stopbuffer
+
+\startshapedparagraph[text=\getbuffer]
+    \dorecurse{3}{\samplefile{ward}\par}
+\stopshapedparagraph
+
+\page
+
+\startshapedparagraph[text=\getbuffer,distance=1em]
+    \dorecurse{3}{\samplefile{ward}\par}
+\stopshapedparagraph
+
+\page
+
+\startshapedparagraph[text=\getbuffer,distance=1em,
+        hoffset=-2em]
+    \dorecurse{3}{\samplefile{ward}\par}
+\stopshapedparagraph
+
+\page
+
+\startshapedparagraph[text=\getbuffer,distance=1em,
+        voffset=-2ex,hoffset=-2em]
+    \dorecurse{3}{\samplefile{ward}\par}
+\stopshapedparagraph
+
+\page
+
+\startshapedparagraph[text=\getbuffer,distance=1em,
+        voffset=-2ex,hoffset=-2em,lines=1]
+    \dorecurse{3}{\samplefile{ward}\par}
+\stopshapedparagraph
+
+\page
+
+\startshapedparagraph[width=4cm,lines=4]
+    \dorecurse{3}{\samplefile{ward}\par}
+\stopshapedparagraph
+\stopbuffer
+
+\typebuffer[jano]
+
+\startplacefigure[title={Flow around something},reference=fig:flow]
+    \startcombination[nx=3,ny=2]
+        {\typesetbuffer[jano][page=1,frame=on,width=\measure{combination}]}{}
+        {\typesetbuffer[jano][page=2,frame=on,width=\measure{combination}]}{}
+        {\typesetbuffer[jano][page=3,frame=on,width=\measure{combination}]}{}
+        {\typesetbuffer[jano][page=4,frame=on,width=\measure{combination}]}{}
+        {\typesetbuffer[jano][page=5,frame=on,width=\measure{combination}]}{}
+        {\typesetbuffer[jano][page=6,frame=on,width=\measure{combination}]}{}
+    \stopcombination
+\stopplacefigure
+
+\stopsectionlevel
+
+\startsectionlevel[title=Modes]
 
 % \ruledvbox{1\ifhmode\writestatus{!}{HMODE 1}\fi}                               % hsize
 % \ruledvbox{\hbox{\strut 2}\ifhmode\writestatus{!}{HMODE 2}\fi}                 % fit
@@ -921,22 +996,402 @@ keyword in the next code. The result is shown in \in {figure} [fig:shape:skips].
 
 {\em todo: some of the side effects of so called modes}
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Normalization]
+\startsectionlevel[title=Leaders]
+
+Leaders are a basic feature that users probably never run into directly. They
+repeat content till it fits the specified width which can be stretched out. The
+content is typeset once and it is the backend that does the real work of
+repetition.
+
+\startbuffer
+\strut\leaders \hbox{!}\hfill\strut
+\strut\xleaders\hbox{!}\hfill\strut
+\strut\cleaders\hbox{!}\hfill\strut
+\strut\gleaders\hbox{!}\hfill\strut
+\stopbuffer
+
+\typebuffer
+
+Here \type {\leaders} starts at the left edge and are repeats the box as long as
+it fits, \type {\xleaders} spreads till the edges and \type {\cleaders} centers
+the lot. The \type {\gleaders} primitive (which is not in orginal \TEX) takes the
+outer box as reference and further behaves like \type {\cleaders}.
+
+\startlines \showmakeup[line] \getbuffer \stoplines
+
+The leader primitives take box or rule but in \LUAMETATEX\ a glyph can also be
+specified, which saves wrapping in a box.
+
+\startbuffer
+\ruledvbox \bgroup \hsize 10cm
+    \strut\cleaders\hbox{!}\hfill\strut
+\egroup
+
+\ruledvbox \bgroup \hsize 10cm
+    \strut\cleaders\hrule\hfill\strut
+\egroup
+
+\ruledvbox \bgroup \hsize 10cm
+    \strut\cleaders\glyph`!\hfill\strut
+\egroup
+\stopbuffer
+
+\typebuffer
+
+\getbuffer
+
+The \LUAMETATEX\ engine also introduced \type {\uleaders}
+
+\definecolor[tred]  [r=.6,a=1,t=.5]
+\definecolor[tgreen][g=.6,a=1,t=.5]
+\definecolor[tblue] [b=.6,a=1,t=.5]
+
+\startbuffer[one]
+    x xx xxx xxxx
+    \ruledhbox{L\hss R}\space
+    x xx xxx xxxx
+\stopbuffer
+
+\startbuffer[two]
+    x xx xxx xxxx
+    \uleaders\backgroundhbox[gray]{L\hss R}\hskip\zeropoint plus 100pt\relax\space
+    x xx xxx xxxx
+\stopbuffer
+
+\startbuffer[three]
+    x xx xxx xxxx
+    \uleaders\ruledhbox{L\hss R}\hskip\zeropoint plus 100pt\relax\space
+    x xx xxx xxxx
+\stopbuffer
+
+We show three boxes, a regular one first (red):
+
+\typebuffer[one]
+
+The second one (blue) is also a box but one that stretches upto 100pt and is in a
+later stage, when the paragraph has been built, is repackaged to the effective
+width. The third example (green) leaves out the background.
+
+\startlinecorrection
+\startoverlay
+    {\vbox{\color[tgreen]{\small\dorecurse {20} {\getbuffer[three]}}}}
+    {\vbox{\color[tblue] {\small\dorecurse {20} {\getbuffer  [two]}}}}
+    {\vbox{\color[tred]  {\small\dorecurse {20} {\getbuffer  [one]}}}}
+\stopoverlay
+\stoplinecorrection
+
+In \CONTEXT\ we have wrapped this feature in the adaptive box mechanism, so here
+a few a few examples:
+
+\setupexternalfigures[location={default,local,global}]
+
+\startbuffer
+\startsetups adaptive:test:a
+    \setbox\usedadaptivebox\vbox to \usedadaptivetotal \bgroup
+        \externalfigure
+          [cow.pdf]
+          [width=\framedmaxwidth,
+           frame=on,
+           height=\usedadaptivetotal]%
+   \egroup
+\stopsetups
+
+\startsetups adaptive:test:b
+    \setbox\usedadaptivebox\vbox to \usedadaptivetotal \bgroup
+        \externalfigure
+          [cow.pdf]
+          [width=\usedadaptivewidth,
+           frame=on,
+           height=\usedadaptivetotal]%
+   \egroup
+\stopsetups
+\stopbuffer
+
+\typebuffer \getbuffer
+
+We use this as follows (see \in {figure} [fig:adaptive] for the result):
+
+\startbuffer
+\framed[height=18cm,align=middle,adaptive=yes,top=,bottom=] {%
+    \begstrut \samplefile{tufte} \endstrut
+    \par
+    \adaptivevbox
+      [strut=yes,setups=adaptive:test:a]
+      {\showstruts\strut\hsize5cm\hss}%
+    \par
+    \adaptivevbox
+      [strut=yes,setups=adaptive:test:b]
+      {\showstruts\strut\hsize5cm\hss}%
+    \par
+    \begstrut \samplefile{tufte} \endstrut
+}
+\stopbuffer
+
+\typebuffer
+
+\startplacefigure[reference=fig:adaptive]
+    \getbuffer
+\stopplacefigure
+
+Here is one that you can test yourself:
+
+\starttyping
+\startsetups adaptive:test
+    \setbox\usedadaptivebox\vbox to \usedadaptivetotal \bgroup
+        \externalfigure
+          [cow.pdf]
+          [width=\usedadaptivewidth,
+           height=\usedadaptivetotal]%
+   \egroup
+\stopsetups
+
+\ruledvbox to \textheight {
+    \par \begstrut \samplefile{tufte} \endstrut \par
+    \adaptivevbox[strut=yes,setups=adaptive:test]{\hsize\textwidth\hss}
+    \par \begstrut \samplefile{tufte} \endstrut
+}
+\stoptyping
+
+The next example comes from the test suite (where it runs over many pages in
+order to illustrate the idea):
+
+\startbuffer
+\startMPdefinitions
+    def TickTock =
+        interim linecap := squared;
+        save p ; path p ;
+        p := fullsquare xysized(AdaptiveWidth,.9(AdaptiveHeight+AdaptiveDepth)) ;
+        fill p withcolor AdaptiveColor ;
+        draw bottomboundary (p enlarged (-AdaptiveThickness) )
+            withdashes (3*AdaptiveThickness)
+            withpen pencircle scaled AdaptiveThickness
+            withcolor white ;
+    enddef ;
+\stopMPdefinitions
+
+\startsetups adaptive:test
+    \setbox\usedadaptivebox\hbox
+        to         \usedadaptivewidth
+        yoffset -.9\usedadaptivedepth
+    \bgroup
+        \hss
+        \startMPcode
+            TickTock ;
+        \stopMPcode
+        \hss
+   \egroup
+\stopsetups
+
+\definecolor[adaptive:tick][.25(blue,green)]
+\definecolor[adaptive:tock][.75(blue,green)]
+
+\defineadaptive
+  [tick]
+  [setups=adaptive:test,
+   color=adaptive:tick,
+   foregroundcolor=white,
+   foregroundstyle=\infofont,
+   strut=yes]
+
+\defineadaptive
+  [tock]
+  [tick]
+  [color=adaptive:tock]
+
+\dostepwiserecurse{8}{12}{1}{%
+    \dostepwiserecurse{5}{15}{1}{%
+        this~#1.##1 is~#1.##1 test~#1.##1
+        \ifodd##1\relax
+            \adaptivebox[tick]{\hss tick #1.##1\hss}
+        \else
+            \adaptivebox[tock]{\hss tock #1.##1\hss}
+        \fi
+    }
+}
+\stopbuffer
+
+\typebuffer \getbuffer
+
+In the next example the graphics adapt to the available space:
+
+\startbuffer
+\startsetups adaptive:test
+    \setbox\usedadaptivebox\hbox
+        to       \usedadaptivewidth
+        yoffset -\usedadaptivedepth
+    \bgroup
+        \externalfigure
+          [cow.pdf]
+          [width=\usedadaptivewidth,
+           height=\dimexpr\usedadaptivetotal\relax]%
+    \egroup
+\stopsetups
+
+\dostepwiserecurse{1}{50}{1}{%
+    this~#1 is~#1 test~#1
+    {\adaptivebox[strut=yes,setups=adaptive:test]{}}
+}
+\stopbuffer
+
+\typebuffer \getbuffer
+
+\stopsectionlevel
+
+\startsectionlevel[title=Prevdepth]
+
+The depth of a box is normally positive but rules can have a negative depth in
+order to get a rule above the baseline. When \TEX\ was written the assumption was
+that a negative depth of more than 1000 point made no sense at all. The last
+depth on a vertical list is registered in the \type {\prevdepth} variable. This
+is basically a reference into the current list. In order to illustrate some
+interesting side effects of setting this \type {\prevdepth} and especially when
+we set it to -1000pt. In order to illustrate this this special value can be set
+to a different value in \LUAMETATEX. However, as dealing with the property is
+somewhat special in the engine you should not set it unless you know that the
+macro package is ware of it.
+
+\startbuffer
+line 1\par line 2 \par \nointerlineskip line 3 \par
+\stopbuffer
+
+\typebuffer
+
+Assuming that we haven't set any inter paragraph spacing this gives:
+
+\startlinecorrection
+\ruledvbox{\setupwhitespace[none]\showmakeup[line]\getbuffer}
+\stoplinecorrection
+
+Here \type {\nointerlineskip} is (normally) defined as:
+
+\starttyping
+\prevdepth-1000pt
+\stoptyping
+
+although in \CONTEXT\ we use \type {\ignoredepthcriterium} instead of the hard
+coded dimension. We now give a more extensive example:
+
+\startbuffer[definition-1]
+\def\PrevTest#1%
+  {\setbox0\ruledhbox{\strut$\tf#1$}%
+   \dp0=#1
+   \vbox\bgroup\hsize4em
+     FIRST\par
+     \unhbox0\par
+     LAST\par
+   \egroup}
+\stopbuffer
+
+\startbuffer[definition-2]
+\def\PrevTest#1%
+  {\setbox0\ruledhbox{\strut$\tf#1$}%
+   \dp0=#1
+   \vbox\bgroup
+     \ruledhbox{FIRST}\par
+     \box0\par
+     \ruledhbox{LAST}\par
+   \egroup}
+\stopbuffer
+
+\startbuffer[example]
+\ruledhbox \bgroup
+    \PrevTest{-10.0pt}\quad
+    \PrevTest{-20.0pt}\quad
+    \PrevTest{-49.9pt}\quad
+    \PrevTest{-50.0pt}\quad
+    \PrevTest{-50.1pt}\quad
+    \PrevTest{-60.0pt}\quad
+    \PrevTest{-80.0pt}%
+\egroup
+\stopbuffer
+
+In this example we set \type {\ignoredepthcriterium} to $\tf-50.0pt$ instead of the
+normal $\tf -1000pt$. The helper is defined as:
+
+\typebuffer[option=TEX][definitions-1]
+
+or
+
+\typebuffer[option=TEX][definitions-2]
+
+The result of the following example is shown in \in {figures} [fig:prevdepth-1]
+\in {and} [fig:prevdepth-2]. The first case is what we normally have in text and
+we haven't set \type {prevdepth} explicitly between lines so \TEX\ will just look
+at the depth of the lines. In the second case the depth is ignored when less than
+the criterium which is why, when we set the depth of the box to a negative value
+we get somewhat interesting skips.
+
+\startplacefigure[reference=fig:prevdepth-1]
+    \showmakeup[line]
+    \ignoredepthcriterium-50pt
+    \setupwhitespace[none]
+    \getbuffer[definition-1,example]
+\stopplacefigure
+
+\startplacefigure[reference=fig:prevdepth-2]
+    \showmakeup[line]
+    \ignoredepthcriterium-50pt
+    \setupwhitespace[none]
+    \getbuffer[definition-2,example]
+    \blank[5*line]
+\stopplacefigure
+
+I'm sure one can use this effect otherwise than intended but I doubt is any user
+is willing to do this but the fact that we can lower the criterium makes for nice
+experiments. Just for the record, in \in {figure} [fig:prevdepth-3] you see what
+we get with positive values:
+
+\startbuffer[example]
+\ruledhbox \bgroup
+    \PrevTest{10.0pt}\quad
+    \PrevTest{20.0pt}\quad
+    \PrevTest{49.9pt}\quad
+    \PrevTest{50.0pt}\quad
+    \PrevTest{50.1pt}\quad
+    \PrevTest{60.0pt}\quad
+    \PrevTest{80.0pt}%
+\egroup
+\stopbuffer
+
+\startplacefigure[reference=fig:prevdepth-3]
+    \showmakeup[line]
+    \ignoredepthcriterium50pt
+    \setupwhitespace[none]
+    \getbuffer[definition-2,example]
+\stopplacefigure
+
+Watch the interline skip kicking in when we make the depth larger than in
+\type {\ignoredepthcriterium} being $\tf 50pt$.
+
+\stopsectionlevel
+
+\startsectionlevel[title=Normalization]
 
 {\em todo: users don't need to bother about this but it might be interesting anyway}
 
-\stopsection
+\stopsectionlevel
+
+\startsectionlevel[title=Dirty tricks]
+
+{\em todo: explain example for combining paragraphs}
+
+% test\wrapuppar{\crlf\ignorepars}
+%
+% test
+%
+% test\wrapuppar{\ignorepars}
+%
+% test
+%
+% test\wrapuppar{\removeunwantedspaces\ignorepars}
+%
+% test
+
+\stopsectionlevel
 
 \stopdocument
-
-\everyhbox \everyvbox : useless unless one resets
-\parattr
-\snapshotpar
-\wrapuppar
-
-% \parfillleftskip
 
 % I rewarded myself after writing a section by watching the video "Final Thing On
 % My Mind", The Pineapple This, Live, 2020, the usual perfect GH performance,
@@ -946,3 +1401,107 @@ keyword in the next code. The result is shown in \in {figure} [fig:shape:skips].
 % Gavin Harrison: Soundcheck, Drummerworld Jan 27, 2021 ... I wish I could make
 % something called a check into pefect solo. Okay, another section and I'll check
 % out the latest Simon Phillips and other favourite dummer uploads.
+
+% todo:
+
+% \everyhbox \everyvbox : useless unless one resets
+% \parattr
+% \snapshotpar
+% \wrapuppar
+
+% \normalizelinemode0
+% x\ruledhbox{\parindent 1cm\indent x \indent x}
+% \normalizelinemode \parindentskipnormalizecode
+% x\ruledhbox{\parindent 1cm\indent x \indent x}
+
+% \starttext
+%     \tracingoutput1 \tracingonline1
+%     \pretolerance9000 test \pretolerance 8000 test \par
+%     \pretolerance9000 test \pretolerance 7000 \updateparagraphproperties test \par
+%     \pretolerance9000 test \pretolerance 6000 \snapshotpar\tolerancefrozenparcode test \par
+%     \pretolerance9000 test {\pretolerance5000 \snapshotpar\ntolerancefrozenparcode}test \par
+% \stoptext
+
+% \par[newgraf][16=1,17=1], .... pretolerance 9000, ....
+% \par[newgraf][16=1,17=1], .... pretolerance 7000, ....
+% \par[newgraf][16=1,17=1], .... pretolerance 6000, ....
+
+% \parfillleftskip
+
+% todo:
+
+% \starttext
+%
+% \showframe
+%
+% % this is the current default behaviour; we have a topskip with quite some stretch
+% % and that stretch is taken into account when tex calculates the badness; watch
+% % the next page
+%
+% \dorecurse{4}{
+%     \bgroup
+%         \shapingpenaltiesmode\zerocount
+%         \showmakeup[penalty]
+%         \placefigure[left]{}{}
+%         \input tufte \par
+%     \egroup
+% }
+%
+% \page EMPTY \page
+%
+% % the ntop is new and when >= 0 it is a multiplier for the number of lines
+% % stretch, here we have one line; watch the next page
+%
+% \dorecurse{4}{
+%     \bgroup
+%         \shapingpenaltiesmode\zerocount
+%         \setupinterlinespace[ntop=1]
+%         \showmakeup[penalty]
+%         \placefigure[left]{}{}
+%         \input tufte \par
+%     \egroup
+% }
+%
+% \page EMPTY \page
+%
+% % these shaping parameters will discourage a linebreak within a shape;
+% % the placement macro checked available space but that doesn't mean that
+% % there can be no linebreak
+%
+% \dorecurse{4}{
+%     \bgroup
+%         \showmakeup[penalty]
+%         \shapingpenalty\plushundred
+%         \shapingpenaltiesmode"FF\relax
+%         \placefigure[left]{}{}
+%         \input tufte \par
+%     \egroup
+% }
+%
+% \page EMPTY \page
+%
+% % the next pages show the effect of changed topskip on page breaks with
+% % footnotes
+%
+% \dorecurse{10}{
+%     [#1] \input tufte \footnote{\input{tufte}} \par
+% }
+%
+% \page EMPTY \page
+%
+% \setupinterlinespace[ntop=2]
+%
+% \dorecurse{10}{
+%     [#1] \input tufte \footnote{\input{tufte}} \par
+% }
+%
+% \page EMPTY \page
+%
+% \setupinterlinespace[ntop=0]
+%
+% \dorecurse{10}{
+%     [#1] \input tufte \footnote{\input{tufte}} \par
+% }
+%
+% \stoptext
+

@@ -32,12 +32,12 @@
 
 \writestatus{loading}{ConTeXt Tracing Macros / Visualization}
 
-\registerctxluafile{trac-vis}{autosuffix,optimize}
-
 \unprotect
 
 \newconstant\c_syst_visualizers_state
 \newtoks    \t_syst_visualizers_optimize
+
+\registerctxluafile{trac-vis}{autosuffix}
 
 % \definesystemattribute[visual][public,global] % already defined
 
@@ -53,19 +53,36 @@
 \aliased\let\syst_visualizers_hbox   \hbox
 \aliased\let\syst_visualizers_vbox   \vbox
 \aliased\let\syst_visualizers_vtop   \vtop
+\aliased\let\syst_visualizers_dbox   \dbox
 \aliased\let\syst_visualizers_vcenter\vcenter
 \aliased\let\syst_visualizers_hpack  \hpack
 \aliased\let\syst_visualizers_vpack  \vpack
 \aliased\let\syst_visualizers_tpack  \tpack
+\aliased\let\syst_visualizers_dpack  \dpack
+\aliased\let\syst_visualizers_vsplit \vsplit
+\aliased\let\syst_visualizers_tsplit \tsplit
+\aliased\let\syst_visualizers_dsplit \dsplit
 
-\permanent\protected\def\ruledhbox   {\syst_visualizers_hbox    attr \visualattribute \clf_getvisual{simplehbox} }
-\permanent\protected\def\ruledhpack  {\syst_visualizers_hpack   attr \visualattribute \clf_getvisual{simplehbox} }
-\permanent\protected\def\ruledvbox   {\syst_visualizers_vbox    attr \visualattribute \clf_getvisual{simplevbox} }
-\permanent\protected\def\ruledvpack  {\syst_visualizers_vpack   attr \visualattribute \clf_getvisual{simplevbox} }
-\permanent\protected\def\ruledvtop   {\syst_visualizers_vtop    attr \visualattribute \clf_getvisual{simplevtop} }
-\permanent\protected\def\ruledtpack  {\syst_visualizers_tpack   attr \visualattribute \clf_getvisual{simplevtop} }
-\permanent\protected\def\ruledvcenter{\syst_visualizers_vcenter attr \visualattribute \clf_getvisual{simplevbox} }
+\permanent\protected\def\ruledhbox   {\syst_visualizers_hbox    \s!attr \visualattribute \clf_getvisual{simplehbox} }
+\permanent\protected\def\ruledhpack  {\syst_visualizers_hpack   \s!attr \visualattribute \clf_getvisual{simplehbox} }
+\permanent\protected\def\ruledvbox   {\syst_visualizers_vbox    \s!attr \visualattribute \clf_getvisual{simplevbox} }
+\permanent\protected\def\ruledvpack  {\syst_visualizers_vpack   \s!attr \visualattribute \clf_getvisual{simplevbox} }
+\permanent\protected\def\ruledvtop   {\syst_visualizers_vtop    \s!attr \visualattribute \clf_getvisual{simplevtop} }
+\permanent\protected\def\ruledtpack  {\syst_visualizers_tpack   \s!attr \visualattribute \clf_getvisual{simplevtop} }
+\permanent\protected\def\ruleddbox   {\syst_visualizers_dbox    \s!attr \visualattribute \clf_getvisual{simplevtop} }
+\permanent\protected\def\ruleddpack  {\syst_visualizers_dpack   \s!attr \visualattribute \clf_getvisual{simplevtop} }
+\permanent\protected\def\ruledvcenter{\syst_visualizers_vcenter \s!attr \visualattribute \clf_getvisual{simplevbox} }
 \permanent\protected\def\ruledmbox #1{\ruledhbox{\startimath#1\stopimath}}
+
+\mutable\integerdef\c_syst_visualizer\zerocount
+
+\permanent\protected\def\ruledvsplit{\afterassignment\syst_visualizers_v_split\integerdef\c_syst_visualizer}
+\permanent\protected\def\ruledtsplit{\afterassignment\syst_visualizers_t_split\integerdef\c_syst_visualizer}
+\permanent\protected\def\ruleddsplit{\afterassignment\syst_visualizers_d_split\integerdef\c_syst_visualizer}
+
+\permanent\protected\def\syst_visualizers_v_split{\syst_visualizers_vsplit\c_syst_visualizer \s!attr \visualattribute \clf_getvisual {simplevbox}}
+\permanent\protected\def\syst_visualizers_t_split{\syst_visualizers_tsplit\c_syst_visualizer \s!attr \visualattribute \clf_getvisual {simplevtop}}
+\permanent\protected\def\syst_visualizers_d_split{\syst_visualizers_dsplit\c_syst_visualizer \s!attr \visualattribute \clf_getvisual {simplevtop}}
 
 \appendtoks
     \ifcase\c_syst_visualizers_state\else
@@ -80,7 +97,7 @@
 
 \def\syst_visualizers_speedup{\the\t_syst_visualizers_optimize}
 
-\appendtoks
+% \appendtoks
 %     \enforced\global\protected\edef\ruledhbox   {\syst_visualizers_hbox    attr \visualattribute \number\clf_getvisual{simplehbox} }
 %     \enforced\global\protected\edef\ruledhpack  {\syst_visualizers_hpack   attr \visualattribute \number\clf_getvisual{simplehbox} }
 %     \enforced\global\protected\edef\ruledvbox   {\syst_visualizers_vbox    attr \visualattribute \number\clf_getvisual{simplevbox} }
@@ -88,7 +105,7 @@
 %     \enforced\global\protected\edef\ruledvtop   {\syst_visualizers_vtop    attr \visualattribute \number\clf_getvisual{simplevtop} }
 %     \enforced\global\protected\edef\ruledtpack  {\syst_visualizers_tpack   attr \visualattribute \number\clf_getvisual{simplevtop} }
 %     \enforced\global\protected\edef\ruledvcenter{\syst_visualizers_vcenter attr \visualattribute \number\clf_getvisual{simplevbox} }
-\to \t_syst_visualizers_optimize
+% \to \t_syst_visualizers_optimize
 
 \permanent\tolerant\protected\def\showmakeup[#1]%
   {\ifarguments
@@ -105,6 +122,8 @@
 \permanent\protected\def\showglyphdata    {\showglyphs\showfontkerns\showfontitalics}
 \permanent\protected\def\showfontexpansion{\clf_setvisual{expansion}}
 
+% lmmonoltcond10regular 4pt
+
 \permanent\tolerant\protected\def\setvisualizerfont[#1]% somename at 4pt
   {\begingroup
    \iftok{#1}\emptytoks
@@ -114,6 +133,14 @@
    \fi
    \clf_setvisualfont\fontid\font
    \endgroup}
+
+\def\syst_v_p_indeed#1%
+  {\setbox\scratchbox\hpack{\visualizerfont#1}}
+
+\def\syst_v_p
+  {\definefrozenfont[visualizerfont][lmmonoltcond10regular @ 4pt]%
+   \let\syst_v_p\syst_v_p_indeed
+   \syst_v_p_indeed}
 
 \permanent\protected\def\resetvisualizers
   {\c_attr_visual\attributeunsetvalue}

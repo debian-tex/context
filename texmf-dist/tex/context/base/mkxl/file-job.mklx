@@ -18,6 +18,9 @@
 %D This module delegates most of the work to \LUA\ and therefore also let it
 %D define the commands, which is more efficient.
 
+\ifdefined\textlevel \else \newinteger\textlevel \fi % used at lua end
+
+\registerctxluafile{data-hsh}{autosuffix}
 \registerctxluafile{file-job}{autosuffix}
 
 %D Here are some helpers for processing and path control. In the following example
@@ -45,7 +48,7 @@
 
 % helper (not really needed nowadays)
 
-\mutable\let\locatedfilepath\empty
+\mutable\lettonothing\locatedfilepath
 
 \permanent\protected\def\locatefilepath#name%
   {\edef\locatedfilepath{\clf_locatefilepath{#name}}} % todo: set at the lua end, catcodes and such
@@ -77,7 +80,6 @@
 
 % document structure
 
-\ifdefined\textlevel                         \else \newcount\textlevel                          \fi % might go away
 \ifdefined\strc_pagenumbers_flush_final_page \else \let\strc_pagenumbers_flush_final_page\relax \fi % ugly
 
 \permanent\protected\def\dostarttext
@@ -138,22 +140,6 @@
 % \startcomponent   [#name] or #name<space> % defined at lua end
 % \startenvironment [#name] or #name<space> % defined at lua end
 
-\newconditional\endofinput % hack, needed because \endinput happens one level down in the input when we write from lua
-
-% \protected\def\signalendofinput#1% argument just for tracing
-%   {\global\settrue\endofinput}
-%
-% \protected\def\honorendofinput
-%   {\ifconditional\endofinput
-%      \global\setfalse\endofinput
-%      \endinput
-%    \fi}
-
-% \protected\def\stopproject     {\clf_stopproject    \honorendofinput} % todo
-% \protected\def\stopproduct     {\clf_stopproduct    \honorendofinput} % todo
-% \protected\def\stopcomponent   {\clf_stopcomponent  \honorendofinput} % todo
-% \protected\def\stopenvironment {\clf_stopenvironment\honorendofinput} % todo
-
 % \currentproject            % defined at lua end
 % \currentproduct            % defined at lua end
 % \currentcomponent          % defined at lua end
@@ -189,7 +175,9 @@
 
 \neverypar\emptytoks
 
-%D Wrappers (the signal is a synchronization with lua hack):
+%D Wrappers. The \type {\endinput} is tricky because we call macros at the \LUA\
+%D end. In \LMTX\ we now do an immediate one, so the ending happens here now. It
+%D is different that in \MKIV, but you can compare the code.
 
 \newsystemmode\v!project
 \newsystemmode\v!product
@@ -204,7 +192,7 @@
 \permanent\protected\def\stopprojectindeed
   {\popsystemmode\v!project
    %stoptext
-   }%\signalendofinput\v!project}
+   \endinput}
 
 \permanent\protected\def\startproductindeed
   {\starttext
@@ -214,7 +202,7 @@
 \permanent\protected\def\stopproductindeed
   {\popsystemmode\v!product
    \stoptext
-   }%\signalendofinput\v!product}
+   \endinput}
 
 \permanent\protected\def\startcomponentindeed
   {\starttext
@@ -226,7 +214,7 @@
   {\popsystemmode\v!component
    \popreferenceprefix
    \stoptext
-   }%\signalendofinput\v!component}
+   \endinput}
 
 \permanent\protected\def\startenvironmentindeed
   {\pushsystemmode\v!environment
@@ -234,7 +222,7 @@
 
 \permanent\protected\def\stopenvironmentindeed
   {\popsystemmode\v!environment
-   }%\signalendofinput\v!environment}
+   \endinput}
 
 %D Upgraded after the ctx 2020 meeting:
 %D
@@ -290,8 +278,8 @@
     \normalexpanded {%
         \startsetups[\currentdocument:\v!start]\noexpand\directsetup{\ifempty\currentdocumentparent\s!document\else\currentdocumentparent\fi:\v!start}\stopsetups
         \startsetups[\currentdocument:\v!stop ]\noexpand\directsetup{\ifempty\currentdocumentparent\s!document\else\currentdocumentparent\fi:\v!stop }\stopsetups
-        \permanent\setvalue{\e!start\currentdocument}{\startdocument[\currentdocument]}%
-        \permanent\setvalue{\e!stop \currentdocument}{\stopdocument}
+        \permanent\defcsname\e!start\currentdocument\endcsname{\startdocument[\currentdocument]}%
+        \permanent\defcsname\e!stop \currentdocument\endcsname{\stopdocument}
     }%
 \to \everydefinedocument
 
@@ -302,7 +290,7 @@
    \ifparameters
    \or
      \ifhastok={#namespace}%
-       \let\currentdocument\empty
+       \lettonothing\currentdocument
        \setupcurrentdocument[#namespace]%
      \else
        \edef\currentdocument{#namespace}%
@@ -337,7 +325,7 @@
    \ifparameters
    \or
      \ifhastok={#namespace}%
-       \let\currentdocument\empty
+       \lettonothing\currentdocument
        \setupcurrentdocument[#namespace]%
      \fi
    \or
@@ -352,10 +340,17 @@
 %
 % \protected\def\samplefile#1%
 %   {\ifcsname\??samplefile#1\endcsname \else
-%      \setxvalue{\??samplefile#1}{\cldloadfile{#1}}%
+%      \xdefcsname\??samplefile#1\endcsname{\cldloadfile{#1}}%
 %    \fi
 %    \lastnamedcs}
 
 \permanent\protected\def\samplefile#1{\clf_samplefile{#1}}
+
+% \adddefaultsuffix[foo,{},crap]
+% \adddefaultsuffix[{}]
+%
+% \typefile{./crapcrap}
+% \typefile{crapcrap}
+
 
 \protect \endinput

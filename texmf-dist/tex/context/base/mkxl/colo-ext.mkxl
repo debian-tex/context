@@ -46,7 +46,7 @@
 \installcorenamespace{colorintent}
 
 \permanent\protected\def\registercolorintent#1#2% \relax is needed !
-  {\setevalue{\??colorintent#1}{\c_attr_colorintent\clf_registercolorintent{#2}\relax}}
+  {\edefcsname\??colorintent#1\endcsname{\c_attr_colorintent\clf_registercolorintent{#2}\relax}}
 
 \protected\def\colo_intents_set
   {\clf_enablecolorintents
@@ -58,7 +58,7 @@
 
 \installattributestack\colorintentattribute
 
-\setevalue{\??colorintent\v!none}{\c_attr_colorintent\attributeunsetvalue} % or reset? used at all?
+\edefcsname\??colorintent\v!none\endcsname{\c_attr_colorintent\attributeunsetvalue} % or reset? used at all?
 
 \permanent\protected\def\startcolorintent[#1]%
   {\pushattribute\colorintentattribute
@@ -73,14 +73,14 @@
 \aliased\let\stopoverprint\stopcolorintent
 \aliased\let\stopknockout \stopcolorintent
 
-\aliased\let\starttextcolorintent\relax
-\aliased\let\stoptextcolorintent \relax
+\permanent\protected\lettonothing\starttextcolorintent
+\permanent\protected\lettonothing\stoptextcolorintent
 
 \appendtoks
     \colo_intents_set_text
 \to \everysetupcolors
 
-\let\p_colo_intent\empty
+\lettonothing\p_colo_intent
 
 \def\colo_intents_set_text
   {\edef\p_colo_intent{\colorsparameter\c!intent}%

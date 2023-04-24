@@ -5,10 +5,30 @@ if not modules then modules = { } end modules ['toks-aux'] = {
     license   = "see context related readme files"
 }
 
-local type, tostring = type, tostring
+local type, tostring, next = type, tostring, next
 local max = math.max
-local formatters, gsub, char = string.formatters, string.gsub, string.char
+local formatters, gsub, char, gmatch = string.formatters, string.gsub, string.char, string.gmatch
 local concat = table.concat
+
+do
+
+ -- tex.magicconstants = { -- we use tex.constants for something else
+ --     running  = -1073741824, -- null_flag
+ --     maxdimen =  1073741823, -- max_dimen
+ --  -- trueinch =     4736286, -- obsolete
+ -- }
+
+    local c = status.getconstants()
+    local t = { }
+    for k, v in next, c do
+        t[gsub(k,"_","")] = v
+    end
+
+    tex.magicconstants = table.setmetatableindex(t,c)
+
+end
+
+-- todo : locals from scanners
 
 local function flags(t)
     if type(t) == "string" then
@@ -24,6 +44,7 @@ local function flags(t)
     if t.instance  then r[#r+1] = "instance"  end
     if t.tolerant  then r[#r+1] = "tolerant"  end
     if t.protected then r[#r+1] = "protected" end
+    if t.constant  then r[#r+1] = "constant"  end
     return r
 end
 
@@ -37,27 +58,27 @@ interfaces.implement {
         local f0 = formatters["%s: %s"]
         local nl = logs.newline
         local wr = logs.writer
-        local t  = token.peek_next() -- local t = token.scan_next() token.put_back(t)
+        local t  = token.peeknext() -- local t = token.scannext() token.putback(t)
         local n  = ""
         local w  = ""
         local c  = t.cmdname
         if c == "left_brace" then
             w = "given token list"
-            t = token.scan_toks(false)
+            t = token.scantoks(false)
         elseif c == "register_toks" then
-            token.scan_next()
+            token.scannext()
             w = "token register"
             n = t.csname or t.index
             t = tex.gettoks(n,true)
         elseif c == "internal_toks" then
-            token.scan_next()
+            token.scannext()
             w = "internal token variable"
             n = t.csname or t.index
             t = tex.gettoks(n,true)
         else
-            n = token.scan_csname()
+            n = token.scancsname()
             local r = flags(t)
-            local m = token.get_meaning(n,true)
+            local m = token.getmeaning(n,true)
             r[#r+1] = "control sequence"
             if type(m) == "table" then
                 t = m
@@ -99,6 +120,7 @@ interfaces.implement {
                 elseif cn == "letter" or cn == "other char" then
                     wr(f3(id,cd,ix,cn,ix))
                 elseif cn == "match" then
+                    -- needs checking for additions
                     local s
                         if ix == 32 then s = "optional spacer"     -- space
                     elseif ix == 42 then s = "skip spaces"         -- *
@@ -128,56 +150,74 @@ interfaces.implement {
 -- For the moment here, will move to initex only (also see node-ini.lua); we need
 -- to actually store these.
 
-local groupcodes       = { }
-local glyphoptioncodes = { }
-local hyphenationcodes = { }
-local frozenparcodes   = { }
-local flagcodes        = { }
-local normalizecodes   = { }
+local context = context
 
-for k, v in next, tex.getgroupvalues() do
-    groupcodes[k] = gsub(v,"[_ ]","")
-end
-for k, v in next, tex.gethyphenationvalues() do
-    hyphenationcodes[k] = gsub(v,"[_ ]","")
-end
-for k, v in next, tex.getglyphoptionvalues() do
-    glyphoptioncodes[k] = gsub(v,"[_ ]","")
-end
-for k, v in next, tex.getfrozenparvalues() do
-    frozenparcodes[k] = gsub(v,"[_ ]","")
-end
-for k, v in next, tex.getflagvalues() do
-    flagcodes[k] = gsub(v,"[_ ]","")
-end
-for k, v in next, tex.getnormalizevalues() do
-    normalizecodes[k] = gsub(v,"[_ ]","")
-end
-
-
-if environment.initex then
-
-    local texintegerdef = tex.integerdef
-
-    for k, v in next, groupcodes       do texintegerdef(v .. "groupcode",          k,"immutable") end
-    for k, v in next, glyphoptioncodes do texintegerdef(v .. "code",               k,"immutable") end
-    for k, v in next, hyphenationcodes do texintegerdef(v .. "hyphenationmodecode",k,"immutable") end
-    for k, v in next, frozenparcodes   do texintegerdef("frozen" .. v .. "code",   k,"immutable") end
-    for k, v in next, flagcodes        do texintegerdef(v .. "flagcode",           k,"immutable") end
-    for k, v in next, normalizecodes   do texintegerdef(v .. "code",               k,"immutable") end
-
+local function getthem(getter,post)
+    local codes = { }
+    if getter then
+        local texintegerdef = tex.integerdef
+        for k, v in next, getter() do
+            codes[k] = gsub(v,"[_ ]","")
+        end
+        if post and post ~= "" then
+            if environment.initex then
+                for k, v in next, codes do
+                    texintegerdef(v .. post,k,"immutable")
+                end
+            end
+            interfaces.implement {
+                name      = post .. "string",
+                public    = true,
+                arguments = "integer",
+                actions   = function(i)
+                    context(codes[i] or "unknown")
+                end
+            }
+        end
+    end
+    return utilities.storage.allocate(table.swapped(codes,codes))
 end
 
-groupcodes           = utilities.storage.allocate(table.swapped(groupcodes,      groupcodes))
-glyphoptioncodes     = utilities.storage.allocate(table.swapped(glyphoptioncodes,glyphoptioncodes))
-hyphenationcodes     = utilities.storage.allocate(table.swapped(hyphenationcodes,hyphenationcodes))
-frozenparcodes       = utilities.storage.allocate(table.swapped(frozenparcodes,  frozenparcodes))
-flagcodes            = utilities.storage.allocate(table.swapped(flagcodes,       flagcodes))
-normalizecodes       = utilities.storage.allocate(table.swapped(normalizecodes,  normalizecodes))
+tex.discoptioncodes       = getthem(tex.getdiscoptionvalues,       "discoptioncode")
+tex.flagcodes             = getthem(tex.getflagvalues,             "flagcode" )
+tex.frozenparcodes        = getthem(tex.getfrozenparvalues,        "frozenparcode")
+tex.glyphoptioncodes      = getthem(tex.getglyphoptionvalues,      "glyphoptioncode")
+tex.groupcodes            = getthem(tex.getgroupvalues,            "groupcode")
+tex.hyphenationcodes      = getthem(tex.gethyphenationvalues,      "hyphenationcode")
+tex.mathcontrolcodes      = getthem(tex.getmathcontrolvalues,      "mathcontrolcode")
+---.mathflattencodes      = getthem(tex.getmathflattenvalues,      "mathflattencode")
+tex.noadoptioncodes       = getthem(tex.getnoadoptionvalues        ) -- only at lua end
+tex.normalizelinecodes    = getthem(tex.getnormalizelinevalues,    "normalizecode")     -- we keep the short name
+tex.normalizeparcodes     = getthem(tex.getnormalizeparvalues,     "normalizeparcode")
+tex.automigrationcodes    = getthem(tex.getautomigrationvalues,    "automigrationcode")
+tex.parcontextcodes       = getthem(tex.getparcontextvalues,       "parcontextcode")
+tex.textcontrolcodes      = getthem(tex.gettextcontrolvalues       ) -- only at lua end
+tex.listanchorcodes       = getthem(tex.getlistanchorvalues,       "listanchorcode")
+tex.listsigncodes         = getthem(tex.getlistsignvalues,         "listsigncode")
+tex.classoptioncodes      = getthem(tex.getmathclassoptionvalues,  "classoptioncode")
+---.alignmentcontextcodes = getthem(tex.getalignmentcontextvalues  ) -- only at lua end
+tex.specialmathclasscodes = getthem(tex.getspecialmathclassvalues  ) -- only at lua end
 
-tex.groupcodes       = groupcodes
-tex.glyphoptioncodes = glyphoptioncodes
-tex.hyphenationcodes = hyphenationcodes
-tex.frozenparcodes   = frozenparcodes
-tex.flagcodes        = flagcodes
-tex.normalizecodes   = normalizecodes
+function tex.stringtocodesbitmap(str,codes)
+    local bitmap = 0
+    if codes then
+        if not str or str == "" then
+            -- zero
+        elseif str == "all" then
+            for k in next, codes do
+                if type(k) == "number" then
+                    bitmap = bitmap | k
+                end
+            end
+        else
+            str = gsub(str,"[_ ]","")
+            for s in gmatch(str,"[^%,]+") do
+                local b = codes[s]
+                if b then
+                    bitmap = bitmap | b
+                end
+            end
+        end
+    end
+    return bitmap
+end

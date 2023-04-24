@@ -15,54 +15,71 @@
 
 \unprotect
 
+\newinteger\scaledfontmode
+\newinteger\scaledfontsize
+\newinteger\lastfontid
+
+\newinteger\c_font_future_glyph_scale
+\newinteger\c_font_scaled_font_mode_saved
+\newinteger\c_font_scaled_points
+
+\ifdefined\globalbodyfontsize \else \newdimension\globalbodyfontsize \fi
+\ifdefined\localbodyfontsize  \else \newdimension\localbodyfontsize  \fi
+\ifdefined\bodyfontsize       \else \newdimension\bodyfontsize       \fi
+
 \registerctxluafile{font-ini}{autosuffix}
 \registerctxluafile{font-log}{}
 \registerctxluafile{font-con}{autosuffix} % kind of early
 %registerctxluafile{font-cft}{}
 \registerctxluafile{font-enc}{}
 \registerctxluafile{font-fmp}{autosuffix}
-\registerctxluafile{font-agl}{}         % if needed we can comment this and delay loading
-\registerctxluafile{font-cid}{}         % cid maps
-\registerctxluafile{font-map}{optimize}
+\registerctxluafile{font-agl}{}           % if needed we can comment this and delay loading
+\registerctxluafile{font-cid}{}           % cid maps
+\registerctxluafile{font-map}{}
 
 % helpers
 
-\registerctxluafile{font-otr}{optimize} % opentype fontloader
-\registerctxluafile{font-web}{}         % opentype fontloader
-\registerctxluafile{font-cff}{optimize} % quadratic outlines
-\registerctxluafile{font-ttf}{optimize} % cubic outlines
-\registerctxluafile{font-dsp}{optimize} % ... for this one
-\registerctxluafile{font-hsh}{}         % hashes used by context
-\registerctxluafile{font-vir}{}
+\registerctxluafile{font-otr}{}           % opentype fontloader
+\registerctxluafile{font-web}{}           % opentype fontloader
+\registerctxluafile{font-cff}{autosuffix} % quadratic outlines
+\registerctxluafile{font-ttf}{autosuffix} % cubic outlines
+\registerctxluafile{font-dsp}{autosuffix}
+\registerctxluafile{font-hsh}{autosuffix} % hashes used by context
 \registerctxluafile{font-vfc}{autosuffix}
-\registerctxluafile{font-prv}{}         % needs hashes
-\registerctxluafile{font-nod}{optimize}
-\registerctxluafile{font-oti}{}         % otf initialization
-\registerctxluafile{font-ott}{}         % otf tables (first)
-\registerctxluafile{font-otl}{}
+\registerctxluafile{font-prv}{}           % needs hashes
+\registerctxluafile{font-vir}{}
+\registerctxluafile{font-nod}{}
+\registerctxluafile{font-oti}{}           % otf initialization
+\registerctxluafile{font-ott}{}           % otf tables (first)
+\registerctxluafile{font-otl}{autosuffix}
 \registerctxluafile{font-oto}{}
-\registerctxluafile{font-otj}{autosuffix,optimize}
+\registerctxluafile{font-otj}{autosuffix}
 \registerctxluafile{font-oup}{}
 \registerctxluafile{font-ota}{autosuffix}
-% \registerctxluafile{font-ots-pre-scale}{autosuffix,optimize}
-\registerctxluafile{font-ots}{autosuffix,optimize}
-\registerctxluafile{font-otd}{optimize}
+\registerctxluafile{font-ots}{autosuffix}
+\registerctxluafile{font-otd}{autosuffix}
 \registerctxluafile{font-otc}{}
 \registerctxluafile{font-oth}{}
-\registerctxluafile{font-osd}{}
+% \doifelsefileexists{font-osd-new.lmt}{
+%     \registerctxluafile{font-osd-new}{autosuffix}
+% } {
+    \registerctxluafile{font-osd}{}
+% }
 %registerctxluafile{font-osm}{}
 \registerctxluafile{font-ogr}{autosuffix}
 
 % we use otf code for type one
 
-\registerctxluafile{font-onr}{optimize}
-\registerctxluafile{font-one}{optimize}
+\registerctxluafile{font-onr}{autosuffix}
+\registerctxluafile{font-one}{autosuffix}
 \registerctxluafile{font-afk}{}
+
+\registerctxluafile{font-txt}{autosuffix}
 
 % tfm
 
-\registerctxluafile{font-tpk}{optimize}
-\registerctxluafile{font-tfm}{}
+\registerctxluafile{font-tpk}{autosuffix}
+\registerctxluafile{font-tfm}{autosuffix}
 
 % name database
 
@@ -79,14 +96,12 @@
 
 \registerctxluafile{node-fnt}{autosuffix} % here
 
-\registerctxluafile{font-mps}{autosuffix} % outline fun
-
 \registerctxluafile{font-lua}{}
 
 \registerctxluafile{font-enh}{autosuffix}
 
 \registerctxluafile{good-ini}{}
-\registerctxluafile{good-gen}{}
+\registerctxluafile{good-gen}{autosuffix}
 \registerctxluafile{good-ctx}{}
 \registerctxluafile{good-mth}{autosuffix}
 
@@ -95,26 +110,25 @@
 
 % extensions, order matters
 
-\registerctxluafile{font-imp-ligatures}{}
+\registerctxluafile{font-imp-checks}{autosuffix}
+\registerctxluafile{font-imp-ligatures}{autosuffix}
 \registerctxluafile{font-imp-tex}{}
 \registerctxluafile{font-imp-reorder}{}
-\registerctxluafile{font-imp-properties}{}
+\registerctxluafile{font-imp-properties}{autosuffix}
 \registerctxluafile{font-imp-unicode}{}
+\registerctxluafile{font-imp-text}{autosuffix}
 \registerctxluafile{font-imp-math}{autosuffix}
 \registerctxluafile{font-imp-notused}{}
-\registerctxluafile{font-imp-effects}{}
-\registerctxluafile{font-imp-quality}{}
+\registerctxluafile{font-imp-effects}{autosuffix}
+\registerctxluafile{font-imp-quality}{autosuffix}
 \registerctxluafile{font-imp-italics}{}
 \registerctxluafile{font-imp-dimensions}{}
 \registerctxluafile{font-imp-spacekerns}{}
 \registerctxluafile{font-imp-tweaks}{}
 \registerctxluafile{font-imp-combining}{}
-
-\doifelsefileexists{font-imp-scripts.lua} {
-    \registerctxluafile{font-imp-scripts}{}
-} {
-    % not yet, lmtx feature
-}
+\registerctxluafile{font-imp-scripts}{autosuffix}
+\registerctxluafile{font-imp-sanitize}{autosuffix} % fixes for indic fonts
+\registerctxluafile{font-imp-digits}{autosuffix}
 
 \registerctxluafile{font-imp-tracing}{autosuffix} % comes last!
 
@@ -122,7 +136,7 @@
 
 \registerctxluafile{font-aux}{}
 
-\registerctxluafile{font-lig}{} % only for experiments so try to avoid it
+\registerctxluafile{font-lig}{autosuffix} % only for experiments so try to avoid it
 
 %D Some low level helpers
 %D
@@ -152,5 +166,15 @@
 \permanent          \def\dolookupgetkey         #1{\clf_fontlookupgetkey{#1}}
 \permanent          \def\cleanfontname          #1{\clf_cleanfontname{#1}}
 \permanent\protected\def\setfontofid            #1{\clf_setfontofid\numexpr#1\relax}
+
+%D I have to put it someplace, so here:
+%D
+%D \starttyping
+%D     \definefontfeature[test][mode=plug,features=text]
+%D     \definefont[FontA][Serif*test]
+%D     \definefont[FontB][Serif*test]
+%D     {\FontA aaa}{\FontB\glyphscale 1200  bbb}
+%D     {\FontA aaa}{\FontB\glyphscale 1200  bbb}
+%D \stoptyping
 
 \protect \endinput

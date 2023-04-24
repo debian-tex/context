@@ -6,8 +6,6 @@ if not modules then modules = { } end modules ['node-mig'] = {
     license   = "see context related readme files"
 }
 
--- todo: insert_after
-
 local format = string.format
 
 local trace_migrations = false trackers.register("nodes.migrations", function(v) trace_migrations = v end)
@@ -51,6 +49,7 @@ local t_sweeps         = 0
 local trialtypesetting = context.trialtypesetting
 
 function nodes.handlers.migrate(head,where)
+    -- is this still needed
     if head and not trialtypesetting() and where == "alignment" then
         if trace_migrations then
             report_nodes("migration sweep %a",where)
@@ -112,7 +111,7 @@ local function check()
         if not enabled then
             enableaction("mvlbuilders", "nodes.handlers.migrate")
             enabled = true
-            texsetcount("automigrationmode",3)
+            texsetcount("automigrationmode",0xFFFF) -- just all of it
         end
     else
         if enabled then

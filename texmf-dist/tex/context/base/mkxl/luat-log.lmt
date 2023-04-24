@@ -14,7 +14,8 @@ if not modules then modules = { } end modules ['luat-log'] = {
 -- mtxrun.
 --
 -- We use different targets: "terminal" "logfile", "both" and have no number
--- channel.
+-- channel. Actually, the log channels are now numeric (1,2,3) as with other
+-- symbolics.
 
 local next, type, select, print = next, type, select, print
 local format, gmatch, find = string.format, string.gmatch, string.find
@@ -24,8 +25,9 @@ local utfchar = utf.char
 local datetime = os.date
 local openfile = io.open
 
-local write_nl = texio.write_nl
-local write    = texio.write
+local writenl = texio.writeselectornl
+local writelf = texio.writeselectorlf
+local write   = texio.writeselector
 
 local setmetatableindex = table.setmetatableindex
 local formatters        = string.formatters
@@ -119,14 +121,17 @@ do
                 status_yes    = formatters["%-15s : %s\n"],
                 status_nop    = formatters["%-15s :\n"],
             },
-            targets = setmetatableindex( {
-                logfile  = "logfile",
-                log      = "logfile",
-                file     = "logfile",
-                console  = "terminal",
-                terminal = "terminal",
-                both     = "terminal_and_logfile",
-            }, function(t,k) t[k] = "terminal_and_logfile" end),
+            targets = setmetatableindex( { -- 1, 2, 3,
+                logfile  = 2,
+                log      = 2,
+                file     = 2,
+                console  = 1,
+                terminal = 1,
+                both     = 3,
+            },
+            function(t,k)
+                local v = 3 t[k] = v return v
+            end),
         },
         ansi = {
             formats = {
@@ -141,14 +146,14 @@ do
                 status_yes    = formatters["[0;33m%-15s [0;1m:[0m %s\n"],
                 status_nop    = formatters["[0;33m%-15s [0;1m:[0m\n"],
             },
-            targets = setmetatableindex( {
+            targets = setmetatableindex( { 1, 1, 1,
                 logfile  = false,
                 log      = false,
                 file     = false,
-                console  = "terminal",
-                terminal = "terminal",
-                both     = "terminal",
-            }, function(t,k) t[k] = "terminal" end),
+                console  = 1,
+                terminal = 1,
+                both     = 1,
+            }, function(t,k) local v = 1 t[k] = v return v end),
         }
     }
 
@@ -161,13 +166,14 @@ do
 
     writer = function(...)
         if target then
-            write_nl(target,...)
+            writenl(target,...)
         end
     end
 
     newline = function()
         if target then
-            write_nl(target,"\n")
+            writelf(target)
+         -- writenl(target,"")
         end
     end
 
@@ -175,13 +181,13 @@ do
         if not target then
             -- ignore
         elseif c ~= nil then
-            write_nl(target,report_yes(translations[a],formatters[formats[b]](c,...)))
+            writenl(target,report_yes(translations[a],formatters[formats[b]](c,...)))
         elseif b then
-            write_nl(target,report_yes(translations[a],formats[b]))
+            writenl(target,report_yes(translations[a],formats[b]))
         elseif a then
-            write_nl(target,report_nop(translations[a]))
+            writenl(target,report_nop(translations[a]))
         else
-            write_nl(target,"\n")
+            writenl(target)
         end
     end
 
@@ -203,13 +209,13 @@ do
         if not target then
             -- ignore
         elseif c ~= nil then
-            write_nl(target,subreport_yes(translations[a],translations[s],formatters[formats[b]](c,...)))
+            writenl(target,subreport_yes(translations[a],translations[s],formatters[formats[b]](c,...)))
         elseif b then
-            write_nl(target,subreport_yes(translations[a],translations[s],formats[b]))
+            writenl(target,subreport_yes(translations[a],translations[s],formats[b]))
         elseif a then
-            write_nl(target,subreport_nop(translations[a],translations[s]))
+            writenl(target,subreport_nop(translations[a],translations[s]))
         else
-            write_nl(target,"\n")
+            writenl(target)
         end
     end
 
@@ -231,13 +237,13 @@ do
         if not target then
             -- ignore
         elseif c ~= nil then
-            write_nl(target,status_yes(translations[a],formatters[formats[b]](c,...)))
+            writenl(target,status_yes(translations[a],formatters[formats[b]](c,...)))
         elseif b then
-            write_nl(target,status_yes(translations[a],formats[b]))
+            writenl(target,status_yes(translations[a],formats[b]))
         elseif a then
-            write_nl(target,status_nop(translations[a]))
+            writenl(target,status_nop(translations[a]))
         else
-            write_nl(target,"\n")
+            writenl(target)
         end
     end
 
@@ -248,7 +254,7 @@ do
             whereto = "both"
             target  = targets[whereto]
         end
-        if target == "terminal" or target == "terminal_and_logfile" then
+        if target == targets.both or target == targets.terminal then
             logs.flush = io.flush
         else
             logs.flush = ignore
@@ -277,8 +283,8 @@ do
     end
 
     setprocessor = function(f)
-        local writeline = write_nl
-        write_nl = function(target,...)
+        local writeline = writenl
+        writenl = function(target,...)
             if target then
                 writeline(target,f(...))
             end
@@ -620,25 +626,39 @@ if package.helpers.report then
     package.helpers.report = logs.reporter("package loader") -- when used outside mtxrun
 end
 
+-- logs.errors=missing references,missing characters
+-- logs.errors=characters
+-- logs.errors=missing
+-- logs.errors=*
+-- logs.quitonerror=missing modules
+
 do
 
     local finalactions  = { }
     local fatalerrors   = { }
     local possiblefatal = { }
+    local quitonerror   = { }
     local loggingerrors = false
 
     function logs.loggingerrors()
         return loggingerrors
     end
 
-    directives.register("logs.errors",function(v)
+    local function register(v)
         loggingerrors = v
         if type(v) == "string" then
-            fatalerrors = settings_to_hash(v)
+            local target = settings_to_hash(v)
+            for k, v in next, target do
+                target[k] = string.topattern(k)
+            end
+            return target
         else
-            fatalerrors = { }
+            return { }
         end
-    end)
+    end
+
+    directives.register("logs.errors",     function(v) fatalerrors = register(v) end)
+    directives.register("logs.quitonerror",function(v) quitonerror = register(v) end)
 
     function logs.registerfinalactions(...)
         insert(finalactions,...) -- so we can force an order if needed
@@ -648,6 +668,7 @@ do
     local report = nil
     local state  = nil
     local target = nil
+    local fatal  = false
 
     local function startlogging(t,r,w,s)
         target = t
@@ -678,6 +699,10 @@ do
         end
         poptarget()
         state = oldstate
+        if fatal then
+            logs.report("error logging","error marked as fatal")
+            luatex.abort()
+        end
     end
 
     function logs.startfilelogging(...)
@@ -698,6 +723,18 @@ do
         end
         if fatalerrors[w] then
             possiblefatal[w] = true
+        else
+            for k, v in next, quitonerror do
+                if find(w,v) then
+                    fatal = true
+                end
+            end
+            for k, v in next, fatalerrors do
+                if find(w,v) then
+                    possiblefatal[w] = true
+                    break
+                end
+            end
         end
         return startlogging("terminal",r,w,...)
     end

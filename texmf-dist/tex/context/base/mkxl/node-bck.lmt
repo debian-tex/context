@@ -46,13 +46,13 @@ local setattributelist   = nuts.setattributelist
 local setprop            = nuts.setprop
 
 local takebox            = nuts.takebox
-local findtail           = nuts.tail
 
 local nextnode           = nuts.traversers.node
 local nexthlist          = nuts.traversers.hlist
 local nextlist           = nuts.traversers.list
 
-local flush_node_list    = nuts.flush_list
+local flushnodelist      = nuts.flushlist
+local flushnode          = nuts.flush
 
 local new_rule           = nodepool.rule
 local new_kern           = nodepool.kern
@@ -61,12 +61,15 @@ local new_hlist          = nodepool.hlist
 local privateattributes  = attributes.private
 local unsetvalue         = attributes.unsetvalue
 
+local getvalue           = attributes.getvalue
+local hasvalues          = attributes.hasvalues
+
 local linefillers        = nodes.linefillers
 
 local a_background       = privateattributes("background")
 local a_alignbackground  = privateattributes("alignbackground")
 local a_linefiller       = privateattributes("linefiller")
-local a_ruled            = privateattributes("ruled")
+----- a_ruled            = privateattributes("ruled")
 
 local trace_alignment    = false
 local report_alignment   = logs.reporter("backgrounds","alignment")
@@ -92,7 +95,7 @@ local function colored_a(current,list,template,id)
         --
         local a = getattr(template,a_linefiller)
         if a then
-            local d = linefillers.data[a%1000]
+            local d = getvalue(a_linefiller,a)
             if d then
                 rule = linefillers.filler(template,d,width,height,depth)
             end
@@ -116,7 +119,7 @@ local function colored_b(current,list,template,id,indent)
         --
         local a = getattr(template,a_linefiller)
         if a then
-            local d = linefillers.data[a%1000]
+            local d = getvalue(a_linefiller,a)
             if d then
                 rule = linefillers.filler(template,d,width-indent,height,depth)
             end
@@ -141,26 +144,30 @@ local currentrow = 0
 local enabled    = false
 local alignments = false
 
+-- todo: more control over cell attributes
+
 local function add_alignbackgrounds(head,list)
     for current, id, subtype, list in nextlist, list do
         if list and id == hlist_code and subtype == celllist_code then
             for template in nexthlist, list do
                 local background = getattr(template,a_alignbackground)
                 if background then
-                    local list = colored_a(current,list,template)
+                    local list = colored_a(current,list,template,id)
                     if list then
                         setlist(current,list)
                     end
-                    setattr(template,a_alignbackground,unsetvalue) -- or property
+                    -- not that efficient:
+                    setattr(template,a_alignbackground,unsetvalue)
                 end
                 break
             end
         end
     end
+    -- we can store this differently now
     local template = getprop(head,"alignmentchecked")
     if template then
         list = colored_b(head,list,template[1],hlist_code,template[2])
-        flush_node_list(template)
+        flushnodelist(template[1])
         templates[currentrow] = false
         return list
     end
@@ -190,7 +197,7 @@ local function add_backgrounds(head,id,list)
         if background then
             list = colored_a(head,list,head,id)
             -- not needed
-            setattr(head,a_background,unsetvalue) -- or property -- todo
+            setattr(head,a_background,unsetvalue) -- or property
             return list
         end
     end
@@ -238,15 +245,6 @@ function nodes.handlers.backgroundsvbox(head,where)
     return head
 end
 
--- interfaces.implement {
---     name      = "enablebackgroundboxes",
---     onlyonce  = true,
---     actions   = enableaction,
---     arguments = { "'shipouts'", "'nodes.handlers.backgrounds'" }
--- }
---
--- doing it in the shipout works as well but this is nicer
-
 local function enable(alignmentstoo)
     if not enabled then
         enabled = true
@@ -266,7 +264,7 @@ interfaces.implement {
 }
 
 interfaces.implement {
-    name      = "enablebackgroundalign",
+    name      = "enablebackgroundalign", --- move into next one
     onlyonce  = true,
     actions   = function()
         enable(true)
@@ -275,7 +273,7 @@ interfaces.implement {
 
 interfaces.implement {
     name      = "setbackgroundrowdata",
-    arguments = { "integer", "integer", "dimension" },
+    arguments = { "integer", "integer", "dimension" }, -- todo: "box"
     actions   = function(row,box,indent)
         row = row -1 -- better here than in tex
         if box == 0 then

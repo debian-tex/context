@@ -3,10 +3,10 @@ return {
         "btex", "etex", "verbatimtex",
     },
     shortcuts = {
-        "..", "...", "--", "---", "&", "\\",
+        "..", "...", "--", "---", "&", "&&", "\\",
     },
     primitives = { -- to be checked
-        "charcode", "day", "linecap", "linejoin", "miterlimit", "month", "pausing",
+        "charcode", "day", "linecap", "linejoin", "miterlimit", "stacking", "month", "pausing",
         "prologues", "showstopping", "time", "tracingcapsules", "tracingchoices", "mpprocset",
         "tracingcommands", "tracingequations", "tracinglostchars",
         "tracingmacros", "tracingonline", "tracingoutput", "tracingrestores",
@@ -30,7 +30,7 @@ return {
         "def", "vardef", "enddef", "expr", "suffix", "text", "primary", "secondary",
         "tertiary", "primarydef", "secondarydef", "tertiarydef",
         "randomseed", "also", "contour", "doublepath",
-        "withcolor", "withcmykcolor", "withpen",
+        "withcolor", "withcmykcolor", "withpen", "withstacking",
         "dashed",
         "envelope",
         "if", "else", "elseif", "fi", "for", "endfor", "forever", "exitif", "within",
@@ -50,7 +50,7 @@ return {
         "message", "delimiters", "turningnumber", "errmessage",
         "scantokens", "end", "outer", "inner", "write", "to", "readfrom", "closefrom",
         "withprescript", "withpostscript",
-        "top", "bot", "lft", "rt", "ulft", "urt", "llft", "lrt",
+     -- "top", "bot", "lft", "rt", "ulft", "urt", "llft", "lrt",
         --
         "redpart", "greenpart", "bluepart",
         "cyanpart", "magentapart", "yellowpart",
@@ -58,7 +58,7 @@ return {
         "prescriptpart", "postscriptpart",
         "rgbcolor", "cmykcolor", -- "greycolor", "graycolor",
         "colormodel",  "graypart", "greypart", "greycolor", "graycolor",
-        "dashpart", "penpart",
+        "dashpart", "penpart", "stackingpart",
 --         "colorpart",
         "stroked", "filled", "textual", "clipped", "bounded", "pathpart",
         "expandafter",
@@ -68,6 +68,15 @@ return {
         --
         "runscript", "maketext", "numbersystem",
         "overloadmode", "setproperty",
+        --
+        "intersectiontimeslist", "arcpoint", "arcpointlist", "subarclength", "maxknotpool", "nocycle",
+        "pathpoint", "pathprecontrol", "pathpostcontrol", "pathdirection",
+        "deltapoint", "deltaprecontrol", "deltapostcontrol", "deltadirection",
+        "corner", "xrange", "yrange",
+        "convexed", "uncontrolled",
+        "nep", "makenep",
+        "withmiterlimit", "withlinejoin", "withlinecap",
+        "centerof", "centerofmass",
     },
     commands = {
         "on", "off",
@@ -84,7 +93,8 @@ return {
         "pensquare",  "penrazor",  "penspec",
         "origin", "quartercircle", "right",
         "unitsquare", "up", "withdots",
-        "abs", "bbox", "ceiling", "center", "cutafter", "cutbefore", "dir",
+        "abs", "bbox", "ceiling", "cutafter", "cutbefore", "dir",
+     -- "center",
         "directionpoint", "div", "dotprod", "intersectionpoint", "inverse", "mod",
         "round", "unitvector", "whatever",
         "cutdraw", "draw", "drawarrow", "drawdblarrow", "fill", "filldraw", "drawdot",
@@ -117,13 +127,15 @@ return {
         --
         "red", "green", "blue", "cyan", "magenta", "yellow", "black", "white", "background",
         --
-        "mm", "pt", "dd", "bp", "cm", "pc", "cc", "in",
+        "mm", "pt", "dd", "bp", "cm", "pc", "cc", "in", "dk",
         --
-        "triplet", "quadruplet", "totransform", "bymatrix",
+        "triplet", "quadruplet", "totransform", "bymatrix", "closedcurve", "closedlines",
         --
         "primitive", "permanent", "immutable", "mutable", "frozen",
         --
         "showproperty", "showhashentry",
+        --
+        "top", "bot", "lft", "rt", "ulft", "urt", "llft", "lrt",
     },
     internals = { -- we need to remove duplicates above
         --

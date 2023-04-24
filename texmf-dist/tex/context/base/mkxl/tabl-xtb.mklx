@@ -15,7 +15,27 @@
 
 \writestatus{loading}{ConTeXt Table Macros / Xtreme}
 
-\registerctxluafile{tabl-xtb}{}
+\unprotect
+
+\newdimension\d_tabl_x_width        \def\d_tabl_x_width_reference {\d_tabl_x_width }
+\newdimension\d_tabl_x_height       \def\d_tabl_x_height_reference{\d_tabl_x_height}
+\newdimension\d_tabl_x_depth        % not used
+\newdimension\d_tabl_x_distance
+\newdimension\d_tabl_x_final_width  \def\d_tabl_x_final_width_reference{\d_tabl_x_final_width}
+\newinteger  \c_tabl_x_nx
+\newinteger  \c_tabl_x_ny
+\newinteger  \c_tabl_x_mode
+\newbox      \b_tabl_x
+\newinteger  \c_tabl_x_state        % 0=empty 1=content 3=splitleft
+\newinteger  \c_tabl_x_nesting
+\newinteger  \c_tabl_x_skip_mode    % 1 = skip
+\newdimension\d_tabl_x_textwidth
+\newinteger  \c_tabl_x_swapped
+\newinteger  \c_tabl_x_swapped_max
+
+\protect
+
+\registerctxluafile{tabl-xtb}{autosuffix}
 
 % todo:
 %
@@ -82,23 +102,7 @@
       {\signalcharacter}% not used
 \to \everyenableelements
 
-\newdimen\d_tabl_x_width
-\newdimen\d_tabl_x_height
-\newdimen\d_tabl_x_depth        % not used
-\newdimen\d_tabl_x_distance
-\newcount\c_tabl_x_nx
-\newcount\c_tabl_x_ny
-\newcount\c_tabl_x_mode
-\newbox  \b_tabl_x
-\newcount\c_tabl_x_state        % 0=empty 1=content 3=splitleft
-\newdimen\d_tabl_x_final_width
-\newcount\c_tabl_x_nesting
-\newcount\c_tabl_x_skip_mode    % 1 = skip
-\newdimen\d_tabl_x_textwidth
-\newcount\c_tabl_x_swapped
-\newcount\c_tabl_x_swapped_max
-
-\let\m_tabl_x_swapped_settings\empty
+\lettonothing\m_tabl_x_swapped_settings
 
 \aliased\let\currentxtablerow   \clf_x_table_r
 \aliased\let\currentxtablecolumn\clf_x_table_c
@@ -156,8 +160,8 @@
     \c!rightmargindistance=\zeropoint,% whole table
 ]
 
-\def\tabl_x_default_buffer{x_table_\number\c_tabl_x_nesting}
-\let\tabl_x_current_buffer\empty
+\def         \tabl_x_default_buffer{x_table_\number\c_tabl_x_nesting}
+\lettonothing\tabl_x_current_buffer
 
 \permanent\protected\def\startxtable{\tabl_x_start_table}
 
@@ -169,7 +173,7 @@
 
 % \permanent\protected\aliased\startxtable\tabl_x_start_table
 
-\aliased\permanent\let\stopxtable\relax
+\permanent\protected\lettonothing\stopxtable
 
 % These direct buffers can be somewhat faster but it's probably neglectable.
 % Anyway, no nesting is supported as we then need to catch (e.g.) rows and keep
@@ -204,19 +208,19 @@
    \edef\tabl_x_current_buffer{embedded_x_table}%
    \tabl_x_process}
 
-\aliased\permanent\let\stopembeddedxtable\relax
+\permanent\protected\lettonothing\stopembeddedxtable
 
 %D We can also define xtables.
 
 \appendtoks
-    \permanent\setuevalue{\e!start\currentxtable}{\tabl_x_start_named[\currentxtable]}%
-    \permanent\setuevalue{\e!stop \currentxtable}{\tabl_x_stop_named}%
+    \permanent\protected\edefcsname\e!start\currentxtable\endcsname{\tabl_x_start_named[\currentxtable]}%
+    \permanent\protected\edefcsname\e!stop \currentxtable\endcsname{\tabl_x_stop_named}%
 \to \everydefinextable
 
 \protected\def\tabl_x_start_named[#tag]#spacer[#settings]%
   {\bgroup
    \edef\currentxtable{#tag}%
-   \advance\c_tabl_x_nesting\plusone
+   \advanceby\c_tabl_x_nesting\plusone
    \dostarttaggedchained\t!table\empty\??xtable
    \setupcurrentxtable[#settings]%
    \tabl_x_check_textwidth
@@ -240,7 +244,7 @@
 \newtoks\everypreparextable
 
 \protected\def\tabl_x_prepare#settings%
-  {\advance\c_tabl_x_nesting\plusone
+  {\advanceby\c_tabl_x_nesting\plusone
    \dostarttaggedchained\t!table\empty\??xtable
    \tabl_x_set_checked{#settings}%
    \tabl_x_check_textwidth
@@ -248,7 +252,7 @@
    }% else whitespace mess
 
 \def\tabl_x_get_buffer
-  {\clf_gettexbuffer{\tabl_x_current_buffer}}
+  {\clf_getbuffertex{\tabl_x_current_buffer}}
 
 \let\tabl_x_start_row_yes \relax
 \let\tabl_x_start_row_nop \relax
@@ -280,7 +284,7 @@
         footer              {\xtableparameter\c!footer}%
    \relax
    %
-   \letxtableparameter\c!option\empty
+   \resetxtableparameter\c!option
    % not so nice but needed as we use this in the setup
    \linewidth\xtableparameter\c!rulethickness\relax
    % so we freeze it
@@ -353,14 +357,14 @@
 
 % in text flow: headers and footers only once
 
-\setvalue{\??xtableflushsplit\v!yes}%
+\defcsname\??xtableflushsplit\v!yes\endcsname
   {\clf_x_table_flush
      method {\v!split}%
    \relax}
 
 % in text flow: headers and footers only once
 
-\setvalue{\??xtableflushsplit\v!no}%
+\defcsname\??xtableflushsplit\v!no\endcsname
   {% \noindent       % gives extra line after table
    % \noindentation  % messes up the next indentation
    % \dontleavehmode % no leftskip
@@ -373,11 +377,24 @@
 
 % in text flow: headers and footers get repeated
 
-\setvalue{\??xtableflushsplit\v!repeat}%
+% \defcsname\??xtableflushsplit\v!repeat\endcsname
+%   {\doloop
+%      {\clf_x_table_flush
+%         method {\v!split}%
+%         height \ifdim\pagegoal=\maxdimen\textheight\else\pagegoal\fi
+%       \relax
+%       \ifcase\c_tabl_x_state
+%         \exitloop
+%       \else
+%         \page
+%       \fi}}
+
+\defcsname\??xtableflushsplit\v!repeat\endcsname
   {\doloop
-     {\clf_x_table_flush
+     {\testpage[5]% for now hard coded, just as the \lineheight below, see mail end of april 2021
+      \clf_x_table_flush
         method {\v!split}%
-        height \ifdim\pagegoal=\maxdimen\textheight\else\pagegoal\fi
+        height \ifdim\pagegoal=\maxdimen\textheight\else\dimexpr\pagegoal-\pagetotal-\lineheight\relax\fi
       \relax
       \ifcase\c_tabl_x_state
         \exitloop
@@ -385,7 +402,7 @@
         \page
       \fi}}
 
-% \setvalue{\??xtableflushsplit\v!setups}%
+% \defcsname\??xtableflushsplit\v!setups\endcsname
 %   {\directsetup{xtable:split:user}}
 %
 % \startsetups[xtable:split:user]
@@ -423,7 +440,7 @@
    \d_split_minimum_free_space\dimexpr\extraxtablesplitheight+\xtableparameter\c!splitoffset\relax
   %\c_split_minimum_free_lines\plustwo % not needed here as we're precise enough
    \let\tsplitdirectsplitter\tabl_x_split_splitter
-   \let\tsplitdirectwidth   \d_tabl_x_final_width
+   \let\tsplitdirectwidth   \d_tabl_x_final_width_reference
    \handledirecttsplit}
 
 \protected\def\tabl_x_split_splitter#height%
@@ -614,7 +631,7 @@
      \fi
      \setupcurrentxtable[#settings]%
      \relax
-     \letxtableparameter\c!width\d_tabl_x_width  % overloads given width
+     \letxtableparameter\c!width\d_tabl_x_width_reference  % overloads given width
      \inheritedxtableframed\bgroup
      \tabl_x_begin_of_cell
    \fi}
@@ -627,7 +644,7 @@
        \letxtableparameter\c!height\v!fit  % overloads given height
      \fi
      \relax
-     \letxtableparameter\c!width\d_tabl_x_width  % overloads given width
+     \letxtableparameter\c!width\d_tabl_x_width_reference % overloads given width
      \inheritedxtableframed\bgroup
      \tabl_x_begin_of_cell
    \fi}
@@ -644,8 +661,8 @@
   {\dostarttagged\t!tablecell\empty % can't we just tag the box
    \setbox\b_tabl_x\hpack\bgroup
    \setupcurrentxtable[#settings]%
-   \letxtableparameter\c!width \d_tabl_x_width  % overloads given width
-   \letxtableparameter\c!height\d_tabl_x_height % overloads given height
+   \letxtableparameter\c!width \d_tabl_x_width_reference  % overloads given width
+   \letxtableparameter\c!height\d_tabl_x_height_reference % overloads given height
    \clf_x_table_init_construct
    \inheritedxtableframed\bgroup
    \tabl_x_begin_of_cell
@@ -654,8 +671,8 @@
 \protected\def\tabl_x_start_cell_construct_nop
   {\dostarttagged\t!tablecell\empty % can't we just tag the box
    \setbox\b_tabl_x\hpack\bgroup
-   \letxtableparameter\c!width \d_tabl_x_width  % overloads given width
-   \letxtableparameter\c!height\d_tabl_x_height % overloads given height (commenting it ... nice option)
+   \letxtableparameter\c!width \d_tabl_x_width_reference  % overloads given width
+   \letxtableparameter\c!height\d_tabl_x_height_reference % overloads given height (commenting it ... nice option)
    \clf_x_table_init_construct
    \inheritedxtableframed\bgroup
    \tabl_x_begin_of_cell
@@ -886,7 +903,7 @@
    \expandafter\let\expandafter\t_tabl_x_swapped\csname\??xtableswap\number\c_tabl_x_swapped\endcsname}
 
 \def\tabl_x_collect_advance
-  {\global\advance\c_tabl_x_swapped\plusone
+  {\global\advanceby\c_tabl_x_swapped\plusone
    \ifnum\c_tabl_x_swapped>\c_tabl_x_swapped_max
      \global\c_tabl_x_swapped_max\c_tabl_x_swapped
    \fi

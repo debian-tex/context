@@ -59,15 +59,6 @@
       \v_page_target_bottom_fill
       \v_page_target_bottom}}
 
-\def\page_boxes_apply_offset % #box
-  {\unless\ifzeropt\topoffset
-     \expandafter\page_boxes_apply_offset_indeed
-   \orelse\ifzeropt\backoffset
-     \expandafter\gobbleoneargument
-   \else
-     \expandafter\page_boxes_apply_offset_indeed
-   \fi}
-
 \def\page_boxes_apply_offset_indeed#box%
   {\scratchwidth \wd#box%
    \scratchheight\ht#box%
@@ -75,11 +66,36 @@
    \setbox#box\vpack
      {\offinterlineskip
       \vskip\topoffset
-      \hskip\doifbothsides\backoffset\backoffset{-\backoffset}%
+     %\hskip\doifbothsides\backoffset\backoffset{-\backoffset}%
+      \hskip\doifbothsides++-\backoffset
       \box#box}%
    \wd#box\scratchwidth
    \ht#box\scratchheight
    \dp#box\scratchdepth}
+
+% a variant (no gain so we stay mkiv compatible):
+%
+% \def\page_boxes_apply_offset_indeed#box% this needs testing in real situations
+%   {\boxxoffset#box\dimexpr\boxxoffset#box\doifbothsides++-\backoffset\relax
+%    \boxyoffset#box\dimexpr\boxyoffset#box-\topoffset\relax}
+
+% \def\page_boxes_apply_offset % #box
+%   {\unless\ifdim\topoffset=\zeropoint
+%      \expandafter\page_boxes_apply_offset_indeed
+%    \orunless\ifdim\backoffset=\zeropoint
+%      \expandafter\page_boxes_apply_offset_indeed
+%    \else
+%      \expandafter\gobbleoneargument
+%    \fi}
+
+\def\page_boxes_apply_offset % #box
+  {\unless\ifzeropt\topoffset
+     \expandafter\page_boxes_apply_offset_indeed
+   \orunless\ifzeropt\backoffset
+     \expandafter\page_boxes_apply_offset_indeed
+   \else
+     \expandafter\gobbleoneargument
+   \fi}
 
 \def\page_boxes_apply_replicate
   {\ifnum\layoutparameter\c!nx>\plusone
@@ -93,9 +109,9 @@
 \def\page_boxes_apply_replicate_indeed#box%
   {\setbox#box\vpack
      {\offinterlineskip
-      \dorecurse{\layoutparameter\c!ny}
+      \dorecurse{\layoutparameter\c!ny}%
         {\hpack{\dorecurse{\layoutparameter\c!nx}{\copy#box\kern\layoutparameter\c!dx}\unskip}%
-         \vskip\layoutparameter\c!dy}
+         \vskip\layoutparameter\c!dy}%
       \unskip}}
 
 \def\page_boxes_apply_orientate_paper#box%
@@ -189,8 +205,8 @@
    \scratchheight\ht#box%
    \scratchdepth \dp#box%
    \setbox#box\hpack
-     {\advance\scratchheight\dimexpr\scratchdepth+2\scratchoffset\relax
-      \advance\scratchwidth \scratchoffset
+     {\advanceby\scratchheight\dimexpr\scratchdepth+2\scratchoffset\relax
+      \advanceby\scratchwidth \scratchoffset
       \ifconditional#right\relax
          \scratchdimen-\scratchoffset
          \kern\scratchdimen
@@ -221,10 +237,10 @@
    \scratchheight\ht#box%
    \scratchdepth \dp#box%
    \setbox#box\hpack
-     {\advance\scratchheight\dimexpr\scratchdepth+2\scratchoffset\relax
-      \advance\scratchwidth \scratchoffset
+     {\advanceby\scratchheight\dimexpr\scratchdepth+2\scratchoffset\relax
+      \advanceby\scratchwidth \scratchoffset
       \doifbothsides
-        {\advance\scratchwidth\scratchoffset
+        {\advanceby\scratchwidth\scratchoffset
          \scratchdimen-\scratchoffset
          \kern\scratchdimen}%
         {\scratchdimen\zeropoint}
@@ -243,13 +259,33 @@
 
 % nearly always some displacement so no speedup test needed
 
+% \def\page_boxes_apply_offsets#1%
+%   {\setbox#1\vpack to \paperheight
+%      {\hsize\paperwidth
+%       \vkern\topspace
+%       \hkern\doifbothsides\backspace\backspace{\dimexpr\paperwidth-\backspace-\makeupwidth\relax}%
+%       \box#1}%
+%    \dp#1\zeropoint}
+
 \def\page_boxes_apply_offsets#1%
   {\setbox#1\vpack to \paperheight
      {\hsize\paperwidth
       \vkern\topspace
       \hkern\doifbothsides\backspace\backspace{\dimexpr\paperwidth-\backspace-\makeupwidth\relax}%
+%       \hkern\doifbothsides\backspace\backspace\cutspace
+%       \page_layouts_swap_margins\v!page
+%       \hkern\backspace
       \box#1}%
    \dp#1\zeropoint}
+
+% a variant (no gain so we stay mkiv compatible):
+%
+% \def\page_boxes_apply_offsets#1%
+%   {\scratchhoffset\doifbothsides\backspace\backspace{\dimexpr\paperwidth-\backspace-\makeupwidth\relax}%
+%    \boxxoffset#1\dimexpr\boxxoffset#1+\scratchhoffset\relax
+%    \boxyoffset#1\dimexpr\boxyoffset#1-\topspace\relax
+%    \wd#1\dimexpr\paperwidth+\scratchhoffset\relax
+%    \ht#1\dimexpr\paperheight+\topspace\relax}
 
 %D This is rather specialized:
 

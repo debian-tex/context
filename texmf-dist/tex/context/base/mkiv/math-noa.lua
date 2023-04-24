@@ -55,7 +55,7 @@ local trace_processing   = false  registertracker("math.processing",  function(v
 local trace_analyzing    = false  registertracker("math.analyzing",   function(v) trace_analyzing   = v end)
 local trace_normalizing  = false  registertracker("math.normalizing", function(v) trace_normalizing = v end)
 local trace_collapsing   = false  registertracker("math.collapsing",  function(v) trace_collapsing  = v end)
-local trace_fixing       = false  registertracker("math.fixing",      function(v) trace_foxing      = v end)
+local trace_fixing       = false  registertracker("math.fixing",      function(v) trace_fixing      = v end)
 local trace_patching     = false  registertracker("math.patching",    function(v) trace_patching    = v end)
 local trace_goodies      = false  registertracker("math.goodies",     function(v) trace_goodies     = v end)
 local trace_variants     = false  registertracker("math.variants",    function(v) trace_variants    = v end)
@@ -134,12 +134,12 @@ local setsup             = nuts.setsup
 local setsubpre          = nuts.setsubpre
 local setsuppre          = nuts.setsuppre
 
-local flush_node         = nuts.flush
+local flushnode          = nuts.flush
 local copy_node          = nuts.copy
 local slide_nodes        = nuts.slide
 local set_visual         = nuts.setvisual
 
-local mlist_to_hlist     = nuts.mlist_to_hlist
+local mlisttohlist       = nuts.mlisttohlist
 
 local new_kern           = nodepool.kern
 local new_submlist       = nodepool.submlist
@@ -185,7 +185,7 @@ local opdisplaylimitsnoad_code = noadcodes.opdisplaylimits
 local oplimitsnoad_code        = noadcodes.oplimits
 local opnolimitsnoad_code      = noadcodes.opnolimits
 local binnoad_code             = noadcodes.bin
-local relnode_code             = noadcodes.rel
+local relnoad_code             = noadcodes.rel
 local opennoad_code            = noadcodes.open
 local closenoad_code           = noadcodes.close
 local punctnoad_code           = noadcodes.punct
@@ -465,7 +465,7 @@ local function errorchar(font,char)
             return fake
         else
             local kind, fake = fonts.checkers.placeholder(font,char)
-            if not fake or kind ~= "char" then
+            if not fake or kind ~= "char" then -- Also check for "with" here?
                 fake = 0x3F
             end
             cached[font][char] = fake
@@ -884,7 +884,7 @@ do
             end
             setchar(d,chr)
             setfam(d,fam)
-            flush_node(sym)
+            flushnode(sym)
         end
         setattrlist(d,char)
         setattrlist(f,char)
@@ -930,7 +930,7 @@ do
                 if midl then
                     local fence = makefence(middlefence_code,current)
                     setnucleus(current)
-                    flush_node(current)
+                    flushnode(current)
                     middle[current] = nil
                     -- replace_node
                     setlink(prev,fence,next)
@@ -956,7 +956,7 @@ do
             local f_c = makefence(rightfence_code,close)
             makelist(middle,open,f_o,o_next,c_prev,f_c)
             setnucleus(close)
-            flush_node(close)
+            flushnode(close)
             -- open is now a list
             setlink(open,c_next)
             return open
@@ -1795,7 +1795,7 @@ do
         [oplimitsnoad_code]        = true,
         [opnolimitsnoad_code]      = true,
         [binnoad_code]             = true, -- new
-        [relnode_code]             = true,
+        [relnoad_code]             = true,
         [opennoad_code]            = true, -- new
         [closenoad_code]           = true, -- new
         [punctnoad_code]           = true, -- new
@@ -1883,7 +1883,7 @@ do
                 end
                 while c ~= l do
                     local n = getnext(c)
-                    flush_node(c)
+                    flushnode(c)
                     c = n
                 end
                 setlink(parent,l)
@@ -1930,8 +1930,6 @@ do
 
     mathematics.virtualize(movesub)
 
-    local options_supported = tokens.defined("Unosuperscript")
-
     local function fixsupscript(parent,current,current_char,new_char)
         if new_char ~= current_char and new_char ~= true then
             setchar(current,new_char)
@@ -1943,9 +1941,7 @@ do
                 report_fixing("fixing subscript, superscript %U",current_char)
             end
         end
-        if options_supported then
-            setfield(parent,"options",0x08+0x22)
-        end
+        setfield(parent,"options",0x08+0x22)
     end
 
  -- local function movesubscript(parent,current_nucleus,oldchar,newchar)
@@ -2097,7 +2093,7 @@ do
                     end
                     setprev(next,pointer)
                     setnext(parent,getnext(next))
-                    flush_node(next)
+                    flushnode(next)
                 end
             end
         end
@@ -2116,7 +2112,7 @@ do
 
     local classes = { }
     local colors  = {
-        [relnode_code]             = "trace:dr",
+        [relnoad_code]             = "trace:dr",
         [ordnoad_code]             = "trace:db",
         [binnoad_code]             = "trace:dg",
         [opennoad_code]            = "trace:dm",
@@ -2175,7 +2171,7 @@ do
     local permitted     = {
         ordinary    = ordnoad_code,
         binary      = binnoad_code,
-        relation    = relnode_code,
+        relation    = relnoad_code,
         punctuation = punctnoad_code,
         inner       = innernoad_code,
     }
@@ -2350,15 +2346,9 @@ do
  --     force_penalties = v
  -- end)
 
-    function builders.kernel.mlist_to_hlist(head,style,penalties)
-        return mlist_to_hlist(head,style,force_penalties or penalties)
+    function builders.kernel.mlisttohlist(head,style,penalties)
+        return mlisttohlist(head,style,force_penalties or penalties)
     end
-
- -- function builders.kernel.mlist_to_hlist(head,style,penalties)
- --     local h = mlist_to_hlist(head,style,force_penalties or penalties)
- --     inspect(nodes.totree(h,true,true,true))
- --     return h
- -- end
 
     implement {
         name      = "setmathpenalties",
@@ -2374,14 +2364,14 @@ local actions = tasks.actions("math") -- head, style, penalties
 
 local starttiming, stoptiming = statistics.starttiming, statistics.stoptiming
 
-function processors.mlist_to_hlist(head,style,penalties)
+function processors.mlisttohlist(head,style,penalties)
     starttiming(noads)
     head = actions(head,style,penalties)
     stoptiming(noads)
     return head
 end
 
-callbacks.register('mlist_to_hlist',processors.mlist_to_hlist,"preprocessing math list")
+callbacks.register('mlist_to_hlist',processors.mlisttohlist,"preprocessing math list")
 
 -- tracing
 

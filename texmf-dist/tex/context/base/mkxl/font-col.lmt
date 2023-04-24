@@ -22,11 +22,11 @@ local nuts               = nodes.nuts
 
 local setfont            = nuts.setfont
 
------ traverse_char      = nuts.traverse_char
 local nextchar           = nuts.traversers.char
 local getscales          = nuts.getscales
 local setscales          = nuts.setscales
 local setprop            = nuts.setprop
+local getcharspec        = nuts.getcharspec
 
 local settings_to_hash   = utilities.parsers.settings_to_hash
 
@@ -53,6 +53,7 @@ local charcommand        = helpers.commands.char
 local rightcommand       = helpers.commands.right
 local addprivate         = helpers.addprivate
 local hasprivate         = helpers.hasprivate
+local isprivate          = helpers.isprivate
 local fontpatternhassize = helpers.fontpatternhassize
 
 local hashes             = fonts.hashes
@@ -258,7 +259,9 @@ function collections.clonevector(name)
             if target then
                 for unicode = start, stop do
                     local unic = unicode + offset - start
-                    if not newchars[target] then
+                    if isprivate(unic) or isprivate(target) then
+                        -- ignore
+                    elseif not newchars[target] then
                         -- not in font
                     elseif force or (not vector[unic] and not oldchars[unic]) then
                         vector[unic] = { cloneid, target }
@@ -270,7 +273,9 @@ function collections.clonevector(name)
             else
                 for unicode = start, stop do
                     local unic = unicode + offset - start
-                    if not newchars[unicode] then
+                    if isprivate(unic) or isprivate(unicode) then
+                        -- ignore
+                    elseif not newchars[target] then
                         -- not in font
                     elseif force or (not vector[unic] and not oldchars[unic]) then
                         vector[unic] = cloneid
@@ -281,7 +286,9 @@ function collections.clonevector(name)
             if target then
                 for unicode = start, stop do
                     local unic = unicode + offset - start
-                    if force or (not vector[unic] and not oldchars[unic]) then
+                    if isprivate(unic) or isprivate(target) then
+                        -- ignore
+                    elseif force or (not vector[unic] and not oldchars[unic]) then
                         vector[unic] = { cloneid, target }
                     end
                     target = target + 1
@@ -289,14 +296,18 @@ function collections.clonevector(name)
             elseif remap then
                 for unicode = start, stop do
                     local unic = unicode + offset - start
-                    if force or (not vector[unic] and not oldchars[unic]) then
+                    if isprivate(unic) or isprivate(unicode) then
+                        -- ignore
+                    elseif force or (not vector[unic] and not oldchars[unic]) then
                         vector[unic] = { cloneid, remap[unicode] }
                     end
                 end
             else
                 for unicode = start, stop do
                     local unic = unicode + offset - start
-                    if force or (not vector[unic] and not oldchars[unic]) then
+                    if isprivate(unic) then
+                        -- ignore
+                    elseif force or (not vector[unic] and not oldchars[unic]) then
                         vector[unic] = cloneid
                     end
                 end
@@ -384,6 +395,7 @@ local function monoslot(font,char,parent,factor)
                 width    = width,
                 height   = character.height,
                 depth    = character.depth,
+                -- { "offset", ... }
                 commands = {
                     rightcommand[(width - character.width or 0)/2],
                     charcommand[char],
@@ -411,61 +423,78 @@ end
 
 -- todo: also general one for missing
 
+local function apply(n,char,font,vector,vect)
+    local kind = type(vect)
+    local newfont, newchar
+    if kind == "table" then
+        newfont = vect[1]
+        newchar = vect[2]
+        if trace_collecting then
+            report_fonts("remapping character %C in font %a to character %C in font %a%s",
+                char,font,newchar,newfont,not chardata[newfont][newchar] and " (missing)" or ""
+            )
+        end
+    elseif kind == "function" then
+        newfont, newchar = vect(font,char,vector)
+        if not newfont then
+            newfont = font
+        end
+        if not newchar then
+            newchar = char
+        end
+        if trace_collecting then
+            report_fonts("remapping character %C in font %a to character %C in font %a%s",
+                char,font,newchar,newfont,not chardata[newfont][newchar] and " (missing)" or ""
+            )
+        end
+        vector[char] = { newfont, newchar }
+    else
+        local fakemono = vector.factor
+        if trace_collecting then
+            report_fonts("remapping font %a to %a for character %C%s",
+                font,vect,char,not chardata[vect][char] and " (missing)" or ""
+            )
+        end
+        newfont = vect
+        if fakemono then
+            newchar = monoslot(vect,char,font,fakemono)
+        else
+            newchar = char
+        end
+    end
+    local rscale = vector.rscale
+    if rscale and rscale ~= 1 then
+        local s, x, y = getscales(n)
+        setscales(n,s*rscale,x*rscale,y*rscale)
+    end
+    setfont(n,newfont,newchar)
+    setprop(n, "original", { font = font, char = char })
+end
+
 function collections.process(head) -- this way we keep feature processing
     for n, char, font in nextchar, head do
         local vector = validvectors[font]
         if vector then
             local vect = vector[char]
             if vect then
-                local kind = type(vect)
-                local newfont, newchar
-                if kind == "table" then
-                    newfont = vect[1]
-                    newchar = vect[2]
-                    if trace_collecting then
-                        report_fonts("remapping character %C in font %a to character %C in font %a%s",
-                            char,font,newchar,newfont,not chardata[newfont][newchar] and " (missing)" or ""
-                        )
-                    end
-                elseif kind == "function" then
-                    newfont, newchar = vect(font,char,vector)
-                    if not newfont then
-                        newfont = font
-                    end
-                    if not newchar then
-                        newchar = char
-                    end
-                    if trace_collecting then
-                        report_fonts("remapping character %C in font %a to character %C in font %a%s",
-                            char,font,newchar,newfont,not chardata[newfont][newchar] and " (missing)" or ""
-                        )
-                    end
-                    vector[char] = { newfont, newchar }
-                else
-                    local fakemono = vector.factor
-                    if trace_collecting then
-                        report_fonts("remapping font %a to %a for character %C%s",
-                            font,vect,char,not chardata[vect][char] and " (missing)" or ""
-                        )
-                    end
-                    newfont = vect
-                    if fakemono then
-                        newchar = monoslot(vect,char,font,fakemono)
-                    else
-                        newchar = char
-                    end
-                end
-                local rscale = vector.rscale
-                if rscale and rscale ~= 1 then
-                    local s, x, y = getscales(n)
-                    setscales(n,s*rscale,x*rscale,y*rscale)
-                end
-                setfont(n,newfont,newchar)
-                setprop(n, "original", { font = font, char = char })
+                apply(n,char,font,vector,vect)
             end
         end
     end
     return head
+end
+
+function collections.direct(n)
+    local char, font = getcharspec(n)
+    if font and char then
+        local vector = validvectors[font]
+        if vector then
+            local vect = vector[char]
+            if vect then
+                apply(n,char,font,vector,vect)
+            end
+        end
+    end
 end
 
 function collections.found(font,char) -- this way we keep feature processing

@@ -52,7 +52,6 @@ local isglyph         = nuts.isglyph
 local getdirection    = nuts.getdirection
 local getwidth        = nuts.getwidth
 
-local flush_list      = nuts.flush_list
 local count_nodes     = nuts.countall
 local used_nodes      = nuts.usedlist
 
@@ -86,7 +85,7 @@ local whatsit_code    = nodecodes.whatsit
 local dimenfactors    = number.dimenfactors
 local formatters      = string.formatters
 
-local start_of_par    = nuts.start_of_par
+local startofpar      = nuts.startofpar
 
 -- this will be reorganized:
 
@@ -157,7 +156,7 @@ local function tosequence(start,stop,compact)
             elseif id == dir_code then
                 local d, p = getdirection(start)
                 n = n + 1 ; t[n] = "[<" .. (p and "-" or "+") .. d .. ">]" -- todo l2r etc
-            elseif id == par_code and start_of_par(current) then
+            elseif id == par_code and startofpar(current) then
                 n = n + 1 ; t[n] = "[<" .. getdirection(start) .. ">]" -- todo l2r etc
             elseif compact then
                 n = n + 1 ; t[n] = "[]"
@@ -308,57 +307,64 @@ end
 nodes.showsimplelist = function(h,depth) showsimplelist(h,depth,0) end
 
 local function listtoutf(h,joiner,textonly,last,nodisc)
-    local w = { }
-    local n = 0
-    local g = formatters["<%i>"]
-    local d = formatters["[%s|%s|%s]"]
-    while h do
-        local c, id = isglyph(h)
-        if c then
-            n = n + 1 ; w[n] = c >= 0 and utfchar(c) or g(c)
-            if joiner then
-                n = n + 1 ; w[n] = joiner
-            end
-        elseif id == disc_code then
-            local pre, pos, rep = getdisc(h)
-            if not nodisc then
-                n = n + 1 ; w[n] = d(
-                    pre and listtoutf(pre,joiner,textonly) or "",
-                    pos and listtoutf(pos,joiner,textonly) or "",
-                    rep and listtoutf(rep,joiner,textonly) or ""
-                )
-            elseif rep then
-                n = n + 1 ; w[n] = listtoutf(rep,joiner,textonly) or ""
-            end
-            if joiner then
-                n = n + 1 ; w[n] = joiner
-            end
-        elseif textonly then
-            if id == glue_code then
-                if getwidth(h) > 0 then
-                    n = n + 1 ; w[n] = " "
+    if h then
+        local w = { }
+        local n = 0
+        local g = formatters["<%i>"]
+        local d = formatters["[%s|%s|%s]"]
+        while h do
+            local c, id = isglyph(h)
+            if c then
+                n = n + 1 ; w[n] = c >= 0 and utfchar(c) or g(c)
+                if joiner then
+                    n = n + 1 ; w[n] = joiner
                 end
-            elseif id == hlist_code or id == vlist_code then
-                n = n + 1 ; w[n] = "["
-                n = n + 1 ; w[n] = listtoutf(getlist(h),joiner,textonly,last,nodisc)
-                n = n + 1 ; w[n] = "]"
+            elseif id == disc_code then
+                local pre, pos, rep = getdisc(h)
+                if not nodisc then
+                    n = n + 1 ; w[n] = d(
+                        pre and listtoutf(pre,joiner,textonly) or "",
+                        pos and listtoutf(pos,joiner,textonly) or "",
+                        rep and listtoutf(rep,joiner,textonly) or ""
+                    )
+                elseif rep then
+                    n = n + 1 ; w[n] = listtoutf(rep,joiner,textonly) or ""
+                end
+                if joiner then
+                    n = n + 1 ; w[n] = joiner
+                end
+            elseif textonly then
+                if id == glue_code then
+                    if getwidth(h) > 0 then
+                        n = n + 1 ; w[n] = " "
+                    end
+                elseif id == hlist_code or id == vlist_code then
+                    local l = getlist(h)
+                    n = n + 1 ; w[n] = "["
+                    if l then
+                        n = n + 1 ; w[n] = listtoutf(l,joiner,textonly,last,nodisc)
+                    end
+                    n = n + 1 ; w[n] = "]"
+                end
+            else
+                n = n + 1 ; w[n] = "[-]"
             end
-        else
-            n = n + 1 ; w[n] = "[-]"
+            if h == last then
+                break
+            else
+                h = getnext(h)
+            end
         end
-        if h == last then
-            break
-        else
-            h = getnext(h)
-        end
+        return concat(w,"",1,(w[n] == joiner) and (n-1) or n)
+    else
+        return ""
     end
-    return concat(w,"",1,(w[n] == joiner) and (n-1) or n)
 end
 
 function nodes.listtoutf(h,joiner,textonly,last,nodisc)
     if h then
         local joiner = joiner == true and utfchar(0x200C) or joiner -- zwnj
-        return listtoutf(tonut(h),joiner,textonly,last and tonut(last),nodisc)
+        return listtoutf(tonut(h),joiner,textonly,last and tonut(last) or nil,nodisc)
     else
         return ""
     end
@@ -474,6 +480,8 @@ end
 
 number.todimen = numbertodimen
 nodes .todimen = nodetodimen
+
+-- todo: dk
 
 function number.topoints      (n,fmt) return numbertodimen(n,"pt",fmt) end
 function number.toinches      (n,fmt) return numbertodimen(n,"in",fmt) end
@@ -737,3 +745,51 @@ end
 trackers.register("fonts.result.show", function(v)
     nodes.tasks.setaction("processors","nodes.handlers.show",v)
 end)
+
+-- This is a weird spot but it's just a compatibility hack:
+
+local getattributes   = nuts.getattributes
+local patchattributes = nuts.patchattributes
+
+local texgetattribute = tex.getattribute
+
+function recolor(head,colormodel,color,transparency)
+    -- todo loop over content
+    for n, id in nextnode, head do
+        if id == glyph_code or id == rule_code then
+            local m, c, t = getattributes(n,a_colormodel,a_color,a_transparency)
+            if not c or c == 1 then
+                if not t then
+                    patchattributes(n,a_colormodel,colormodel,a_color,color,a_transparency,transparency)
+                else
+                    patchattributes(n,a_colormodel,colormodel,a_color,color)
+                end
+            else
+                if not t then
+                    patchattributes(n,a_transparency,transparency)
+                end
+            end
+            -- maybe skip the visuals
+        elseif id == hlist_node or id == vlist_node then
+            recolor(getlist(n),colormodel,color,transparency)
+        end
+    end
+end
+
+local function recolorbox(head)
+    recolor(getlist(head),texgetattribute(a_colormodel),texgetattribute(a_color),texgetattribute(a_transparency))
+end
+
+nodes.handlers.recolor = recolorbox
+
+local getbox = nodes.nuts.getbox
+
+interfaces.implement {
+    name      = "recolorbox",
+    public    = true,
+    protected = true,
+    arguments = { "integer" },
+    actions   = function(n)
+        recolor(getbox(n))
+    end
+}

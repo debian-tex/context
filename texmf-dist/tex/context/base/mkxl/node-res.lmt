@@ -8,6 +8,7 @@ if not modules then modules = { } end modules ['node-res'] = {
 
 local type, next, rawset = type, next, rawset
 local gmatch, format = string.gmatch, string.format
+local round = math.round
 
 --[[ldx--
 <p>The next function is not that much needed but in <l n='context'/> we use
@@ -73,12 +74,13 @@ local setshift     = nuts.setshift
 local setwidth     = nuts.setwidth
 local setsubtype   = nuts.setsubtype
 local setleader    = nuts.setleader
+local setclass     = nuts.setclass
 
 local setdata      = nuts.setdata
-local setruledata  = nuts.setruledata
+local setoffsets   = nuts.setoffsets
 local setvalue     = nuts.setvalue
 
-local copy_nut     = nuts.copy_only or nuts.copy
+local copy_nut     = nuts.copyonly
 local new_nut      = nuts.new
 local flush_nut    = nuts.flush
 
@@ -181,10 +183,14 @@ local lefttoright_code  = nodes.dirvalues.lefttoright
 
 local rule              = register_nut(new_nut(rule_code))                   -- setdirection(rule, lefttoright_code)
 local emptyrule         = register_nut(new_nut(rule_code,rulecodes.empty))   -- setdirection(rule, lefttoright_code)
+local strutrule         = register_nut(new_nut(rule_code,rulecodes.strut))   -- setdirection(rule, lefttoright_code)
 local userrule          = register_nut(new_nut(rule_code,rulecodes.user))    -- setdirection(rule, lefttoright_code)
 local outlinerule       = register_nut(new_nut(rule_code,rulecodes.outline)) -- setdirection(rule, lefttoright_code)
-local hlist             = register_nut(new_nut(nodecodes.hlist))             setdirection(hlist,lefttoright_code)
-local vlist             = register_nut(new_nut(nodecodes.vlist))             setdirection(vlist,lefttoright_code)
+local imagerule         = register_nut(new_nut(rule_code,rulecodes.image))   -- setdirection(rule, lefttoright_code)
+local boxrule           = register_nut(new_nut(rule_code,rulecodes.box))     -- setdirection(rule, lefttoright_code)
+local virtualrule       = register_nut(new_nut(rule_code,rulecodes.virtual)) -- setdirection(rule, lefttoright_code)
+local hlist             = register_nut(new_nut(nodecodes.hlist))                setdirection(hlist,lefttoright_code)
+local vlist             = register_nut(new_nut(nodecodes.vlist))                setdirection(vlist,lefttoright_code)
 
 function nutpool.glyph(fnt,chr)
     local n = copy_nut(glyph)
@@ -355,6 +361,14 @@ function nutpool.emptyrule(width,height,depth) -- w/h/d == nil will let them ada
     return n
 end
 
+function nutpool.strutrule(width,height,depth) -- w/h/d == nil will let them adapt
+    local n = copy_nut(strutrule)
+    if width or height or depth then
+        setwhd(n,width,height,depth)
+    end
+    return n
+end
+
 function nutpool.userrule(width,height,depth) -- w/h/d == nil will let them adapt
     local n = copy_nut(userrule)
     if width or height or depth then
@@ -369,12 +383,37 @@ function nutpool.outlinerule(width,height,depth,line) -- w/h/d == nil will let t
         setwhd(n,width,height,depth)
     end
     if line then
-        setruledata(n,line)
+        setdata(n,round(line)) -- has to be an integer
     end
     return n
 end
 
-function nutpool.leader(width,list)
+function nutpool.imagerule(width,height,depth) -- w/h/d == nil will let them adapt
+    local n = copy_nut(imagerule)
+    if width or height or depth then
+        setwhd(n,width,height,depth)
+    end
+    return n
+end
+
+function nutpool.boxrule(width,height,depth) -- w/h/d == nil will let them adapt
+    local n = copy_nut(boxrule)
+    if width or height or depth then
+        setwhd(n,width,height,depth)
+    end
+    return n
+end
+
+function nutpool.virtualrule(width,height,depth) -- w/h/d == nil will let them adapt
+    local n = copy_nut(virtualrule)
+    if width or height or depth then
+        setdata(n,width)
+        setoffsets(n,nil,nil,height,depth)
+    end
+    return n
+end
+
+local function new_leader(width,list)
     local n = copy_nut(cleader)
     if width then
         setwidth(n,width)
@@ -383,6 +422,12 @@ function nutpool.leader(width,list)
         setleader(n,list)
     end
     return n
+end
+
+nutpool.leader = new_leader
+
+function nodepool.leader(width,list)
+    return tonode(new_leader(width,list and tonut(list)))
 end
 
 function nutpool.leftmarginkern(glyph,width)
@@ -419,11 +464,20 @@ function nutpool.temp()
     return copy_nut(temp)
 end
 
-function nutpool.noad()         return copy_nut(noad)         end
+function nutpool.noad(class)
+    local n = copy_nut(noad)
+    if class then
+        setsubtype(n,class)
+        setclass(n,class,class,class)
+    end
+    return n
+end
+
+-- maybe also the rest wrt subtype and class
+
 function nutpool.delimiter()    return copy_nut(delimiter)    end  nutpool.delim = nutpool.delimiter
 function nutpool.fence()        return copy_nut(fence)        end
 function nutpool.submlist()     return copy_nut(submlist)     end
-function nutpool.noad()         return copy_nut(noad)         end
 function nutpool.fence()        return copy_nut(fence)        end
 function nutpool.accent()       return copy_nut(accent)       end
 function nutpool.radical()      return copy_nut(radical)      end
@@ -484,6 +538,7 @@ end
 -- housekeeping
 
 local function cleanup(nofboxes) -- todo
+    -- this is bonus, not really needed
     local tracers = nodes.tracers
     if tracers and tracers.steppers then -- to be resolved
         tracers.steppers.reset() -- todo: make a registration subsystem
@@ -537,27 +592,42 @@ statistics.register("node memory usage", function() -- comes after cleanup !
     end
 end)
 
-lua.registerfinalizer(cleanup, "cleanup reserved nodes")
+lua.registerinitexfinalizer(cleanup, "cleanup reserved nodes")
 
 do
 
-    local glyph       = glyph
-    local traverse_id = nuts.traverse_id
+    local glyph      = glyph
+    local traverseid = nuts.traverseid
 
-    local traversers  = table.setmetatableindex(function(t,k)
-        local v = traverse_id(type(k) == "number" and k or nodecodes[k],glyph)
+    local traversers = table.setmetatableindex(function(t,k)
+        local v = traverseid(type(k) == "number" and k or nodecodes[k],glyph)
+        t[k] = v
+        return v
+    end)
+
+    local treversers = table.setmetatableindex(function(t,k)
+        local v = traverseid(type(k) == "number" and k or nodecodes[k],glyph,true)
         t[k] = v
         return v
     end)
 
     -- these are special:
 
-    traversers.node    = nuts.traverse        (glyph)
-    traversers.char    = nuts.traverse_char   (glyph)
-    traversers.glyph   = nuts.traverse_glyph  (glyph)
-    traversers.list    = nuts.traverse_list   (glyph)
-    traversers.content = nuts.traverse_content(glyph)
+    traversers.node    = nuts.traverse       (glyph)
+    traversers.char    = nuts.traversechar   (glyph)
+    traversers.glyph   = nuts.traverseglyph  (glyph)
+    traversers.list    = nuts.traverselist   (glyph)
+    traversers.content = nuts.traversecontent(glyph)
+    traversers.leader  = nuts.traverseleader (glyph)
+
+    treversers.node    = nuts.traverse       (glyph,true)
+    treversers.char    = nuts.traversechar   (glyph,true)
+    treversers.glyph   = nuts.traverseglyph  (glyph,true)
+    treversers.list    = nuts.traverselist   (glyph,true)
+    treversers.content = nuts.traversecontent(glyph,true)
+    treversers.leader  = nuts.traverseleader (glyph,true)
 
     nuts.traversers = traversers
+    nuts.treversers = treversers
 
 end

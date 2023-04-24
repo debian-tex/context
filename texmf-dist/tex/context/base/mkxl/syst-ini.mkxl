@@ -16,13 +16,92 @@
 %D this loader is found in \type {syst-tex.tex}. Some of the comment's are Don
 %D Knuths and more of it can be found in the plain \TEX\ format.
 %D
+%D Successive versions will be adapted to \LUAMETATEX. That also means that we
+%D define things a bit differently than in \MKII\ and \MKIV. This is party due to
+%D the fact that in this engine we removed some side effects or added features. The
+%D original \TEX\ program is well defined and documented and is still the benchmark.
+%D The \ETEX\ extensions originally were meant as systematic follow up but that
+%D never went beyond a first upgrade. It had a dual mode: compatible or extensible.
+%D We always used the second mode. The \LUATEX\ engines don't have that.
+%D
+%D There are some hard coded properties that relate to for instance node types but
+%D we always used abstraction. There are also side effects that (probably) originate
+%D in the fact that \ETEX\ had to stay compatible with the dominant set of macros
+%D using the original \TEX\ ones (either or not wrapped). Even unwanted side effects
+%D eventually become features. In\LUATEX\ and even more in \LUAMETATEX\ we get
+%D around that by additional mode variables that you can find below.
+%D
+%D Side note: those who complain about \TEX\ as rather special language, \ETEX\
+%D extensions that should have been or be different, should really look into how
+%D \TEX\ and friends evolved, and not come to quick and wrong conclusions. There are
+%D only a very few languages that evolve this way. As a comparison one can wonder
+%D why \CCODE\ never had proper strings like \PASCAL\ bit it's just hindsight and
+%D discussing it has no use. In a similar fashion one should keep in mind that what
+%D you see here is just a logical follow up in \MKII\ where we had to bend the rules
+%D and \MKIV\ where we had a bit more available. Not many who look at the latest
+%D engines had to jump though all the hoops.
+%D
+%D This is for instance noticeable in the names of some primitvies: \CONTEXT\ has a
+%D concept of protection before \type {\protected} showed up, and similarly had
+%D expansion helpers. This is why in \MKII\ you find \type {\protected}, \type
+%D {\expanded}, and \type {\unexpanded} commands with different meanings than the
+%D later \ETEX\ primitives. In \MKIV\ we stuck to the \CONTEXT\ originals and use
+%D \type {\normal...} ones when needed (so \type {\normal...} is there for a
+%D reason!). In \LMTX\ we made the transition from \type {\unexpanded} to \type
+%D {\protected} so again this file looks different than the \MKIV\ ancestor.
+%D
+%D When primitives get initialized they come from the \TEX\ namespace (the
+%D originals), the \ETEX\ extensions (although we dropped some) and \LUATEX\ which
+%D includes the \LUAMETATEX\ ones. The most noticeable \ETEX\ extensions we kept are
+%D those that relate to expansion and the expression scanners. The last group has
+%D always been somewhat special because (we were told) it was modelled after a macro
+%D set so it had to be compatible. It is tempting to replace it (and eventually I
+%D might do that) but for now we stick to them (although with an integer divide
+%D extension (like the \LUA\ \type {//} and the source has commented binary
+%D operators but I haven't yet decided on the symbols to use because we need to
+%D avoid expansion issues). For the record: the more extensive, related to \ETEX\
+%D follow up \NTS\ never took of, probably because of the implementation language
+%D and because performance made it unuseable. This is also why \LUATEX\ took a
+%D different route: extending by an extension language. Of course in the end some
+%D core functionality got added too.
+%D
+%D The most noticeable \LUAMETATEX\ specific code here has to do with additional
+%D data types (integer and dimension constants) and macro argument extensions. We
+%D also set up some defaults in handling math, languages, etc. Elsewhere in the
+%D \CONTEXT\ source the real configuration and usage happens so don't consider this
+%D an tutorial (as the plain format is).
+%D
+%D Category codes are another areas where subtle changed happened. You might not
+%D grasp it (maybe because \CONTEXT\ is alien to you) but whenever you see something
+%D that looks weird keep in mind that there is a valid reason for it.
+%D
+%D In due time I will add some more comments here, also because some \CONTEXT\
+%D users might be interested in the hostiry. Now to the code!
+
 %D Characters can have special states, that can be triggered by setting their
 %D category coded. Some are preset, others are to be set as soon as possible,
 %D otherwise we cannot define any useful macros.
 %D
 %D First we define a bunch of constants. Normally we would \type {\setconstant}
 %D but we're prestine and have no macros defined yet. Abstraction also makes it
-%D possible to avoid the \type {^^} in the input.
+%D possible to avoid the \type {^^} in the input. We no longer define the \ETEX\
+%D nodes here (we have not only more, but also different numbers) so we do it
+%D elsewhere.
+
+% cheatsheet
+%
+% # : 0--9
+% * : ignore spaces
+% + : keep the braces
+% - : discard and don't count the argument
+% . : ignore pars and spaces
+% , : push back space when no match
+% / : remove leading and trailing spaces and pars
+% : : pick up scanning here
+% ; : quit scanning
+% = : braces are mandate
+% ^ : keep leading spaces
+% _ : braces are mandate and kept
 
 \immutable\integerdef\escapecatcode             0
 \immutable\integerdef\begingroupcatcode         1
@@ -63,6 +142,7 @@
 \immutable\integerdef\periodasciicode          46
 \immutable\integerdef\forwardslashasciicode    47 % /
 \immutable\integerdef\colonasciicode           58
+\immutable\integerdef\semicolonasciicode       59
 \immutable\integerdef\lessthanasciicode        60 % < used as alternative verbatim {
 \immutable\integerdef\morethanasciicode        62 % > used as alternative verbatim }
 \immutable\integerdef\questionmarkasciicode    63 % ? used in namespace protection
@@ -141,7 +221,7 @@
     function tex.enableprimitives() end % so we kind of protect what's there
 }
 
-\permanent\let\undefined\undefined
+\untraced\permanent\let\undefined\undefined
 
 \immutable\def\space{ }
 \immutable\def\empty{}
@@ -199,48 +279,62 @@
 %D non||\type {\global} assignments with respect to registers 0, 2, 4, \unknown\ 30.
 %D This will prevent \quote {save stack buildup} that might otherwise occur.
 %D
-%D We reserve some registers for special (management) purposes:
+%D We reserve some registers for special (management) purposes. In the mkiv file you
+%D can see how we also (even if we don't use it) deal with families and languages
+%D and distinguish read and write ranges. There we also use a more traditional
+%D insert allocator that operates in its own range. In \MKIV\ the ranges are:
 
 %   0 -  20 : scratch
 %  21 - 127 : internal
-% 128 - 254 : inserts
+% 128 - 254 : inserts   (no longer)
 % 255       : page
-% 256 -     : user
+% 256 -     : user defined
 
-% use \chardef instead for min and max
-%
-% will be blocked: \newfamily \newlanguage
+%D However, in \LMTX\ we have:
 
-\permanent\countdef   \c_syst_min_allocated_register   =    52 \c_syst_min_allocated_register   =   256 % can change
-\permanent\countdef   \c_syst_max_allocated_register   =    53 \c_syst_max_allocated_register   = 65535
-\permanent\countdef   \c_syst_min_allocated_read       =    54 \c_syst_min_allocated_read       =     0
-\permanent\countdef   \c_syst_max_allocated_read       =    55 \c_syst_max_allocated_read       =  1023
-\permanent\countdef   \c_syst_min_allocated_language   =    56 \c_syst_min_allocated_language   =     0
-\permanent\countdef   \c_syst_max_allocated_language   =    57 \c_syst_max_allocated_language   =  8191
-\permanent\countdef   \c_syst_min_allocated_insert     =    58 \c_syst_min_allocated_insert     =   128
-\permanent\countdef   \c_syst_max_allocated_insert     =    59 \c_syst_max_allocated_insert     =   254
-\permanent\countdef   \c_syst_min_allocated_family     =    60 \c_syst_min_allocated_family     =   128
-\permanent\countdef   \c_syst_max_allocated_family     =    61 \c_syst_max_allocated_family     =   255
-\permanent\countdef   \c_syst_min_allocated_attribute  =    62 \c_syst_min_allocated_attribute  =  1024 % 0-1023 : private
-\permanent\countdef   \c_syst_min_allocated_write      =    63 \c_syst_min_allocated_write      =     0
-\permanent\countdef   \c_syst_max_allocated_write      =    64 \c_syst_max_allocated_write      =  1023
+%   0 - 199 : scratch
+% 200 - 254 : internal
+% 255       : page
+% 256 -     : user defined
 
-\permanent\countdef   \c_syst_last_allocated_count     =    32 \c_syst_last_allocated_count     = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_dimen     =    33 \c_syst_last_allocated_dimen     = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_skip      =    34 \c_syst_last_allocated_skip      = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_muskip    =    35 \c_syst_last_allocated_muskip    = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_box       =    36 \c_syst_last_allocated_box       = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_toks      =    37 \c_syst_last_allocated_toks      = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_read      =    38 \c_syst_last_allocated_read      = \c_syst_min_allocated_read
-\permanent\countdef   \c_syst_last_allocated_write     =    39 \c_syst_last_allocated_write     = \c_syst_min_allocated_write
-\permanent\countdef   \c_syst_last_allocated_marks     =    40 \c_syst_last_allocated_marks     = \c_syst_min_allocated_register
-\permanent\countdef   \c_syst_last_allocated_language  =    41 \c_syst_last_allocated_language  = \c_syst_min_allocated_language    % not used in context
-\permanent\countdef   \c_syst_last_allocated_insertion =    42 \c_syst_last_allocated_insertion = \c_syst_min_allocated_insert
-\permanent\countdef   \c_syst_last_allocated_family    =    43 \c_syst_last_allocated_family    = \c_syst_min_allocated_family      % not used in context
-\permanent\countdef   \c_syst_last_allocated_attribute =    44 \c_syst_last_allocated_attribute = \c_syst_min_allocated_attribute   % not used in context
+%D Later on, the \type {\c_syst_max_allocated_*} variables will be halfed so that
+%D while local allocators will use the 23* range. So we have plenty of room reserved
+%D for more private ones.
 
-\permanent\countdef   \c_syst_min_counter_value =   125 \c_syst_min_counter_value = -"7FFFFFFF % beware, we use index 125 at the lua end
-\permanent\countdef   \c_syst_max_counter_value =   126 \c_syst_max_counter_value =  "7FFFFFFF % beware, we use index 126 at the lua end
+\directlua {tex.magicconstants = status.getconstants()} % this will be reset later on
+
+\permanent\countdef\c_syst_min_allocated_register  = 201 \c_syst_min_allocated_register  =   256 % can change
+
+\permanent\countdef\c_syst_min_allocated_iohandle  = 203 \c_syst_min_allocated_iohandle  =     0
+\permanent\countdef\c_syst_max_allocated_iohandle  = 204 \c_syst_max_allocated_iohandle  =  1023
+
+\permanent\countdef\c_syst_min_allocated_mark      = 205 \c_syst_min_allocated_mark      =    16 % a few scratch ones
+\permanent\countdef\c_syst_max_allocated_mark      = 206 \c_syst_max_allocated_mark      =  1024 % max 10K in luametatex anyway
+
+\permanent\countdef\c_syst_min_allocated_attribute = 207 \c_syst_min_allocated_attribute =  1024 % 0-1023 : private
+\permanent\countdef\c_syst_max_allocated_attribute = 208 \c_syst_min_allocated_attribute = \directlua{tex.write(tex.magicconstants.max_attribute_register_index)} % 65535 % no allocator, managed differently
+
+\permanent\countdef\c_syst_max_allocated_count     = 211 \c_syst_max_allocated_count     = \directlua{tex.write(tex.magicconstants.max_int_register_index)}       % 65535 % is adapted later on
+\permanent\countdef\c_syst_max_allocated_dimen     = 212 \c_syst_max_allocated_dimen     = \directlua{tex.write(tex.magicconstants.max_dimen_register_index)}     % idem
+\permanent\countdef\c_syst_max_allocated_skip      = 213 \c_syst_max_allocated_skip      = \directlua{tex.write(tex.magicconstants.max_glue_register_index)}      % idem
+\permanent\countdef\c_syst_max_allocated_muskip    = 214 \c_syst_max_allocated_muskip    = \directlua{tex.write(tex.magicconstants.max_mu_glue_register_index)}   % idem
+\permanent\countdef\c_syst_max_allocated_box       = 215 \c_syst_max_allocated_box       = \directlua{tex.write(tex.magicconstants.max_box_register_index)}       % idem
+\permanent\countdef\c_syst_max_allocated_toks      = 216 \c_syst_max_allocated_toks      = \directlua{tex.write(tex.magicconstants.max_toks_register_index)}      % idem
+\permanent\countdef\c_syst_max_allocated_read      = 217 \c_syst_max_allocated_read      = \c_syst_max_allocated_iohandle
+\permanent\countdef\c_syst_max_allocated_write     = 218 \c_syst_max_allocated_write     = \c_syst_max_allocated_iohandle
+
+\permanent\countdef\c_syst_last_allocated_count    = 221 \c_syst_last_allocated_count    = \c_syst_min_allocated_register
+\permanent\countdef\c_syst_last_allocated_dimen    = 222 \c_syst_last_allocated_dimen    = \c_syst_min_allocated_register
+\permanent\countdef\c_syst_last_allocated_skip     = 223 \c_syst_last_allocated_skip     = \c_syst_min_allocated_register
+\permanent\countdef\c_syst_last_allocated_muskip   = 224 \c_syst_last_allocated_muskip   = \c_syst_min_allocated_register
+\permanent\countdef\c_syst_last_allocated_box      = 225 \c_syst_last_allocated_box      = \c_syst_min_allocated_register
+\permanent\countdef\c_syst_last_allocated_toks     = 226 \c_syst_last_allocated_toks     = \c_syst_min_allocated_register
+\permanent\countdef\c_syst_last_allocated_read     = 227 \c_syst_last_allocated_read     = \c_syst_min_allocated_iohandle
+\permanent\countdef\c_syst_last_allocated_write    = 228 \c_syst_last_allocated_write    = \c_syst_min_allocated_iohandle
+\permanent\countdef\c_syst_last_allocated_marks    = 229 \c_syst_last_allocated_marks    = \c_syst_min_allocated_mark
+
+\permanent\countdef\c_syst_min_counter_value       = 253 \c_syst_min_counter_value       = -"7FFFFFFF
+\permanent\countdef\c_syst_max_counter_value       = 254 \c_syst_max_counter_value       =  "7FFFFFFF
 
 \immutable\integerdef\zerocount       0
 \immutable\integerdef\plusone         1
@@ -250,6 +344,29 @@
 
 \immutable\integerdef\statuswrite   \minusone
 
+\immutable\dimensiondef\zeropoint     0pt
+
+%D These alternatives avoid the indirect references. Don't use these for generic
+%D code because one never knows what happens elsewhere.
+
+% \permanent\protected\def\newinteger   #1{\ifdefined#1\else\integerdef   #1\fi\zerocount} % can be relax
+% \permanent\protected\def\newdimension #1{\ifdefined#1\else\dimensiondef #1\fi\zeropoint}
+% \permanent\protected\def\newgluespec  #1{\ifdefined#1\else\gluespecdef  #1\fi\zeropoint}
+% \permanent\protected\def\newmugluespec#1{\ifdefined#1\else\mugluespecdef#1\fi\zeropoint}
+
+\permanent\protected\def\newinteger   #1{\integerdef   #1\zerocount}
+\permanent\protected\def\newdimension #1{\dimensiondef #1\zeropoint}
+\permanent\protected\def\newgluespec  #1{\gluespecdef  #1\zeropoint}
+\permanent\protected\def\newmugluespec#1{\mugluespecdef#1\zeropoint}
+
+%D The aliasing here is tricky: we need to make sure the alias is not let to the
+%D current value but behaves dynamic. Instead we can use just \newcount, unless of
+%D course I introduce a reference in the engine which is not more efficient so then
+%D one can as well use registers.
+
+\protected\def\aliasinteger  #1#2{\untraced\protected\def#1{#2}}% name parent
+\protected\def\aliasdimension#1#2{\untraced\protected\def#1{#2}}% name parent
+
 %D So, effectively we start allocating from 256 and upwards. The inserts sit in the
 %D range 128 upto 254. Page numbers use the counters 0 upto 9 and the pagebox is
 %D 255. Users can use the scratch registers upto 31 without problem but all others
@@ -257,27 +374,23 @@
 
 \permanent\let\wlog\gobbleoneargument % Let's get rid of this one.
 
-%D The allocators share a common helper macro.
+%D The allocators share a common helper macro. Marks might be changed to work in lower
+%D regions and we always assumes allocation.
 
-\permanent\protected\def\newcount   {\syst_basics_allocate\c_syst_last_allocated_count    \count   \countdef  \c_syst_max_allocated_register}
-\permanent\protected\def\newdimen   {\syst_basics_allocate\c_syst_last_allocated_dimen    \dimen   \dimendef  \c_syst_max_allocated_register}
-\permanent\protected\def\newskip    {\syst_basics_allocate\c_syst_last_allocated_skip     \skip    \skipdef   \c_syst_max_allocated_register}
-\permanent\protected\def\newmuskip  {\syst_basics_allocate\c_syst_last_allocated_muskip   \muskip  \muskipdef \c_syst_max_allocated_register}
-\permanent\protected\def\newbox     {\syst_basics_allocate\c_syst_last_allocated_box      \box     \integerdef\c_syst_max_allocated_register}
-\permanent\protected\def\newtoks    {\syst_basics_allocate\c_syst_last_allocated_toks     \toks    \toksdef   \c_syst_max_allocated_register}
-\permanent\protected\def\newread    {\syst_basics_allocate\c_syst_last_allocated_read     \read    \integerdef\c_syst_max_allocated_read}
-\permanent\protected\def\newwrite   {\syst_basics_allocate\c_syst_last_allocated_write    \write   \integerdef\c_syst_max_allocated_write}
-\permanent\protected\def\newmarks   {\syst_basics_allocate\c_syst_last_allocated_marks    \marks   \integerdef\c_syst_max_allocated_register}
-\permanent\protected\def\newinsert  {\syst_basics_allocate\c_syst_last_allocated_insertion\insert  \chardef   \c_syst_max_allocated_insert}
-\permanent\protected\def\newlanguage{\syst_basics_allocate\c_syst_last_allocated_language \language\integerdef\c_syst_max_allocated_language} % not needed in context
-\permanent\protected\def\newfamily  {\syst_basics_allocate\c_syst_last_allocated_family   \fam     \integerdef\c_syst_max_allocated_family}   % not needed in context
-
-\aliased\let\newfam\newfamily
+\permanent\protected\def\newcount {\syst_basics_allocate\c_syst_last_allocated_count \count \countdef  \c_syst_max_allocated_count}
+\permanent\protected\def\newdimen {\syst_basics_allocate\c_syst_last_allocated_dimen \dimen \dimendef  \c_syst_max_allocated_dimen}
+\permanent\protected\def\newskip  {\syst_basics_allocate\c_syst_last_allocated_skip  \skip  \skipdef   \c_syst_max_allocated_skip}
+\permanent\protected\def\newmuskip{\syst_basics_allocate\c_syst_last_allocated_muskip\muskip\muskipdef \c_syst_max_allocated_muskip}
+\permanent\protected\def\newbox   {\syst_basics_allocate\c_syst_last_allocated_box   \box   \integerdef\c_syst_max_allocated_box}
+\permanent\protected\def\newtoks  {\syst_basics_allocate\c_syst_last_allocated_toks  \toks  \toksdef   \c_syst_max_allocated_toks}
+\permanent\protected\def\newread  {\syst_basics_allocate\c_syst_last_allocated_read  \read  \integerdef\c_syst_max_allocated_read}
+\permanent\protected\def\newwrite {\syst_basics_allocate\c_syst_last_allocated_write \write \integerdef\c_syst_max_allocated_write}
+\permanent\protected\def\newmarks {\syst_basics_allocate\c_syst_last_allocated_marks \marks \integerdef\c_syst_max_allocated_mark}
 
 \firstvalidlanguage \plusone % so zero is ignored in hyphenation, this might become the default
 
-% Watch out, for the moment we disable the check for already being defined
-% later we will revert this but first all chardefs must be replaced.
+%D Watch out, for the moment we disable the check for already being defined later we
+%D will revert this but first all chardefs must be replaced.
 
 \permanent\protected\def\setconstant         {}
 \permanent\protected\def\setconstantvalue#1#2{\csname#1\endcsname\numexpr#2\relax}
@@ -286,11 +399,13 @@
   {\ifrelax#1%
     %\writestatus{!!!!!!!!!!}{\string #1 => RELAX}%
      \unletfrozen#1%
-     \newcount#1%
+   % \newcount#1%
+     \newinteger#1%
    \orelse\ifdefined#1%
     %\writestatus{!!!!!!!!!!}{\string #1 => DEFINED}%
    \else
-     \newcount#1%
+   % \newcount#1%
+     \newinteger#1%
    \fi}
 
 \permanent\protected\def\setnewconstant#1{\newconstant#1#1}
@@ -303,16 +418,31 @@
 %D consecutive ranges more easily, for instance if for \MPLIB\ we want to allocate a
 %D continuous range of boxes. It also permits us to do a proper upward allocation
 %D for inserts. The current code evolved from code that dealt with older engines but
-%D as all engines now provide many registers we removed all traces.
+%D as all engines now provide many registers we removed all traces. If you ever run
+%D into the \MKII\ \type {mptopdf} code, you'll notice that some register magic was
+%D needed to fit into existing macro packages. The same is true for \PICTEX\ that we
+%D used in (generic) \PPCHTEX.
 
 \ifdefined\writestatus \else
    %\protected\def\writestatus#1#2{\immediate\write\statuswrite{#1: #2}}
     \frozen\protected\def\writestatus#1#2{\message{#1: #2}}
 \fi
 
+%D The above command will normally hook into the interface commands and is a
+%D protected command. We also have an \type {\diagnostic} predefined which is an
+%D expandable command:
+%D
+%D \starttyping
+%D test \diagnostic     {here 1} test
+%D test \diagnostic[2]  {here 2} test
+%D test \diagnostic[.05]{here 3} test
+%D \stoptyping
+%D
+%D The optional argument triggers a sleep in seconds.
+
 \def\syst_basics_allocate_yes#1#2#3#4#5% last class method max name
   {\ifnum#1<#4\relax
-     \global\advance#1\plusone
+     \global\advanceby#1\plusone
      \permanent\global#3#5=#1\relax
    \else
      \writestatus{warning}{no room for \string#2\space \string#5\space (max: \number#4)}%
@@ -334,9 +464,6 @@
 %D Since the number of chars exceed 256 now, we can use \type {\chardef} instead of
 %D the more limited \type {\mathchardef}.
 
-% \protected\def\newbox  {\syst_basics_allocate\c_syst_last_allocated_box  \box  \chardef\c_syst_max_allocated_register}
-% \protected\def\newmarks{\syst_basics_allocate\c_syst_last_allocated_marks\marks\chardef\c_syst_max_allocated_register}
-
 %D Attributes are something very \LUATEX. In \CONTEXT\ you are not supposed to use
 %D the attributes directly but always allocate then first. For instance attribute~0
 %D is reserved for special purposes (this might change). Attributes in the range
@@ -344,7 +471,7 @@
 
 \immutable\integerdef\attributeunsetvalue\c_syst_min_counter_value % used to be \minusone
 
-% \permanent\protected\def\newattribute{\syst_basics_allocate\c_syst_last_allocated_attribute\attribute\attributedef\c_syst_max_allocated_register}
+% \permanent\protected\def\newattribute{\syst_basics_allocate\c_syst_last_allocated_attribute\attribute\attributedef\c_syst_max_allocated_attribute}
 
 % %D Not used by \CONTEXT\ but for instance \PICTEX\ needs it. It's a trick to force
 % %D strings instead of tokens that take more memory.
@@ -361,30 +488,30 @@
 %D some available. The private ones are used in cases where we don't want to
 %D intrude on normal scratch ones.
 
-\newcount \scratchcounter  \newcount \globalscratchcounter  \newcount \privatescratchcounter
-\newdimen \scratchdimen    \newdimen \globalscratchdimen    \newdimen \privatescratchdimen
-\newskip  \scratchskip     \newskip  \globalscratchskip     \newskip  \privatescratchskip
-\newmuskip\scratchmuskip   \newmuskip\globalscratchmuskip   \newmuskip\privatescratchmuskip
-\newtoks  \scratchtoks     \newtoks  \globalscratchtoks     \newtoks  \privatescratchtoks
-\newbox   \scratchbox      \newbox   \globalscratchbox      \newbox   \privatescratchbox
+\newinteger  \scratchcounter    \newinteger  \globalscratchcounter \newinteger  \privatescratchcounter
+\newdimension\scratchdimen      \newdimension\globalscratchdimen   \newdimension\privatescratchdimen
+\newgluespec \scratchskip       \newgluespec \globalscratchskip    \newgluespec \privatescratchskip
+\newmuskip   \scratchmuskip     \newmuskip   \globalscratchmuskip  \newmuskip   \privatescratchmuskip
+\newtoks     \scratchtoks       \newtoks     \globalscratchtoks    \newtoks     \privatescratchtoks
+\newbox      \scratchbox        \newbox      \globalscratchbox     \newbox      \privatescratchbox
 
-\newcount\scratchcounterone  \newcount\scratchcountertwo  \newcount\scratchcounterthree
-\newdimen  \scratchdimenone  \newdimen  \scratchdimentwo  \newdimen  \scratchdimenthree
-\newskip    \scratchskipone  \newskip    \scratchskiptwo  \newskip    \scratchskipthree
-\newmuskip\scratchmuskipone  \newmuskip\scratchmuskiptwo  \newmuskip\scratchmuskipthree
-\newtoks    \scratchtoksone  \newtoks    \scratchtokstwo  \newtoks    \scratchtoksthree
-\newbox      \scratchboxone  \newbox      \scratchboxtwo  \newbox      \scratchboxthree
+\newinteger  \scratchcounterone \newinteger  \scratchcountertwo    \newinteger  \scratchcounterthree
+\newdimension\scratchdimenone   \newdimension\scratchdimentwo      \newdimension\scratchdimenthree
+\newgluespec \scratchskipone    \newgluespec \scratchskiptwo       \newgluespec \scratchskipthree
+\newmuskip   \scratchmuskipone  \newmuskip   \scratchmuskiptwo     \newmuskip   \scratchmuskipthree
+\newtoks     \scratchtoksone    \newtoks     \scratchtokstwo       \newtoks     \scratchtoksthree
+\newbox      \scratchboxone     \newbox      \scratchboxtwo        \newbox      \scratchboxthree
 
-\newcount\scratchcounterfour \newcount\scratchcounterfive \newcount\scratchcountersix
-\newdimen  \scratchdimenfour \newdimen  \scratchdimenfive \newdimen  \scratchdimensix
-\newskip    \scratchskipfour \newskip    \scratchskipfive \newskip    \scratchskipsix
-\newmuskip\scratchmuskipfour \newmuskip\scratchmuskipfive \newmuskip\scratchmuskipsix
-\newtoks    \scratchtoksfour \newtoks    \scratchtoksfive \newtoks    \scratchtokssix
-\newbox      \scratchboxfour \newbox      \scratchboxfive \newbox      \scratchboxsix
+\newinteger  \scratchcounterfour\newinteger  \scratchcounterfive   \newinteger  \scratchcountersix
+\newdimension\scratchdimenfour  \newdimension\scratchdimenfive     \newdimension\scratchdimensix
+\newgluespec \scratchskipfour   \newgluespec \scratchskipfive      \newgluespec \scratchskipsix
+\newmuskip   \scratchmuskipfour \newmuskip   \scratchmuskipfive    \newmuskip   \scratchmuskipsix
+\newtoks     \scratchtoksfour   \newtoks     \scratchtoksfive      \newtoks     \scratchtokssix
+\newbox      \scratchboxfour    \newbox       \scratchboxfive      \newbox      \scratchboxsix
 
-\newcount\globalscratchcounterone
-\newcount\globalscratchcountertwo
-\newcount\globalscratchcounterthree
+\newinteger\globalscratchcounterone
+\newinteger\globalscratchcountertwo
+\newinteger\globalscratchcounterthree
 
 \mutable\let\scratchmacro   \relax
 \mutable\let\scratchmacroone\relax
@@ -393,56 +520,57 @@
 %D \macros
 %D   {tempstring, scratchstring*}
 
-\mutable\let\tempstring      \empty
+\mutable\lettonothing\tempstring
 
-\mutable\let\scratchstring   \empty
-\mutable\let\scratchstringone\empty
-\mutable\let\scratchstringtwo\empty
+\mutable\lettonothing\scratchstring
+\mutable\lettonothing\scratchstringone
+\mutable\lettonothing\scratchstringtwo
 
 %D \macros
 %D   {scratchwidth, scratchheight, scratchdepth, scratchoffset, scratchdistance}
 %D
 %D A few more scratch dimensions:
 
-\newdimen\scratchwidth
-\newdimen\scratchheight
-\newdimen\scratchdepth
-\newdimen\scratchtotal
+\newdimension\scratchwidth
+\newdimension\scratchheight
+\newdimension\scratchdepth
+\newdimension\scratchitalic
+\newdimension\scratchtotal
 
-\newdimen\scratchoffset
-\newdimen\scratchleftoffset
-\newdimen\scratchrightoffset
-\newdimen\scratchtopoffset
-\newdimen\scratchbottomoffset
+\newdimension\scratchoffset
+\newdimension\scratchleftoffset
+\newdimension\scratchrightoffset
+\newdimension\scratchtopoffset
+\newdimension\scratchbottomoffset
 
-\newdimen\scratchdistance
+\newdimension\scratchdistance
 
-\newdimen\scratchhsize
-\newdimen\scratchvsize
+\newdimension\scratchhsize
+\newdimension\scratchvsize
 
-\newdimen\scratchxoffset
-\newdimen\scratchyoffset
-\newdimen\scratchhoffset
-\newdimen\scratchvoffset
+\newdimension\scratchxoffset
+\newdimension\scratchyoffset
+\newdimension\scratchhoffset
+\newdimension\scratchvoffset
 
-\newdimen\scratchxposition
-\newdimen\scratchyposition
+\newdimension\scratchxposition
+\newdimension\scratchyposition
 
-\newcount\scratchnx
-\newcount\scratchny
+\newinteger\scratchnx
+\newinteger\scratchny
 
-\newcount\scratchmx
-\newcount\scratchmy
+\newinteger\scratchmx
+\newinteger\scratchmy
 
-\newcount\scratchmin
-\newcount\scratchmax
+\newinteger\scratchmin
+\newinteger\scratchmax
 
-\newcount\scratchunicode
+\newinteger\scratchunicode
 
-\newdimen\scratchleftskip
-\newdimen\scratchrightskip
-\newdimen\scratchtopskip
-\newdimen\scratchbottomskip
+\newdimension\scratchleftskip
+\newdimension\scratchrightskip
+\newdimension\scratchtopskip
+\newdimension\scratchbottomskip
 
 %D More allocations:
 
@@ -458,7 +586,7 @@
 
 \immutable\integerdef    \maxcount 2147483647
 
-\immutable\dimensiondef  \zeropoint     0pt
+%immutable\dimensiondef  \zeropoint     0pt
 \immutable\dimensiondef  \onepoint      1pt
 \immutable\dimensiondef  \halfapoint    0.5pt
 \immutable\dimensiondef  \maxdimen      16383.99999pt % 1073741823sp
@@ -466,7 +594,13 @@
 \immutable\dimensiondef  \scaledpoint   1sp
 \immutable\dimensiondef  \thousandpoint 1000pt
 
-\immutable\gluespecdef   \zeroskip      0pt plus 0pt minus 0pt
+\immutable\gluespecdef   \zeroskip           \zeropoint plus \zeropoint     minus \zeropoint
+\immutable\gluespecdef   \centeringskip      \zeropoint plus \thousandpoint minus \thousandpoint
+\immutable\gluespecdef   \stretchingskip     \zeropoint plus \thousandpoint
+\immutable\gluespecdef   \shrinkingskip      \zeropoint                     minus \thousandpoint
+\immutable\gluespecdef   \centeringfillskip  \zeropoint plus 1fill          minus 1fill
+\immutable\gluespecdef   \stretchingfillskip \zeropoint plus 1fill
+\immutable\gluespecdef   \shrinkingfillskip  \zeropoint                     minus 1fill
 
 \immutable\mugluespecdef \zeromuskip    0mu
 \immutable\mugluespecdef \onemuskip     1mu
@@ -512,6 +646,11 @@
 \immutable\integerdef\medcard            32768
 \immutable\integerdef\maxcard            65536 % pdftex has less mathchars
 \immutable\integerdef\maxcardminusone    65535
+\immutable\integerdef\maxiterator       "FFFFF
+
+\immutable\integerdef\binaryshiftedten          1024
+\immutable\integerdef\binaryshiftedtwenty    1048576
+\immutable\integerdef\binaryshiftedthirty 1073741824
 
 %D \macros
 %D   {doubleexpandafter,tripleexpandafter,expanded,startexpanded}
@@ -535,9 +674,15 @@
 \aliased\let\leavevmode\unvoidbox % we prefer to use \dontleavehmode
 
 %D \macros
-%D   {dontcomplain}
+%D   {dontcomplain,lessboxtracing}
 %D
-%D We need this one soon:
+%D We need this one soon. The second one shows less box details (because that actually
+%D slows down noticeably due to the more extensive details in node content.
+
+% With \showboxdepth\maxcount and \showboxbreadth\maxcount the second one is way slower:
+%
+% \testfeatureonce{10}{\setbox\scratchbox\vbox        {\samplefile{tufte}}} \elapsedtime\par
+% \testfeatureonce{10}{\setbox\scratchbox\vbox to 10cm{\samplefile{tufte}}} \elapsedtime\par
 
 \permanent\protected\def\dontcomplain
   {\hbadness\plustenthousand
@@ -545,8 +690,20 @@
    \hfuzz   \maxdimen
    \vfuzz   \maxdimen}
 
-%D Some expected plain variants follow. We don't reuse registers because we
-%D don't want clashes.
+\permanent\protected\def\noboxtracing
+  {\showboxdepth  \zerocount
+   \showboxbreadth\zerocount}
+
+\permanent\protected\def\lessboxtracing
+  {\showboxdepth  \plusfive
+   \showboxbreadth\plusten}
+
+\permanent\protected\def\moreboxtracing
+  {\showboxbreadth\maxcount
+   \showboxdepth  \maxcount}
+
+%D Some expected plain variants follow. We don't reuse registers because we don't
+%D want clashes. These will go away and packages that need them have to define them.
 
 \aliased\let\p@     \onepoint
 \aliased\let\m@ne   \minusone
@@ -621,28 +778,20 @@
 \newif\ifscratchconditionone
 \newif\ifscratchconditiontwo
 
+%D This used to be a protected definition with a \type {dimexpr} but now we have
+%D it natively (less tracking noise).
+
 \aliased\let\htdp\boxtotal
 
-%D A few shortcuts:
+%D A few shortcuts (gone by now):
 
 % \permanent\protected\def\udef {\protected\def }
 % \permanent\protected\def\ugdef{\protected\gdef}
 % \permanent\protected\def\uedef{\protected\edef}
 % \permanent\protected\def\uxdef{\protected\xdef}
 
-% For now:
-
-\permanent\protected\def\defUmathtopaccent  #1#2#3#4{\global\immutable\protected\def#1{\Umathaccent     "#2 "#3 "#4 }}
-\permanent\protected\def\defUmathbotaccent  #1#2#3#4{\global\immutable\protected\def#1{\Umathbotaccent  "#2 "#3 "#4 }}
-\permanent\protected\def\defUdelimiterover  #1#2#3#4{\global\immutable\protected\def#1{\Udelimiterover  "#2 "#3     }}
-\permanent\protected\def\defUdelimiterunder #1#2#3#4{\global\immutable\protected\def#1{\Udelimiterunder "#2 "#3     }}
-\permanent\protected\def\defUdelimiter      #1#2#3#4{\global\immutable\protected\def#1{\Udelimiter      "#2 "#3 "#4 }}
-\permanent\protected\def\defUradical          #1#2#3{\global\immutable\protected\def#1{\Uradical        "#2 "#3     }}
-\permanent\protected\def\defUroot             #1#2#3{\global\immutable\protected\def#1{\Uroot           "#2 "#3     }}
-\permanent\protected\def\defUmathchar       #1#2#3#4{\global\immutable\Umathchardef #1                  "#2 "#3 "#4 }
-
 %D For a while we keep the following, as systems like tikz need it. Best not use
-%D that one \CONTEXT.
+%D that one \CONTEXT. It will probably move to the tikz loader.
 
 \aliased\let\active\activecatcode
 
@@ -672,29 +821,36 @@
 % no longer \errorstopmode cf. plain tex 3.141592653
 
 \permanent\protected\def\tracingall
-  {\tracingonline    \plusone
-   \tracingcommands  \plusthree
-   \tracingmacros    \plustwo
+  {\tracingcommands  \plusfour  % > 3: show mode change independent
+   \tracingmacros    \plusthree % > 2: obey \untraced
    \tracingoutput    \plusone
    \tracingpages     \plusone
-   \tracingparagraphs\plusone
+   \tracingparagraphs\plustwo
    \tracingrestores  \plusone
    \tracinggroups    \plusone
    \tracingifs       \plusone
-   \tracingnesting   \plustwo
+   \tracingnesting   \plusthree
    \tracingassigns   \plustwo
    \tracingmath      \plusone
-   \tracingalignments\plusone
+   \tracingalignments\plustwo   % > 1: also show preamble
    \showboxbreadth   \maxcount
-   \showboxdepth     \maxcount}
+   \showboxdepth     \maxcount
+   \tracingonline    \plusone}
+
+\permanent\protected\def\tracingless
+  {\tracingall
+   \tracingoutput    \zerocount
+   \showboxbreadth   \maxcount
+   \showboxdepth     \plusten}
 
 \permanent\protected\def\loggingall
   {\tracingall
    \tracingonline    \zerocount}
 
 \permanent\protected\def\tracingnone
-  {\showboxdepth     \plusthree
-   \showboxbreadth   \plusfive
+  {\tracingonline    \zerocount
+   \showboxdepth     \plusfive % lessboxtracing
+   \showboxbreadth   \plusten
    \tracingalignments\zerocount
    \tracingmath      \zerocount
    \tracingassigns   \zerocount
@@ -711,8 +867,10 @@
 
 %D When we want to see a box we can as well show all of it.
 
-\showboxdepth  \maxdimen
-\showboxbreadth\maxdimen
+% \showboxdepth  \maxcount
+% \showboxbreadth\maxcount
+
+\lessboxtracing
 
 %D Just for tracing purposes we set:
 
@@ -806,7 +964,7 @@
 \aliased\let\newconditional\setfalse
 \aliased\let\ifconditional \ifcase
 
-\aliased\let\then\relax % so that we can say: \ifnum1>2\then -)
+\permanent\protected\lettonothing\then % so that we can say: \ifnum1>2\then -)
 
 \permanent\def\truecondition {\iftrue}
 \permanent\def\falsecondition{\iffalse}
@@ -824,7 +982,7 @@
 %D {\let} (the only advantage is that we often give them names with some
 %D prefix.
 
-\permanent\protected\def\newmacro   #1{\mutable\let#1\empty}
+\permanent\protected\def\newmacro   #1{\mutable\lettonothing#1}
 \permanent\protected\def\setnewmacro#1{\mutable\let#1}
 
 \permanent\protected\def\newfraction#1{\mutable\let#1\!!plusone}
@@ -846,7 +1004,8 @@
 %D \ifzeropt \somedimen ... \else ... \fi
 %D \stoptyping
 
-\aliased\let\ifzeropt\ifcase
+\aliased\let\ifzeropt\ifzerodim % was \let\ifzeropt\ifcase
+\aliased\let\ifzero  \ifzeronum % was \let\ifzeropt\ifcase
 
 % these token list helpers might move to syst-aux.mkiv
 %
@@ -992,16 +1151,15 @@
 %D The following registers are kind of standard and (for the moment) we define
 %D them here. This might change.
 
-\newskip \bigskipamount    \bigskipamount   = 12pt plus 4pt minus 4pt
-\newskip \medskipamount    \medskipamount   =  6pt plus 2pt minus 2pt
-\newskip \smallskipamount  \smallskipamount =  3pt plus 1pt minus 1pt
+\newgluespec \bigskipamount    \bigskipamount   = 12pt plus 4pt minus 4pt
+\newgluespec \medskipamount    \medskipamount   =  6pt plus 2pt minus 2pt
+\newgluespec \smallskipamount  \smallskipamount =  3pt plus 1pt minus 1pt
 
 \baselineskip  = 12pt
 \lineskip      =  1pt
 \lineskiplimit =  0pt
 
-%D Sometimes kerns make more sense than glue but we need to be in the
-%D right mode:
+%D Sometimes kerns make more sense than glue but we need to be in the right mode:
 
 \permanent\protected\def\vkern   {\ifhmode\par           \fi\kern}
 \permanent\protected\def\hkern   {\ifvmode\dontleavehmode\fi\kern}
@@ -1009,19 +1167,19 @@
 \permanent\protected\def\vpenalty{\ifhmode\par           \fi\penalty}
 \permanent\protected\def\hpenalty{\ifvmode\dontleavehmode\fi\penalty}
 
-%D Again a few kind-of-extensions the core. These come from plain \TEX\ but
-%D are probably not used in \CONTEXT.
+%D Again a few kind-of-extensions the core. These come from plain \TEX\ but are
+%D probably not used in \CONTEXT.
 
-\newskip \hideskip   \hideskip  = -1000pt plus 1fill
-\newskip \centering  \centering = 0pt plus 1000pt minus 1000pt
+\newgluespec \hideskip   \hideskip  = -1000pt plus 1fill           % obsolete
+\newgluespec \centering  \centering = 0pt plus 1000pt minus 1000pt % obsolete
 
-\permanent\def\hidewidth % for alignment entries that can stick out
-  {\hskip\hideskip}
-
-\permanent\def\ialign % initialized \halign
-  {\everycr\emptytoks
-   \tabskip\zeroskip
-   \halign}
+% \permanent\def\hidewidth % for alignment entries that can stick out
+%   {\hskip\hideskip}
+%
+% \permanent\def\ialign % initialized \halign, to be used grouped!
+%   {\everycr\emptytoks
+%    \tabskip\zeroskip
+%    \halign}
 
 \newcount \mscount
 
@@ -1032,7 +1190,7 @@
    \mscount#1\relax
    \loop
      \ifnum\mscount>\plusone
-       \spanomit \advance\mscount\minusone
+       \spanomit \advanceby\mscount\minusone
    \repeat}
 
 \let\nopdfcompression        \relax % later
@@ -1089,14 +1247,15 @@
   {\ifcsname ??#1\endcsname
      \immediate\write\statuswrite{fatal error: duplicate system namespace '#1'}%
    \else
-     \global\advance\c_syst_helpers_n_of_namespaces\plusone
-     \immutable\edefcsname ??#1\endcsname{\v_interfaces_prefix_template_system}%
+     \global\advanceby\c_syst_helpers_n_of_namespaces\plusone
+     \immutable\cdefcsname ??#1\endcsname{\v_interfaces_prefix_template_system}%
    \fi}
 
 %D It makes more sense to have these here:
 
 \aliased\let\normalsuperscript  \Usuperscript
 \aliased\let\normalsubscript    \Usubscript
+\aliased\let\normalprimescript  \Uprimescript
 \aliased\let\normalnosuperscript\Unosuperscript
 \aliased\let\normalnosubscript  \Unosubscript
 \aliased\let\normalstartimath   \Ustartmath
@@ -1110,19 +1269,14 @@
 
 %D For a while we will keep these useless numbers as for instance tikz checks for them:
 
-\immutable\integerdef\eTeXversion   2
-\immutable\def       \eTeXrevision {2}
+\immutable\integerdef\eTeXversion    2
+\immutable\def       \eTeXrevision {.2} % there is a funny period here
 
-%D Experiment:
+% %D Just in case users use this (or some styles still have it):
 
-\glyphoptions"80 % replaces \glyphdimensionsmode=1
-
-%D Just in case users use this:
-
-\aliased\let\immediateassign  \immediate
 \aliased\let\immediateassigned\localcontrolled
 
-%D Needed:
+%D Needed (maybe no longer the multiple next ones):
 
 \mutable\let\nexttoken   \relax
 \mutable\let\next        \relax
@@ -1135,18 +1289,15 @@
 % \mutable\let\par\par
 % \popoverloadmode
 
-%D Also here:
-
-\listcallbackmode\plusone
-
 %D Often used as cs key:
 
-\mutable\let\on  \empty
-\mutable\let\of  \empty
-\mutable\let\and \empty
-\mutable\let\with\empty
-\mutable\let\nop \empty % used often
-\mutable\let\yes \empty % used often
+\mutable\let\on  \relax % \empty
+\mutable\let\of  \relax % \empty
+\mutable\let\and \relax % \empty
+\mutable\let\with\relax % \empty
+
+\mutable\lettonothing\nop % used often
+\mutable\lettonothing\yes % used often
 
 %D Another experiment:
 
@@ -1161,7 +1312,7 @@
   {\ifflags#2\permanent\permanent\fi % the rest is taken with the copy
    \def#1{\syst_suggested_alias#1#2}}
 
-% A few traditional allocations (these might go):
+% A few traditional allocations (these might go too):
 
 % \countdef \count@   255 % hm, used in \newif .. todo: replace it there
 % \dimendef \dimen@     0
@@ -1199,53 +1350,49 @@
 %D \stoptyping
 %D
 %D There is a little extra overhead in the overload protection but not that much.
-%D Instead of:
 
-% \newcount\c_syst_local_count \c_syst_local_count \c_syst_max_allocated_register
-% \newcount\c_syst_local_dimen \c_syst_local_dimen \c_syst_local_count
-% \newcount\c_syst_local_skip  \c_syst_local_skip  \c_syst_local_count
-% \newcount\c_syst_local_muskip\c_syst_local_muskip\c_syst_local_count
-% \newcount\c_syst_local_box   \c_syst_local_box   \c_syst_local_count
-% \newcount\c_syst_local_toks  \c_syst_local_toks  \c_syst_local_count
+% integerdef is local
 
-%D We do this:
+\permanent\countdef\c_syst_local_count  = 231 \c_syst_local_count  = \c_syst_max_allocated_count
+\permanent\countdef\c_syst_local_dimen  = 232 \c_syst_local_dimen  = \c_syst_max_allocated_dimen
+\permanent\countdef\c_syst_local_skip   = 233 \c_syst_local_skip   = \c_syst_max_allocated_skip
+\permanent\countdef\c_syst_local_muskip = 234 \c_syst_local_muskip = \c_syst_max_allocated_muskip
+\permanent\countdef\c_syst_local_box    = 235 \c_syst_local_box    = \c_syst_max_allocated_box
+\permanent\countdef\c_syst_local_toks   = 236 \c_syst_local_toks   = \c_syst_max_allocated_toks
+\permanent\countdef\c_syst_local_read   = 237 \c_syst_local_read   = \c_syst_max_allocated_read
+\permanent\countdef\c_syst_local_write  = 238 \c_syst_local_write  = \c_syst_max_allocated_write
 
-\permanent\countdef\c_syst_local_count  = 72 \c_syst_local_count  = \c_syst_max_allocated_register
-\permanent\countdef\c_syst_local_dimen  = 73 \c_syst_local_dimen  = \c_syst_local_count
-\permanent\countdef\c_syst_local_skip   = 74 \c_syst_local_skip   = \c_syst_local_count
-\permanent\countdef\c_syst_local_muskip = 75 \c_syst_local_muskip = \c_syst_local_count
-\permanent\countdef\c_syst_local_box    = 76 \c_syst_local_box    = \c_syst_local_count
-\permanent\countdef\c_syst_local_toks   = 77 \c_syst_local_toks   = \c_syst_local_count
-\permanent\countdef\c_syst_local_read   = 78 \c_syst_local_read   = \c_syst_local_count
-\permanent\countdef\c_syst_local_write  = 79 \c_syst_local_write  = \c_syst_local_count
-
-% We should have used  \c_syst_local_dimen = \numexpr \c_syst_max_allocated_register +
-% 1\relax, but we do this instead (it's no problem loosing a few registers).
-
-\c_syst_max_allocated_register \numexpr\c_syst_max_allocated_register:2\relax % floor
+\c_syst_max_allocated_count    \numexpr\c_syst_max_allocated_count   :2\relax % floor
+\c_syst_max_allocated_dimen    \numexpr\c_syst_max_allocated_dimen   :2\relax % floor
+\c_syst_max_allocated_skip     \numexpr\c_syst_max_allocated_skip    :2\relax % floor
+\c_syst_max_allocated_muskip   \numexpr\c_syst_max_allocated_muskip  :2\relax % floor
+\c_syst_max_allocated_toks     \numexpr\c_syst_max_allocated_toks    :2\relax % floor
+\c_syst_max_allocated_box      \numexpr\c_syst_max_allocated_box     :2\relax % floor
+\c_syst_max_allocated_read     \numexpr\c_syst_max_allocated_read    :2\relax % floor
+\c_syst_max_allocated_write    \numexpr\c_syst_max_allocated_write   :2\relax % floor
 
 \permanent\protected\def\syst_local_overflow#1#2{\writestatus\m!system{no room for local #1 \string#2}\wait}
 
-\permanent\protected\def\setnewlocaldimen#1%
-  {\ifnum\c_syst_local_dimen>\c_syst_max_allocated_register
-     \advance\c_syst_local_dimen\minusone\dimendef#1\c_syst_local_dimen
-   \else
-     \syst_local_overflow_dimen#1%
-   \fi
-   #1}
-
 \permanent\protected\def\setnewlocalcount#1%
-  {\ifnum\c_syst_local_count>\c_syst_max_allocated_register
-     \advance\c_syst_local_count\minusone
+  {\ifnum\c_syst_local_count>\c_syst_max_allocated_count
+     \advanceby\c_syst_local_count\minusone
      \overloaded\frozen\countdef#1\c_syst_local_count
    \else
      \syst_local_overflow_count#1%
    \fi
    #1}
 
+\permanent\protected\def\setnewlocaldimen#1%
+  {\ifnum\c_syst_local_dimen>\c_syst_max_allocated_dimen
+     \advanceby\c_syst_local_dimen\minusone\dimendef#1\c_syst_local_dimen
+   \else
+     \syst_local_overflow_dimen#1%
+   \fi
+   #1}
+
 \permanent\protected\def\setnewlocalskip#1%
-  {\ifnum\c_syst_local_skip>\c_syst_max_allocated_register
-     \advance\c_syst_local_skip\minusone
+  {\ifnum\c_syst_local_skip>\c_syst_max_allocated_skip
+     \advanceby\c_syst_local_skip\minusone
      \overloaded\frozen\skipdef#1\c_syst_local_skip
    \else
      \syst_local_overflow_skip#1%
@@ -1253,8 +1400,8 @@
    #1}
 
 \permanent\protected\def\setnewlocalmuskip#1%
-  {\ifnum\c_syst_local_muskip>\c_syst_max_allocated_register
-     \advance\c_syst_local_muskip\minusone
+  {\ifnum\c_syst_local_muskip>\c_syst_max_allocated_muskip
+     \advanceby\c_syst_local_muskip\minusone
      \overloaded\frozen\muskipdef#1\c_syst_local_muskip
    \else
      \syst_local_overflow_muskip#1%
@@ -1262,8 +1409,8 @@
    #1}
 
 \permanent\protected\def\setnewlocaltoks#1%
-  {\ifnum\c_syst_local_toks>\c_syst_max_allocated_register
-     \advance\c_syst_local_toks\minusone
+  {\ifnum\c_syst_local_toks>\c_syst_max_allocated_toks
+     \advanceby\c_syst_local_toks\minusone
      \overloaded\frozen\toksdef#1\c_syst_local_toks
    \else
      \syst_local_overflow_toks#1%
@@ -1271,8 +1418,8 @@
    #1}
 
 \permanent\protected\def\setnewlocalbox#1%
-  {\ifnum\c_syst_local_box>\c_syst_max_allocated_register
-     \advance\c_syst_local_box\minusone
+  {\ifnum\c_syst_local_box>\c_syst_max_allocated_box
+     \advanceby\c_syst_local_box\minusone
      \overloaded\frozen\integerdef#1\c_syst_local_box
    \else
      \syst_local_overflow_box#1%
@@ -1280,16 +1427,16 @@
    \setbox#1}
 
 \permanent\protected\def\newlocalread#1% so no set
-  {\ifnum\c_syst_local_read>\c_syst_max_allocated_register
-     \advance\c_syst_local_read\minusone
+  {\ifnum\c_syst_local_read>\c_syst_max_allocated_read
+     \advanceby\c_syst_local_read\minusone
      \overloaded\frozen\integerdef#1\c_syst_local_read
    \else
      \syst_local_overflow_read#1%
    \fi}
 
 \permanent\protected\def\newlocalwrite#1% so no set
-  {\ifnum\c_syst_local_write>\c_syst_max_allocated_register
-     \advance\c_syst_local_write\minusone
+  {\ifnum\c_syst_local_write>\c_syst_max_allocated_write
+     \advanceby\c_syst_local_write\minusone
      \overloaded\frozen\integerdef#1\c_syst_local_write
    \else
      \syst_local_overflow_write#1%
@@ -1306,7 +1453,7 @@
 \permanent\protected\def\syst_local_overflow_read  {\syst_local_overflow  {read}}
 \permanent\protected\def\syst_local_overflow_write {\syst_local_overflow {write}}
 
-%D We sacrifice a little performance but save some tokens by not defineing these
+%D We sacrifice a little performance but save some tokens by not defining these
 %D completely:
 
 \permanent\protected\def\newlocalcount #1{\setnewlocalcount #1\zerocount }
@@ -1315,5 +1462,37 @@
 \permanent\protected\def\newlocalmuskip#1{\setnewlocalmuskip#1\zeromuskip}
 \permanent\protected\def\newlocaltoks  #1{\setnewlocaltoks  #1\emptytoks }
 \permanent\protected\def\newlocalbox   #1{\setnewlocalbox   #1\emptybox  }
+
+%D Let's be detailed: grouplevel:inputlevel:catcodetable (bits 1 2 4)
+
+\tracinglevels\plusthree
+
+\permanent\protected\def\tracingcatcodes{\tracinglevels\plusseven}
+
+%D We just report duplicate patterns being ignored:
+
+\tracinghyphenation\plusone
+
+%D Sometimes nicer:
+
+\let\ifexpression\ifnumexpression
+
+%D This will be default:
+
+\autoparagraphmode\plusone  % we need at least 1 in order to be able to switch to 2
+%autoparagraphmode\plustwo  % because we define two \par delimited macros
+
+%D The same values apply as \type {\shownodedetails}. When set the box is shown in
+%D the the log file but that is pretty slow when we have much detail.
+
+\tracingfullboxes\zerocount
+
+%D We don't do this:
+
+% \setdefaultmathcodes % initializes traditional codes
+
+%D Catch
+
+\ifdefined\mathpunctuation \else \let\mathpunctuation\mathpunct \fi % fixed in 2.10.06
 
 \protect \endinput

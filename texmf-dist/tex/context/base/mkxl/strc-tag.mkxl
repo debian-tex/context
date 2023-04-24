@@ -206,21 +206,6 @@
 
 \installsetuponlycommandhandler \??tagging {tagging}
 
-\def\strc_tags_report_hyphen#1%
-  {\writestatus\m!languages{setting #1 to U+00AD}}
-
-\protected\def\strc_tags_patch_hyphen
-  {% for the moment here
-   \ifnum\languageparameter\s!lefthyphenchar>\zerocount
-     \setuplanguage[\s!default][\s!lefthyphenchar="AD]%
-     \strc_tags_report_hyphen\s!lefthyphenchar
-   \fi
-   \ifnum\languageparameter\s!righthyphenchar>\zerocount
-     \setuplanguage[\s!default][\s!righthyphenchar="AD]%
-     \strc_tags_report_hyphen\s!righthyphenchar
-   \fi
-   \let\strc_tags_report_hyphen\gobbleoneargument}
-
 % It makes no sense to have labels ... maybe some day as a last 'replace' in the export
 % which might be more efficient then ... okay, we now cannot overload but who cares.
 
@@ -245,8 +230,7 @@
    \fi}
 
 \protected\def\strc_tags_enable_elements
-  {\strc_tags_patch_hyphen
-   \enforced\let\startelement    \strc_tags_element_start_yes
+  {\enforced\let\startelement    \strc_tags_element_start_yes
    \enforced\let\stopelement     \strc_tags_element_stop_yes
    \enforced\let\dosettagproperty\strc_tags_set_aspect}
 
@@ -296,7 +280,7 @@
 
 \newconditional\c_strc_tags_enabled
 
-\aliased\let\dotaggedplaceholder\empty
+\lettonothing\dotaggedplaceholder
 
 \immutable\chardef\strc_tags_placeholder_char\zerocount % "FFFC
 
@@ -325,7 +309,7 @@
      \enforced\let\dostoptagged         \donothing
    \else
      % initial
-     \enforced\let\dotaggedplaceholder  \empty
+     \enforced\lettonothing\dotaggedplaceholder
      \enforced\let\dostarttagged        \gobbletwoarguments
      \enforced\let\dostarttaggednodetail\gobbleoneargument
      \enforced\let\dostarttaggedchained \gobblethreearguments
@@ -350,6 +334,8 @@
 \protected\def\strc_tags_disable_properties
   {\enforced\let\getelementtag             \donothing
    \enforced\let\setupelementuserproperties\gobbletwooptionals}
+
+\strc_tags_disable
 
 %D The triggers:
 
@@ -402,10 +388,10 @@
   {\endgraf % we end before the group
    \begingroup
    \ifarguments
-     \let\currentparagraph\empty
+     \lettonothing\currentparagraph
    \or
      \ifhastok={#1}%
-       \let\currentparagraph\empty
+       \lettonothing\currentparagraph
        \setupcurrentparagraph[#1]
      \else
        \edef\currentparagraph{#1}%

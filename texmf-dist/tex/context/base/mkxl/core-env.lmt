@@ -18,8 +18,7 @@ local P, C, S, lpegmatch, patterns = lpeg.P, lpeg.C, lpeg.S, lpeg.match, lpeg.pa
 local context              = context
 local ctxcore              = context.core
 
-local texgetcount          = tex.getcount
-local texgetintegervalue   = token.get_integer -- todo: in tex namespace
+local texgetintegervalue   = token.getinteger -- todo
 
 local allocate             = utilities.storage.allocate
 local setmetatableindex    = table.setmetatableindex
@@ -119,12 +118,10 @@ setmetatablenewindex(texifs,          function(t,k) end)
 -- kind of variable ... maybe we no longer have to cache anyway (in lmtx)
 
 setmetatableindex(texconstants, function(t,k)
- -- return cache[k].command == countcode and texgetcount(k) or 0
     return cache[k].command == integercode and texgetintegervalue(k) or 0
 end)
 
 setmetatableindex(texconditionals, function(t,k) -- 0 == true
- -- return cache[k].command == countcode and texgetcount(k) == 0
     return cache[k].command == integercode and texgetintegervalue(k) == 0
 end)
 
@@ -135,30 +132,30 @@ end)
 
 tex.isdefined = isdefined
 
-function tex.isdimen(name)
-    local hit = cache[name]
-    return hit.command == dimencode and hit.index or true
-end
-
-function tex.iscount(name)
-    local hit = cache[name]
-    return hit.command == countcode and hit.index or true
-end
-
-function tex.istoken(name)
-    local hit = cache[name]
-    return hit.command == tokencode and hit.index or true
-end
-
-function tex.isskip(name)
-    local hit = cache[name]
-    return hit.command == skipcode and hit.index or true
-end
-
-function tex.ismuskip(name)
-    local hit = cache[name]
-    return hit.command == muskipcode and hit.index or true
-end
+-- function tex.isdimen(name)
+--     local hit = cache[name]
+--     return hit.command == dimencode and hit.index or true
+-- end
+--
+-- function tex.iscount(name)
+--     local hit = cache[name]
+--     return hit.command == countcode and hit.index or true
+-- end
+--
+-- function tex.istoken(name)
+--     local hit = cache[name]
+--     return hit.command == tokencode and hit.index or true
+-- end
+--
+-- function tex.isskip(name)
+--     local hit = cache[name]
+--     return hit.command == skipcode and hit.index or true
+-- end
+--
+-- function tex.ismuskip(name)
+--     local hit = cache[name]
+--     return hit.command == muskipcode and hit.index or true
+-- end
 
 function tex.type(name)
     return types[cache[name].command] or "macro"

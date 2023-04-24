@@ -61,9 +61,9 @@ local v_line             = variables.line
 local nuts               = nodes.nuts
 local tonode             = nuts.tonode
 
-local hpack_nodes        = nuts.hpack
-local traverse_id        = nuts.traverse_id
-local flush_node_list    = nuts.flush_list
+local hpacknodes         = nuts.hpack
+local traverseid         = nuts.traverseid
+local flushnodelist      = nuts.flushlist
 
 local getnext            = nuts.getnext
 local getprev            = nuts.getprev
@@ -82,8 +82,6 @@ local setwidth           = nuts.setwidth
 local getheight          = nuts.getheight
 
 local setattrlist        = nuts.setattrlist
-
-local getbox             = nuts.getbox
 local takebox            = nuts.takebox
 
 local setprop            = nuts.setprop
@@ -105,6 +103,7 @@ local new_usernode       = nodepool.usernode
 local latelua            = nodepool.latelua
 
 local texgetdimen        = tex.getdimen
+
 local texgetcount        = tex.getcount
 local texget             = tex.get
 
@@ -251,7 +250,7 @@ function margins.save(t)
                 local si = store[i]
                 if si.name == name then
                     local s = remove(store,i)
-                    flush_node_list(s.box)
+                    flushnodelist(s.box)
                 end
             end
         else
@@ -259,7 +258,7 @@ function margins.save(t)
                 local si = store[i]
                 if si.name == name then
                     local s = remove(store,i)
-                    flush_node_list(s.box)
+                    flushnodelist(s.box)
                 end
             end
         end
@@ -270,8 +269,8 @@ function margins.save(t)
     if t.number then
         local leftmargindistance  = texgetdimen("naturalleftmargindistance")
         local rightmargindistance = texgetdimen("naturalrightmargindistance")
-        local strutbox            = getbox("strutbox")
-        local _, strutht, strutdp = getwhd(strutbox)
+        local strutht = texgetdimen("strutht")
+        local strutdp = texgetdimen("strutdp")
         -- better make a new table and make t entry in t
         t.box                 = content
         t.n                   = nofsaved
@@ -285,11 +284,11 @@ function margins.save(t)
         --
         t.leftmargindistance  = leftmargindistance -- todo:layoutstatus table
         t.rightmargindistance = rightmargindistance
-        t.leftedgedistance    = texgetdimen("naturalleftedgedistance")
-                              + texgetdimen("leftmarginwidth")
+        t.leftedgedistance    = texgetdimen("naturalleftedgedistance")  -- can be swapped
+                              + texgetdimen("leftmarginwidth")          -- can be swapped
                               + leftmargindistance
-        t.rightedgedistance   = texgetdimen("naturalrightedgedistance")
-                              + texgetdimen("rightmarginwidth")
+        t.rightedgedistance   = texgetdimen("naturalrightedgedistance") -- can be swapped
+                              + texgetdimen("rightmarginwidth")         -- can be swapped
                               + rightmargindistance
         t.lineheight          = texgetdimen("lineheight")
         --
@@ -492,9 +491,9 @@ local function markovershoot(current) -- todo: alleen als offset > line
     v_anchors = v_anchors + 1
     cache[v_anchors] = fastcopy(stacked)
     local anchor = setanchor(v_anchors)
- -- local list = hpack_nodes(setlink(anchor,getlist(current))) -- not ok, we need to retain width
+ -- local list = hpacknodes(setlink(anchor,getlist(current))) -- not ok, we need to retain width
  -- local list = setlink(anchor,getlist(current)) -- why not this ... better play safe
-    local list = hpack_nodes(setlink(anchor,getlist(current)),getwidth(current),"exactly")--
+    local list = hpacknodes(setlink(anchor,getlist(current)),getwidth(current),"exactly")--
     if trace_marginstack then
         report_margindata("marking anchor %a",v_anchors)
     end
@@ -790,7 +789,7 @@ local function flushed(scope,parent) -- current is hlist
     if done then
         local a = getattr(head,a_linenumber) -- hack .. we need a more decent critical attribute inheritance mechanism
         if false then
-            local l = hpack_nodes(head,getwidth(parent),"exactly")
+            local l = hpacknodes(head,getwidth(parent),"exactly")
             setlist(parent,l)
             if a then
                 setattr(l,a_linenumber,a)
@@ -806,7 +805,7 @@ local function flushed(scope,parent) -- current is hlist
     return done, continue
 end
 
--- only when group   : vbox|vmode_par
+-- only when group   : vbox|vmodepar
 -- only when subtype : line, box (no indent alignment cell)
 
 local function handler(scope,head,group)
@@ -884,9 +883,9 @@ function margins.globalhandler(head,group) -- check group
             report_margindata("ignored 1, group %a, stored %s, inhibit %a",group,nofstored,inhibit)
         end
         return head
-    elseif group == "hmode_par" then
+    elseif group == "hmodepar" then
         return handler(v_global,head,group)
-    elseif group == "vmode_par" then              -- experiment (for alignments)
+    elseif group == "vmodepar" then              -- experiment (for alignments)
         return handler(v_global,head,group)
      -- this needs checking as we then get quite some one liners to process and
      -- we cannot look ahead then:
@@ -905,7 +904,7 @@ end
 local function finalhandler(head)
     if nofdelayed > 0 then
         local current = head
-        while current and nofdelayed > 0 do -- traverse_list
+        while current and nofdelayed > 0 do
             local id = getid(current)
             if id == hlist_code then -- only lines?
                 local a = getprop(current,"margindata")

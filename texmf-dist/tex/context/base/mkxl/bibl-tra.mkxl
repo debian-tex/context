@@ -202,8 +202,8 @@
 \installstructurelistprocessor{pubs:userdata}%
   {\ctxlua{bibtex.hacks.add(structures.lists.uservalue("\currentlist",\currentlistindex,"bibref"),\currentlistindex)}}
 
-\ifdefined\bibtexblock   \else \newcount\bibtexblock   \fi \bibtexblock\plusone
-\ifdefined\bibtexcounter \else \newcount\bibtexcounter \fi
+\ifdefined\bibtexblock   \else \newinteger\bibtexblock   \fi \bibtexblock\plusone
+\ifdefined\bibtexcounter \else \newinteger\bibtexcounter \fi
 
 %D \macros{bibdoif,bibdoifnot,bibdoifelse}
 %D
@@ -258,7 +258,7 @@
   {\dosingleempty\dosetupbibtex}
 
 \protected\def\dosetupbibtex[#1]%
-  {\let\@@pbdatabase\empty
+  {\lettonothing\@@pbdatabase
    \getparameters[\??pb][#1]%
    \the\everysetupbibtex}
 
@@ -299,7 +299,7 @@
      {\readsysfile{bibl-\@@pbalternative.tex}
         {\showmessage\m!publications{6}{bibl-\@@pbalternative}}
         {\showmessage\m!publications{1}{bibl-\@@pbalternative}}%
-      \let\@@pbalternative\empty}%
+      \lettonothing\@@pbalternative}%
    \let\setuppublicationlayout\normalsetuppublicationlayout % overloaded in bibl-num ... vadjust needs to be done with option
    \getparameters[\??pb][#1]% as bibl-* can have set things back
    \the\everysetuppublications
@@ -517,9 +517,9 @@
 %D Another level of indirection is needed to control the typesetting of all of these
 %D arguments.
 
-\newcount\etallimitcounter
-\newcount\etaldisplaycounter
-\newcount\todocounter
+\newinteger\etallimitcounter
+\newinteger\etaldisplaycounter
+\newinteger\todocounter
 
 \protected\def\specialbibinsert#1#2#3#4#5%
   {\bgroup
@@ -537,7 +537,7 @@
      \fi
      \ifnum\todocounter>\zerocount
        % find the current author list
-       \let\templist\empty
+       \lettonothing\templist
        \dorecurse{#2}
          {\scratchtoks\doubleexpandafter{\csname\??pb @#1\recurselevel\endcsname}%
           \edef\templist{\ifempty\templist\else\templist,\fi\the\scratchtoks}}%
@@ -559,7 +559,7 @@
 %D \#3 = commacommand containing authors
 
 \protected\def\doprocessauthoritem#1#2#3%
-  {\advance\scratchcounter\plusone
+  {\advanceby\scratchcounter\plusone
    \ifnum\numexpr\scratchcounter-\plusone\relax<#2\relax
      \publicationlistparameter{#1}#3%
      \ifnum\scratchcounter=#2\relax
@@ -770,6 +770,7 @@
         {}%
         {\listparameter\c!extras}%
         {\listparameter\c!order}}%
+        {}%
    \ctxlua{bibtex.hacks.flush("\@@pbsorttype")}%
    \stoppacked
    \endgroup}
@@ -854,7 +855,7 @@
    \inpublisttrue
    \typesetpubslist
    \inpublistfalse
-   \global\advance\bibtexblock\plusone}
+   \global\advanceby\bibtexblock\plusone}
 
 %D \subsubject{What's in a publication}
 %D
@@ -877,13 +878,13 @@
 
 \protected\def\doplacepublicationindeed#1%
   {\doifelsebibreferencefound{#1}
-     {\global\advance\bibtexcounter\plusone
+     {\global\advanceby\bibtexcounter\plusone
       \def\currentpublicationkey{#1}%
       \ctxlua{bibtex.hacks.registerplaced("#1")}%
-      \def \currentlist               {pubs}%
-      \edef\currentlistentrynumber    {\number\bibtexcounter}%
-      \let \currentlistentrytitle     \bibtexpubtext
-      \let \currentlistentrypagenumber\empty
+      \def\currentlist{pubs}%
+      \edef\currentlistentrynumber{\number\bibtexcounter}%
+      \let\currentlistentrytitle\bibtexpubtext
+      \lettonothing\currentlistentrypagenumber
       \strc_lists_apply_renderingsetup}
      {}} % invalid
 
@@ -896,7 +897,7 @@
    \the\initializebibdefinitions % NEW
    \def\@@currentalternative{:l:}%
    \presetbibvariables
-   \let\biblanguage\empty
+   \lettonothing\biblanguage
    \ignorespaces
    \bibgetvard{#1}%
    \removeunwantedspaces
@@ -962,9 +963,9 @@
       \ifempty\LOextras
         \setupcite[\@@currentalternative][#1]%
       \else
-        \expandafter\ifrelax\csname \??pv \@@currentalternative\c!right\endcsname
+        \expandafter\ifrelax\csname\??pv\@@currentalternative\c!right\endcsname
           % avoids tail recursion
-          \expandafter\let\csname \??pv \@@currentalternative\c!right\endcsname\empty
+          \expandafter\lettonothing\csname\??pv\@@currentalternative\c!right\endcsname
         \fi
         \expandafter\ifrelax\csname LOright\endcsname
           \edef\LOextras{{\LOextras\bibalternative\c!right}}%
@@ -1049,22 +1050,22 @@
 
 %D Delegate this to \LUA.
 
-% \let\ixlastcommand   \relax
-% \let\ixsecondcomman  \relax
-% \let\ixfirstcommand  \relax
-% \let\thebibauthors   \empty
-% \let\thebibyears     \empty
-% \let\authorcount     \!!zerocount
+% \let         \ixlastcommand \relax
+% \let         \ixsecondcomman\relax
+% \let         \ixfirstcommand\relax
+% \lettonothing\thebibauthors
+% \lettonothing\thebibyears
+% \let         \authorcount   \!!zerocount
 
-\let\currentbibauthor\empty
+\lettonothing\currentbibauthor
 
 \protected\def\ixbibauthoryear#1#2#3#4%
   {\bgroup
-   \gdef\ixlastcommand  {#4}%
+   \gdef\ixlastcommand{#4}%
    \gdef\ixsecondcommand{#3}%
-   \gdef\ixfirstcommand {#2}%
-   \glet\thebibauthors  \empty
-   \glet\thebibyears    \empty
+   \gdef\ixfirstcommand{#2}%
+   \glettonothing\thebibauthors
+   \glettonothing\thebibyears
    \getcommalistsize[#1]%
    \ifbibcitecompress
      \dorecurse\commalistsize{\xdef\thebibyears{\thebibyears,}}%
@@ -1087,7 +1088,7 @@
    \expandafter\processcommalist\expandafter[\thebibauthors]\dodobibauthoryear}
 
 \protected\def\dodobibauthoryear#1%
-  {\advance\scratchcounter\plusone
+  {\advanceby\scratchcounter\plusone
    \edef\wantednumber{\the\scratchcounter}%
    \getfromcommacommand[\thebibyears][\wantednumber]%
    \expandafter\def\expandafter\currentbibyear\expandafter{\commalistelement}%
@@ -1104,7 +1105,7 @@
   {\getcommacommandsize[#1]%
    \ifcase\commalistsize
     % anonymous?
-     \let\currentbibauthor\empty
+     \lettonothing\currentbibauthor
    \or
      \def\currentbibauthor{#1}%
    \or
@@ -1113,13 +1114,13 @@
      \handlemultiplebibauthors{\commalistsize}{#1}%
    \fi}
 
-\newcount\citescratchcounter
+\newinteger\citescratchcounter
 
 \protected\def\handlemultiplebibauthors#1#2%
   {\citescratchcounter\zerocount
-   \let\currentbibauthor\empty
+   \lettonothing\currentbibauthor
    \protected\def\bibprocessauthoritem##1%
-     {\advance\citescratchcounter\plusone
+     {\advanceby\citescratchcounter\plusone
       \ifnum \citescratchcounter=#1\relax
         \edef\currentbibauthor{\currentbibauthor##1}%
       \orelse\ifnum\numexpr\citescratchcounter+\plusone\relax=#1\relax
@@ -1195,8 +1196,8 @@
 %D Two temporary counters. One of these two can possibly be replaced by \type
 %D {\scratchcounter}.
 
-\newcount\bibitemcounter
-\newcount\bibitemwanted
+\newinteger\bibitemcounter
+\newinteger\bibitemwanted
 
 %D The first portion is simple enough: if this is the very first author it is quite
 %D straightforward to add it. \type {\bibitemcounter} and \type {\bibitemwanted} are
@@ -1222,12 +1223,12 @@
 %D setup properly to insert the year info.
 
 \protected\def\docomparemyauthor#1%
-  {\global\advance\bibitemwanted \plusone
+  {\global\advanceby\bibitemwanted \plusone
    \def\mytempc{#1}%
    \ifx\mytempc\myauthor
      \quitcommalist
    \orelse\ifnum\bibitemwanted=\bibitemcounter\relax
-     \global\advance\bibitemwanted \plusone
+     \global\advanceby\bibitemwanted \plusone
      \global\bibitemcounter\bibitemwanted\relax
      \expandafter\doglobal\expandafter\robustaddtocommalist\expandafter{{\myauthor}}\thebibauthors
    \fi}

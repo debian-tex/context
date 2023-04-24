@@ -31,10 +31,10 @@
 
 % Actually we can do better now with lua hacks.
 
-\newcount\c_math_delimiter_nesting
+\newinteger\c_math_delimiter_nesting
 
-\permanent\protected\def\leftfakedelimiter {\advance\c_math_delimiter_nesting\minusone\gobbleoneargument}
-\permanent\protected\def\rightfakedelimiter{\advance\c_math_delimiter_nesting\plusone \gobbleoneargument}
+\permanent\protected\def\leftfakedelimiter {\advanceby\c_math_delimiter_nesting\minusone\gobbleoneargument}
+\permanent\protected\def\rightfakedelimiter{\advanceby\c_math_delimiter_nesting\plusone \gobbleoneargument}
 
 \permanent\protected\def\checkdelimiters#1%
   {\c_math_delimiter_nesting\zerocount
@@ -66,7 +66,7 @@
 % A new experiment:
 
 % Hm, we already have \definemathextensible so we need to preserve that one. We now
-% use \definemathdelimiter.
+% use \definemathdelimiter. This mechanism will probably disappear so don't use it!
 
 \installcorenamespace {mathdelimiter}
 
@@ -85,11 +85,12 @@
 
 \appendtoks
     \ifcstok{\mathdelimiterparameter\c!define}\v!yes
+        % we can intercept auto here
         \frozen\instance\setuevalue\currentmathdelimiter{\mathdelimiter[\currentmathdelimiter]}%
     \fi
 \to \everydefinemathdelimiter
 
-\permanent\tolerant\protected\def\mathdelimiter[#1]#*[#2]%
+\permanent\tolerant\protected\def\mathdelimiter[#1]#*[#2]% so not really used (for now)
   {\mathop
      {\edef\currentmathdelimiter{#1}%
       \iftok{#2}\emptytoks
@@ -118,7 +119,11 @@
         \mskip\p_rightoffset
       \fi}}
 
-\definemathdelimiter[integral][\c!symbol="222B]
+% \definemathdelimiter[integral][\c!symbol="222B]
+
+\permanent\protected\def\integral{\int\Umathadapttoright}
+
+\aliased\let\Umathadaptsize\Umathadapttoright
 
 % \setupmathdelimiter[integral][rightoffset=-3mu,exact=yes,factor=2]
 %
@@ -134,7 +139,7 @@
 % \ruledhbox{$\int                f\frac{1}{2}$}
 % \stoplines
 
-\permanent\protected\def\autointegral#1#2#3%
+\permanent\protected\def\autointegral#1#2#3% this one is obsolete now
   {\ifmmode
      \setbox\nextbox\mathstylehbox{#3}%
      \scratchdimen\ifdim\nextboxht>\nextboxdp\nextboxht\else\nextboxdp\fi

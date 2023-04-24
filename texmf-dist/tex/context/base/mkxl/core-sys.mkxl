@@ -90,7 +90,7 @@
 
 \permanent\protected\def\setjobfullname#1% #1 = default if not given
   {\doifelsenothing\jobfilename
-     {\let\jobfullname\empty}
+     {\lettonothing\jobfullname}
      {\doif\jobfilesuffix\c!tex{\edef\jobfullname{\jobfilename.#1}}}}
 
 %D There are a couple of system states avaiable:
@@ -129,9 +129,9 @@
       \scratchcounter\normaltime
       \processaction
         [#1]
-        [  \v!small=>\divide\scratchcounter 15, %  900,
-          \v!medium=>\divide\scratchcounter 30, % 1800,
-             \v!big=>\divide\scratchcounter 60, % 3600,
+        [  \v!small=>\divideby\scratchcounter 15, %  900,
+          \v!medium=>\divideby\scratchcounter 30, % 1800,
+             \v!big=>\divideby\scratchcounter 60, % 3600,
           \v!normal=>\scratchcounter\newrandomseed,
          \s!default=>\scratchcounter\newrandomseed,
          \s!unknown=>\scratchcounter#1]%
@@ -233,16 +233,32 @@
 %
 % \ignorestartstop[bagger]
 
+%D When looking at an application of \type {\beginsimplegroup} and \type I wondered
+%D about this one but it doesn't make much sense. One hould define highlights that
+%D have style and color, but on the other hand, we might want to combine a font
+%D style and some other treatment. The overhead of commalists (where we can use
+%D {\aftergrouped} for collecting stop tags) is neglectable but it makes no sense.
+%D Maybe we need a \type {command} or better (as commands can take arguments) a
+%D \type {setups} key, but no one ever asked so \unknown.
+
+% \processnextcommalist\typo_highlights_step ...
+%
+% list  : 10K single: 0.111 / 0.132 with command / 0.134 with setups
+% single: 10K single: 0.075 / 0.098 with command / 0.099 with setups
+
 \installcorenamespace{highlight}
 
 \installcommandhandler \??highlight {highlight} \??highlight % we could do with less
 
 \setuphighlight
   [\c!define=\v!yes]
+%  \c!command=,
+%  \c!setups=]
 
 \appendtoks
     \ifcstok{\highlightparameter\c!define}\v!yes
-        \frozen\instance\setuevalue\currenthighlight{\typo_highlights_indeed{\currenthighlight}}%
+        \frozen\instance\protected\edefcsname\currenthighlight\endcsname
+           {\typo_highlights_indeed{\currenthighlight}}%
     \fi
 \to \everydefinehighlight
 
@@ -253,6 +269,8 @@
      {\def\currenthighlight{#1}%
       \dostarttagged\t!highlight\currenthighlight
       \usehighlightstyleandcolor\c!style\c!color
+    % \usehighlightstyleandcolor\c!style\c!color
+    % \highlightparameter\c!command
       \dotaghighlight}
      {\dostoptagged}}
 
@@ -264,6 +282,8 @@
    \def\currenthighlight{#1}%
    \dostarttagged\t!highlight\currenthighlight
    \usehighlightstyleandcolor\c!style\c!color
+ % \usehighlightstyleandcolor\c!style\c!color
+ % \highlightparameter\c!command
    \dotaghighlight}
 
 \permanent\protected\def\stophighlight
@@ -272,13 +292,19 @@
 
 \aliased\let\directhighlight\typo_highlights_indeed
 
+%D Defining commands (rather old):
+
 \permanent\protected\def\defineexpandable
-  {\doifelsenextoptional
+  {\integerdef\c_syst_parameter_catcode\catcode\hashasciicode
+   \catcode\hashasciicode\parametercatcode%
+   \doifelsenextoptional
      {\syst_basics_define_yes\def}%
      {\syst_basics_define_nop\def}}
 
 \permanent\protected\def\define
-  {\doifelsenextoptional
+  {\integerdef\c_syst_parameter_catcode\catcode\hashasciicode
+   \catcode\hashasciicode\parametercatcode%
+   \doifelsenextoptional
      {\syst_basics_define_yes{\protected\def}}%
      {\syst_basics_define_nop{\protected\def}}}
 
@@ -297,13 +323,15 @@
      #1#3##1##2##3##4##5##6##7{#4}\or
      #1#3##1##2##3##4##5##6##7##8{#4}\or
      #1#3##1##2##3##4##5##6##7##8##9{#4}\else
-     #1#3{#4}\fi}
+     #1#3{#4}\fi
+   \catcode\hashasciicode\c_syst_parameter_catcode}
 
 \protected\def\syst_basics_define_nop#1#2#3%
   {\ifdefined#2%
      \showmessage\m!system4{\string#2}%
    \fi
-   #1#2{#3}}
+   #1#2{#3}%
+   \catcode\hashasciicode\c_syst_parameter_catcode}
 
 \aliased\let\redefine\define
 

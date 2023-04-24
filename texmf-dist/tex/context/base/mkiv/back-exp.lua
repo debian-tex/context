@@ -325,9 +325,9 @@ local styletemplate = [[
 
     local numbertoallign = {
         [0] = "justify", ["0"] = "justify", [variables.normal    ] = "justify",
-        [1] = "right",   ["1"] = "right",   [variables.flushright] = "right",
-        [2] = "center",  ["2"] = "center",  [variables.middle    ] = "center",
-        [3] = "left",    ["3"] = "left",    [variables.flushleft ] = "left",
+              "right",   ["1"] = "right",   [variables.flushright] = "right",
+              "center",  ["2"] = "center",  [variables.middle    ] = "center",
+              "left",    ["3"] = "left",    [variables.flushleft ] = "left",
     }
 
     function wrapups.allusedstyles(filename)
@@ -1640,7 +1640,7 @@ do
                             d.__i__ = n
                             data[n] = d
                         elseif content == " " or content == "" then
-                            if di.tg == "mspace" then
+                            if d.tg == "mspace" then
                                 -- we append or prepend a space to a preceding or following mtext
                                 local parent = di.__p__
                                 local index  = di.__i__ -- == i
@@ -3020,7 +3020,7 @@ local collectresults  do -- too many locals otherwise
     local getkern          = nuts.getkern
     local getwidth         = nuts.getwidth
 
-    local start_of_par     = nuts.start_of_par
+    local startofpar       = nuts.startofpar
 
     local nexthlist        = nuts.traversers.hlist
     local nextnode         = nuts.traversers.node
@@ -3390,7 +3390,7 @@ end
                     last = nil
                     currentparagraph = nil
                 end
-            elseif not paragraph and id == par_code and start_of_par(n) then
+            elseif not paragraph and id == par_code and startofpar(n) then
                 paragraph = getattr(n,a_taggedpar)
             elseif id == disc_code then
                 -- very unlikely because we stripped them
@@ -3438,8 +3438,8 @@ end
         for n, subtype in nexthlist, head do
             if subtype == linelist_code then
                 setattr(n,a_textblock,noftextblocks)
-            elseif subtype == glue_code or subtype == kern_code then -- no need to set fontkerns
-                setattr(n,a_textblock,0)
+--             elseif subtype == glue_code or subtype == kern_code then -- weird, no list
+--                 setattr(n,a_textblock,0)
             end
         end
         return false

@@ -33,8 +33,6 @@ texconfig.stack_size      =   10000
 texconfig.function_size   =   32768
 texconfig.properties_size =   10000
 texconfig.fix_mem_init    = 1000000
-texconfig.level_max       =     500
-texconfig.level_chr       =      46 -- period
 
 -- registering bytecode chunks
 
@@ -88,28 +86,6 @@ function lua.registercode(filename,options)
         elseif environment.initex then
             texio.write_nl(format("\nerror loading file: %s (aborting)",filename))
             os.exit()
-        end
-    end
-end
-
-local finalizers = { }
-
-function lua.registerfinalizer(f,comment)
-    comment = comment or "unknown"
-    if type(f) == "function" then
-        finalizers[#finalizers+1] = { action = f, comment = comment }
-    else
-        print(format("\nfatal error: invalid finalizer, action: %s\n",comment))
-        os.exit()
-    end
-end
-
-function lua.finalize(logger)
-    for i=1,#finalizers do
-        local finalizer = finalizers[i]
-        finalizer.action()
-        if logger then
-            logger("finalize action: %s",finalizer.comment)
         end
     end
 end
@@ -169,6 +145,38 @@ environment.luatexfunctionality = LUATEXFUNCTIONALITY
 environment.jitsupported        = JITSUPPORTED
 environment.initex              = INITEXMODE
 environment.initexmode          = INITEXMODE
+
+if INITEXMODE then
+
+    local finalizers = { }
+
+    function lua.registerinitexfinalizer(f,comment)
+        comment = comment or "unknown"
+        if type(f) == "function" then
+            finalizers[#finalizers+1] = { action = f, comment = comment }
+        else
+            print(format("\nfatal error: invalid finalizer, action: %s\n",comment))
+            os.exit()
+        end
+    end
+
+    function lua.finalizeinitex(logger)
+        for i=1,#finalizers do
+            local finalizer = finalizers[i]
+            finalizer.action()
+            if logger then
+                logger("finalize action: %s",finalizer.comment)
+            end
+        end
+    end
+
+else
+
+    function lua.registerinitexfinalizer() end
+    function lua.finalizeinitex         () end
+
+end
+
 
 if not environment.luafilechunk then
 

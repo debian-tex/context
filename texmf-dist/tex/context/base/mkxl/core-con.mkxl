@@ -19,8 +19,8 @@
 
 \unprotect
 
-\ifdefined\currentlanguage \else \let\currentlanguage\empty              \fi
-\ifdefined\labeltext       \else \let\labeltext      \firstofoneargument \fi
+\ifdefined\currentlanguage \else \lettonothing\currentlanguage     \fi
+\ifdefined\labeltext       \else \let\labeltext\firstofoneargument \fi
 
 %D This module deals with all kind of conversions from numbers and dates. I
 %D considered splitting this module in a support one and a core one, but to keep
@@ -86,9 +86,14 @@
 \permanent\def\Alphabeticnumerals#1{\clf_Alphabetic\numexpr#1\relax{}}
 
 \permanent\def\thainumerals      #1{\clf_alphabetic\numexpr#1\relax{thai}}
-\permanent\def\devanagarinumerals#1{\clf_alphabetic\numexpr#1\relax{devanagari}}
-\permanent\def\gurmurkhinumerals #1{\clf_alphabetic\numexpr#1\relax{gurmurkhi}}
-\permanent\def\gujaratinumerals  #1{\clf_alphabetic\numexpr#1\relax{gujarati}}
+\permanent\def\devanagarinumerals#1{\clf_decimals  \numexpr#1\relax{devanagari}}
+\permanent\def\malayalamnumerals #1{\clf_decimals  \numexpr#1\relax{malayalam}}
+\permanent\def\tamilnumerals     #1{\clf_decimals  \numexpr#1\relax{tamil}}
+\permanent\def\kannadanumerals   #1{\clf_decimals  \numexpr#1\relax{kannada}}
+\permanent\def\telugunumerals    #1{\clf_decimals  \numexpr#1\relax{telugu}}
+\permanent\def\bengalinumerals   #1{\clf_decimals  \numexpr#1\relax{bengali}}
+\permanent\def\gujaratinumerals  #1{\clf_decimals  \numexpr#1\relax{gujarati}}
+\permanent\def\gurmurkhinumerals #1{\clf_decimals  \numexpr#1\relax{gurmurkhi}}
 \permanent\def\tibetannumerals   #1{\clf_alphabetic\numexpr#1\relax{tibetan}}
 \permanent\def\greeknumerals     #1{\clf_alphabetic\numexpr#1\relax{greek}}
 \permanent\def\Greeknumerals     #1{\clf_Alphabetic\numexpr#1\relax{greek}}
@@ -96,6 +101,9 @@
 \permanent\def\persiannumerals   #1{\clf_alphabetic\numexpr#1\relax{persian}}
 \permanent\def\arabicdecimals    #1{\clf_decimals  \numexpr#1\relax{arabic}}
 \permanent\def\persiandecimals   #1{\clf_decimals  \numexpr#1\relax{persian}}
+
+\permanent\def\mathgreeknumerals #1{\im{\clf_alphabetic\numexpr#1\relax{greek}}}
+\permanent\def\mathGreeknumerals #1{\im{\clf_Alphabetic\numexpr#1\relax{greek}}}
 
 \aliased  \let\arabicexnumerals     \persiannumerals
 
@@ -180,12 +188,7 @@
 %D
 %D The last part of this module is dedicated to converting dates. Because we want to
 %D use as meaningful commands as possible, and because \TEX\ already uses up some of
-%D those, we save the original meanings.
-
-% \savenormalmeaning\time
-% \savenormalmeaning\year
-% \savenormalmeaning\month
-% \savenormalmeaning\day
+%D those, we save the original meanings. The above are defined already.
 
 %D \macros
 %D   {month,MONTH}
@@ -418,8 +421,8 @@
 
 \installcorenamespace{date}
 
-\permanent\tolerant\protected\def\definedate[#1]#*[#2]%
-  {\ifarguments\else\setvalue{\??date#1}{#2}\fi}
+\permanent\tolerant\protected\def\definedate[#1]#,[#2]%
+  {\ifarguments\else\defcsname\??date#1\endcsname{#2}\fi}
 
 \def\syst_converters_check_date_specification#1%
   {\ifcsname\??date#1\endcsname
@@ -452,7 +455,7 @@
       \iftok{\directdummyparameter\c!m}\emptytoks\else\normalmonth\number\directdummyparameter\c!m\relax\fi
       \iftok{\directdummyparameter\c!y}\emptytoks\else\normalyear \number\directdummyparameter\c!y\relax\fi}}
 
-\permanent\tolerant\protected\def\date[#1]#*[#2]% sets the date !
+\permanent\tolerant\protected\def\date[#1]#,[#2]% sets the date !
   {\dontleavehmode
    \begingroup
    \setdate[#1]% sets the date !
@@ -552,7 +555,7 @@
 \installcorenamespace {conversionwords}
 
 %D It might be better to move more to \LUA\ as we also need conversion there and
-%D doublicating logic doesn't make things cleaner. It means that all conversions
+%D duplicating logic doesn't make things cleaner. It means that all conversions
 %D will get a language argument too. However, we permit definitions at the \TEX\ end
 %D so we have to provide some hybrid method.
 
@@ -568,8 +571,8 @@
 \def\syst_converters_define_conversion_indeed#1#2#3%
   {\doifelseinstring{,}{\detokenize{#3}}
      {\clf_defineconversion{#2}{\detokenize{#3}}% a set e.g. of symbols
-      \setgvalue{\??conversion#1}{\syst_converters_checked_conversion{#2}}}
-     {\setgvalue{\??conversion#1}{#3}}}
+      \gdefcsname\??conversion#1\endcsname{\syst_converters_checked_conversion{#2}}}
+     {\gdefcsname\??conversion#1\endcsname{#3}}}
 
 \def\syst_converters_checked_conversion#1#2%
   {\clf_checkedconversion{#1}\numexpr#2\relax}
@@ -588,9 +591,9 @@
 \permanent\protected\def\uconvertnumber % unexpandable
   {\convertnumber}
 
-\setvalue{\??conversionarguments1}#1{\csname\??conversion\currentlanguage#1\endcsname}
-\setvalue{\??conversionarguments2}#1{\csname\??conversion                #1\endcsname}
-\letvalue{\??conversionarguments3}\syst_converters_checked_conversion
+\defcsname\??conversionarguments1\endcsname#1{\csname\??conversion\currentlanguage#1\endcsname}
+\defcsname\??conversionarguments2\endcsname#1{\csname\??conversion                #1\endcsname}
+\letcsname\??conversionarguments3\endcsname  \syst_converters_checked_conversion
 
 % we can also add a \ctxcommand{doifelseconversion("#1","\currentlanguage")} to check
 % if we have definitions that are not matched at the lua end .. eventually we might do
@@ -617,11 +620,11 @@
 
 %D Handy.
 
-\setvalue{\??conversionwords\v!one  }{1}
-\setvalue{\??conversionwords\v!two  }{2}
-\setvalue{\??conversionwords\v!three}{3}
-\setvalue{\??conversionwords\v!four }{4}
-\setvalue{\??conversionwords\v!five }{5}
+\defcsname\??conversionwords\v!one  \endcsname{1}
+\defcsname\??conversionwords\v!two  \endcsname{2}
+\defcsname\??conversionwords\v!three\endcsname{3}
+\defcsname\??conversionwords\v!four \endcsname{4}
+\defcsname\??conversionwords\v!five \endcsname{5}
 
 %permanent\def\wordtonumber#1#2{\ifcsname\??conversionwords#1\endcsname\csname\??conversionwords#1\endcsname\else#2\fi}
 \permanent\def\wordtonumber#1#2{\ifcsname\??conversionwords#1\endcsname\lastnamedcs\else#2\fi}
@@ -711,6 +714,9 @@
 \defineconversion [\v!greek]             [\greeknumerals]
 \defineconversion [\v!Greek]             [\Greeknumerals]
 
+\defineconversion [\s!math:\v!greek]     [\mathgreeknumerals]
+\defineconversion [\s!math:\v!Greek]     [\mathGreeknumerals]
+
 \defineconversion [g]                    [\greeknumerals]
 \defineconversion [G]                    [\Greeknumerals]
 
@@ -729,6 +735,11 @@
 
 \defineconversion [thainumerals]         [\thainumerals]
 \defineconversion [devanagarinumerals]   [\devanagarinumerals]
+\defineconversion [malayalamnumerals]    [\malayalamnumerals]
+\defineconversion [tamilnumerals]        [\tamilnumerals]
+\defineconversion [kannadanumerals]      [\kannadanumerals]
+\defineconversion [telugunumerals]       [\telugunumerals]
+\defineconversion [bengalinumerals]      [\bengalinumerals]
 \defineconversion [gurmurkhinumerals]    [\gurmurkhinumerals]
 \defineconversion [gujaratinumerals]     [\gujaratinumerals]
 \defineconversion [tibetannumerals]      [\tibetannumerals]
@@ -739,6 +750,9 @@
 \defineconversion [arabicexnumerals]     [\arabicexnumerals]
 \defineconversion [arabicdecimals]       [\arabicdecimals]
 \defineconversion [persiandecimals]      [\persiandecimals]
+
+\defineconversion [mathgreeknumerals]    [\mathgreeknumerals]
+\defineconversion [mathGreeknumerals]    [\mathGreeknumerals]
 
 \defineconversion [koreannumerals]       [\koreannumerals]
 \defineconversion [koreanparennumerals]  [\koreanparenthesisnumerals] % for old times sake (for a while)
@@ -968,9 +982,9 @@
 
 %D Taken from x-asciimath (see digits-001.tex for an example):
 
-\mutable\let\spaceddigitsmethod   \empty % alternative methods   : 1 default, 2 and 3 only when > 4
-\mutable\let\spaceddigitssymbol   \empty % extra splitter symbol : {,}
-\mutable\let\spaceddigitsseparator\empty % separator symbol      : {\Uchar{"2008}}
+\mutable\lettonothing\spaceddigitsmethod    % alternative methods   : 1 default, 2 and 3 only when > 4
+\mutable\lettonothing\spaceddigitssymbol    % extra splitter symbol : {,}
+\mutable\lettonothing\spaceddigitsseparator % separator symbol      : {\Uchar{"2008}}
 
 \permanent\protected\def\spaceddigits#1%
   {\clf_spaceddigits

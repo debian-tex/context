@@ -7,15 +7,11 @@ if not modules then modules = { } end modules ['node-ref'] = {
     license   = "see context related readme files"
 }
 
--- We supported pdf right from the start and in mkii this has resulted in
--- extensive control over the links. Nowadays pdftex provides a lot more
--- control over margins but as mkii supports multiple backends we stuck to
--- our own mechanisms. In mkiv again we implement our own handling. Eventually
--- we will even disable the pdf primitives.
-
--- helper, will end up in luatex
-
--- is grouplevel still used?
+-- We supported pdf right from the start and in mkii this has resulted in extensive
+-- control over the links. Nowadays pdftex provides a lot more control over margins
+-- but as mkii supports multiple backends we stuck to our own mechanisms. In mkiv
+-- again we implement our own handling. Eventually we will even disable the pdf
+-- primitives.
 
 local tonumber = tonumber
 local concat = table.concat
@@ -46,8 +42,21 @@ local report_reference     = logs.reporter("backend","references")
 local report_destination   = logs.reporter("backend","destinations")
 local report_area          = logs.reporter("backend","areas")
 
+local texiscount           = tex.iscount
 local texsetcount          = tex.setcount
 ----- texsetattribute      = tex.setattribute
+
+local injectreference      = backends.nodeinjections.reference
+local injectdestination    = backends.nodeinjections.destination
+local prerollreference     = backends.codeinjections.prerollreference
+
+updaters.register("backends.injections.latebindings",function()
+    injectreference   = backends.nodeinjections.reference
+    injectdestination = backends.nodeinjections.destination
+    prerollreference  = backends.codeinjections.prerollreference
+end)
+
+local c_lastreferenceattribute = texiscount("lastreferenceattribute")
 
 local nuts                 = nodes.nuts
 local nodepool             = nuts.pool
@@ -80,7 +89,8 @@ local getdimensions        = nuts.dimensions
 local getrangedimensions   = nuts.rangedimensions
 local traverse             = nuts.traverse
 local find_node_tail       = nuts.tail
-local start_of_par         = nuts.start_of_par
+
+local startofpar           = nuts.startofpar
 
 local nodecodes            = nodes.nodecodes
 local gluecodes            = nodes.gluecodes
@@ -99,7 +109,9 @@ local dir_code             = nodecodes.dir
 local par_code             = nodecodes.par
 
 local leftskip_code        = gluecodes.leftskip
+local lefthang_code        = gluecodes.lefthangskip
 local rightskip_code       = gluecodes.rightskip
+local righthang_code       = gluecodes.righthangskip
 local parfillleftskip_code = gluecodes.parfillleftskip
 local parfillskip_code     = gluecodes.parfillskip
 
@@ -109,7 +121,7 @@ local new_rule             = nodepool.rule
 local new_kern             = nodepool.kern
 local new_hlist            = nodepool.hlist
 
-local flush_node           = nuts.flush
+local flushnode            = nuts.flush
 
 local tosequence           = nodes.tosequence
 
@@ -147,7 +159,7 @@ local inject_areas do
         local v = vpack_list(start) -- use helper but happens seldom anyway so ...
         local w, h, d = getwhd(v)
         setlist(v) -- not needed
-        flush_node(v)
+        flushnode(v)
         if temp then
             setnext(stop,temp)
         end
@@ -237,7 +249,7 @@ local inject_areas do
         end
     end
 
-    -- Setting these once and not passign them each nested call is faster and this injector is
+    -- Setting these once and not passing them each nested call is faster and this injector is
     -- actually one of the more costly calls in a run (when we have lots of references to
     -- check) and it's also a bti less code.
 
@@ -304,7 +316,7 @@ local inject_areas do
     local function inject(head,skip,parent,pardir,txtdir)
         local first, last, firstdir, reference
         local current = head
-        while current do
+        while current do -- tod: check with loop
             local id = getid(current)
             if id == hlist_code or id == vlist_code then
                 local r = getattr(current,attribute)
@@ -352,15 +364,16 @@ local inject_areas do
                 txtdir = not pop and direction -- we might need a stack
                 goto NEXT
             elseif id == par_code then
-                if start_of_par(current) then
+                if startofpar(current) then
                     pardir = getdirection(current)
                 end
                 goto NEXT
             elseif id == glue_code then
+                -- local skiptype = ... 0=regular 1=left 2=right
                 local subtype = getsubtype(current)
-                if subtype == leftskip_code or subtype == parfillleftskip_code then
+                if subtype == leftskip_code or subtype == lefthang_code or subtype == parfillleftskip_code then
                     goto NEXT
-                elseif subtype == rightskip_code or subtype == parfillskip_code then
+                elseif subtype == rightskip_code or subtype == righthang_code or subtype == parfillskip_code then
                     if reference and (done[reference] or 0) == 0 then
                         head, current = inject_range(head,first,last,reference,parent,pardir,firstdir)
                         reference = nil
@@ -393,8 +406,8 @@ local inject_areas do
 --                         print("!!!!!!!!")
                     end
                 else
-                    -- todo: safeguard when we have a glyph or dics or ... so we might as well
-                    -- then scan for all possibel content nodes
+                    -- todo: safeguard when we have a glyph or disc or ... so we might as well
+                    -- then scan for all possible content nodes
                     reference = r
                     first     = current
                     last      = current
@@ -447,6 +460,7 @@ local colorize, justadd do
                     str   = str .. " "
                     shift = (shift or 2) * exheight
                 end
+                -- todo: virtual rule, zero width hbox, offsets
                 local text = typesetters.tohpack(str,infofont)
                 local rule = new_rule(emwidth/5,4*exheight,3*exheight)
                 setshift(text,shift)
@@ -484,12 +498,12 @@ local colorize, justadd do
             height = 65536/2
             depth  = height
         end
+        -- todo: use virtual rules
         local rule = setcoloring(new_rule(width,height,depth),1,u_color,u_transparency) -- gray color model
         if width < 0 then
             local kern = new_kern(width)
             setwidth(rule,-width)
-            setnext(kern,rule)
-            setprev(rule,kern)
+            setlink(kern,rule)
             return kern
         elseif sr and sr ~= "" then
             local text = addstring(what,sr,shift)
@@ -519,6 +533,8 @@ local nofreferences = 0
 
 do
 
+    -- here we can't use attributes.registervalue etc (afaiks)
+
     local stack      = { }
     local done       = { }
     local attribute  = attributes.private('reference')
@@ -538,7 +554,7 @@ do
         -- so some part of the backend work is already done here
         stack[topofstack] = { r, h or false, d or false, codeinjections.prerollreference(r) }
      -- texsetattribute(attribute,topofstack) -- todo -> at tex end
-        texsetcount("lastreferenceattribute",topofstack)
+        texsetcount(c_lastreferenceattribute,topofstack)
     end
 
     function references.get(n) -- not public so functionality can change
@@ -563,7 +579,7 @@ do
                 if depth  < dp then depth  = dp end
             end
          -- logs.report("temp","used: ht=%p dp=%p",height,depth)
-            local annot = nodeinjections.reference(width,height,depth,set,resolved.mesh)
+            local annot = injectreference(reference,width,height,depth,set,resolved.mesh)
             if annot then
                 annot = tonut(annot) -- todo
                 nofreferences = nofreferences + 1
@@ -658,6 +674,8 @@ local nofdestinations = 0
 
 do
 
+    -- here we can use attributes.registervalue etc
+
     local stack      = { }
     local done       = { }
     local attribute  = attributes.private('destination')
@@ -742,13 +760,13 @@ do
                 end
             end
             nofdestinations = nofdestinations + 1
-            local annot = nodeinjections.destination(width,height,depth,name,view)
+            local annot = injectdestination(width,height,depth,name,view)
             if annot then
                 annot = tonut(annot) -- obsolete soon
                 if result then
                     setlink(current,annot)
                 else
-                    result  = annot
+                    result = annot
                 end
                 current = find_node_tail(annot)
             end

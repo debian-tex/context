@@ -39,32 +39,82 @@
 \installsimplecommandhandler \??blackrules {blackrules} \??blackrules
 
 \permanent\protected\def\blackrule
-  {\hpack\bgroup
+  {% this was \hpack\bgroup\dontleavehmode but we want leader support
+   \begingroup
    \doifelsenextoptionalcs\pack_black_rule_pickup\pack_black_rule_indeed}
 
 \def\pack_black_rule_pickup[#1]%
   {\setupcurrentblackrules[#1]%
    \pack_black_rule_indeed}
 
+% \def\pack_black_rule_indeed
+%   {\edef\p_width {\directblackrulesparameter\c!width }%
+%    \edef\p_height{\directblackrulesparameter\c!height}%
+%    \edef\p_depth {\directblackrulesparameter\c!depth }%
+%    \ifx\p_height\v!max
+%      \setstrut
+%    \orelse\ifx\p_depth\v!max
+%      \setstrut
+%    \fi
+%    \useblackrulesstyleandcolor\c!style\c!color
+%    \ifcsname\??blackruletype\directblackrulesparameter\c!type\endcsname
+%      \lastnamedcs
+%    \else
+%      \vrule
+%    \fi
+%    \ifx\p_width \v!max\s!width \emwidth\orelse\ifempty\p_width \else\s!width \p_width \fi
+%    \ifx\p_height\v!max\s!height\strutht\orelse\ifempty\p_height\else\s!height\p_height\fi
+%    \ifx\p_depth \v!max\s!depth \strutdp\orelse\ifempty\p_depth \else\s!depth \p_depth \fi
+%    \egroup}
+
 \def\pack_black_rule_indeed
-  {\edef\p_width {\directblackrulesparameter\c!width }%
-   \edef\p_height{\directblackrulesparameter\c!height}%
-   \edef\p_depth {\directblackrulesparameter\c!depth }%
+  {\edef\p_width  {\directblackrulesparameter\c!width}%
+   \edef\p_height {\directblackrulesparameter\c!height}%
+   \edef\p_depth  {\directblackrulesparameter\c!depth}%
+   \edef\p_stretch{\directblackrulesparameter\c!stretch}%
+   \edef\p_shrink {\directblackrulesparameter\c!shrink}%
    \ifx\p_height\v!max
      \setstrut
+     \let\p_height\strutdp
    \orelse\ifx\p_depth\v!max
      \setstrut
    \fi
+ % \ifx\p_height\v!max
+ %   \let\p_height\strutdp
+ % \fi
+   \ifx\p_depth\v!max
+     \let\p_depth\strutdp
+   \fi
+   \ifx\p_width\v!max
+     \let\p_width\emwidth
+   \fi
    \useblackrulesstyleandcolor\c!style\c!color
+   \ifempty\p_stretch
+     \ifempty\p_shrink
+        \donefalse
+     \else
+        \donetrue
+        \leaders
+     \fi
+   \else
+      \donetrue
+      \leaders
+   \fi
    \ifcsname\??blackruletype\directblackrulesparameter\c!type\endcsname
      \lastnamedcs
    \else
      \vrule
    \fi
-   \ifx\p_width \v!max\s!width \emwidth\orelse\ifempty\p_width \else\s!width \p_width \fi
-   \ifx\p_height\v!max\s!height\strutht\orelse\ifempty\p_height\else\s!height\p_height\fi
-   \ifx\p_depth \v!max\s!depth \strutdp\orelse\ifempty\p_depth \else\s!depth \p_depth \fi
-   \egroup}
+   \ifempty\p_height\else\s!height\p_height\fi
+   \ifempty\p_depth\else\s!depth\p_depth\fi
+   \ifdone
+     \hskip\ifempty\p_width\zeropoint\else\p_width\fi
+     \ifempty\p_stretch\else\s!plus\p_stretch\fi
+     \ifempty\p_shrink\else\s!minus\p_shrink\fi
+   \else
+     \ifempty\p_width\else\s!width\p_width\fi
+   \fi
+   \endgroup}
 
 \setupblackrules
   [\c!width=\emwidth,
@@ -99,7 +149,7 @@
 %D would probably have taken more tokens.
 
 \permanent\tolerant\protected\def\blackrules[#1]% probably never used
-  {\hpack\bgroup
+  {\hpack\bgroup % we keep this because breaking into lines breaks compatibility
    \ifarguments\or\setupcurrentblackrules[#1]\fi
    \scratchwidth   \directblackrulesparameter\c!width
    \scratchheight  \directblackrulesparameter\c!height
@@ -131,20 +181,20 @@
    \s!depth \scratchdepth
    \relax
    \ifzeropt\scratchdistance\else
-     \hskip\scratchdistance
+     \kern\scratchdistance % hskip
    \fi}
 
 \installcorenamespace{blackruletype}
 
-\setvalue{\??blackruletype mp}%
+\defcsname\??blackruletype mp\endcsname
   {\frule
      type {mp}%
      data {\includeMPgraphic{\directblackrulesparameter\c!mp}}
      line \dimexpr\directblackrulesparameter\c!rulethickness\relax
    }
 
-\letvalue{\??blackruletype\s!no }\novrule
-%letvalue{\??blackruletype\s!yes}\vrule
+\letcsname\??blackruletype\s!no \endcsname\novrule
+%letcsname\??blackruletype\s!yes\endcsname\vrule
 
 \setupblackrules
   [\c!n=3,
@@ -189,7 +239,7 @@
         \s!height\linewidth
         \s!depth \zeropoint}}
 
-% \let\dovlwdhtdp\pack_rule_vl_indeed % used elsewhere .. not any more
+\let\dovlwdhtdp\pack_rule_vl_indeed % used elsewhere .. in font manual
 
 %D \macros
 %D   {hairline, thinrule, thinrules, setupthinrules}
@@ -257,10 +307,10 @@
    \c!background=,
    \c!rulethickness=\linewidth]
 
-\letvalue{\??thinrulealternatives\v!a   }\zerocount
-\letvalue{\??thinrulealternatives\v!b   }\plusone
-\letvalue{\??thinrulealternatives\v!c   }\plustwo
-\letvalue{\??thinrulealternatives\v!none}\zerocount
+\letcsname\??thinrulealternatives\v!a   \endcsname\zerocount
+\letcsname\??thinrulealternatives\v!b   \endcsname\plusone
+\letcsname\??thinrulealternatives\v!c   \endcsname\plustwo
+\letcsname\??thinrulealternatives\v!none\endcsname\zerocount
 
 \newconstant\c_pack_thinrules_type
 
@@ -562,7 +612,7 @@
 %D
 %D \typebuffer \start \getbuffer \stop
 
-\setvalue{\??textrulealternatives\v!top}#1%
+\defcsname\??textrulealternatives\v!top\endcsname#1%
   {\page[\v!preference] % interferes
    \directtextrulesparameter\c!before\relax
    \blank[\v!samepage,\v!nowhite]%
@@ -571,14 +621,14 @@
    \directtextrulesparameter\c!inbetween\relax
    \endgraf}
 
-\setvalue{\??textrulealternatives\v!bottom}#1%
+\defcsname\??textrulealternatives\v!bottom\endcsname#1%
   {\blank[\v!samepage,\v!nowhite]%
    \pack_textrule_following{#1}%
    \blank[\v!samepage,\v!nowhite]%
    \directtextrulesparameter\c!after\relax
    \page[\v!preference]}
 
-\setvalue{\??textrulealternatives\v!middle}#1%
+\defcsname\??textrulealternatives\v!middle\endcsname#1%
   {\blank[\v!samepage,\v!nowhite]%
    \directtextrulesparameter\c!inbetween\relax
    \pack_textrule_following{#1}%
@@ -598,7 +648,7 @@
            {\llap
               {\usetextrulesstyleandcolor\c!style\c!color
                #1%
-               \hskip\leftmargindistance}}
+               \kern\leftmargindistance}} % hskip
            {\color[\directtextrulesparameter\c!rulecolor]
               {\vrule
                  \s!height\scratchheight
@@ -697,6 +747,8 @@
 %D
 %D \showsetup{fillinrules}
 %D \showsetup{setupfillinrules}
+%D
+%D I NEED TO UPGRADE THIS!
 
 \installcorenamespace{fillinrules}
 
@@ -742,7 +794,7 @@
        \strut
        #2%
        \hfill\directfillinrulesparameter\c!separator
-       \hskip\scratchdistance
+       \kern\scratchdistance % hskip
      \egroup
    \fi
    \setupwhitespace[\v!big]%
@@ -831,12 +883,13 @@
        \c!width=\scratchwidth,
        \c!height=\scratchheight,
        \c!depth=\scratchheight]}%
-   \frozen\advance\rightskip \directfillinlinesparameter\c!margin\relax
+   \frozen\advanceby\rightskip \directfillinlinesparameter\c!margin\relax
    \frozen\parfillskip\zeropoint\relax
    \endgroup}
 
 \permanent\tolerant\protected\def\fillinline[#1]%
-  {\registerparwrapper
+  {\dontleavehmode
+   \registerparwrapper
      {fillinline}%
      {\pack_fillinline_before{#1}}%
      {\pack_fillinline_after {#1}%

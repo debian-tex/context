@@ -39,6 +39,8 @@ local sharedprivates = setmetatableindex(function(t,k)
     return v
 end)
 
+fonts.helpers.sharedprivates = sharedprivates
+
 function helpers.addprivate(tfmdata,name,characterdata)
     local properties = tfmdata.properties
     local characters = tfmdata.characters
@@ -79,6 +81,22 @@ end
 
 function helpers.newprivateslot(name)
     return sharedprivates[name]
+end
+
+function helpers.isprivate(unicode)
+    if unicode < 0xD7FF or (unicode > 0xDFFF and unicode <= 0xFFFF) then
+        return false
+    elseif unicode >= 0x00E000 and unicode <= 0x00F8FF then
+        return true
+    elseif unicode >= 0x0F0000 and unicode <= 0x0FFFFF then
+        return true
+    elseif unicode >= 0x100000 and unicode <= 0x10FFFF then
+        return true
+    elseif unicode >= 0x00D800 and unicode <= 0x00DFFF then
+        return true
+    else
+        return false
+    end
 end
 
 do

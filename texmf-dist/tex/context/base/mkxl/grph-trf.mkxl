@@ -26,15 +26,28 @@
 
 \registerctxluafile{grph-trf}{autosuffix}
 
+% See below
+
+\newdimension\d_grph_rotate_x_size
+\newdimension\d_grph_rotate_y_size
+\newdimension\d_grph_rotate_x_offset
+\newdimension\d_grph_rotate_y_offset
+\newdimension\d_grph_rotate_x_position
+\newdimension\d_grph_rotate_y_position
+
+\newdimension\d_grph_rotate_new_width
+\newdimension\d_grph_rotate_new_height
+\newdimension\d_grph_rotate_new_depth
+
 % local:
 
-\newdimen\d_grph_scale_x_size
-\newdimen\d_grph_scale_y_size
-\newdimen\d_grph_scale_x_offset
-\newdimen\d_grph_scale_y_offset
+\newdimension\d_grph_scale_x_size
+\newdimension\d_grph_scale_y_size
+\newdimension\d_grph_scale_x_offset
+\newdimension\d_grph_scale_y_offset
 
-\newdimen\d_grph_scale_h_size
-\newdimen\d_grph_scale_v_size
+\newdimension\d_grph_scale_h_size
+\newdimension\d_grph_scale_v_size
 
 \newconditional\c_grph_scale_done
 \newconditional\c_grph_scale_scaling_done
@@ -42,28 +55,28 @@
 
 \newconditional\c_grph_scale_swap_factor
 
-\newdimen\d_grph_scale_wd
-\newdimen\d_grph_scale_ht
-\newdimen\d_grph_scale_dp
+\newdimension\d_grph_scale_wd
+\newdimension\d_grph_scale_ht
+\newdimension\d_grph_scale_dp
 
 % global
 
-\newdimen\d_grph_scale_used_x_size
-\newdimen\d_grph_scale_used_y_size
+\newdimension\d_grph_scale_used_x_size
+\newdimension\d_grph_scale_used_y_size
 
-\newcount\c_grph_scale_used_x_scale
-\newcount\c_grph_scale_used_y_scale
+\newinteger\c_grph_scale_used_x_scale
+\newinteger\c_grph_scale_used_y_scale
 
-\let     \m_grph_scale_used_x_scale\!!plusone
-\let     \m_grph_scale_used_y_scale\!!plusone
+\let\m_grph_scale_used_x_scale\!!plusone
+\let\m_grph_scale_used_y_scale\!!plusone
 
-\newdimen\d_grph_scale_outer_v_size % we cannot manipulate any global vsize !
+\newdimension\d_grph_scale_outer_v_size % we cannot manipulate any global vsize !
 
 % scratch:
 
-\let\m_grph_scale_temp  \empty
-\let\m_grph_scale_temp_x\empty
-\let\m_grph_scale_temp_y\empty
+\lettonothing\m_grph_scale_temp
+\lettonothing\m_grph_scale_temp_x
+\lettonothing\m_grph_scale_temp_y
 
 % public:
 
@@ -104,10 +117,10 @@
   {\bgroup
    % this is quite common so we might make this a helper
    \ifarguments
-     \let\currentscale\empty
+     \lettonothing\currentscale
    \or
      \ifhastok={#1}%
-       \let\currentscale\empty
+       \lettonothing\currentscale
        \setupcurrentscale[#1]%
      \else
        \edef\currentscale{#1}%
@@ -117,7 +130,7 @@
      \setupcurrentscale[#2]%
    \fi
    %
-   \dowithnextboxcs\grph_scale_finish\hbox}
+   \dowithnextboxcs\grph_scale_finish\naturalhbox} % intercept direction
 
 \def\grph_scale_finish
   {% todo: p_scale_
@@ -558,7 +571,7 @@
   {\hbox}
 
 \def\grph_scale_fast_yes#1%
-  {\edef\finalscaleboxxscale{\withoutpt\the\dimexpr#1\onepoint/1000\relax}% brrr
+  {\edef\finalscaleboxxscale{\toscaled\dimexpr#1\onepoint/1000\relax}% brrr
    \let\finalscaleboxyscale\finalscaleboxxscale
    \dowithnextboxcs\grph_scale_fast_finish\hbox} % container ?
 
@@ -645,11 +658,11 @@
      \scratchheight\dimexpr\ht\nextbox/\clippingparameter\c!ny\relax
      \scratchyoffset\dimexpr-\clippingparameter\c!y\scratchheight-\clippingparameter\c!sy\scratchheight+\scratchheight\relax
      \scratchheight\clippingparameter\c!sy\scratchheight
-     \advance\scratchyoffset \ht\nextbox
+     \advanceby\scratchyoffset \ht\nextbox
    \fi
    \setbox\nextbox\naturalhpack
-     {\advance\scratchxoffset -\clippingparameter\c!leftoffset  \relax
-      \advance\scratchyoffset -\clippingparameter\c!bottomoffset\relax
+     {\advanceby\scratchxoffset -\clippingparameter\c!leftoffset  \relax
+      \advanceby\scratchyoffset -\clippingparameter\c!bottomoffset\relax
       \hskip-\scratchxoffset
       \lower\scratchyoffset
       \box\nextbox}%
@@ -657,8 +670,8 @@
    \ht\nextbox\zeropoint
    \dp\nextbox\zeropoint
    \setbox\nextbox\naturalhpack
-     {\advance\scratchwidth \dimexpr\clippingparameter\c!leftoffset  +\clippingparameter\c!rightoffset\relax
-      \advance\scratchheight\dimexpr\clippingparameter\c!bottomoffset+\clippingparameter\c!topoffset  \relax
+     {\advanceby\scratchwidth \dimexpr\clippingparameter\c!leftoffset  +\clippingparameter\c!rightoffset\relax
+      \advanceby\scratchheight\dimexpr\clippingparameter\c!bottomoffset+\clippingparameter\c!topoffset  \relax
       \dostartclipping{\clippingparameter\c!mp}\scratchwidth\scratchheight
         \box\nextbox
       \dostopclipping}%
@@ -758,28 +771,28 @@
 %D register and these are actually kind of constants not used in further
 %D calculations):
 
-\mutable\dimendef\d_grph_rotate_x_size    \zeropoint
-\mutable\dimendef\d_grph_rotate_y_size    \zeropoint
-\mutable\dimendef\d_grph_rotate_x_offset  \zeropoint
-\mutable\dimendef\d_grph_rotate_y_offset  \zeropoint
-\mutable\dimendef\d_grph_rotate_x_position\zeropoint
-\mutable\dimendef\d_grph_rotate_y_position\zeropoint
-
-\mutable\dimendef\d_grph_rotate_new_width \zeropoint
-\mutable\dimendef\d_grph_rotate_new_height\zeropoint
-\mutable\dimendef\d_grph_rotate_new_depth \zeropoint
+% mutable\dimendef\d_grph_rotate_x_size    \zeropoint
+% mutable\dimendef\d_grph_rotate_y_size    \zeropoint
+% mutable\dimendef\d_grph_rotate_x_offset  \zeropoint
+% mutable\dimendef\d_grph_rotate_y_offset  \zeropoint
+% mutable\dimendef\d_grph_rotate_x_position\zeropoint
+% mutable\dimendef\d_grph_rotate_y_position\zeropoint
+%
+% mutable\dimendef\d_grph_rotate_new_width \zeropoint
+% mutable\dimendef\d_grph_rotate_new_height\zeropoint
+% mutable\dimendef\d_grph_rotate_new_depth \zeropoint
 
 %D These aren't:
 
-\newdimen\d_grph_rotate_used_height
+\newdimension\d_grph_rotate_used_height
 
-\newdimen\d_grph_rotate_width
-\newdimen\d_grph_rotate_height
-\newdimen\d_grph_rotate_depth
+\newdimension\d_grph_rotate_width
+\newdimension\d_grph_rotate_height
+\newdimension\d_grph_rotate_depth
 
-\newdimen\d_grph_rotate_saved_width
-\newdimen\d_grph_rotate_saved_height
-\newdimen\d_grph_rotate_saved_depth
+\newdimension\d_grph_rotate_saved_width
+\newdimension\d_grph_rotate_saved_height
+\newdimension\d_grph_rotate_saved_depth
 
 \newconditional\c_grph_rotate_obey_depth
 \newconditional\c_grph_rotate_not_fit
@@ -795,8 +808,8 @@
    \c!offset=\v!overlay,
    \c!frame=\v!off]
 
-\let\p_rotation_location\empty
-\let\p_rotation_rotation\empty
+\lettonothing\p_rotation_location
+\lettonothing\p_rotation_rotation
 
 \permanent\tolerant\protected\def\rotate[#1]% \bgroup: \rotate kan argument zijn
   {\bgroup

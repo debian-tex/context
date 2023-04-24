@@ -7,10 +7,57 @@ if not modules then modules = { } end modules ['lpdf-ini'] = {
     license   = "see context related readme files"
 }
 
--- beware of "too many locals" here
+-- This file is the starting point for PDF related features. Although quite a bit
+-- evolved over time, most of what we do in MkIV and LMTX already was available in
+-- MkII (with e.g. pdfTeX) anyway, but it was implemented in TeX. We're talking of
+-- arbitrary annotations, media like audio and video, widgets (aka forms) with
+-- chains and appearances, comments, attachments, javascript based manipulation of
+-- layers, graphic trickery like shading, color spaces, transparancy, flash stuff,
+-- executing commands, accessing the interface, etc. In that respect there isn't
+-- much really new here, after all MkII was there before the turn of the century,
+-- but it's just more fun to maintain it in Lua than in low level TeX. Also, because
+-- we no longer deal with other engines, there is no need to go low level TeX, which
+-- makes for better code.
+--
+-- However, over the decades PDF evolved and it shows. For instance audio and video
+-- support changed and became worse. Some things were dropped (smil, flash, movies,
+-- audio). Using appearances for widgets became a pain because it sort of assumes
+-- that you construct these forms in acrobat which then leads to bugs becoming
+-- features which means that certain things simply don't work (initializations,
+-- chained widgets, funny dingabt defaults, etc), probably because they never were
+-- tested when viewers evolved.
+--
+-- Attachment are also a fragile bit. And comments that at some point became
+-- dependent on rendering annotations ... it all deserves no beauty price because
+-- reliable simplicity was replaced by unreliable complexity. Something that might
+-- work today often didn't in the past and might fail in the future, if only because
+-- it more relates to the viewer user interface, maybe changing security demands or
+-- whatever. We cannot predict this. A side effect is that we keep adapting and even
+-- worse, have to remove features that originally were expected to stay (media
+-- stuff). To some extend it's a waste of time to get it all supported, also because
+-- the open source viewers lag behind. It makes no sense to keep tons of code
+-- arround that will never be used (again).
+--
+-- Also, I don't think that these PDF features were added with something else than
+-- Acrobat in mind: a flexible system like TeX that actually could inject these low
+-- level features right from the moment that they showed up (and before they were
+-- fully tested) is not mainstream enough to be taken into account. One cannot blame
+-- a commercial product for its own priorities. The evolution of the web might also
+-- have interfered with the agendas.
+--
+-- As a consequence, the code that we use is spread over files and it might change
+-- over time as we try to adapt. But it's easy for the mentioned features to fix one
+-- aspect and break another. Eventually we might see more of these fancy features to
+-- be removed because they make no sense on the long run, than such features being
+-- added. In retrospect maybe many such features were just experiments: anchored in
+-- time for throw away documents (like presentations), never meant to be used on the
+-- long term. In that respect PDF is a disappointment.
+
+-- Comment: beware of "too many locals" problem here.
 
 local setmetatable, getmetatable, type, next, tostring, tonumber, rawset = setmetatable, getmetatable, type, next, tostring, tonumber, rawset
-local char, byte, format, gsub, concat, match, sub, gmatch = string.char, string.byte, string.format, string.gsub, table.concat, string.match, string.sub, string.gmatch
+local concat = table.concat
+local char, byte, format, sub, tohex = string.char, string.byte, string.format, string.sub, string.tohex
 local utfchar, utfbyte, utfvalues = utf.char, utf.byte, utf.values
 local sind, cosd, max, min = math.sind, math.cosd, math.max, math.min
 local sort, sortedhash = table.sort, table.sortedhash
@@ -18,37 +65,24 @@ local P, C, R, S, Cc, Cs, V = lpeg.P, lpeg.C, lpeg.R, lpeg.S, lpeg.Cc, lpeg.Cs, 
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 local formatters = string.formatters
 local isboolean = string.is_boolean
-local rshift = bit32.rshift
 
 local report_objects    = logs.reporter("backend","objects")
 local report_finalizing = logs.reporter("backend","finalizing")
 local report_blocked    = logs.reporter("backend","blocked")
 
-local implement         = interfaces.implement
-
+local implement         = interfaces and interfaces.implement
 local context           = context
 
 -- In ConTeXt MkIV we use utf8 exclusively so all strings get mapped onto a hex
 -- encoded utf16 string type between <>. We could probably save some bytes by using
--- strings between () but then we end up with escaped ()\ too.
+-- strings between () but then we end up with escaped ()\ characters too.
 
 pdf                     = type(pdf) == "table" and pdf or { }
 local factor            = number.dimenfactors.bp
 
-local codeinjections    = { }
-local nodeinjections    = { }
-
-local backends          = backends
-
-local pdfbackend        = {
-    comment        = "backend for directly generating pdf output",
-    nodeinjections = nodeinjections,
-    codeinjections = codeinjections,
-    registrations  = { },
-    tables         = { },
-}
-
-backends.pdf = pdfbackend
+local pdfbackend        = backends and backends.registered.pdf or { }
+local codeinjections    = pdfbackend.codeinjections
+local nodeinjections    = pdfbackend.nodeinjections
 
 lpdf       = lpdf or { }
 local lpdf = lpdf
@@ -62,33 +96,50 @@ end)
 local trace_finalizers = false  trackers.register("backend.finalizers", function(v) trace_finalizers = v end)
 local trace_resources  = false  trackers.register("backend.resources",  function(v) trace_resources  = v end)
 
+do
+
+    -- This is for a future feature (still under investigation and consideration). So,
+    -- it is work in progress (and brings a harmless overhead for now).
+
+    local initializers = { }
+
+    function lpdf.registerinitializer(initialize)
+        initializers[#initializers+1] = initialize
+    end
+
+    function lpdf.initialize(f)
+        for i=1,#initializers do
+            initializers[i]()
+        end
+    end
+
+end
+
 local pdfreserveobject
 local pdfimmediateobject
 
-updaters.register("backend.update.lpdf",function()
-    pdfreserveobject    = lpdf.reserveobject
-    pdfimmediateobject  = lpdf.immediateobject
+updaters.register("backends.pdf.latebindings",function()
+    pdfreserveobject   = lpdf.reserveobject
+    pdfimmediateobject = lpdf.immediateobject
 end)
 
 do
 
-    updaters.register("backend.update.lpdf",function()
+    local pdfgetmatrix, pdfhasmatrix, pdfgetpos
+
+    updaters.register("backends.pdf.latebindings",function()
         job.positions.registerhandlers {
             getpos  = drivers.getpos,
             getrpos = drivers.getrpos,
             gethpos = drivers.gethpos,
             getvpos = drivers.getvpos,
         }
-        lpdf.getpos = drivers.getpos
-    end)
-
-    local pdfgetmatrix, pdfhasmatrix, pdfgetpos
-
-    updaters.register("backend.update.lpdf",function()
         pdfgetmatrix = lpdf.getmatrix
         pdfhasmatrix = lpdf.hasmatrix
-        pdfgetpos    = lpdf.getpos
+        pdfgetpos    = drivers.getpos
     end)
+
+    function lpdf.getpos() return pdfgetpos() end
 
     -- local function transform(llx,lly,urx,ury,rx,sx,sy,ry)
     --     local x1 = llx * rx + lly * sy
@@ -146,27 +197,6 @@ do
 
 end
 
--- we could use a hash of predefined unicodes
-
--- local function tosixteen(str) -- an lpeg might be faster (no table)
---     if not str or str == "" then
---         return "<feff>" -- not () as we want an indication that it's unicode
---     else
---         local r, n = { "<feff" }, 1
---         for b in utfvalues(str) do
---             n = n + 1
---             if b < 0x10000 then
---                 r[n] = format("%04x",b)
---             else
---                 r[n] = format("%04x%04x",rshift(b,10),b%1024+0xDC00)
---             end
---         end
---         n = n + 1
---         r[n] = ">"
---         return concat(r)
---     end
--- end
-
 local tosixteen, fromsixteen, topdfdoc, frompdfdoc, toeight, fromeight
 
 do
@@ -177,8 +207,7 @@ do
             v = format("%04x",v)
         else
             v = v - 0x10000
-            v = format("%04x%04x",rshift(v,10)+0xD800,v%1024+0xDC00)
-         -- v = format("%04x%04x",rshift(v-0x10000,10)+0xD800,v%1024+0xDC00)
+            v = format("%04x%04x",(v>>10)+0xD800,v%1024+0xDC00)
         end
         t[k] = v
         return v
@@ -193,6 +222,8 @@ do
             return lpegmatch(unified,str)
         end
     end
+
+    -- we could make a helper for this
 
     local more = 0
 
@@ -220,8 +251,8 @@ do
         end
     end
 
-    local toregime   = regimes.toregime
-    local fromregime = regimes.fromregime
+    local toregime   = regimes and regimes.toregime
+    local fromregime = regimes and regimes.fromregime
     local escaped    = Cs(Cc("(") * (S("\\()\n\r\t\b\f")/"\\%0" + P(1))^0 * Cc(")"))
 
     topdfdoc = function(str,default)
@@ -323,22 +354,54 @@ do
 
 end
 
+local pdfescaped do
+
+    local replacer = S("\0\t\n\r\f ()[]{}/%%#\\") / {
+        ["\00"]="#00",
+        ["\09"]="#09",
+        ["\10"]="#0a",
+        ["\12"]="#0c",
+        ["\13"]="#0d",
+        [ " " ]="#20",
+        [ "#" ]="#23",
+        [ "%" ]="#25",
+        [ "(" ]="#28",
+        [ ")" ]="#29",
+        [ "/" ]="#2f",
+        [ "[" ]="#5b",
+        [ "\\"]="#5c",
+        [ "]" ]="#5d",
+        [ "{" ]="#7b",
+        [ "}" ]="#7d",
+    } + P(1)
+
+    local p_escaped_1 = Cs(Cc("/") * replacer^0)
+    local p_escaped_2 = Cs(          replacer^0)
+
+    pdfescaped = function(str,slash)
+        return lpegmatch(slash and p_escaped_1 or p_escaped_2,str) or str
+    end
+
+    lpdf.escaped = pdfescaped
+
+end
+
 local tostring_a, tostring_d
 
 do
 
-    local f_key_null       = formatters["/%s null"]
-    local f_key_value      = formatters["/%s %s"]
- -- local f_key_dictionary = formatters["/%s << % t >>"]
+    local f_key_null       = formatters["%s null"]
+    local f_key_value      = formatters["%s %s"]
+ -- local f_key_dictionary = formatters["%s << % t >>"]
  -- local f_dictionary     = formatters["<< % t >>"]
-    local f_key_dictionary = formatters["/%s << %s >>"]
+    local f_key_dictionary = formatters["%s << %s >>"]
     local f_dictionary     = formatters["<< %s >>"]
- -- local f_key_array      = formatters["/%s [ % t ]"]
+ -- local f_key_array      = formatters["%s [ % t ]"]
  -- local f_array          = formatters["[ % t ]"]
-    local f_key_array      = formatters["/%s [ %s ]"]
+    local f_key_array      = formatters["%s [ %s ]"]
     local f_array          = formatters["[ %s ]"]
-    local f_key_number     = formatters["/%s %N"]  -- always with max 9 digits and integer is possible
-    local f_tonumber       = formatters["%N"]      -- always with max 9 digits and integer is possible
+    local f_key_number     = formatters["%s %N"]  -- always with max 9 digits and integer is possible
+    local f_tonumber       = formatters["%N"]     -- always with max 9 digits and integer is possible
 
     tostring_d = function(t,contentonly,key)
         if next(t) then
@@ -363,6 +426,9 @@ do
                 local v  = t[k]
                 local tv = type(v)
                 -- mostly tables
+                --
+                k = pdfescaped(k,true)
+                --
                 if tv == "table" then
                  -- local mv = getmetatable(v)
                  -- if mv and mv.__lpdftype then
@@ -393,7 +459,7 @@ do
             if contentonly then
                 return r
             elseif key then
-                return f_key_dictionary(key,r)
+                return f_key_dictionary(pdfescaped(key,true),r)
             else
                 return f_dictionary(r)
             end
@@ -443,7 +509,7 @@ do
             if contentonly then
                 return r
             elseif key then
-                return f_key_array(key,r)
+                return f_key_array(pdfescaped(key,true),r)
             else
                 return f_array(r)
             end
@@ -620,29 +686,10 @@ do
 
     for i=-1,9 do cache[i] = pdfnumber(i) end
 
-    local replacer = S("\0\t\n\r\f ()[]{}/%%#\\") / {
-        ["\00"]="#00",
-        ["\09"]="#09",
-        ["\10"]="#0a",
-        ["\12"]="#0c",
-        ["\13"]="#0d",
-        [ " " ]="#20",
-        [ "#" ]="#23",
-        [ "%" ]="#25",
-        [ "(" ]="#28",
-        [ ")" ]="#29",
-        [ "/" ]="#2f",
-        [ "[" ]="#5b",
-        [ "\\"]="#5c",
-        [ "]" ]="#5d",
-        [ "{" ]="#7b",
-        [ "}" ]="#7d",
-    } + P(1)
-
-    local escaped = Cs(Cc("/") * replacer^0)
+    local escaped = lpdf.escaped
 
     local cache = table.setmetatableindex(function(t,k)
-        local v = setmetatable({ lpegmatch(escaped,k) }, mt_c)
+        local v = setmetatable({ escaped(k,true) }, mt_c)
         t[k] = v
         return v
     end)
@@ -652,12 +699,6 @@ do
             str = default or "none"
         end
         return cache[str]
-    end
-
-    local escaped = Cs(replacer^0)
-
-    function lpdf.escaped(str)
-        return lpegmatch(escaped,str) or str
     end
 
 end
@@ -725,6 +766,8 @@ lpdf.reference   = pdfreference
 lpdf.verbose     = pdfverbose
 lpdf.literal     = pdfliteral
 
+if not callbacks then return lpdf end
+
 -- three priority levels, default=2
 
 local pagefinalizers     = { { }, { }, { } }
@@ -747,6 +790,8 @@ function lpdf.getpageproperties()
 end
 
 resetpageproperties()
+
+lpdf.registerinitializer(resetpageproperties)
 
 local function addtopageresources  (k,v) pageresources  [k] = v end
 local function addtopageattributes (k,v) pageattributes [k] = v end
@@ -807,13 +852,12 @@ function lpdf.finalizepage(shipout)
     end
 end
 
+local finalized = false
+
 function lpdf.finalizedocument()
-    if not environment.initex then
+    if not environment.initex and not finalized then
         run(documentfinalizers,"document")
-        function lpdf.finalizedocument()
-         -- report_finalizing("serious error: the document is finalized multiple times")
-            function lpdf.finalizedocument() end
-        end
+        finalized = true
     end
 end
 
@@ -868,7 +912,6 @@ do
     local function flushcatalog()
         if checkcatalog() then
             catalog.Type = nil
---             pdfsetcatalog(catalog())
         end
     end
 
@@ -928,6 +971,12 @@ do
     local d_extgstates, d_colorspaces, d_patterns, d_shades
     local p_extgstates, p_colorspaces, p_patterns, p_shades
 
+    lpdf.registerinitializer(function()
+        r_extgstates = nil ; r_colorspaces = nil ; r_patterns = nil ; r_shades = nil ;
+        d_extgstates = nil ; d_colorspaces = nil ; d_patterns = nil ; d_shades = nil ;
+        p_extgstates = nil ; p_colorspaces = nil ; p_patterns = nil ; p_shades = nil ;
+    end)
+
     local function checkextgstates () if d_extgstates  then addtopageresources("ExtGState", p_extgstates ) end end
     local function checkcolorspaces() if d_colorspaces then addtopageresources("ColorSpace",p_colorspaces) end end
     local function checkpatterns   () if d_patterns    then addtopageresources("Pattern",   p_patterns   ) end end
@@ -946,7 +995,7 @@ do
 
     local pdfgetfontobjectnumber
 
-    updaters.register("backend.update.lpdf",function()
+    updaters.register("backends.pdf.latebindings",function()
         pdfgetfontobjectnumber = lpdf.getfontobjectnumber
     end)
 
@@ -1051,73 +1100,6 @@ function lpdf.rotationcm(a)
     return format("%.6F %.6F %.6F %.6F 0 0 cm",c,s,-s,c)
 end
 
--- ! -> universaltime
-
-do
-
-    -- It's a bit of a historical mess here.
-
-    local osdate, ostime, ostimezone = os.date, os.time, os.timezone
-
-    local metadata  = nil
-    local timestamp = osdate("%Y-%m-%dT%X") .. ostimezone(true)
-
-    function lpdf.getmetadata()
-        if not metadata then
-            local contextversion      = environment.version
-            local luatexversion       = format("%1.2f",LUATEXVERSION)
-            local luatexfunctionality = tostring(LUATEXFUNCTIONALITY)
-            metadata = {
-                producer            = format("LuaTeX-%s",luatexversion),
-                creator             = format("LuaTeX %s %s + ConTeXt LMTX %s",luatexversion,luatexfunctionality,contextversion),
-                luatexversion       = luatexversion,
-                contextversion      = contextversion,
-                luatexfunctionality = luatexfunctionality,
-                luaversion          = tostring(LUAVERSION),
-                platform            = os.platform,
-                time                = timestamp,
-            }
-        end
-        return metadata
-    end
-
-    function lpdf.settime(n)
-        if n then
-            n = converters.totime(n)
-            if n then
-                converters.settime(n)
-                timestamp = osdate("%Y-%m-%dT%X") .. ostimezone(true) -- probably not ok
-            end
-        end
-        if metadata then
-            metadata.time = timestamp
-        end
-        return timestamp
-    end
-
-    lpdf.settime(tonumber(resolvers.variable("start_time")) or tonumber(resolvers.variable("SOURCE_DATE_EPOCH"))) -- bah
-
-    function lpdf.pdftimestamp(str)
-        local t = type(str)
-        if t == "string" then
-            local Y, M, D, h, m, s, Zs, Zh, Zm = match(str,"^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)([%+%-])(%d%d):(%d%d)$")
-            return Y and format("D:%s%s%s%s%s%s%s%s'%s'",Y,M,D,h,m,s,Zs,Zh,Zm)
-        else
-            return osdate("D:%Y%m%d%H%M%S",t == "number" and str or ostime()) -- maybe "!D..." : universal time
-        end
-    end
-
-    function lpdf.id(date)
-        local banner = environment.jobname or tex.jobname or "unknown"
-        if not date then
-            return banner
-        else
-            return format("%s | %s",banner,timestamp)
-        end
-    end
-
-end
-
 -- return nil is nicer in test prints
 
 function lpdf.checkedkey(t,key,variant)
@@ -1196,14 +1178,15 @@ end
 
 -- return formatters["BT /Span << /ActualText (CONTEXT) >> BDC [<feff>] TJ % t EMC ET"](code)
 
-do
+if implement then
 
     local f_actual_text_p     = formatters["BT /Span << /ActualText <feff%s> >> BDC %s EMC ET"]
     local f_actual_text_b     = formatters["BT /Span << /ActualText <feff%s> >> BDC"]
-    local s_actual_text_e     = "EMC ET"
     local f_actual_text_b_not = formatters["/Span << /ActualText <feff%s> >> BDC"]
-    local s_actual_text_e_not = "EMC"
     local f_actual_text       = formatters["/Span <</ActualText %s >> BDC"]
+
+    local s_actual_text_e     <const> = "EMC ET"
+    local s_actual_text_e_not <const> = "EMC"
 
     local context   = context
     local pdfdirect = nodes.pool.directliteral -- we can use nuts.write deep down
@@ -1257,19 +1240,24 @@ do
 
 end
 
--- interface
+-- Bah, tikz uses \immediate for some reason which is probably a bug, so the usage
+-- will deal with that. However, we will not provide the serialization.
 
-implement { name = "lpdf_collectedresources",                             actions = { lpdf.collectedresources, context } }
-implement { name = "lpdf_addtocatalog",          arguments = "2 strings", actions = lpdf.addtocatalog }
-implement { name = "lpdf_addtoinfo",             arguments = "2 strings", actions = function(a,b,c) lpdf.addtoinfo(a,b,c) end } -- gets adapted
-implement { name = "lpdf_addtonames",            arguments = "2 strings", actions = lpdf.addtonames }
-implement { name = "lpdf_addtopageattributes",   arguments = "2 strings", actions = lpdf.addtopageattributes }
-implement { name = "lpdf_addtopagesattributes",  arguments = "2 strings", actions = lpdf.addtopagesattributes }
-implement { name = "lpdf_addtopageresources",    arguments = "2 strings", actions = lpdf.addtopageresources }
-implement { name = "lpdf_adddocumentextgstate",  arguments = "2 strings", actions = function(a,b) lpdf.adddocumentextgstate (a,pdfverbose(b)) end }
-implement { name = "lpdf_adddocumentcolorspace", arguments = "2 strings", actions = function(a,b) lpdf.adddocumentcolorspace(a,pdfverbose(b)) end }
-implement { name = "lpdf_adddocumentpattern",    arguments = "2 strings", actions = function(a,b) lpdf.adddocumentpattern   (a,pdfverbose(b)) end }
-implement { name = "lpdf_adddocumentshade",      arguments = "2 strings", actions = function(a,b) lpdf.adddocumentshade     (a,pdfverbose(b)) end }
+if implement then
+
+    implement { name = "pdfbackendcurrentresources",                   public = true, untraced  = true,                            actions = { lpdf.collectedresources, context } }
+    implement { name = "pdfbackendsetcatalog",        usage = "value", public = true, protected = true, arguments = "2 arguments", actions = lpdf.addtocatalog }
+    implement { name = "pdfbackendsetinfo",           usage = "value", public = true, protected = true, arguments = "2 arguments", actions = function(a,b,c) lpdf.addtoinfo(a,b,c) end } -- gets adapted
+    implement { name = "pdfbackendsetname",           usage = "value", public = true, protected = true, arguments = "2 arguments", actions = lpdf.addtonames }
+    implement { name = "pdfbackendsetpageattribute",  usage = "value", public = true, protected = true, arguments = "2 arguments", actions = lpdf.addtopageattributes }
+    implement { name = "pdfbackendsetpagesattribute", usage = "value", public = true, protected = true, arguments = "2 arguments", actions = lpdf.addtopagesattributes }
+    implement { name = "pdfbackendsetpageresource",   usage = "value", public = true, protected = true, arguments = "2 arguments", actions = lpdf.addtopageresources }
+    implement { name = "pdfbackendsetextgstate",      usage = "value", public = true, protected = true, arguments = "2 arguments", actions = function(a,b) lpdf.adddocumentextgstate (a,pdfverbose(b)) end }
+    implement { name = "pdfbackendsetcolorspace",     usage = "value", public = true, protected = true, arguments = "2 arguments", actions = function(a,b) lpdf.adddocumentcolorspace(a,pdfverbose(b)) end }
+    implement { name = "pdfbackendsetpattern",        usage = "value", public = true, protected = true, arguments = "2 arguments", actions = function(a,b) lpdf.adddocumentpattern   (a,pdfverbose(b)) end }
+    implement { name = "pdfbackendsetshade",          usage = "value", public = true, protected = true, arguments = "2 arguments", actions = function(a,b) lpdf.adddocumentshade     (a,pdfverbose(b)) end }
+
+end
 
 -- more helpers: copy from lepd to lpdf
 
@@ -1331,10 +1319,15 @@ end
 
 do
 
-    -- This is obsolete but old viewers might still use it as directive
-    -- for what to send to a postscript printer.
+    -- This is obsolete but old viewers might still use it as directive for what to
+    -- send to a postscript printer.
 
     local a_procset, d_procset
+
+    lpdf.registerinitializer(function()
+        a_procset = nil
+        d_procset = nil
+    end)
 
     function lpdf.procset(dict)
         if not a_procset then

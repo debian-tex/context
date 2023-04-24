@@ -31,6 +31,7 @@ local nextlist         = nuts.traversers.list
 local new_stretch      = nuts.pool.stretch
 
 local a_realign        = attributes.private("realign")
+local c_realpageno     = tex.iscount("realpageno")
 
 local texsetattribute  = tex.setattribute
 local texgetcount      = tex.getcount
@@ -51,7 +52,7 @@ local nofrealigned     = 0
 -- raggedright     0           0         fil
 -- raggedcenter    0 +         0 +        -
 
-local function handler(head,leftpage,realpageno) -- traverse_list
+local function handler(head,leftpage,realpageno)
     for current, id, subtype, list in nextlist, head do
         if subtype == linelist_code then
             local a = takeattr(current,a_realign)
@@ -103,7 +104,7 @@ local function handler(head,leftpage,realpageno) -- traverse_list
 end
 
 function alignments.handler(head)
-    return handler(head,isleftpage(),texgetcount("realpageno"))
+    return handler(head,isleftpage(),texgetcount(c_realpageno))
 end
 
 local enabled = false
@@ -116,7 +117,7 @@ function alignments.set(n)
             report_realign("enabled")
         end
     end
-    texsetattribute(a_realign,texgetcount("realpageno") * 10 + n)
+    texsetattribute(a_realign,texgetcount(c_realpageno) * 10 + n)
 end
 
 interfaces.implement {

@@ -82,7 +82,7 @@
   [\c!align=\v!normal,
    \c!strut=\v!no]
 
-\mutable\let\currentdefinedchemical\empty
+\mutable\lettonothing\currentdefinedchemical
 
 \permanent\protected\def\setupchemicalframed
   {\setupframed[\??chemicalframed]}
@@ -120,9 +120,9 @@
       \ifcase\currentxfontsize\or\scriptstyle\or\scriptscriptstyle\fi
       #1}}
 
-\setvalue{\??chemicalsize\v!small }{\txx}
-\setvalue{\??chemicalsize\v!medium}{\tx}
-\setvalue{\??chemicalsize\v!big   }{}
+\defcsname\??chemicalsize\v!small \endcsname{\txx}
+\defcsname\??chemicalsize\v!medium\endcsname{\tx}
+\defcsname\??chemicalsize\v!big   \endcsname{}
 
 \newtoks       \everychemical
 \newtoks       \everystructurechemical
@@ -131,9 +131,9 @@
 \newtoks       \t_chem_every_box
 \newbox        \b_chem_result
 \newconditional\c_chem_some_text
-\newdimen      \d_chem_width
-\newdimen      \d_chem_height
-\newdimen      \d_chem_depth
+\newdimension  \d_chem_width
+\newdimension  \d_chem_height
+\newdimension  \d_chem_depth
 
 \permanent\tolerant\protected\def\startchemical[#1]#*[#2]%
   {\ifmmode\vcenter\else\vbox\fi % vpack ?
@@ -256,29 +256,29 @@
 \permanent\protected\def\chemicalbottext#1{\global\settrue\c_chem_some_text\gdef\m_chem_bot_text{#1}\ignorespaces}
 \permanent\protected\def\chemicalmidtext#1{\global\settrue\c_chem_some_text\gdef\m_chem_mid_text{#1}\ignorespaces}
 
-\mutable\let\toptext\empty
-\mutable\let\bottext\empty
-\mutable\let\midtext\empty
+\mutable\lettonothing\toptext
+\mutable\lettonothing\bottext
+\mutable\lettonothing\midtext
 
 \appendtoks
-    \let\toptext\chemicaltoptext \glet\m_chem_top_text\empty
-    \let\bottext\chemicalbottext \glet\m_chem_bot_text\empty
-    \let\midtext\chemicalmidtext \glet\m_chem_mid_text\empty
+    \let\toptext\chemicaltoptext \glettonothing\m_chem_top_text
+    \let\bottext\chemicalbottext \glettonothing\m_chem_bot_text
+    \let\midtext\chemicalmidtext \glettonothing\m_chem_mid_text
     \global\setfalse\c_chem_some_text
 \to \everystructurechemical
 
 \def\chem_add_texts
-  {\setbox2\hpack to \d_chem_width{\strut\hss\hbox{\strut\m_chem_mid_text}\hss}%
-   \setbox4\hpack to \d_chem_width{\strut\hss\hbox{\strut\m_chem_top_text}\hss}%
-   \setbox6\hpack to \d_chem_width{\strut\hss\hbox{\strut\m_chem_bot_text}\hss}%
+  {\setbox\scratchboxone  \hpack to \d_chem_width{\strut\hss\hbox{\strut\m_chem_mid_text}\hss}%
+   \setbox\scratchboxtwo  \hpack to \d_chem_width{\strut\hss\hbox{\strut\m_chem_top_text}\hss}%
+   \setbox\scratchboxthree\hpack to \d_chem_width{\strut\hss\hbox{\strut\m_chem_bot_text}\hss}%
    \setbox\b_chem_result\hpack \bgroup
      \box\b_chem_result
      \hskip-\d_chem_width
-     \raise\d_chem_height\hpack{\lower\ht4\box4}%
+     \raise\d_chem_height\hpack{\lower\ht\scratchboxtwo\box\scratchboxtwo}%
      \hskip-\d_chem_width
-     \lower.5\dimexpr\ht2-\dp2\relax\box2%
+     \lower.5\dimexpr\ht\scratchboxone-\dp\scratchboxone\relax\box\scratchboxone
      \hskip-\d_chem_width
-     \lower\d_chem_depth \hpack{\raise\dp6\box6}%
+     \lower\d_chem_depth\hpack{\raise\dp\scratchboxthree\box\scratchboxthree}%
      \hss
    \egroup} % text on top of chemicals
 
@@ -607,12 +607,15 @@
 \definechemicalsymbol[d:plus]        [\enspace+\enspace]
 \definechemicalsymbol[d:minus]       [\enspace-\enspace]
 \definechemicalsymbol[d:equals]      [\enspace=\enspace]
-\definechemicalsymbol[d:gives]       [\rightarrowfill]          % \chem_arrow_construct\xrightarrow
-\definechemicalsymbol[d:equilibrium] [\rightoverleftarrowfill]  % \chem_arrow_construct\xrightoverleftarrow
-\definechemicalsymbol[d:mesomeric]   [\leftarrowfill]           % \chem_arrow_construct\xleftrightarrow
+%definechemicalsymbol[d:gives]       [\rightarrowfill]          % \chem_arrow_construct\xrightarrow
+%definechemicalsymbol[d:equilibrium] [\rightoverleftarrowfill]  % \chem_arrow_construct\xrightoverleftarrow
+%definechemicalsymbol[d:mesomeric]   [\leftarrowfill]           % \chem_arrow_construct\xleftrightarrow
+\definechemicalsymbol[d:gives]       [\crightarrow]
+\definechemicalsymbol[d:equilibrium] [\cleftarrow]
+\definechemicalsymbol[d:mesomeric]   [\crightoverleftarrow]
 \definechemicalsymbol[d:single]      [\chemicalbondrule]
-\definechemicalsymbol[d:double]      [\hpack{\lower.5ex\chemicalbondrule\hskip-1em\raise.5ex\chemicalbondrule}]
-\definechemicalsymbol[d:triple]      [\hpack{\chemicalbondrule\hskip-1em\lower.5ex\chemicalbondrule\hskip-1em\raise.5ex\chemicalbondrule}]
+\definechemicalsymbol[d:double]      [\hpack{\lower.5\exheight\chemicalbondrule\hskip-\emwidth\raise.5\exheight\chemicalbondrule}]
+\definechemicalsymbol[d:triple]      [\hpack{\chemicalbondrule\hskip-\emwidth\lower.5\exheight\chemicalbondrule\hskip-\emwidth\raise.5\exheight\chemicalbondrule}]
 \definechemicalsymbol[d:opencomplex] [\mathematics{\Bigg[}]     % not yet ok
 \definechemicalsymbol[d:closecomplex][\mathematics{\Bigg]}]     % not yet ok
 

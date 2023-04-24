@@ -13,7 +13,7 @@
 
 \writestatus{loading}{ConTeXt Interaction Macros / Widgets}
 
-\registerctxluafile{scrn-wid}{}
+\registerctxluafile{scrn-wid}{autosuffix}
 
 % todo: expansion in comments (default is expanded)
 % todo: check renderings ... acrobat crashes too easily on missing one
@@ -94,11 +94,11 @@
    \c!depth=\v!fit,
    \c!location=\v!high]
 
-\mutable\let\currentattachmentdepth     \empty
-\mutable\let\currentattachmentheight    \empty
-\mutable\let\currentattachmentregistered\empty
-\mutable\let\currentattachmentsymbol    \empty
-\mutable\let\currentattachmentwidth     \empty
+\mutable\lettonothing\currentattachmentdepth
+\mutable\lettonothing\currentattachmentheight
+\mutable\lettonothing\currentattachmentregistered
+\mutable\lettonothing\currentattachmentsymbol
+\mutable\lettonothing\currentattachmentwidth
 
 \permanent\tolerant\protected\def\registerattachment[#tag]#spacer[#settings]% we save (globally) at the lua end
   {\ifarguments\else
@@ -171,7 +171,7 @@
    \setupattachment[\currentattachment][#settings]%
    \expandnamespaceparameter\??attachmentmethod\attachmentparameter\c!method\v!normal}
 
-\setvalue{\??attachmentmethod\v!normal}%
+\defcsname\??attachmentmethod\v!normal\endcsname
   {\edef\currentattachmentsymbol{\attachmentparameter\c!symbol}%
    \edef\currentattachmentwidth {\attachmentparameter\c!width }%
    \edef\currentattachmentheight{\attachmentparameter\c!height}%
@@ -214,7 +214,7 @@
    \dp\b_scrn_attachment_link\currentattachmentdepth
    \expandnamespaceparameter\??attachmentlocation\attachmentparameter\c!location\s!unknown}
 
-\setvalue{\??attachmentmethod\v!hidden}%
+\defcsname\??attachmentmethod\v!hidden\endcsname
   {\clf_insertattachment
      tag        {\currentattachment}%
      registered {\currentattachmentregistered}%
@@ -249,14 +249,14 @@
 
 \let\scrn_attachment_flush\scrn_attachment_flush_normal
 
-\setvalue{\??attachmentlocation\v!inmargin   }{\inmargin     {\scrn_attachment_flush}}
-\setvalue{\??attachmentlocation\v!leftedge   }{\inleftedge   {\scrn_attachment_flush}}
-\setvalue{\??attachmentlocation\v!rightedge  }{\inrightedge  {\scrn_attachment_flush}}
-\setvalue{\??attachmentlocation\v!leftmargin }{\inleftmargin {\scrn_attachment_flush}}
-\setvalue{\??attachmentlocation\v!rightmargin}{\inrightmargin{\scrn_attachment_flush}}
-\setvalue{\??attachmentlocation\v!high       }{\high         {\scrn_attachment_flush}}
+\defcsname\??attachmentlocation\v!inmargin   \endcsname{\inmargin     {\scrn_attachment_flush}}
+\defcsname\??attachmentlocation\v!leftedge   \endcsname{\inleftedge   {\scrn_attachment_flush}}
+\defcsname\??attachmentlocation\v!rightedge  \endcsname{\inrightedge  {\scrn_attachment_flush}}
+\defcsname\??attachmentlocation\v!leftmargin \endcsname{\inleftmargin {\scrn_attachment_flush}}
+\defcsname\??attachmentlocation\v!rightmargin\endcsname{\inrightmargin{\scrn_attachment_flush}}
+\defcsname\??attachmentlocation\v!high       \endcsname{\high         {\scrn_attachment_flush}}
 
-\setvalue{\??attachmentlocation\v!none}%
+\defcsname\??attachmentlocation\v!none\endcsname
   {\global\setbox\b_scrn_attachment_collect\hbox\bgroup
      \ifvoid\b_scrn_attachment_collect\else
        \box\b_scrn_attachment_collect
@@ -265,7 +265,7 @@
      \scrn_attachment_flush
    \egroup}
 
-\setvalue{\??attachmentlocation\s!unknown}%
+\defcsname\??attachmentlocation\s!unknown\endcsname
   {\ifvoid\b_scrn_attachment_collect\else
      \box\b_scrn_attachment_collect
    \fi}
@@ -403,15 +403,15 @@
    \c!buffer=\v!comment,
    \c!location=\v!high]
 
-\mutable\let\currentcommentdepth \empty
-\mutable\let\currentcommentheight\empty
-\mutable\let\currentcommentsymbol\empty
-\mutable\let\currentcommentwidth \empty
+\mutable\lettonothing\currentcommentdepth
+\mutable\lettonothing\currentcommentheight
+\mutable\lettonothing\currentcommentsymbol
+\mutable\lettonothing\currentcommentwidth
 
 \appendtoks
-    \frozen\instance\setuevalue         \currentcomment {\scrn_comment_argument[\currentcomment]}%
-    \frozen\instance\setuevalue{\e!start\currentcomment}{\scrn_comment_start   [\currentcomment]}%
-    \frozen\instance\setuevalue{\e!stop \currentcomment}{\scrn_comment_stop                     }%
+    \frozen\protected\instance\edefcsname        \currentcomment\endcsname{\scrn_comment_argument[\currentcomment]}%
+    \frozen\protected\instance\edefcsname\e!start\currentcomment\endcsname{\scrn_comment_start   [\currentcomment]}%
+    \frozen\protected\instance\edefcsname\e!stop \currentcomment\endcsname{\scrn_comment_stop                     }%
 \to \everydefinecomment
 
 \tolerant\protected\def\scrn_comment_argument[#category]#spacer[#title]#spacer[#settings]#:#text%%
@@ -461,7 +461,7 @@
 %D Beware: comments symbols don't scale in acrobat (cf. spec but somewhat
 %D weird, esp because for instance attachment symbols do scale).
 
-\setvalue{\??commentmethods\v!normal}%
+\defcsname\??commentmethods\v!normal\endcsname
   {\edef\currentcommentsymbol{\commentparameter\c!symbol}%
    \edef\currentcommentwidth {\commentparameter\c!width }%
    \edef\currentcommentheight{\commentparameter\c!height}%
@@ -502,7 +502,7 @@
    \dp\b_scrn_comment_link\currentcommentdepth
    \expandnamespaceparameter\??commentlocation\commentparameter\c!location\s!unknown}
 
-\letvalue{\??commentmethods\v!hidden}\donothing
+\aliased\letcsname\??commentmethods\v!hidden\endcsname\donothing
 
 \protected\def\scrn_comment_flush_traced
   {\hpack\bgroup
@@ -527,14 +527,14 @@
 
 % todo: dedicated margin classes
 
-\setvalue{\??commentlocation\v!inmargin   }{\inmargin     {\scrn_comment_flush}}
-\setvalue{\??commentlocation\v!leftedge   }{\inleftedge   {\scrn_comment_flush}}
-\setvalue{\??commentlocation\v!rightedge  }{\inrightedge  {\scrn_comment_flush}}
-\setvalue{\??commentlocation\v!leftmargin }{\inleftmargin {\scrn_comment_flush}}
-\setvalue{\??commentlocation\v!rightmargin}{\inrightmargin{\scrn_comment_flush}}
-\setvalue{\??commentlocation\v!high       }{\high         {\scrn_comment_flush}}
+\defcsname\??commentlocation\v!inmargin   \endcsname{\inmargin     {\scrn_comment_flush}}
+\defcsname\??commentlocation\v!leftedge   \endcsname{\inleftedge   {\scrn_comment_flush}}
+\defcsname\??commentlocation\v!rightedge  \endcsname{\inrightedge  {\scrn_comment_flush}}
+\defcsname\??commentlocation\v!leftmargin \endcsname{\inleftmargin {\scrn_comment_flush}}
+\defcsname\??commentlocation\v!rightmargin\endcsname{\inrightmargin{\scrn_comment_flush}}
+\defcsname\??commentlocation\v!high       \endcsname{\high         {\scrn_comment_flush}}
 
-\setvalue{\??commentlocation\v!none}%
+\defcsname\??commentlocation\v!none\endcsname
   {\global\setbox\b_scrn_comment_collect\hbox\bgroup
      \ifvoid\b_scrn_comment_collect\else
        \box\b_scrn_comment_collect
@@ -543,7 +543,7 @@
      \scrn_comment_flush
    \egroup}
 
-\setvalue{\??commentlocation\s!unknown}%
+\defcsname\??commentlocation\s!unknown\endcsname
   {\ifvoid\b_scrn_comment_collect\else
      \box\b_scrn_comment_collect
    \fi}
@@ -559,96 +559,69 @@
 %     \definecomment[\v!comment]
 % \fi
 
-%D Soundclips:
+%D Conform Michals recommendations support for the old movie (and sound) annotations
+%D has been removed. This also means that movies are no longer a valid external figure
+%D format. So be it.
 %D
-%D Defining sound tracks:
+%D Renderings (adapted to \MKIV\ by Michal Vlasák). We no longer have the \MKII\ internal
+%D and external rendering because over time all this widget stuff changed in \PDF\ and
+%D Acrobat.
 %D
 %D \starttyping
-%D \useexternalsoundtrack[label][file]
+%D \setupinteraction[state=start]
+%D
+%D \starttext
+%D     \startTEXpage[offset=10pt]
+%D       % \definerenderingwindow[myrenderingwindow][width=\textwidth, height=\textwidth]
+%D       % \definerenderingwindow[myrenderingwindow][width=\textwidth, height=\textwidth, openpageaction=StartRendering{myvideo}]
+%D         \definerenderingwindow[myrenderingwindow][width=\textwidth, height=\textwidth, openpageaction=StartCurrentRendering, closepageaction=StopCurrentRendering]
+%D       % \userendering[myvideo][video/mp4][edited.mp4][embed=yes, auto]
+%D         \userendering[myvideo][video/mp4][woodwork.mp4][embed=yes, auto]
+%D         % auto = openpageaction=StartCurrentRendering, closepageaction=StopCurrentRendering
+%D         \placerenderingwindow[myrenderingwindow][myvideo]
+%D         \blank
+%D         \goto{start}[StartRendering{myvideo}]
+%D         \goto{stop}[StopRendering{myvideo}]
+%D     \stopTEXpage
+%D \stoptext
 %D \stoptyping
-%D
-%D associated actions: StartSound StopSound PauseSound ResumeSound
-%D
-%D Todo: like external figures, also search on path,
-%D although, they need to be present ar viewing time, so ...
 
-\installcorenamespace{externalsoundtracks}
+\mutable\lettonothing\currentrendering
+\mutable\lettonothing\currentrenderingwindow
 
-\installsetuponlycommandhandler \??externalsoundtracks {externalsoundtracks}
-
-\setupexternalsoundtracks
-  [\c!option=]
-
-\permanent\tolerant\protected\def\useexternalsoundtrack[#tag]#spacer[#filename]%
-  {\clf_registersoundclip
-     tag  {#tag}%
-     file {#filename}%
-   \relax}
-
-\permanent\def\checksoundtrack#tag% yet untested in mkiv (also move management to lua)
-  {\iflocation
-     \clf_insertsoundclip
-       tag    {#tag}%
-       repeat {\directexternalsoundtracksparameter\c!option}%
-     \relax
-   \fi}
-
-%D Renderings (not yet tested in mkvi):
-
-% Todo: multiple instances and inheritance .. will be done when needed i.e. when I
-% see usage. Probaly by that time this feature is dropped (as are other media
-% rel;ated ones).
-
-\mutable\let\currentrendering      \empty
-\mutable\let\currentrenderingtype  \empty
-\mutable\let\currentrenderingwindow\empty
-
-\definereference[StartCurrentRendering] [\v!StartRendering {\currentrendering}]
-\definereference[StopCurrentRendering]  [\v!StopRendering  {\currentrendering}]
-\definereference[PauseCurrentRendering] [\v!PauseRendering {\currentrendering}]
-\definereference[ResumeCurrentRendering][\v!ResumeRendering{\currentrendering}]
-
-\permanent\tolerant\protected\def\useexternalrendering[#tag]#spacer[#mime]#spacer[#file]#spacer[#option]%
+\permanent\tolerant\protected\def\userendering[#tag]#spacer[#mime]#spacer[#file]#spacer[#option]%
   {\clf_registerrendering
-     type     {external}%
      label    {#tag}%
      mime     {#mime}%
      filename {#file}%
      option   {#option}%
    \relax}
 
-\permanent\tolerant\protected\def\setinternalrendering[#tag]#spacer[#option]% {content} % crappy
-  {\bgroup
-   \dowithnextbox
-     {\clf_registerrendering
-         type     {internal}%
-         label    {#tag}%
-         mime     {IRO}% brrr
-         filename {#tag}%
-         option   {#option}%
-      \relax
-      \let\objectoffset\zeropoint
-      \setobject{IRO}{#tag}\hpack{\box\nextbox}%
-      \egroup}%
-     \hbox}
+\permanent\tolerant\protected\let\useexternalrendering\userendering
 
-\permanent\def\renderingtype  #tag{\clf_renderingvar{#tag}{type}}
 \permanent\def\renderingoption#tag{\clf_renderingvar{#tag}{option}}
 
-\newdimen\d_scrn_rendering_width  \d_scrn_rendering_width  8cm
-\newdimen\d_scrn_rendering_height \d_scrn_rendering_height 6cm
+\newdimension\d_scrn_rendering_width  \d_scrn_rendering_width  8cm
+\newdimension\d_scrn_rendering_height \d_scrn_rendering_height 6cm
 
 \let\m_scrn_rendering_page\!!zerocount
+
+%D \starttyping
+%D \definerenderingwindow[soundplace][width=0pt, height=0pt]
+%D \useexternalrendering[mainsound][audio/mp3][sound.mp3][embed=yes]
+%D \placerenderingwindow[soundplace][mainsound]
+%D \stoptyping
 
 \installcorenamespace{renderingwindow}
 
 \installframedcommandhandler \??renderingwindow {renderingwindow} \??renderingwindow
 
 \appendtoks
-    \letrenderingwindowparameter\c!openpageaction \empty
-    \letrenderingwindowparameter\c!closepageaction\empty
-    \setrenderingwindowparameter\c!width          {\d_scrn_rendering_width }%
-    \setrenderingwindowparameter\c!height         {\d_scrn_rendering_height}%
+    \resetrenderingwindowparameter\c!openpageaction
+    \resetrenderingwindowparameter\c!closepageaction
+    \setrenderingwindowparameter  \c!width          {\d_scrn_rendering_width }%
+    \setrenderingwindowparameter  \c!height         {\d_scrn_rendering_height}%
+    \letrenderingwindowparameter  \c!align          \v!flushleft
 \to \everypresetrenderingwindow
 
 \permanent\tolerant\protected\def\placerenderingwindow[#window]#spacer[#rendering]% do all in lua
@@ -662,13 +635,7 @@
    \else
      \edef\currentrenderingwindow{#window}%
    \fi
-   \edef\currentrenderingtype{\renderingtype\currentrendering}%
-   \ifx\currentrenderingtype\s!internal
-     \getobjectdimensions{IRO}\currentrendering
-     \d_scrn_rendering_height\dimexpr\objectheight+\objectdepth\relax
-     \d_scrn_rendering_width\objectwidth\relax
-     \getobjectreferencepage{IRO}\currentrendering\m_scrn_rendering_page
-   \orelse\ifx\currentrenderingwindow\s!default
+   \ifx\currentrenderingwindow\s!default
      \d_scrn_rendering_height\vsize
      \d_scrn_rendering_width \hsize
      \let\m_scrn_rendering_page\realpageno
@@ -677,19 +644,18 @@
      \d_scrn_rendering_width \renderingwindowparameter\c!width
      \let\m_scrn_rendering_page\realpageno
    \fi
- % todo:
- % \handlereferenceactions{\renderingwindowparameter\c!openpageaction }\dosetuprenderingopenpageaction
- % \handlereferenceactions{\renderingwindowparameter\c!closepageaction}\dosetuprenderingclosepageaction
    \letrenderingwindowparameter\c!offset\v!overlay
    \inheritedrenderingwindowframed
      {\vfilll
       \dontleavehmode
       \clf_insertrenderingwindow
-        label  {\currentrendering}%
-        width  \d_scrn_rendering_width
-        height \d_scrn_rendering_height
-        option {\renderingoption\currentrendering}%
-        page   \m_scrn_rendering_page
+        label     {\currentrendering}%
+        width     \d_scrn_rendering_width
+        height    \d_scrn_rendering_height
+        option    {\renderingoption\currentrendering}%
+        page      \m_scrn_rendering_page
+        openpage  {\renderingwindowparameter\c!openpageaction}%
+        closepage {\renderingwindowparameter\c!closepageaction}%
       \relax
       \hfill}%
    \egroup}

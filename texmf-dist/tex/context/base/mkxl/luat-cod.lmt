@@ -17,32 +17,31 @@ local texconfig, lua = texconfig, lua
 
 -- some basic housekeeping
 
-texconfig.kpse_init       = false     -- not needed in lmtx
-texconfig.shell_escape    = 't'       -- not needed in lmtx
+---------.kpse_init       = false     -- not needed in lmtx
+---------.shell_escape    = 't'       -- not needed in lmtx
 
-texconfig.max_in_open     =     2000
-texconfig.nest_size       =    10000
-texconfig.param_size      =   100000
-texconfig.save_size       =   500000
-texconfig.stack_size      =   100000
-texconfig.buffer_size     = 10000000
-texconfig.token_size      = 10000000
-texconfig.node_size       = 50000000
+-- texconfig.max_in_open     =     2000
+-- texconfig.nest_size       =    10000
+-- texconfig.param_size      =   100000
+-- texconfig.save_size       =   500000
+-- texconfig.stack_size      =   100000
+-- texconfig.buffer_size     = 10000000
+-- texconfig.token_size      = 10000000
+-- texconfig.token_size      = { size = 10000000, step = 2000000 }
+-- texconfig.node_size       = 50000000
 
-texconfig.max_print_line  =   100000
-texconfig.max_strings     =   500000
-texconfig.max_pool        = 10000000
+---------.max_print_line  =   100000
+-- texconfig.max_strings     =   500000
+-- texconfig.max_strings     = { size = 600000, step = 200000 }
+-- texconfig.max_pool        = 10000000
+-- texconfig.hash_extra      =   250000
+-- texconfig.expand_depth    =    10000
 
-texconfig.hash_extra      =   200000
+-- texconfig.error_line      =      250
+-- texconfig.half_error_line =      125
 
-texconfig.expand_depth    =    10000
-texconfig.function_size   =    32768
-texconfig.properties_size =    10000
-texconfig.error_line      =      250
-texconfig.half_error_line =      125
-
-texconfig.level_max       =      500
-texconfig.level_chr       =       46 -- period
+texconfig.functionsize   = 32768
+texconfig.propertiessize = 10000
 
 -- registering bytecode chunks
 
@@ -94,30 +93,8 @@ function lua.registercode(filename,options)
                 lua.lastbytecode = n
             end
         elseif environment.initex then
-            texio.write_nl(format("\nerror loading file: %s (aborting)",filename))
+            texio.writenl(format("\nerror loading file: %s (aborting)",filename))
             os.exit()
-        end
-    end
-end
-
-local finalizers = { }
-
-function lua.registerfinalizer(f,comment)
-    comment = comment or "unknown"
-    if type(f) == "function" then
-        finalizers[#finalizers+1] = { action = f, comment = comment }
-    else
-        print(format("\nfatal error: invalid finalizer, action: %s\n",comment))
-        os.exit()
-    end
-end
-
-function lua.finalize(logger)
-    for i=1,#finalizers do
-        local finalizer = finalizers[i]
-        finalizer.action()
-        if logger then
-            logger("finalize action: %s",finalizer.comment)
         end
     end
 end
@@ -161,9 +138,7 @@ if LUATEXFORMATID == nil then
     LUATEXFORMATID = status.format_id or 0
 end
 
-if JITSUPPORTED == nil then
-    JITSUPPORTED = false
-end
+JITSUPPORTED = false
 
 if INITEXMODE == nil then
     INITEXMODE = status.run_state == 0 -- initializing updating production
@@ -175,6 +150,37 @@ environment.luatexfunctionality = LUATEXFUNCTIONALITY
 environment.jitsupported        = JITSUPPORTED
 environment.initex              = INITEXMODE
 environment.initexmode          = INITEXMODE
+
+if INITEXMODE then
+
+    local finalizers = { }
+
+    function lua.registerinitexfinalizer(f,comment)
+        comment = comment or "unknown"
+        if type(f) == "function" then
+            finalizers[#finalizers+1] = { action = f, comment = comment }
+        else
+            print(format("\nfatal error: invalid finalizer, action: %s\n",comment))
+            os.exit()
+        end
+    end
+
+    function lua.finalizeinitex(logger)
+        for i=1,#finalizers do
+            local finalizer = finalizers[i]
+            finalizer.action()
+            if logger then
+                logger("finalize action: %s",finalizer.comment)
+            end
+        end
+    end
+
+else
+
+    function lua.registerinitexfinalizer() end
+    function lua.finalizeinitex         () end
+
+end
 
 -- if INITEXMODE then
 --     -- we have about that amount so we preallocate then which gives less
@@ -284,7 +290,10 @@ local function open_data_file(name)
         return {
             reader = function()
                 return f:read("*line")
-            end
+            end,
+         -- close = function()
+         --     f:close()
+         -- end
         }
     else
         return false
@@ -301,7 +310,7 @@ callback.register("trace_memory", function(what,success)
         logs.report("tex memory","bumping category %a %s, details: %s",
             what,success,table.sequenced(status["get"..what.."state"]()))
     elseif texio then
-        texio.write_nl(format("bumping tex '%s' memory %s",
+        texio.writenl(format("bumping tex '%s' memory %s",
             what,success))
     end
  -- os.exit()

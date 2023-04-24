@@ -22,6 +22,7 @@ local setargument   = environment.setargument
 
 local filejoinname  = file.join
 local filebasename  = file.basename
+local filenameonly  = file.nameonly
 local filepathpart  = file.pathpart
 local filesuffix    = file.suffix
 local fileaddsuffix = file.addsuffix
@@ -106,12 +107,14 @@ end
 -- -- The way we use stubs will change in a bit in 2019 (mtxrun and context). We also normalize
 -- -- the platforms to use a similar approach to this.
 
-local engine_new = file.nameonly(getargument("engine") or directives.value("system.engine"))
-local engine_old = file.nameonly(environment.ownmain) or file.nameonly(environment.ownbin)
+local engine_new = filenameonly(getargument("engine") or directives.value("system.engine"))
+local engine_old = filenameonly(environment.ownmain) or filenameonly(environment.ownbin)
 
 local function restart(engine_old,engine_new)
-    local ownname = file.join(file.dirname(environment.ownname),"mtxrun.lua")
-    local command = format("%s --luaonly %q %s --redirected",engine_new,ownname,environment.reconstructcommandline())
+    local generate  = environment.arguments.generate and (engine_new == "luatex" or engine_new == "luajittex")
+    local arguments = generate and  "--generate" or environment.reconstructcommandline()
+    local ownname   = filejoinname(filepathpart(environment.ownname),"mtxrun.lua")
+    local command   = format("%s --luaonly %q %s --redirected",engine_new,ownname,arguments)
     report(format("redirect %s -> %s: %s",engine_old,engine_new,command))
     local result = os.execute(command)
     os.exit(result == 0 and 0 or 1)
@@ -361,20 +364,29 @@ local function multipass_changed(oldhash, newhash)
     return false
 end
 
-local f_tempfile = formatters["%s-%s-%02d.tmp"]
+local f_tempfile_i = formatters["%s-%s-%02d.tmp"]
+local f_tempfile_s = formatters["%s-%s-keep.%s"]
 
 local function backup(jobname,run,kind,filename)
-    if run == 1 then
-        for i=1,10 do
-            local tmpname = f_tempfile(jobname,kind,i)
-            if validfile(tmpname) then
-                removefile(tmpname)
-                report("removing %a",tmpname)
+    if run then
+        if run == 1 then
+            for i=1,10 do
+                local tmpname = f_tempfile_i(jobname,kind,i)
+                if validfile(tmpname) then
+                    removefile(tmpname)
+                    report("removing %a",tmpname)
+                end
             end
         end
-    end
-    if validfile(filename) then
-        local tmpname = f_tempfile(jobname,kind,run or 1)
+        if validfile(filename) then
+            local tmpname = f_tempfile_i(jobname,kind,run or 1)
+            report("copying %a into %a",filename,tmpname)
+            file.copy(filename,tmpname)
+        else
+            report("no file %a, nothing kept",filename)
+        end
+    elseif validfile(filename) then
+        local tmpname = f_tempfile_s(jobname,kind,kind)
         report("copying %a into %a",filename,tmpname)
         file.copy(filename,tmpname)
     else
@@ -395,10 +407,20 @@ local function multipass_copyluafile(jobname,run)
     end
 end
 
+local function multipass_copypdffile(jobname,run)
+    if run then
+        local pdfname = jobname..".pdf"
+        if validfile(pdfname) then
+            backup(jobname,false,"pdf",pdfname)
+            report()
+        end
+    end
+end
+
 local function multipass_copylogfile(jobname,run)
-    local logname = jobname..".log"
-    if validfile(logname) then
-        if run then
+    if run then
+        local logname = jobname..".log"
+        if validfile(logname) then
             backup(jobname,run,"log",logname)
             report()
         end
@@ -659,6 +681,7 @@ function scripts.context.run(ctxdata,filename)
     local a_purgeall      = getargument("purgeall")
     local a_purgeresult   = getargument("purgeresult")
     local a_global        = getargument("global")
+    local a_runpath       = getargument("runpath")
     local a_timing        = getargument("timing")
     local a_profile       = getargument("profile")
     local a_batchmode     = getargument("batchmode")
@@ -673,6 +696,7 @@ function scripts.context.run(ctxdata,filename)
     local a_texformat     = getargument("texformat")
     local a_keeptuc       = getargument("keeptuc")
     local a_keeplog       = getargument("keeplog")
+    local a_keeppdf       = getargument("keeppdf")
     local a_export        = getargument("export")
     local a_nodates       = getargument("nodates")
     local a_trailerid     = getargument("trailerid")
@@ -692,9 +716,13 @@ function scripts.context.run(ctxdata,filename)
         local basename = filebasename(filename) -- use splitter
         local pathname = filepathpart(filename)
         --
+        if filesuffix(filename) == "" then
+            filename = fileaddsuffix(filename,"tex")
+        end
+        --
         if pathname == "" and not a_global and filename ~= usedfiles.nop then
             filename = "./" .. filename
-            if not validfile(filename) and not validfile(filename..".tex") then
+            if not validfile(filename) then
                 report("warning: no (local) file %a, proceeding",filename)
             end
         end
@@ -715,6 +743,31 @@ function scripts.context.run(ctxdata,filename)
                 formatfile, scriptfile = resolvers.locateformat(formatname)
             end
             --
+            local runpath = a_runpath or analysis.runpath
+            if type(runpath) == "string" and runpath ~= "" then
+                runpath = resolvers.resolve(runpath)
+                local currentdir = dir.current()
+                if not lfs.isdir(runpath) then
+                    if dir.makedirs(runpath) then
+                        report("runpath %a has been created",runpath)
+                    else
+                        report("error: runpath %a cannot be created",runpath)
+                        os.exit()
+                    end
+                end
+                if lfs.chdir(runpath) then
+                    report("changing to runpath %a",runpath)
+                else
+                    report("error: changing to runpath %a is impossible",runpath)
+                    os.exit()
+                end
+                environment.arguments.path    = currentdir
+                environment.arguments.runpath = runpath
+                if filepathpart(filename) == "." then
+                    filename = filebasename(filename)
+                end
+            end
+            --
             a_jithash       = validstring(a_jithash or analysis.jithash) or nil
             a_permitloadlib = a_permitloadlib or analysis.permitloadlib or nil
             --
@@ -733,11 +786,15 @@ function scripts.context.run(ctxdata,filename)
                     return flag or plus -- flag wins
                 end
             end
-            local a_trackers    = analysis.trackers
-            local a_experiments = analysis.experiments
+            ----- a_trackers    = analysis.trackers
+            ----- a_experiments = analysis.experiments
             local directives    = combine("directives")
             local trackers      = combine("trackers")
             local experiments   = combine("experiments")
+            --
+            local ownerpassword = environment.ownerpassword or analysis.ownerpassword
+            local userpassword  = environment.userpassword  or analysis.userpassword
+            local permissions   = environment.permissions   or analysis.permissions
             --
             if formatfile and scriptfile then
                 local suffix     = validstring(getargument("suffix"))
@@ -745,7 +802,7 @@ function scripts.context.run(ctxdata,filename)
                 if not resultname or resultname == "" then
                     resultname = validstring(analysis.result)
                 end
-                local resultpath = file.pathpart(resultname)
+                local resultpath = filepathpart(resultname)
                 if resultpath ~= "" then
                     resultname  = nil
                 elseif suffix then
@@ -805,6 +862,10 @@ function scripts.context.run(ctxdata,filename)
                     export         = a_export and true or nil,
                     nocompression  = a_nocompression and true or nil,
                     texmfbinpath   = os.selfdir,
+                    --
+                    ownerpassword  = ownerpassword,
+                    userpassword   = userpassword,
+                    permissions    = permissions,
                 }
                 --
                 for k, v in next, environment.arguments do
@@ -816,6 +877,14 @@ function scripts.context.run(ctxdata,filename)
                 --
                 -- todo: --output-file=... in luatex
                 --
+                local usedname = jobname
+                local engine   = analysis.engine or "luametatex"
+                if engine == "luametatex" and (mainfile == usedfiles.yes or mainfile == usedfiles.nop) and not getargument("redirected") then
+                    mainfile = "" -- we don't need that
+                    usedname = fulljobname
+                end
+                --
+                --
                 local l_flags = {
                     ["interaction"]           = a_batchmode,
                  -- ["synctex"]               = false,       -- context has its own way
@@ -825,7 +894,8 @@ function scripts.context.run(ctxdata,filename)
                  -- ["file-line-error-style"] = true,
 --                  ["fmt"]                   = formatfile,
 --                  ["lua"]                   = scriptfile,
-                    ["jobname"]               = jobname,
+--                  ["jobname"]               = jobname,
+                    ["jobname"]               = usedname,
                     ["jithash"]               = a_jithash,
                     ["permitloadlib"]         = a_permitloadlib,
                 }
@@ -854,10 +924,9 @@ function scripts.context.run(ctxdata,filename)
                 --
                 -- kindofrun: 1:first run, 2:successive run, 3:once, 4:last of maxruns
                 --
-                local engine = analysis.engine or "luametatex"
-                if engine == "luametatex" and (mainfile == usedfiles.yes or mainfile == usedfiles.nop) then
-                    mainfile = "" -- we don't need that
-                end
+                -- can be used to include pages from a previous run, --keeppdf or "% keeppdf" on first-line
+                --
+                multipass_copypdffile(jobname,a_keeppdf or analysis.keeppdf)
                 --
                 for currentrun=1,maxnofruns do
                     --
@@ -913,7 +982,7 @@ function scripts.context.run(ctxdata,filename)
                 end
                 --
                 if environment.arguments["ansilog"] then
-                    local logfile = file.replacesuffix(jobname,"log")
+                    local logfile = filenewsuffix(jobname,"log")
                     local logdata = io.loaddata(logfile) or ""
                     if logdata ~= "" then
                         io.savedata(logfile,(gsub(logdata,"%[.-m","")))
@@ -1438,7 +1507,7 @@ end
 function scripts.context.pages()
     local filename = environment.files[1]
     if filename then
-        local u = table.load(file.addsuffix(filename,"tuc"))
+        local u = table.load(fileaddsuffix(filename,"tuc"))
         if u then
             local p = u.structures.pages.collected
             local l = u.structures.lists.collected
@@ -1637,19 +1706,16 @@ end
 
 -- todo: we need to do a dummy run
 
-function scripts.context.trackers()
-    environment.files = { resolvers.findfile("m-trackers.mkiv") }
+local function showsetter()
+    environment.files = { resolvers.findfile("mtx-context-setters.tex") }
     multipass_nofruns = 1
     setargument("purgeall",true)
     scripts.context.run()
 end
 
-function scripts.context.directives()
-    environment.files = { resolvers.findfile("m-directives.mkiv") }
-    multipass_nofruns = 1
-    setargument("purgeall",true)
-    scripts.context.run()
-end
+scripts.context.trackers    = showsetter
+scripts.context.directives  = showsetter
+scripts.context.experiments = showsetter
 
 function scripts.context.logcategories()
     environment.files = { resolvers.findfile("m-logcategories.mkiv") }
@@ -1663,6 +1729,12 @@ function scripts.context.timed(action)
 end
 
 -- getting it done
+
+if getargument("pdftex") then
+    setargument("engine","pdftex")
+elseif getargument("xetex") then
+    setargument("engine","xetex")
+end
 
 if getargument("timedlog") then
     logs.settimedlog()
@@ -1781,7 +1853,7 @@ end
 do
 
     if getargument("wipebusy") then
-        os.remove("context-is-busy.tmp")
+        removefile("context-is-busy.tmp")
     end
 
 end

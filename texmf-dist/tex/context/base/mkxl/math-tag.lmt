@@ -8,8 +8,13 @@ if not modules then modules = { } end modules ['math-tag'] = {
 
 -- todo: have a local list with local tags that then get appended
 -- todo: use tex.getmathcodes (no table)
+-- todo: add more spacing details + check text stuff for latest additions
+-- todo: some more font related cleanup + adaption to new scaling
+-- todo: tracing
+-- todo: maybe use lpeg matchers
 
--- use lpeg matchers
+-- todo: prime
+-- todo: middle in fraction
 
 local find, match = string.find, string.match
 local insert, remove, concat = table.insert, table.remove, table.concat
@@ -20,42 +25,48 @@ local nodes             = nodes
 local nuts              = nodes.nuts
 local tonut             = nuts.tonut
 
-local getnext           = nuts.getnext
-local getid             = nuts.getid
 local getchar           = nuts.getchar
-local getfont           = nuts.getfont
+local getprev           = nuts.getprev
+local getcharspec       = nuts.getcharspec
+local getdata           = nuts.getdata
 local getlist           = nuts.getlist
 local getfield          = nuts.getfield
 local getdisc           = nuts.getdisc
-local getsubtype        = nuts.getsubtype
 local getattr           = nuts.getattr
 local getattrlist       = nuts.getattrlist
 local setattr           = nuts.setattr
------ getcomponents     = nuts.getcomponents -- not really needed
 local getwidth          = nuts.getwidth
 
-local getnucleus        = nuts.getnucleus
-local getsub            = nuts.getsub
-local getsup            = nuts.getsup
+local getnumerator      = nuts.getnumerator
+local getdenominator    = nuts.getdenominator
+local getdelimiter      = nuts.getdelimiter
+local getleftdelimiter  = nuts.getleftdelimiter
+local getrightdelimiter = nuts.getrightdelimiter
+local getdegree         = nuts.getdegree
+local gettop            = nuts.gettop
+local getbottom         = nuts.getbottom
+local getchoice         = nuts.getchoice
 
-local set_attributes    = nuts.setattributes
+local getnucleus        = nuts.getnucleus
+
+local setattributes     = nuts.setattributes
 
 local nextnode          = nuts.traversers.node
 
 local nodecodes         = nodes.nodecodes
 
-local noad_code         = nodecodes.noad           -- attr nucleus sub sup
-local accent_code       = nodecodes.accent         -- attr nucleus sub sup accent
-local radical_code      = nodecodes.radical        -- attr nucleus sub sup left degree
-local fraction_code     = nodecodes.fraction       -- attr nucleus sub sup left right
-local subbox_code       = nodecodes.subbox         -- attr list
-local submlist_code     = nodecodes.submlist       -- attr list
-local mathchar_code     = nodecodes.mathchar       -- attr fam char
-local mathtextchar_code = nodecodes.mathtextchar   -- attr fam char
-local delimiter_code    = nodecodes.delimiter      -- attr small_fam small_char large_fam large_char
-local style_code        = nodecodes.style          -- attr style
-local choice_code       = nodecodes.choice         -- attr display text script scriptscript
-local fence_code        = nodecodes.fence          -- attr subtype
+local noad_code         = nodecodes.noad
+local accent_code       = nodecodes.accent
+local radical_code      = nodecodes.radical
+local fraction_code     = nodecodes.fraction
+local subbox_code       = nodecodes.subbox
+local submlist_code     = nodecodes.submlist
+local mathchar_code     = nodecodes.mathchar
+local mathtextchar_code = nodecodes.mathtextchar
+local delimiter_code    = nodecodes.delimiter
+local style_code        = nodecodes.style
+local choice_code       = nodecodes.choice
+local fence_code        = nodecodes.fence
 
 local accentcodes       = nodes.accentcodes
 local fencecodes        = nodes.fencecodes
@@ -64,9 +75,10 @@ local fixedtopaccent_code    = accentcodes.fixedtop
 local fixedbottomaccent_code = accentcodes.fixedbottom
 local fixedbothaccent_code   = accentcodes.fixedboth
 
-local leftfence_code    = fencecodes.left
-local middlefence_code  = fencecodes.middle
-local rightfence_code   = fencecodes.right
+local leftfence_code     = fencecodes.left
+local middlefence_code   = fencecodes.middle
+local rightfence_code    = fencecodes.right
+local operatorfence_code = fencecodes.operator
 
 local kerncodes         = nodes.kerncodes
 
@@ -94,12 +106,15 @@ local restart_tagged    = tags.restart
 local stop_tagged       = tags.stop
 local taglist           = tags.taglist
 
-local chardata          = characters.data
+----- chardata          = characters.data
 
-local getmathcodes      = tex.getmathcodes
-local mathcodes         = mathematics.codes
-local ordinary_mathcode = mathcodes.ordinary
-local variable_mathcode = mathcodes.variable
+local getmathcodes         = tex.getmathcodes
+----- mathcodes            = mathematics.codes
+local mathcodes            = mathematics.classes
+local ordinary_mathcode    = mathcodes.ordinary
+local digit_mathcode       = mathcodes.digit
+local punctuation_mathcode = mathcodes.punctuation
+local active_mathcode      = mathcodes.active
 
 local fromunicode16     = fonts.mappings.fromunicode16
 local fontcharacters    = fonts.hashes.characters
@@ -108,19 +123,31 @@ local report_tags       = logs.reporter("structure","tags")
 
 local process
 
+local function processnucleus(nucleus,prime)
+    if prime then
+        -- This should work wasn't it that browser handling of primes have an issue with
+        -- "big semi raised text" vs "small supposedly superscripted". So let's play safe
+        -- and use a superscript. Even then we get somewhat different positioning for the
+        -- same primed character in q sqrt and (e.g.) a sequential integral.
+     -- start_tagged("mrow", { prime = true })
+        start_tagged("msup", { prime = true })
+        process(nucleus)
+        process(prime)
+        stop_tagged()
+    else
+        process(nucleus)
+    end
+end
+
 local function processsubsup(start)
     -- At some point we might need to add an attribute signaling the
     -- super- and subscripts because TeX and MathML use a different
     -- order. The mrows are needed to keep mn's separated.
-    local nucleus = getnucleus(start)
-    local sup     = getsup(start)
-    local sub     = getsub(start)
+    local nucleus, prime, sup, sub, presup, presub = getnucleus(start,true)
     if sub then
         if sup then
             setattr(start,a_tagged,start_tagged("msubsup"))
-         -- start_tagged("mrow")
-            process(nucleus)
-         -- stop_tagged()
+            processnucleus(nucleus,prime)
             start_tagged("mrow", { subscript = true })
             process(sub)
             stop_tagged()
@@ -130,9 +157,7 @@ local function processsubsup(start)
             stop_tagged()
         else
             setattr(start,a_tagged,start_tagged("msub"))
-         -- start_tagged("mrow")
-            process(nucleus)
-         -- stop_tagged()
+            processnucleus(nucleus,prime)
             start_tagged("mrow")
             process(sub)
             stop_tagged()
@@ -140,15 +165,13 @@ local function processsubsup(start)
         end
     elseif sup then
         setattr(start,a_tagged,start_tagged("msup"))
-     -- start_tagged("mrow")
-        process(nucleus)
-     -- stop_tagged()
+        processnucleus(nucleus,prime)
         start_tagged("mrow")
         process(sup)
         stop_tagged()
         stop_tagged()
     else
-        process(nucleus)
+        processnucleus(nucleus,prime)
     end
 end
 
@@ -161,17 +184,8 @@ local fencesstack = { }
 
 -- glyph nodes and such can happen in under and over stuff
 
--- local function getunicode(n) -- instead of getchar
---     local char = getchar(n)
---  -- local font = getfontoffamily(getfield(n,"fam"))
---     local font = getfont(n)
---     local data = fontcharacters[font][char]
---     return data.unicode or char
--- end
-
 local function getunicode(n) -- instead of getchar
- -- local char, font = isglyph(n) -- no, we have a mathchar
-    local char, font = getchar(n), getfont(n)
+    local char, font = getcharspec(n)
     local data = fontcharacters[font][char]
     return data.unicode or char -- can be a table but unlikely for math characters
 end
@@ -205,17 +219,28 @@ end
 --     )
 -- end
 
+-- I need to bring this in sync with new or removed mathml 3, not that there has
+-- been many changes. It will happen in sync with other mathml updates in context
+-- where we also keep adapting to a cycling between either or not support in
+-- browsers, the come-and-go of alternatives like ascii math and mathjax. It's the
+-- web and browser support that drives this, not tex and its community. So, maybe
+-- I'll add some more detail here, nto that it matters much in the long run where we
+-- only focus on structure and let the engine deal with the details. Another reason
+-- to update this is that we can add some tracing (lmtx only).
+
+-- This has been working ok for quite but in 2023 it's time to have a look at it
+-- again and see to what extend we need to adapt to new features. Around the time
+-- PG's Panopticom was put on youtube.
+
 process = function(start) -- we cannot use the processor as we have no finalizers (yet)
     local mtexttag = nil
-    while start do
-        local id = getid(start)
--- showtag(start,id,true)
+    for start, id, subtype in nextnode, start do -- current
         if id == glyph_code or id == disc_code then
             if not mtexttag then
                 mtexttag = start_tagged("mtext")
             end
             setattr(start,a_tagged,mtexttag)
-        elseif mtexttag and id == kern_code and (getsubtype(start) == fontkern_code or getsubtype(start) == italickern_code) then -- italickern
+        elseif mtexttag and id == kern_code and subtype == fontkern_code or subtype == italickern_code then -- italickern
             setattr(start,a_tagged,mtexttag)
         else
             if mtexttag then
@@ -225,26 +250,48 @@ process = function(start) -- we cannot use the processor as we have no finalizer
             if id == mathchar_code then
                 local char = getchar(start)
                 local code = getmathcodes(char)
+--                 local ch   = chardata[char]
+--                 local mc   = ch and ch.mathclass
                 local tag
-                if code == ordinary_mathcode or code == variable_mathcode then
-                    local ch = chardata[char]
-                    local mc = ch and ch.mathclass
-                    if mc == "number" then
-                        tag = "mn"
-                    elseif mc == "variable" or not mc then -- variable is default
-                        tag = "mi"
-                    else
-                        tag = "mo"
-                    end
+                local properties= { class = code }
+                -- we're a bit early so we can have active here and no rules get applied
+                -- so maybe we have to correct some later on
+                -- todo: we have way more now
+--                 if code == ordinary_mathcode then
+--                     if mc == "number" then
+--                         tag = "mn"
+--                     elseif mc == "variable" or not mc then -- variable is default
+--                         tag = "mi"
+--                     else
+--                         tag = "mo"
+--                     end
+--                 else
+--                     tag = "mo"
+--                 end
+-- print(code,mathematics.classes[code])
+-- print(ordinary_mathcode,digit_mathcode,active_mathcode)
+                if code == ordinary_mathcode then
+                    tag = "mi"
+                elseif code == digit_mathcode then
+                    tag = "mn"
+--                 elseif code == punctuation_mathcode or code == active_mathcode then
+--                     tag = "mo"
                 else
                     tag = "mo"
                 end
+--                 if mc == "open" or nc == "close" or  mc == "middle" then
+--                     properties = { maxsize =  1 }
+--                 end
                 local a = getattr(start,a_mathcategory)
                 if a then
-                    setattr(start,a_tagged,start_tagged(tag,{ mathcategory = a }))
-                else
-                    setattr(start,a_tagged,start_tagged(tag)) -- todo: a_mathcategory
+                    -- todo / redo
+                    if properties then
+                        properties.mathcategory = a
+                    else
+                        properties = { mathcategory = a }
+                    end
                 end
+                setattr(start,a_tagged,start_tagged(tag,properties))
                 stop_tagged()
              -- showtag(start,id,false)
                 break -- okay?
@@ -287,7 +334,8 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                                 process(list)
                             end
                         else
-                            if tag ~= "mstackertop" and tag ~= "mstackermid" and tag ~= "mstackerbot" then
+if tag ~= "mtable" and tag ~= "mstackertop" and tag ~= "mstackermid" and tag ~= "mstackerbot" then
+--                             if tag ~= "mstackertop" and tag ~= "mstackermid" and tag ~= "mstackerbot" then
                                 tag = "mtext"
                             end
                             local text = start_tagged(tag)
@@ -297,7 +345,7 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                                 -- empty list
                             elseif not attr then
                                 -- box comes from strange place
-                                set_attributes(list,a_tagged,text) -- only the first node ?
+                                setattributes(list,a_tagged,text) -- only the first node ?
                             else
                                 -- Beware, the first node in list is the actual list so we definitely
                                 -- need to nest. This approach is a hack, maybe I'll make a proper
@@ -314,12 +362,12 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                                  -- local keep = { } -- win case we might need to move keep outside
                                     for n, id, subtype in nextnode, list do
                                         local mth = id == math_code and subtype
-                                        if mth == 0 then -- hm left_code
-                                         -- insert(keep,text)
-                                            keep = text
-                                            text = start_tagged("mrow")
-                                            common = common + 1
-                                        end
+if mth == 0 then -- begin in line
+ -- insert(keep,text)
+    keep = text
+    text = start_tagged("mrow")
+    common = common + 1
+end
                                         local aa = getattr(n,a_tagged)
                                         if aa then
                                             local ac = cache[aa]
@@ -363,12 +411,12 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                                                 runner(replace,depth+1)
                                             end
                                         end
-                                        if mth == 1 then
-                                            stop_tagged()
-                                         -- text = remove(keep)
-                                            text = keep
-                                            common = common - 1
-                                        end
+if mth == 1 then -- end in line
+    stop_tagged()
+ -- text = remove(keep)
+    text = keep
+    common = common - 1
+end
                                     end
                                 end
                                 runner(list,0)
@@ -419,10 +467,13 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                     end
                 end
             elseif id == fraction_code then
-                local num   = getfield(start,"num")
-                local denom = getfield(start,"denom")
-                local left  = getfield(start,"left")
-                local right = getfield(start,"right")
+                --
+                -- if middle then we have a stacker!
+                --
+                local num   = getnumerator(start)
+                local denom = getdenominator(start)
+                local left  = getleftdelimiter(start)
+                local right = getrightdelimiter(start)
                 if left then
                    setattr(left,a_tagged,start_tagged("mo"))
                    process(left)
@@ -438,10 +489,10 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                     stop_tagged()
                 end
             elseif id == choice_code then
-                local display      = getfield(start,"display")
-                local text         = getfield(start,"text")
-                local script       = getfield(start,"script")
-                local scriptscript = getfield(start,"scriptscript")
+                local display      = getchoice(start,1)
+                local text         = getchoice(start,2)
+                local script       = getchoice(start,3)
+                local scriptscript = getchoice(start,4)
                 if display then
                     process(display)
                 end
@@ -455,29 +506,27 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                     process(scriptscript)
                 end
             elseif id == fence_code then
-                local subtype = getsubtype(start)
-                local delim   = getfield(start,"delimiter")
+                local delimiter = getdelimiter(start)
+-- print(subtype,fencecodes[subtype],delimiter)
                 if subtype == leftfence_code then
-                    -- left
                     local properties = { }
                     insert(fencesstack,properties)
                     setattr(start,a_tagged,start_tagged("mfenced",properties)) -- needs checking
-                    if delim then
+                    if delimiter then
                         start_tagged("ignore")
-                        local chr = getchar(delim)
+                        local chr = getchar(delimiter)
                         if chr ~= 0 then
                             properties.left = chr
                         end
-                        process(delim)
+                        process(delimiter)
                         stop_tagged()
                     end
                     start_tagged("mrow") -- begin of subsequence
                 elseif subtype == middlefence_code then
-                    -- middle
-                    if delim then
+                    if delimiter then
                         start_tagged("ignore")
                         local top = fencesstack[#fencesstack]
-                        local chr = getchar(delim)
+                        local chr = getchar(delimiter)
                         if chr ~= 0 then
                             local mid = top.middle
                             if mid then
@@ -486,7 +535,7 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                                 top.middle = { chr }
                             end
                         end
-                        process(delim)
+                        process(delimiter)
                         stop_tagged()
                     end
                     stop_tagged()        -- end of subsequence
@@ -497,26 +546,44 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                         report_tags("missing right fence")
                         properties = { }
                     end
-                    if delim then
+                    if delimiter then
                         start_tagged("ignore")
-                        local chr = getchar(delim)
+                        local chr = getchar(delimiter)
                         if chr ~= 0 then
                             properties.right = chr
                         end
-                        process(delim)
+                        process(delimiter)
                         stop_tagged()
                     end
                     stop_tagged() -- end of subsequence
                     stop_tagged()
-                else
-                    -- can't happen
+                elseif subtype == operatorfence_code then
+                    -- the same as left but different key
+                    local properties = { }
+                    insert(fencesstack,properties)
+                    setattr(start,a_tagged,start_tagged("mfenced",properties)) -- needs checking
+                    if delimiter then
+                        local chr = getchar(delimiter)
+                        if chr ~= 0 then
+                            properties.operator = chr
+                        end
+                        process(delimiter)
+                    end
+                    processsubsup(start)
+                    start_tagged("mrow") -- begin of subsequence
                 end
             elseif id == radical_code then
-                local left   = getfield(start,"left")
-                local degree = getfield(start,"degree")
+                local left   = getleftdelimiter(start)
+                local right  = getrightdelimiter(start)
+                local degree = getdegree(start)
                 if left then
                     start_tagged("ignore")
                     process(left) -- root symbol, ignored
+                    stop_tagged()
+                end
+                if right then
+                    start_tagged("ignore")
+                    process(lright) -- actuarian symbol, ignored
                     stop_tagged()
                 end
                 if degree and hascontent(degree) then
@@ -530,55 +597,58 @@ process = function(start) -- we cannot use the processor as we have no finalizer
                     stop_tagged()
                 end
             elseif id == accent_code then
-                local subtype    = getsubtype(start)
-                local accent     = getfield(start,"accent")
-                local bot_accent = getfield(start,"bot_accent")
-                if bot_accent then
-                    if accent then
+                local topaccent = gettop(start)
+                local bottomaccent = getbottom(start)
+                if bottomaccent then
+                    if topaccent then
                         setattr(start,a_tagged,start_tagged("munderover", {
                             accent      = true,
-                            top         = getunicode(accent),
-                            bottom      = getunicode(bot_accent),
+                            top         = getunicode(topaccent),
+                            bottom      = getunicode(bottomaccent),
                             topfixed    = subtype == fixedtopaccent_code or subtype == fixedbothaccent_code,
                             bottomfixed = subtype == fixedbottomaccent_code or subtype == fixedbothaccent_code,
                         }))
                         processsubsup(start)
-                        process(bot_accent)
-                        process(accent)
+                        process(bottomaccent)
+                        process(topaccent)
                         stop_tagged()
                     else
                         setattr(start,a_tagged,start_tagged("munder", {
                             accent      = true,
-                            bottom      = getunicode(bot_accent),
+                            bottom      = getunicode(bottomaccent),
                             bottomfixed = subtype == fixedbottomaccent_code or subtype == fixedbothaccent_code,
                         }))
                         processsubsup(start)
-                        process(bot_accent)
+                        process(bottomaccent)
                         stop_tagged()
                     end
-                elseif accent then
+                elseif topaccent then
                     setattr(start,a_tagged,start_tagged("mover", {
                         accent   = true,
-                        top      = getunicode(accent),
+                        top      = getunicode(topaccent),
                         topfixed = subtype == fixedtopaccent_code or subtype == fixedbothaccent_code,
                     }))
                     processsubsup(start)
-                    process(accent)
+                    process(topaccent)
                     stop_tagged()
                 else
                     processsubsup(start)
                 end
             elseif id == glue_code then
-             -- setattr(start,a_tagged,start_tagged("mspace",{ width = getwidth(start) }))
-                setattr(start,a_tagged,start_tagged("mspace"))
+                -- before processing, so other intermathglue is not tagged
+                local em = fonts.hashes.emwidths[nuts.getfont(start)]
+                local wd = getwidth(start)
+                if em and wd then
+                    setattr(start,a_tagged,start_tagged("mspace",{ emfactor = wd/em }))
+                end
                 stop_tagged()
             else
-                setattr(start,a_tagged,start_tagged("merror", { detail = nodecodes[i] }))
+                --rule boundary
+                setattr(start,a_tagged,start_tagged("merror", { detail = nodecodes[id] }))
                 stop_tagged()
             end
         end
 -- showtag(start,id,false)
-        start = getnext(start)
     end
     if mtexttag then
         stop_tagged()
@@ -593,4 +663,97 @@ function noads.handlers.tags(head,style,penalties)
 -- showtag(head,getid(head),false)
     stop_tagged()
     stop_tagged()
+end
+
+do
+
+    -- This one is meant for tracing (in m4all/m4mbo where it complements some other
+    -- tracing) but it actually can also replace the embedding feature although that
+    -- one might be better when we have more complex code with dependencies outside
+    -- the blob. I'll deal with that when it's needed (trivial). The current
+    -- interface is rather minimalistic.
+
+    local enabled = false
+    local export  = false
+    local allmath = false
+    local warned  = false
+
+    function mathematics.startcollecting()
+        if structures.tags.enabled() then
+            if not enabled then
+                nodes.tasks.enableaction("math", "noads.handlers.export")
+            end
+            enabled = true
+            export  = structures.tags.localexport
+            allmath = { }
+        elseif not warned then
+            report_tags("math collecting only works when tagging is enabled")
+            warned = true
+        end
+    end
+
+    function mathematics.stopcollecting()
+        export = false
+    end
+
+    local function collected(asstring)
+        local a = allmath or { }
+        return asstring and concat(a) or a
+    end
+
+    mathematics.collected = collected
+
+    interfaces.implement {
+        name      = "startcollectingmath",
+     -- public    = true,
+        protected = true,
+        actions   = mathematics.startcollecting
+    }
+
+    interfaces.implement {
+        name      = "stopcollectingmath",
+     -- public    = true,
+        protected = true,
+        actions   = mathematics.stopcollecting
+    }
+
+    interfaces.implement {
+        name      = "processcollectedmath",
+     -- public    = true,
+        protected = true,
+        arguments = "2 strings",
+        actions   = function(filename,buffername)
+            if filename and filename ~= "" then
+                io.savedata(filename,collected(true))
+            elseif buffername then
+                buffers.assign(buffername == interfaces.variables.yes and "" or buffername,collected(true))
+            else
+                return collected
+            end
+        end
+    }
+
+    interfaces.implement {
+        name      = "collectedmath",
+        usage     = "value",
+        protected = true,
+        public    = true,
+        actions = function(what)
+            if what == "value" then
+                return tokens.values.integer, allmath and #allmath or 0
+            else
+                context(allmath and allmath[tokens.scanners.integer()] or nil)
+            end
+        end
+    }
+
+    function noads.handlers.export(head)
+        if export then
+            allmath[#allmath+1] = export(head)
+        end
+        return head
+    end
+
+    nodes.tasks.appendaction("math", "finalizers", "noads.handlers.export", nil, "nonut", "disabled")
+
 end

@@ -99,7 +99,7 @@ local setdata      = nuts.setdata
 local setruledata  = nuts.setruledata
 local setvalue     = nuts.setvalue
 
-local copy_nut     = nuts.copy_only or nuts.copy
+local copy_nut     = nuts.copy
 local new_nut      = nuts.new
 local flush_nut    = nuts.flush
 
@@ -173,19 +173,10 @@ local savepos           = register_nut(new_nut(whatsit_code,whatsitcodes.savepos
 
 local user_node         = new_nut(whatsit_code,whatsitcodes.userdefined)
 
-if CONTEXTLMTXMODE == 0 then
-    setfield(user_node,"type",usercodes.number)
-end
+setfield(user_node,"type",usercodes.number)
 
-local left_margin_kern, right_margin_kern
-
-if CONTEXTLMTXMODE > 0 then
-    left_margin_kern  = register_nut(new_nut(kern_code,kerncodes.leftmargincode))
-    right_margin_kern = register_nut(new_nut(kern_code,kerncodes.rightmargincode))
-else
-    left_margin_kern  = register_nut(new_nut(nodecodes.marginkern,0))
-    right_margin_kern = register_nut(new_nut(nodecodes.marginkern,1))
-end
+local left_margin_kern  = register_nut(new_nut(nodecodes.marginkern,0))
+local right_margin_kern = register_nut(new_nut(nodecodes.marginkern,1))
 
 local lineskip          = register_nut(new_nut(glue_code,gluecodes.lineskip))
 local baselineskip      = register_nut(new_nut(glue_code,gluecodes.baselineskip))
@@ -429,27 +420,15 @@ function nutpool.savepos()
     return copy_nut(savepos)
 end
 
-if CONTEXTLMTXMODE == 0 then
-
-    function nutpool.latelua(code)
-        local n = copy_nut(latelua)
-        if type(code) == "table" then
-            local action        = code.action
-            local specification = code.specification or code
-            code = function() action(specification) end
-        end
-        setdata(n,code)
-        return n
+function nutpool.latelua(code)
+    local n = copy_nut(latelua)
+    if type(code) == "table" then
+        local action        = code.action
+        local specification = code.specification or code
+        code = function() action(specification) end
     end
-
-else
-
-    function nutpool.latelua(code)
-        local n = copy_nut(latelua)
-        nodeproperties[n] = { data = code }
-        return n
-    end
-
+    setdata(n,code)
+    return n
 end
 
 function nutpool.leftmarginkern(glyph,width)
@@ -575,7 +554,7 @@ local function cleanup(nofboxes) -- todo
     return nr, nl, nofboxes -- can be nil
 end
 
-local usage = CONTEXTLMTXMODE > 0 and node.inuse or function()
+local function usage()
     local t = { }
     for n, tag in gmatch(status.node_mem_usage,"(%d+) ([a-z_]+)") do
         t[tag] = tonumber(n) or 0
@@ -583,7 +562,7 @@ local usage = CONTEXTLMTXMODE > 0 and node.inuse or function()
     return t
 end
 
-local stock = CONTEXTLMTXMODE > 0 and node.instock or { }
+local stock = { }
 
 nutpool .cleanup = cleanup
 nodepool.cleanup = cleanup
@@ -611,25 +590,25 @@ statistics.register("node memory usage", function() -- comes after cleanup !
     end
 end)
 
-lua.registerfinalizer(cleanup, "cleanup reserved nodes")
+lua.registerinitexfinalizer(cleanup, "cleanup reserved nodes")
 
 -- experiment
 
 do
 
-    local glyph       = tonode(glyph)
-    local traverse_id = nodes.traverse_id
+    local glyph      = tonode(glyph)
+    local traverseid = nodes.traverseid
 
-    local traversers  = table.setmetatableindex(function(t,k)
-        local v = traverse_id(type(k) == "number" and k or nodecodes[k],glyph)
+    local traversers = table.setmetatableindex(function(t,k)
+        local v = traverseid(type(k) == "number" and k or nodecodes[k],glyph)
         t[k] = v
         return v
     end)
 
-                                 traversers.node  = nodes.traverse      (glyph)
-                                 traversers.char  = nodes.traverse_char (glyph)
-    if nodes.traverse_glyph then traversers.glyph = nodes.traverse_glyph(glyph) end
-    if nodes.traverse_list  then traversers.list  = nodes.traverse_list (glyph) end
+                                traversers.node  = nodes.traverse     (glyph)
+                                traversers.char  = nodes.traversechar (glyph)
+    if nodes.traverseglyph then traversers.glyph = nodes.traverseglyph(glyph) end
+    if nodes.traverselist  then traversers.list  = nodes.traverselist (glyph) end
 
     nodes.traversers = traversers
 
@@ -637,20 +616,20 @@ end
 
 do
 
-    local glyph       = glyph
-    local traverse_id = nuts.traverse_id
+    local glyph      = glyph
+    local traverseid = nuts.traverseid
 
-    local traversers  = table.setmetatableindex(function(t,k)
-        local v = traverse_id(type(k) == "number" and k or nodecodes[k],glyph)
+    local traversers = table.setmetatableindex(function(t,k)
+        local v = traverseid(type(k) == "number" and k or nodecodes[k],glyph)
         t[k] = v
         return v
     end)
 
-                                  traversers.node    = nuts.traverse        (glyph)
-                                  traversers.char    = nuts.traverse_char   (glyph)
-    if nuts.traverse_glyph   then traversers.glyph   = nuts.traverse_glyph  (glyph) end
-    if nuts.traverse_list    then traversers.list    = nuts.traverse_list   (glyph) end
-    if nuts.traverse_content then traversers.content = nuts.traverse_content(glyph) end
+                                 traversers.node    = nuts.traverse       (glyph)
+                                 traversers.char    = nuts.traversechar   (glyph)
+    if nuts.traverseglyph   then traversers.glyph   = nuts.traverseglyph  (glyph) end
+    if nuts.traverselist    then traversers.list    = nuts.traverselist   (glyph) end
+    if nuts.traversecontent then traversers.content = nuts.traversecontent(glyph) end
 
     nuts.traversers = traversers
 

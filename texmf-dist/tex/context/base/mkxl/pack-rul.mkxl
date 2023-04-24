@@ -18,7 +18,14 @@
 %D packaging and expansion we also keep tracing reasonable. For instance, multiple
 %D stacked backgrounds can slow down a run if not optimized this way.
 
-\registerctxluafile{pack-rul}{autosuffix,optimize}
+\newinteger  \framednoflines
+\newdimension\framedfirstheight
+\newdimension\framedlastdepth
+\newdimension\framedminwidth
+\newdimension\framedmaxwidth
+\newdimension\framedaveragewidth
+
+\registerctxluafile{pack-rul}{autosuffix}
 
 \unprotect
 
@@ -35,7 +42,7 @@
 %D The linewidth is available in \type{\linewidth}. The preset value of .4pt equals
 %D the default hard coded \TEX\ rule width.
 
-\newdimen\linewidth
+\newdimension\linewidth
 
 \permanent\tolerant\protected\def\setuplinewidth[#1]%
   {\assigndimension{#1}\linewidth{.2\points}{.4\points}{.6\points}}
@@ -114,6 +121,32 @@
   {\installsimplecommandhandler{#1}{#2}{#3}%
    \installinheritedframed{#2}}
 
+% corner options (with radius=0pt rectangular):
+%
+%  0 round ltrb trbl rblt bltr
+%  1 2 3 4 5 6 7 8 ltrb
+%  9 lbr rbl / 10 tlb blt / 11 ltr rtl / 12 lbr rbl
+% 13 rt tr / 14 rb br / 15 bl lb / 16 tl lt
+% 32 lr rl / 33 tb bt
+% 28 l / 29 r / 30 b / 31 t
+
+%D \starttyping
+%D \dostepwiserecurse{0}{33}{1}{
+%D     \startTEXpage[offset=1dk]
+%D         \dontleavehmode\ruledhbox{\framed
+%D           [framecolor=red,
+%D            framecorner=#1,
+%D            frameradius=\zeropoint]
+%D           {TEST #1}}
+%D         \ruledhbox{\framed
+%D           [framecolor=red,
+%D            framecorner=#1,
+%D            frameradius=10pt]
+%D           {TEST #1}}
+%D     \stopTEXpage
+%D }
+%D \stoptyping
+
 % for regular framed
 
 \setupframed
@@ -157,6 +190,7 @@
   %\c!anchoring=,
    \c!autowidth=\v!yes,
   %\c!setups=,
+   \c!synchronize=,
    \c!loffset=\zeropoint,
    \c!roffset=\zeropoint,
    \c!toffset=\zeropoint,
@@ -197,33 +231,36 @@
 %D We will communicate through module specific variables, current framed
 %D parameters and some reserved dimension registers.
 
-\newdimen\d_framed_target_wd
-\newdimen\d_framed_target_ht
-\newdimen\d_framed_target_dp
-\newdimen\d_framed_linewidth  \aliased\let\ruledlinewidth\d_framed_linewidth % needed at lua end
+\newdimension\d_framed_target_wd
+\newdimension\d_framed_target_ht
+\newdimension\d_framed_target_dp
+%newdimen    \d_framed_linewidth  \aliased\let   \ruledlinewidth\d_framed_linewidth % needed at lua end
+\newdimension\d_framed_linewidth  \aliasdimension\ruledlinewidth\d_framed_linewidth % needed at lua end
 
-\let\p_framed_frame           \empty % \framedparameter\c!frame
-\let\p_framed_backgroundoffset\empty
-\let\p_framed_foregroundstyle \empty
-\let\p_framed_autostrut       \empty
-\let\p_framed_location        \empty
-\let\p_framed_orientation     \empty
-\let\p_framed_anchoring       \empty
-\let\p_framed_autowidth       \empty
-\let\p_framed_franalyze       \empty
-\let\p_framed_backgroundcorner\empty
-\let\p_framed_backgroundradius\empty
-\let\p_framed_framecorner     \empty
-\let\p_framed_frameradius     \empty
-\let\p_framed_lines           \empty
-\let\p_framed_empty           \empty
-\let\p_framed_backgroundcolor \empty
-\let\p_framed_framecolor      \empty
-\let\p_framed_component       \empty
-\let\p_framed_background      \empty
-\let\p_framed_rulethickness   \empty
-\let\p_framed_foregroundcolor \empty
-\let\p_framed_setups          \empty
+\lettonothing\p_framed_frame            % \framedparameter\c!frame
+\lettonothing\p_framed_backgroundoffset
+\lettonothing\p_framed_foregroundstyle
+\lettonothing\p_framed_autostrut
+\lettonothing\p_framed_location
+\lettonothing\p_framed_orientation
+\lettonothing\p_framed_anchoring
+\lettonothing\p_framed_synchronize
+\lettonothing\p_framed_autowidth
+\lettonothing\p_framed_franalyze
+\lettonothing\p_framed_backgroundcorner
+\lettonothing\p_framed_backgroundradius
+\lettonothing\p_framed_framecorner
+\lettonothing\p_framed_frameradius
+\lettonothing\p_framed_lines
+\lettonothing\p_framed_empty
+\lettonothing\p_framed_backgroundcolor
+\lettonothing\p_framed_framecolor
+\lettonothing\p_framed_component
+\lettonothing\p_framed_background
+\lettonothing\p_framed_rulethickness
+\lettonothing\p_framed_foregroundcolor
+\lettonothing\p_framed_setups
+\lettonothing\p_framed_synchronize
 
 %D We don't have to stick to a \TEX\ drawn rule, but also can use rounded
 %D or even fancier shapes, as we will see later on.
@@ -262,32 +299,56 @@
      corner {\p_framed_backgroundcorner}
    \relax}}
 
+% we keep this as reference (should still work when uncommented)
+%
+% \def\pack_framed_stroked_box
+%   {\edef\p_framed_framecorner{\framedparameter\c!framecorner}%
+%    \ifx\p_framed_framecorner\v!rectangular
+%      \pack_framed_stroked_box_normal
+%    \else
+%      \pack_framed_stroked_box_radius
+%    \fi}
+%
+% \def\pack_framed_stroked_box_radius
+%   {\edef\p_framed_frameradius{\framedparameter\c!frameradius}%
+%    \ifzeropt\dimexpr\p_framed_frameradius\relax % just in case of .x\bodyfontsize
+%      \pack_framed_stroked_box_normal
+%    \orelse\ifx\p_framed_frame\v!on
+%      \pack_framed_stroked_box_round
+%    \fi}
+%
+% % \pack_framed_stroked_box_normal % later
+%
+% \def\pack_framed_stroked_box_round
+%   {\raise\d_framed_target_dp\hpack{\frule
+%      width  \d_framed_target_wd
+%      height \d_framed_target_ht
+%      depth  \d_framed_target_dp
+%      line   \d_framed_linewidth
+%      radius \p_framed_frameradius\space
+%      corner {\p_framed_framecorner}
+%    \relax}}
+%
+% corner is the parent of framecorner and backgroundcorner (round value never checked)
+% when 'round' is passed it is not a number and therefore we get four sides
+
 \def\pack_framed_stroked_box
   {\edef\p_framed_framecorner{\framedparameter\c!framecorner}%
    \ifx\p_framed_framecorner\v!rectangular
-     \pack_framed_stroked_box_normal
-   \else
-     \pack_framed_stroked_box_radius
-   \fi}
-
-\def\pack_framed_stroked_box_radius
-  {\edef\p_framed_frameradius{\framedparameter\c!frameradius}%
-   \ifzeropt\dimexpr\p_framed_frameradius\relax % just in case of .x\bodyfontsize
      \pack_framed_stroked_box_normal
    \orelse\ifx\p_framed_frame\v!on
      \pack_framed_stroked_box_round
    \fi}
 
-% \pack_framed_stroked_box_normal % later
-
-\def\pack_framed_stroked_box_round
-  {\raise\d_framed_target_dp\hpack{\frule
-     width  \d_framed_target_wd
-     height \d_framed_target_ht
-     depth  \d_framed_target_dp
-     line   \d_framed_linewidth
-     radius \p_framed_frameradius\space
-     corner {\p_framed_framecorner}
+\def\pack_framed_stroked_box_round % todo: variant without keywords
+  {\raise\d_framed_target_dp
+   \hpack{\clf_roundedoutline % we could access these at the lua end!
+     \d_framed_target_wd
+     \d_framed_target_ht
+     \d_framed_target_dp
+     \d_framed_linewidth
+     \framedparameter\c!frameradius
+     {\p_framed_framecorner}
    \relax}}
 
 % a lot of weird corners
@@ -404,13 +465,13 @@
 %D
 %D The resulting box is lowered to the right depth.
 
-\newdimen\d_overlay_width
-\newdimen\d_overlay_height
-\newdimen\d_overlay_depth
-\newdimen\d_overlay_offset
-\newdimen\d_overlay_linewidth
+\newdimension\d_overlay_width
+\newdimension\d_overlay_height
+\newdimension\d_overlay_depth
+\newdimension\d_overlay_offset
+\newdimension\d_overlay_linewidth
 
-\let\m_overlay_region\empty
+\lettonothing\m_overlay_region
 
 % expandable ... in a future version the space will go (in mp one can use Overlay*)
 
@@ -427,11 +488,11 @@
 %mutable  \edef\overlaycorner      {\framedparameter\c!backgroundcorner}
 %mutable  \edef\overlayradius      {\framedparameter\c!backgroundradius}
 
-\permanent\def\usedoverlaywidth    {\dimexpr\d_overlay_width    \relax}
-\permanent\def\usedoverlayheight   {\dimexpr\d_overlay_height   \relax}
-\permanent\def\usedoverlaydepth    {\dimexpr\d_overlay_depth    \relax}
-\permanent\def\usedoverlayoffset   {\dimexpr\d_overlay_offset   \relax}
-\permanent\def\usedoverlaylinewidth{\dimexpr\d_overlay_linewidth\relax}
+\aliased\let\usedoverlaywidth    \d_overlay_width
+\aliased\let\usedoverlayheight   \d_overlay_height
+\aliased\let\usedoverlaydepth    \d_overlay_depth
+\aliased\let\usedoverlayoffset   \d_overlay_offset
+\aliased\let\usedoverlaylinewidth\d_overlay_linewidth
 
 %D The next register is used to initialize overlays.
 
@@ -452,8 +513,12 @@
     \vsize\d_overlay_height
 \to \everyoverlay
 
+\protected\def\pack_overlay_define#1#2%
+  {\defcsname\??overlay#1\endcsname{\executedefinedoverlay{#1}{#2}}}
+
 \permanent\tolerant\protected\def\defineoverlay[#1]#*[#2]% wil be overloaded
-  {\def\pack_framed_define_overlay_indeed##1{\defcsname\??overlay##1\endcsname{\executedefinedoverlay{##1}{#2}}}%
+% {\def\pack_framed_define_overlay_indeed##1{\defcsname\??overlay##1\endcsname{\executedefinedoverlay{##1}{#2}}}%
+  {\def\pack_framed_define_overlay_indeed##1{\pack_overlay_define{##1}{#2}}%
    \processcommalist[#1]\pack_framed_define_overlay_indeed}
 
 \permanent\protected\def\executedefinedoverlay#1#2% we can share the definitions
@@ -497,7 +562,7 @@
 
 \newtoks\everybackgroundbox
 
-\let\m_framed_background\empty % we might need a public name
+\lettonothing\m_framed_background % we might need a public name
 
 \def\pack_framed_process_background
   {\ifcsname\??overlaybuiltin\m_framed_background\endcsname
@@ -536,10 +601,10 @@
 %D Beware, a backgroundbox can be empty which is another reason why we set the
 %D width to zero instead of back-skipping.
 
-\newdimen\framedbackgroundwidth
-\newdimen\framedbackgroundheight
-\newdimen\framedbackgrounddepth
-\newdimen\framedbackgroundoffset
+\newdimension\framedbackgroundwidth
+\newdimension\framedbackgroundheight
+\newdimension\framedbackgrounddepth
+\newdimension\framedbackgroundoffset
 
 \aliased\let\foregroundbox\relax
 
@@ -551,11 +616,14 @@
      \edef\m_overlay_region{\reservedautoregiontag}%
    \fi}
 
-\def\pack_framed_add_region % experiment
-  {\anch_mark_tagged_box\b_framed_normal\m_overlay_region}
+\def\pack_framed_add_region % experiment, zerocount forces the given region
+  {\anch_mark_tagged_box\b_framed_normal\m_overlay_region\zerocount}
 
 \def\pack_framed_add_background
-  {\setbox\b_framed_normal\hpack % was vbox % see also *1*
+  {\ifconditional\c_pack_reanchor
+      \analyzelocalanchors\b_framed_normal
+   \fi
+   \setbox\b_framed_normal\hpack % was vbox % see also *1*
      {%\pack_framed_forgetall % can be relaxed
       \boxmaxdepth\maxdimen
       \framedbackgroundoffset\d_framed_backgroundoffset
@@ -596,9 +664,9 @@
 %D
 %D We predefine two already familiar backgrounds:
 
-%letvalue{\??overlaybuiltin\v!screen    }\pack_framed_background_box_gray
-\letvalue{\??overlaybuiltin\v!color     }\pack_framed_background_box_color
-\letvalue{\??overlaybuiltin\v!foreground}\pack_framed_background_box_content % replaces: \defineoverlay[\v!foreground][\foregroundbox]
+%letcsname\??overlaybuiltin\v!screen    \endcsname\pack_framed_background_box_gray
+\letcsname\??overlaybuiltin\v!color     \endcsname\pack_framed_background_box_color
+\letcsname\??overlaybuiltin\v!foreground\endcsname\pack_framed_background_box_content % replaces: \defineoverlay[\v!foreground][\foregroundbox]
 
 %D We can specify overlays as a comma separated list of overlays, a sometimes
 %D handy feature.
@@ -614,7 +682,7 @@
       \d_framed_target_ht\dimexpr\ht\b_framed_normal+ \d_framed_frameoffset\relax
       \d_framed_target_dp\dimexpr\dp\b_framed_normal+ \d_framed_frameoffset+\framedparameter\c!framedepth\relax
       \ifdim\d_framed_target_dp<\zeropoint
-        \advance\d_framed_target_ht \d_framed_target_dp
+        \advanceby\d_framed_target_ht \d_framed_target_dp
         \scratchdimen-\d_framed_target_dp
         \d_framed_target_dp\zeropoint
       \else
@@ -632,10 +700,48 @@
       \box\b_framed_normal
       \box\b_framed_extra}}
 
+%D A probably unknown feature:
+%D
+%D \startbuffer
+%D \hpack\bgroup
+%D     \framed[framecolor=MyColor,frame=on]    {!!!!!!!!}
+%D     \framed[framecolor=MyColor,frame=closed]{!!!!!!!!}
+%D     \framed[framecolor=MyColor,frame=small] {!!!!!!!!}
+%D \egroup
+%D \stopbuffer
+%D
+%D \typebuffer \startlinecorrection[blank] \getbuffer \stoplinecorrection
+
+% \def\pack_framed_stroked_box_normal_opened
+%   {\setbox\scratchbox\vpack \bgroup
+%      \csname\??framedtop\p_framed_frame\framedparameter\c!topframe\endcsname
+%      \nointerlineskip % new (needed for fences)
+%      \hpack \bgroup
+%        \csname\??framedleft\p_framed_frame\framedparameter\c!leftframe\endcsname
+%        \novrule
+%          \s!width \d_framed_target_wd
+%          \s!height\d_framed_target_ht
+%          \s!depth \d_framed_target_dp
+%        \csname\??framedright\p_framed_frame\framedparameter\c!rightframe\endcsname
+%      \egroup
+%      \nointerlineskip % new (needed for fences)
+%      \csname\??framedbottom\p_framed_frame\framedparameter\c!bottomframe\endcsname
+%    \egroup
+%    \wd\scratchbox\d_framed_target_wd
+%    \ht\scratchbox\d_framed_target_ht
+%    \dp\scratchbox\d_framed_target_dp
+%    \box\scratchbox}
+
+% less logging:
+
 \def\pack_framed_stroked_box_normal_opened
   {\setbox\scratchbox\vpack \bgroup
+   % \normaloffinterlineskip % sets baselineskip, lineskip and lineskiplimit
+     \baselineskip-\thousandpoint
+     \lineskip     \zeropoint
+     \lineskiplimit\maxdimen
      \csname\??framedtop\p_framed_frame\framedparameter\c!topframe\endcsname
-     \nointerlineskip % new (needed for fences)
+   % \nointerlineskip % new (needed for fences)
      \hpack \bgroup
        \csname\??framedleft\p_framed_frame\framedparameter\c!leftframe\endcsname
        \novrule
@@ -644,7 +750,7 @@
          \s!depth \d_framed_target_dp
        \csname\??framedright\p_framed_frame\framedparameter\c!rightframe\endcsname
      \egroup
-     \nointerlineskip % new (needed for fences)
+   % \nointerlineskip % new (needed for fences)
      \csname\??framedbottom\p_framed_frame\framedparameter\c!bottomframe\endcsname
    \egroup
    \wd\scratchbox\d_framed_target_wd
@@ -655,7 +761,7 @@
 \def\pack_framed_stroked_box_normal_closed
   {\hpack\bgroup
      \scratchdimen.5\d_framed_linewidth
-     \hskip\scratchdimen
+     \kern\scratchdimen
      \clf_framedoutline
        \dimexpr\d_framed_target_wd-\d_framed_linewidth\relax
        \dimexpr\d_framed_target_ht-\scratchdimen\relax
@@ -676,44 +782,61 @@
 \def\pack_framed_r_rule{\kern-\d_framed_linewidth\vrule\s!width\d_framed_linewidth}
 \def\pack_framed_l_rule{\vrule\s!width\d_framed_linewidth\kern-\d_framed_linewidth}
 
-\letvalue{\??framedtop   \v!on \v!on}\pack_framed_t_rule
-\letvalue{\??framedtop   \v!off\v!on}\pack_framed_t_rule
-\letvalue{\??framedtop   \v!on      }\pack_framed_t_rule
+\letcsname\??framedtop   \v!on \v!on\endcsname\pack_framed_t_rule
+\letcsname\??framedtop   \v!off\v!on\endcsname\pack_framed_t_rule
+\letcsname\??framedtop   \v!on      \endcsname\pack_framed_t_rule
 
-\letvalue{\??framedbottom\v!on \v!on}\pack_framed_b_rule
-\letvalue{\??framedbottom\v!off\v!on}\pack_framed_b_rule
-\letvalue{\??framedbottom\v!on      }\pack_framed_b_rule
+\letcsname\??framedbottom\v!on \v!on\endcsname\pack_framed_b_rule
+\letcsname\??framedbottom\v!off\v!on\endcsname\pack_framed_b_rule
+\letcsname\??framedbottom\v!on      \endcsname\pack_framed_b_rule
 
-\letvalue{\??framedleft  \v!on \v!on}\pack_framed_l_rule
-\letvalue{\??framedleft  \v!off\v!on}\pack_framed_l_rule
-\letvalue{\??framedleft  \v!on      }\pack_framed_l_rule
+\letcsname\??framedleft  \v!on \v!on\endcsname\pack_framed_l_rule
+\letcsname\??framedleft  \v!off\v!on\endcsname\pack_framed_l_rule
+\letcsname\??framedleft  \v!on      \endcsname\pack_framed_l_rule
 
-\letvalue{\??framedright \v!on \v!on}\pack_framed_r_rule
-\letvalue{\??framedright \v!off\v!on}\pack_framed_r_rule
-\letvalue{\??framedright \v!on      }\pack_framed_r_rule
+\letcsname\??framedright \v!on \v!on\endcsname\pack_framed_r_rule
+\letcsname\??framedright \v!off\v!on\endcsname\pack_framed_r_rule
+\letcsname\??framedright \v!on      \endcsname\pack_framed_r_rule
 
 % no overlapping rules
 
-\def\pack_framed_t_rules{\hpack{\kern\d_framed_linewidth\vrule\s!width\dimexpr\d_framed_target_wd-2\d_framed_linewidth\relax\s!height\d_framed_linewidth}\nointerlineskip\kern-\d_framed_linewidth}
-\def\pack_framed_b_rules{\kern-\d_framed_linewidth\nointerlineskip\hpack{\kern\d_framed_linewidth\vrule\s!width\dimexpr\d_framed_target_wd-2\d_framed_linewidth\relax\s!height\d_framed_linewidth}}
-\def\pack_framed_r_rules{\kern-\d_framed_linewidth\vrule\s!height\dimexpr\d_framed_target_ht-\d_framed_linewidth\relax\s!depth-\d_framed_linewidth\s!width\d_framed_linewidth}
-\def\pack_framed_l_rules{\vrule\s!height\dimexpr\d_framed_target_ht-\d_framed_linewidth\relax\s!depth-\d_framed_linewidth\s!width\d_framed_linewidth\kern-\d_framed_linewidth}
+% \def\pack_framed_t_rules{\hpack{\kern\d_framed_linewidth\vrule\s!width\dimexpr\d_framed_target_wd-2\d_framed_linewidth\relax\s!height\d_framed_linewidth}\nointerlineskip\kern-\d_framed_linewidth}
+% \def\pack_framed_b_rules{\kern-\d_framed_linewidth\nointerlineskip\hpack{\kern\d_framed_linewidth\vrule\s!width\dimexpr\d_framed_target_wd-2\d_framed_linewidth\relax\s!height\d_framed_linewidth}}
+% \def\pack_framed_r_rules{\kern-\d_framed_linewidth\vrule\s!height\dimexpr\d_framed_target_ht-\d_framed_linewidth\relax\s!depth-\d_framed_linewidth\s!width\d_framed_linewidth}
+% \def\pack_framed_l_rules{\vrule\s!height\dimexpr\d_framed_target_ht-\d_framed_linewidth\relax\s!depth-\d_framed_linewidth\s!width\d_framed_linewidth\kern-\d_framed_linewidth}
+%
+% see above, less tracing
+%
+% \def\pack_framed_t_rules{\hpack{\kern\d_framed_linewidth\vrule\s!width\dimexpr\d_framed_target_wd-2\d_framed_linewidth\relax\s!height\d_framed_linewidth}\kern-\d_framed_linewidth}
+% \def\pack_framed_b_rules{\kern-\d_framed_linewidth\hpack{\kern\d_framed_linewidth\vrule\s!width\dimexpr\d_framed_target_wd-2\d_framed_linewidth\relax\s!height\d_framed_linewidth}}
+% \def\pack_framed_r_rules{\kern-\d_framed_linewidth\vrule\s!height\dimexpr\d_framed_target_ht-\d_framed_linewidth\relax\s!depth-\d_framed_linewidth\s!width\d_framed_linewidth}
+% \def\pack_framed_l_rules{\vrule\s!height\dimexpr\d_framed_target_ht-\d_framed_linewidth\relax\s!depth-\d_framed_linewidth\s!width\d_framed_linewidth\kern-\d_framed_linewidth}
+%
+% more modern:
 
-\letvalue{\??framedtop   \v!small\v!small}\pack_framed_t_rules
-\letvalue{\??framedtop   \v!off  \v!small}\pack_framed_t_rules
-\letvalue{\??framedtop   \v!small        }\pack_framed_t_rules
+\def\pack_framed_rules_hrule{\hrule\s!height\d_framed_linewidth\s!left\d_framed_linewidth\s!right \d_framed_linewidth\relax}
+\def\pack_framed_rules_vrule{\vrule\s!width \d_framed_linewidth\s!top \d_framed_linewidth\s!bottom\d_framed_linewidth\relax}% \s!yoffset-\d_framed_linewidth}
 
-\letvalue{\??framedbottom\v!small\v!small}\pack_framed_b_rules
-\letvalue{\??framedbottom\v!off  \v!small}\pack_framed_b_rules
-\letvalue{\??framedbottom\v!small        }\pack_framed_b_rules
+\def\pack_framed_t_rules{\pack_framed_rules_hrule\kern-\d_framed_linewidth}
+\def\pack_framed_b_rules{\kern-\d_framed_linewidth\pack_framed_rules_hrule}
+\def\pack_framed_r_rules{\kern-\d_framed_linewidth\pack_framed_rules_vrule}
+\def\pack_framed_l_rules{\pack_framed_rules_vrule\kern-\d_framed_linewidth}
 
-\letvalue{\??framedleft  \v!small\v!small}\pack_framed_l_rules
-\letvalue{\??framedleft  \v!off  \v!small}\pack_framed_l_rules
-\letvalue{\??framedleft  \v!small        }\pack_framed_l_rules
+\letcsname\??framedtop   \v!small\v!small\endcsname\pack_framed_t_rules
+\letcsname\??framedtop   \v!off  \v!small\endcsname\pack_framed_t_rules
+\letcsname\??framedtop   \v!small        \endcsname\pack_framed_t_rules
 
-\letvalue{\??framedright \v!small\v!small}\pack_framed_r_rules
-\letvalue{\??framedright \v!off  \v!small}\pack_framed_r_rules
-\letvalue{\??framedright \v!small        }\pack_framed_r_rules
+\letcsname\??framedbottom\v!small\v!small\endcsname\pack_framed_b_rules
+\letcsname\??framedbottom\v!off  \v!small\endcsname\pack_framed_b_rules
+\letcsname\??framedbottom\v!small        \endcsname\pack_framed_b_rules
+
+\letcsname\??framedleft  \v!small\v!small\endcsname\pack_framed_l_rules
+\letcsname\??framedleft  \v!off  \v!small\endcsname\pack_framed_l_rules
+\letcsname\??framedleft  \v!small        \endcsname\pack_framed_l_rules
+
+\letcsname\??framedright \v!small\v!small\endcsname\pack_framed_r_rules
+\letcsname\??framedright \v!off  \v!small\endcsname\pack_framed_r_rules
+\letcsname\??framedright \v!small        \endcsname\pack_framed_r_rules
 
 % \framed
 %   [width=4cm,height=3cm,rulethickness=3mm,
@@ -775,11 +898,11 @@
 
 % \presetlocalframed[\??framed]
 
-\newcount\c_pack_framed_nesting
+\newinteger\c_pack_framed_nesting
 
 \permanent\tolerant\protected\def\framed[#1]%
   {\bgroup
-   \advance\c_pack_framed_nesting\plusone
+   \advanceby\c_pack_framed_nesting\plusone
    \letcsname\??framed>\the\c_pack_framed_nesting:\s!parent\endcsname\??framed
    \edef\currentframed{>\the\c_pack_framed_nesting}%
    \pack_framed_initialize
@@ -794,7 +917,7 @@
      \bgroup
    \or
      \ifhastok={#1}%
-       \advance\c_pack_framed_nesting\plusone
+       \advanceby\c_pack_framed_nesting\plusone
        \letcsname\??framed>\the\c_pack_framed_nesting:\s!parent\endcsname\??framed
        \edef\currentframed{>\the\c_pack_framed_nesting}%
        \pack_framed_initialize
@@ -823,7 +946,7 @@
 
 \permanent\protected\def\normalframedwithsettings[#1]%
   {\bgroup
-   \advance\c_pack_framed_nesting\plusone
+   \advanceby\c_pack_framed_nesting\plusone
    \letcsname\??framed>\the\c_pack_framed_nesting:\s!parent\endcsname\??framed
    \bgroup
    \edef\currentframed{>\the\c_pack_framed_nesting}%
@@ -881,6 +1004,7 @@
    \edef\p_framed_background{\framedparameter\c!background}%
    % not here, in calling macro: setups
    \pack_framed_remove_depth
+   % beware, depth goes away when we have a frame, otherwise it's retained
    \ifx\p_framed_frame\v!overlay \orelse \ifx\p_framed_frame\v!none \else
      \ifempty\p_framed_rulethickness\else
         \d_framed_linewidth\p_framed_rulethickness\relax
@@ -909,7 +1033,11 @@
 %D can better be correct.
 
 \protected\def\pack_framed_process_box_indeed#1#2% component box (assumes parameters set and grouped usage)
-  {\setbox\b_framed_normal\box#2% could actually be \let\b_framed_normal#2
+  {%
+  %\setbox\b_framed_normal\box#2%
+  %\def\b_framed_normal{#2}% protected against overload
+   \enforced\let\b_framed_normal#2%
+   %
    \edef\m_overlay_region{\framedparameter\c!region}%
    \ifempty\m_overlay_region\else
      \pack_framed_set_region
@@ -960,11 +1088,49 @@
 %D \defineframed[test][hoffset=1cm]
 %D \stoptyping
 
-\newdimen\d_framed_width
-\newdimen\d_framed_height
-\newdimen\d_framed_frameoffset
-\newdimen\d_framed_backgroundoffset
-\newdimen\d_framed_local_offset
+%D A byproduct of \type {\uleaders} in the 2022 math upgrade project:
+%D
+%D \starttyping
+%D \startsetups adaptive:test:a
+%D     \setbox\usedadaptivebox\vbox to \usedadaptivetotal \bgroup
+%D         \externalfigure
+%D           [cow.pdf]
+%D           [width=\framedmaxwidth,
+%D            frame=on,
+%D            height=\usedadaptivetotal]%
+%D    \egroup
+%D \stopsetups
+%D
+%D \startsetups adaptive:test:b
+%D     \setbox\usedadaptivebox\vbox to \usedadaptivetotal \bgroup
+%D         \externalfigure
+%D           [cow.pdf]
+%D           [width=\usedadaptivewidth,
+%D            frame=on,
+%D            height=\usedadaptivetotal]%
+%D    \egroup
+%D \stopsetups
+%D
+%D \framed[height=18cm,align=middle,adaptive=yes,top=,bottom=] {%
+%D     \begstrut \samplefile{tufte} \endstrut
+%D     \par
+%D     \adaptivevbox
+%D       [strut=yes,setups=adaptive:test:a]
+%D       {\showstruts\strut\hsize5cm\hss}%
+%D     \par
+%D     \adaptivevbox
+%D       [strut=yes,setups=adaptive:test:b]
+%D       {\showstruts\strut\hsize5cm\hss}%
+%D     \par
+%D     \begstrut \samplefile{tufte} \endstrut
+%D }
+%D \stoptyping
+
+\newdimension\d_framed_width
+\newdimension\d_framed_height
+\newdimension\d_framed_frameoffset
+\newdimension\d_framed_backgroundoffset
+\newdimension\d_framed_local_offset
 
 % todo: protect local \framednames
 
@@ -989,23 +1155,49 @@
 
 \defineinterfaceconstant {fr!analyze} {fr:analyze} % private option
 
-\aliased\let\delayedbegstrut\relax
-\aliased\let\delayedendstrut\relax
-\aliased\let\delayedstrut   \relax
+\permanent\protected\lettonothing\delayedbegstrut
+\permanent\protected\lettonothing\delayedendstrut
+\permanent\protected\lettonothing\delayedstrut
 
-\mutable\let\localoffset\empty
-\mutable\let\localwidth \empty
-\mutable\let\localheight\empty
-\mutable\let\localformat\empty
-\mutable\let\localstrut \empty
+\permanent\protected\lettonothing\localbegstrut
+\permanent\protected\lettonothing\localendstrut
+\permanent\protected\lettonothing\localstrut
 
-\mutable\let\framedwidth \empty
-\mutable\let\framedheight\empty
-\mutable\let\framedoffset\empty
+\mutable\lettonothing\localoffset
+\mutable\lettonothing\localwidth
+\mutable\lettonothing\localheight
+\mutable\lettonothing\localformat
 
-\aliased\let\localbegstrut\relax
-\aliased\let\localendstrut\relax
-\aliased\let\localstrut   \relax
+\mutable\lettonothing\framedwidth
+\mutable\lettonothing\framedheight
+\mutable\lettonothing\framedoffset
+
+% better a constant:
+
+\newconditional\c_pack_resync
+\newconditional\c_pack_reanchor
+
+% \let\spac_framed_pop_local_anchors\relax
+
+\def\spac_framed_push_local_anchors
+  {\ifx\p_framed_synchronize\v!yes
+     \settrue\c_pack_resync
+     \settrue\c_pack_reanchor
+     \pushlocalanchors
+   % \aftergrouped{\aftergrouped{\poplocalanchors}}%
+     \aftergroup\poplocalanchors
+   \orelse\ifx\p_framed_synchronize\v!text
+     \settrue\c_pack_resync
+     \pushlocalanchors
+     \aftergroup\poplocalanchors
+   \orelse\ifx\p_framed_synchronize\v!background
+     \settrue\c_pack_reanchor
+     \pushlocalanchors
+     \aftergroup\poplocalanchors
+   \else
+     \setfalse\c_pack_resync
+     \setfalse\c_pack_reanchor
+   \fi}
 
 \protected\def\pack_framed_process_indeed
   {\d_framed_frameoffset\framedparameter\c!frameoffset
@@ -1037,9 +1229,18 @@
    \edef\p_framed_location   {\framedparameter\c!location}%
    \edef\p_framed_orientation{\framedparameter\c!orientation}%
    \edef\p_framed_anchoring  {\framedparameter\c!anchoring}%
+   \edef\p_framed_synchronize{\framedparameter\c!synchronize}%
    %
    \edef\p_framed_autowidth  {\framedparameter\c!autowidth}%
    \edef\p_framed_franalyze  {\framedparameter\c!fr!analyze}% experimental option
+   %
+   \ifempty\p_framed_synchronize
+     \setfalse\c_pack_resync
+     \setfalse\c_pack_reanchor
+%      \let\spac_framed_pop_local_anchors\relax
+   \else
+     \spac_framed_push_local_anchors
+   \fi
    %
    \ifx\p_framed_frame\v!overlay   % no frame, no offset, no framewidth
      \setfalse\c_framed_has_frame
@@ -1088,8 +1289,13 @@
    \fi
    % the next check could move to heightalternative
    \ifconditional\c_framed_has_height
-     % obey user set height, also downward compatible
+     \ifcstok{\framedparameter\c!adaptive}\v!yes
+       \let\p_framed_adaptive\s!delay
+     \else
+       \lettonothing\p_framed_adaptive
+     \fi
    \else
+     \lettonothing\p_framed_adaptive
      \edef\p_framed_lines{\framedparameter\c!lines}%
      \ifempty\p_framed_lines
      \orelse\ifcase\p_framed_lines
@@ -1107,8 +1313,8 @@
    %   \d_framed_width\localhsize
    % \fi
    % i.e. disable (colsetbackgroundproblemintechniek)
-   \advance\d_framed_width  -2\d_framed_local_offset
-   \advance\d_framed_height -2\d_framed_local_offset
+   \advanceby\d_framed_width  -2\d_framed_local_offset
+   \advanceby\d_framed_height -2\d_framed_local_offset
    \ifcsname\??framedstrutalternative\p_strut\endcsname
      \lastnamedcs
    \else
@@ -1116,9 +1322,9 @@
    \fi
    % the next check could move to strutalternative
    \ifcase\c_framed_has_strut % none (not even noindent)
-     \enforced\let\localbegstrut\relax
-     \enforced\let\localendstrut\relax
-     \enforced\let\localstrut   \relax
+     \enforced\lettonothing\localbegstrut
+     \enforced\lettonothing\localendstrut
+     \enforced\lettonothing\localstrut
    \or % no / overlay
      \enforced\let\localbegstrut\pseudobegstrut
      \enforced\let\localendstrut\pseudoendstrut
@@ -1129,16 +1335,16 @@
      \enforced\let\localstrut   \strut
    \fi
    \ifx\p_framed_autostrut\v!yes
-     \enforced\let\delayedbegstrut\relax
-     \enforced\let\delayedendstrut\relax
-     \enforced\let\delayedstrut   \relax
+     \enforced\lettonothing\delayedbegstrut
+     \enforced\lettonothing\delayedendstrut
+     \enforced\lettonothing\delayedstrut
    \else
-     \enforced\let\delayedbegstrut\localbegstrut
-     \enforced\let\delayedendstrut\localendstrut
-     \enforced\let\delayedstrut   \localstrut
-     \enforced\let\localbegstrut  \relax
-     \enforced\let\localendstrut  \relax
-     \enforced\let\localstrut     \relax
+     \enforced\let         \delayedbegstrut\localbegstrut
+     \enforced\let         \delayedendstrut\localendstrut
+     \enforced\let         \delayedstrut   \localstrut
+     \enforced\lettonothing\localbegstrut
+     \enforced\lettonothing\localendstrut
+     \enforced\lettonothing\localstrut
    \fi
    \ifconditional\c_framed_has_height
      \enforced\let\\\pack_framed_vboxed_newline
@@ -1174,17 +1380,17 @@
    \fi
    \pack_framed_check_extra_offsets
    \edef\p_framed_background{\framedparameter\c!background}%
-%    \ifempty\p_framed_background
-%      \let\pack_framed_forgetall\forgetall
-%    \else
-%      \let\pack_framed_forgetall\relax
-%      \forgetall
-%    \fi
+ % \ifempty\p_framed_background
+ %   \let\pack_framed_forgetall\forgetall
+ % \else
+ %   \let\pack_framed_forgetall\relax
+ %   \forgetall
+ % \fi
    \edef\framedwidth {\the\ifdim\d_framed_width >\zeropoint         \d_framed_width \else\zeropoint\fi}% public
    \edef\framedheight{\the\ifdim\d_framed_height>\zeropoint         \d_framed_height\else\zeropoint\fi}% public
    \edef\framedoffset{\the\dimexpr\ifconditional\c_framed_has_offset\localoffset    \else\zeropoint\fi}% public
    % for now: i need to think of something better
- % \bitwiseflip \normalizelinemode -\clipwidthcode % now handled in analyzer
+ % \bitwiseflip \normalizelinemode -\clipwidthnormalizecode % now handled in analyzer
    % but that's for later
    \ifempty\p_framed_orientation
      \let\pack_framed_stop_orientation\relax
@@ -1202,8 +1408,12 @@
 \installcorenamespace{framedoffsetalternative}
 
 % widths
+%
+% \inframed[adaptive=0500]{Just some words}
+% \inframed[adaptive=0]   {Just some words}
+% \inframed[adaptive=-500]{Just some words}
 
-\setvalue{\??framedwidthalternative\empty}%
+\defcsname\??framedwidthalternative\empty\endcsname
   {\ifconditional\c_framed_has_format
      \settrue\c_framed_has_width
      \d_framed_width\hsize
@@ -1212,7 +1422,7 @@
      \d_framed_width\zeropoint
    \fi}
 
-\setvalue{\??framedwidthalternative\v!fit}%
+\defcsname\??framedwidthalternative\v!fit\endcsname
   {\ifconditional\c_framed_has_format
      \settrue\c_framed_has_width
      \d_framed_width\hsize
@@ -1221,7 +1431,7 @@
      \d_framed_width\zeropoint
    \fi}
 
-\setvalue{\??framedwidthalternative\v!fixed}% equals \v!fit but no shapebox
+\defcsname\??framedwidthalternative\v!fixed\endcsname % equals \v!fit but no shapebox
   {\ifconditional\c_framed_has_format
      \settrue\c_framed_has_width
      \d_framed_width\hsize
@@ -1230,20 +1440,20 @@
      \d_framed_width\zeropoint
    \fi}
 
-\setvalue{\??framedwidthalternative\v!broad}%
+\defcsname\??framedwidthalternative\v!broad\endcsname
   {\settrue\c_framed_has_width
    \d_framed_width\hsize}
 
-\setvalue{\??framedwidthalternative\v!max}% idem broad
+\defcsname\??framedwidthalternative\v!max\endcsname % idem broad
   {\settrue\c_framed_has_width
    \d_framed_width\hsize}
 
-\setvalue{\??framedwidthalternative\v!local}%
+\defcsname\??framedwidthalternative\v!local\endcsname
   {\settrue\c_framed_has_width
    %\setlocalhsize
    \d_framed_width\localhsize}
 
-\setvalue{\??framedwidthalternative\s!unknown}%
+\defcsname\??framedwidthalternative\s!unknown\endcsname
   {\settrue\c_framed_has_width
    \d_framed_width\localwidth}
 
@@ -1253,23 +1463,23 @@
 
 % heights
 
-\setvalue{\??framedheightalternative\empty}%
+\defcsname\??framedheightalternative\empty\endcsname
   {\setfalse\c_framed_has_height
    \d_framed_height\zeropoint}
 
-\setvalue{\??framedheightalternative\v!fit}%
+\defcsname\??framedheightalternative\v!fit\endcsname
   {\setfalse\c_framed_has_height
    \d_framed_height\zeropoint}
 
-\setvalue{\??framedheightalternative\v!broad}%
+\defcsname\??framedheightalternative\v!broad\endcsname
   {\setfalse\c_framed_has_height
    \d_framed_height\zeropoint}
 
-\setvalue{\??framedheightalternative\v!max}%
+\defcsname\??framedheightalternative\v!max\endcsname
   {\settrue\c_framed_has_height
    \d_framed_height\vsize}
 
-\setvalue{\??framedheightalternative\s!unknown}%
+\defcsname\??framedheightalternative\s!unknown\endcsname
   {\settrue\c_framed_has_height
    \d_framed_height\localheight}
 
@@ -1279,49 +1489,49 @@
 
 % struts (use let instead?)
 
-\setvalue{\??framedstrutalternative\v!no}%
+\defcsname\??framedstrutalternative\v!no\endcsname
   {\c_framed_has_strut\plusone}
 
-\setvalue{\??framedstrutalternative\v!global}%
+\defcsname\??framedstrutalternative\v!global\endcsname
   {\setstrut}
 
-\setvalue{\??framedstrutalternative\v!local}%
+\defcsname\??framedstrutalternative\v!local\endcsname
   {\setfontstrut}
 
-\setvalue{\??framedstrutalternative\v!yes}%
+\defcsname\??framedstrutalternative\v!yes\endcsname
   {\setstrut}
 
-\setvalue{\??framedstrutalternative\s!unknown}%
+\defcsname\??framedstrutalternative\s!unknown\endcsname
   {\setstrut}
 
 \def\framed_strut_alternative_unknown
   {\setstrut}
 
-\setvalue{\??framedstrutalternative\v!none}% not even pseudo struts
+\defcsname\??framedstrutalternative\v!none\endcsname % not even pseudo struts
   {\c_framed_has_strut\zerocount}
 
 % offsets
 
-\setvalue{\??framedoffsetalternative\v!none}%
+\defcsname\??framedoffsetalternative\v!none\endcsname
   {\setfalse\c_framed_has_offset
    \c_framed_has_strut\plusone
    \setfalse\c_framed_is_overlaid
    \d_framed_local_offset\d_framed_linewidth}
 
-\setvalue{\??framedoffsetalternative\v!overlay}%
+\defcsname\??framedoffsetalternative\v!overlay\endcsname
   {% \ifx\p_framed_frame\v!no \setfalse\c_framed_has_frame \fi % test first
    \setfalse\c_framed_has_offset
    \c_framed_has_strut\plusone
    \settrue\c_framed_is_overlaid
    \d_framed_local_offset\zeropoint}
 
-% \setvalue{\??framedoffsetalternative\v!strut}%
+% \defcsname\??framedoffsetalternative\v!strut\endcsname
 %   {\setfalse\c_framed_has_offset
 %    \c_framed_has_strut\plustwo
 %    \settrue\c_framed_is_overlaid
 %    \d_framed_local_offset\zeropoint}
 
-\setvalue{\??framedoffsetalternative\v!default}% new per 2-6-2000
+\defcsname\??framedoffsetalternative\v!default\endcsname % new per 2-6-2000
   {\settrue \c_framed_has_offset
    \c_framed_has_strut\plustwo
    \setfalse\c_framed_is_overlaid
@@ -1336,7 +1546,7 @@
    \let\defaultframeoffset\localoffset
    \d_framed_local_offset\dimexpr\localoffset+\d_framed_linewidth\relax}
 
-\letvalue{\??framedoffsetalternative\s!unknown}\framed_offset_alternative_unknown
+\letcsname\??framedoffsetalternative\s!unknown\endcsname\framed_offset_alternative_unknown
 
 % so far for alternatives
 
@@ -1412,6 +1622,19 @@
 % options (btw, beware of location settings of derived functionality that bleed
 % into this
 
+\def\pack_framed_profile_box
+  {\profilegivenbox\p_profile\b_framed_normal
+   \setbox\b_framed_normal\vpack{\unvbox\b_framed_normal}}
+
+\def\pack_framed_reverse_box
+  {\ifvbox\b_framed_normal
+     \edef\p_linedirection{\framedparameter\c!linedirection}%
+     \ifx\p_linedirection\v!reverse
+       \reversevboxcontent\b_framed_normal
+       \setbox\b_framed_normal\vpack{\unvbox\b_framed_normal}%
+     \fi
+   \fi}
+
 \def\pack_framed_finish_a
   {\ifreshapeframebox
      \pack_framed_reshape_process
@@ -1437,29 +1660,20 @@
      \pack_framed_reshape_reset
    \fi}
 
-\def\pack_framed_profile_box
-  {\profilegivenbox\p_profile\b_framed_normal
-   \setbox\b_framed_normal\vpack{\unvbox\b_framed_normal}}
-
-\def\pack_framed_reverse_box
-  {\ifvbox\b_framed_normal
-     \edef\p_linedirection{\framedparameter\c!linedirection}%
-     \ifx\p_linedirection\v!reverse
-       \reversevboxcontent\b_framed_normal
-       \setbox\b_framed_normal\vpack{\unvbox\b_framed_normal}%
-     \fi
-   \fi}
+% Musical timestamp for the adding the "freezespacing" feature: Porcupine Tree -
+% Herd Culling (Single Edit - Official Visualiser : some old sql code scrolling by
+% on some paper terminal font); scalefactors are in the range -1000..1000.
 
 \protected\def\pack_framed_finish
-  {%\pack_framed_stop_orientation % hm, wrong place ! should rotate the result (after reshape) .. moved down
+  {\edef\p_freeze{\framedparameter\c!freezespacing}%
+   \ifempty\p_freeze
+ % \orelse\ifx\p_freeze\v!yes
+ %   \boxfreeze\b_framed_normal\zerocount
+   \else
+     \boxadapt\b_framed_normal\p_freeze\relax
+   \fi
    \pack_framed_locator_before\p_framed_location
    \ifconditional\c_framed_has_format
-    %\ifconditional\c_framed_has_height \else
-    %  \edef\p_profile{\framedparameter\c!profile}%
-    %  \ifempty\p_profile\else
-    %    \pack_framed_profile_box
-    %  \fi
-    %\fi
      \ifempty\p_framed_anchoring\else
        \pack_framed_reverse_box
      \fi
@@ -1496,10 +1710,8 @@
      \ht\b_framed_normal\d_framed_height
    \else
      \edef\p_framed_minheight{\framedparameter\c!minheight}%
-     \ifempty\p_framed_minheight \else
-       \ifdim\ht\b_framed_normal<\p_framed_minheight
-         \ht\b_framed_normal\p_framed_minheight
-       \fi
+     \ifempty\p_framed_minheight \orelse \ifdim\ht\b_framed_normal<\p_framed_minheight
+       \ht\b_framed_normal\p_framed_minheight
      \fi
    \fi
    \edef\p_framed_empty{\framedparameter\c!empty}%
@@ -1523,15 +1735,13 @@
        \d_framed_linewidth
      \fi
    \ifconditional\c_framed_has_offset
-     \advance\d_framed_applied_offset\localoffset\relax
+     \advanceby\d_framed_applied_offset\localoffset\relax
    \fi
    \ifconditional\c_framed_has_extra_offset
      \pack_framed_apply_extra_offsets % includes \d_framed_applied_offset
+   \orelse\ifzeropt\d_framed_applied_offset
    \else
-     \ifzeropt\d_framed_applied_offset
-     \else
-       \pack_framed_widen_box
-     \fi
+     \pack_framed_widen_box
    \fi
    %
    \ifrelax\postprocessframebox \else
@@ -1551,11 +1761,10 @@
        \pack_framed_add_background
      \fi
    \fi
+%    \pack_framed_pop_local_anchors
    \pack_framed_locator_after\p_framed_location
-   \iftrialtypesetting \else
-     \ifempty\m_overlay_region\else
-       \pack_framed_add_region
-     \fi
+   \iftrialtypesetting \orelse \ifempty\m_overlay_region \else
+     \pack_framed_add_region
    \fi
    \box\b_framed_normal
    \global\frameddimensionstate % global so to be used directly afterwards !
@@ -1620,10 +1829,10 @@
 \def\pack_framed_locator_before#1{\begincsname\??framedlocatorbefore#1\endcsname}
 \def\pack_framed_locator_after #1{\begincsname\??framedlocatorafter #1\endcsname}
 
-\newdimen\d_framed_locator_ht
-\newdimen\d_framed_locator_dp
-\newdimen\d_framed_locator_lo
-\newdimen\d_framed_locator_ro
+\newdimension\d_framed_locator_ht
+\newdimension\d_framed_locator_dp
+\newdimension\d_framed_locator_lo
+\newdimension\d_framed_locator_ro
 
 \def\pack_framed_locator_set#1%
   {\d_framed_locator_ht\dimexpr
@@ -1673,6 +1882,12 @@
 %   \framed[width=2cm,align=middle,location=bottom] {location\\equals\\bottom}
 %   \framed[width=2cm,align=middle,location=lohi]   {location\\equals\\lohi}
 %   \framed[width=2cm,align=middle,location=middle] {location\\equals\\middle}
+%   B}
+% \vskip2cm
+% \ruledhbox
+%  {A
+%   \framed[width=2cm,align=middle,location=keep]   {location\\equals\\top}
+%   \framed[width=2cm,align=middle,location=formula {location\\equals\\bottom}
 %   B}
 
 \installframedlocator \v!hanging % best with strut=no *1* / see mail to list by SB
@@ -1753,7 +1968,7 @@
   {\pack_framed_remove_depth}
   {\pack_framed_restore_depth}
 
-\newdimen\d_framed_formula
+\newdimension\d_framed_formula
 
 \installframedlocator \v!formula % private, will become a more generic name
   {}
@@ -1765,9 +1980,9 @@
 
 % also used in fastlocalframed
 
-\newdimen\d_framed_original_wd
-\newdimen\d_framed_original_ht
-\newdimen\d_framed_original_dp
+\newdimension\d_framed_original_wd
+\newdimension\d_framed_original_ht
+\newdimension\d_framed_original_dp
 
 \def\pack_framed_remove_depth
   {\d_framed_original_wd\wd\b_framed_normal
@@ -1817,151 +2032,14 @@
 %D When we set \type{empty} to \type{yes}, we get ourselves a frame and/or background,
 %D but no content, so actually we have a sort of phantom framed box.
 
-%D \macros
-%D   {mframed, minframed}
-%D
-%D When Tobias asked how to frame mathematical elements in formulas, Taco's posted the
-%D next macro:
-%D
-%D \starttyping
-%D \def\mframed#1%
-%D   {\relax
-%D    \ifmmode
-%D      \vcenter{\hbox{\framed{$\ifinner\else\displaystyle\fi#1$}}}%
-%D    \else
-%D      \framed{$#1$}%
-%D    \fi}
-%D \stoptyping
-%D
-%D Because \type {\ifinner} does not (always) reports what one would expect, we move the
-%D test to the outer level. We also want to pass arguments,
-%D
-%D \starttyping
-%D \def\mframed%
-%D   {\dosingleempty\domframed}
-%D
-%D \def\domframed[#1]#2% % tzt \dowithnextmathbox ?
-%D   {\relax
-%D    \ifmmode
-%D      \ifinner
-%D        \inframed[#1]{$#2$}%
-%D      \else
-%D        \vcenter{\hbox{\framed[#1]{$\displaystyle#2$}}}%
-%D      \fi
-%D    \else
-%D      \inframed[#1]{$#2$}%
-%D    \fi}
-%D \stoptyping
-%D
-%D Still better is the next alternative, if only because it takes care of setting the super-
-%D and subscripts styles
-
-\newcount\c_framed_mstyle
-
-\protected\def\pack_framed_math_strut
-  {\Ustartmath
-   \triggermathstyle\c_framed_mstyle
-   \vphantom{(}%
-   \Ustopmath}
-
-\installcorenamespace{mathframed}
-
-\installframedcommandhandler \??mathframed {mathframed} \??mathframed
-
-\newcount\c_pack_framed_mathframed
-\newtoks \t_pack_framed_mathframed
-
-\appendtoks
-    \frozen\protected\instance\edefcsname\currentmathframed\endcsname{\pack_framed_mathframed[\currentmathframed]}%
-\to \everydefinemathframed
-
-\let\pack_framed_mc_one\relax
-\let\pack_framed_mc_two\relax
-
-\tolerant\protected\def\pack_framed_mathframed[#1]#*[#2]#:#3% needs testing !
-  {\begingroup
-   \edef\currentmathframed{#1}%
-   \setupcurrentmathframed[#2]%
-   \c_framed_mstyle\normalmathstyle
-   \edef\m_framed_location{\mathframedparameter\c!location}%
-   \ifx\m_framed_location\v!mathematics
-     \enforced\let\normalstrut\pack_framed_math_pos % I don't like this overload!
-   \orelse\ifx\m_framed_location\v!low\else
-     \enforced\let\normalstrut\pack_framed_math_strut
-   \fi
-   \inheritedmathframedframed\bgroup
-     \Ustartmath
-     \triggermathstyle\c_framed_mstyle
-     \the\t_pack_framed_mathframed
-     #3%
-     \Ustopmath
-   \egroup
-   \endgroup}
-
-\def\pack_framed_math_pos
-  {\global\advance\c_pack_framed_mathframed\plusone
-   \xdef\pack_framed_mc_one{mcf:1:\number\c_pack_framed_mathframed}%
-   \xdef\pack_framed_mc_two{mcf:2:\number\c_pack_framed_mathframed}%
-   \xypos\pack_framed_mc_two}
-
-\appendtoks
-    \mathraggedstatus\plustwo   % makes \startalign work
-    \eqalignmode     \zerocount % makes \startalign fit
-\to \t_pack_framed_mathframed
-
-\installframedlocator \v!mathematics
-  {}
-  {\lower\dimexpr\MPy\pack_framed_mc_two-\MPy\pack_framed_mc_one\relax
-   \hpack{\xypos\pack_framed_mc_one\box\b_framed_normal}}
-
-\definemathframed[mframed]
-\definemathframed[inmframed][\c!location=\v!low]
-\definemathframed[mcframed] [\c!location=\v!mathematics]
-
-%D So instead of the rather versatile \type {\framed}, we use \type {\mframed}:
-%D
-%D \startbuffer
-%D \startformula
-%D   x \times   \mframed{y} \times y^{z_z}
-%D   x \times \inmframed{y} \times y^{z_z}
-%D \stopformula
-%D \stopbuffer
-%D
-%D \typebuffer \getbuffer
-%D
-%D And:
-%D
-%D \startbuffer
-%D \startformula
-%D   x \times \mframed{y} \times y^{\mframed{z}_{\mframed{z}}}
-%D \stopformula
-%D \stopbuffer
-%D
-%D \typebuffer \getbuffer
-%D
-%D As usual, one can specify in what way the text should be framed. One should be
-%D aware of the fact that, inorder to preserve the proper spacing, the \type
-%D {offset} is set to \type {overlay} and \type {frameoffset} is used used instead.
-%D
-%D \startbuffer
-%D \startformula
-%D   x \times y^{\mframed[framecolor=red]{z}_{z}}
-%D \stopformula
-%D \stopbuffer
-%D
-%D \typebuffer \getbuffer
-%D
-%D For inline use, we also provide the \type {\inmframed} alternative: we want $x
-%D \times \inmframed{y}$ in inline math, right?
-
 %D This previous framing macros needs a lot of alternatives for putting rules around
 %D boxes, inserting offsets and aligning text. Each step is handled by separate macros.
 
-\newdimen\d_framed_applied_offset
-\newdimen\d_framed_loffset
-\newdimen\d_framed_roffset
-\newdimen\d_framed_toffset
-\newdimen\d_framed_boffset
+\newdimension\d_framed_applied_offset
+\newdimension\d_framed_loffset
+\newdimension\d_framed_roffset
+\newdimension\d_framed_toffset
+\newdimension\d_framed_boffset
 
 \def\pack_framed_check_extra_offsets % we could check h and v indepently
   {\setfalse\c_framed_has_extra_offset
@@ -1969,17 +2047,17 @@
    \d_framed_roffset\framedparameter\c!roffset\relax
    \d_framed_toffset\framedparameter\c!toffset\relax
    \d_framed_boffset\framedparameter\c!boffset\relax
-   \ifzeropt\d_framed_loffset\else \advance\d_framed_width -\d_framed_loffset \settrue\c_framed_has_extra_offset \fi
-   \ifzeropt\d_framed_roffset\else \advance\d_framed_width -\d_framed_roffset \settrue\c_framed_has_extra_offset \fi
-   \ifzeropt\d_framed_toffset\else \advance\d_framed_height-\d_framed_toffset \settrue\c_framed_has_extra_offset \fi
-   \ifzeropt\d_framed_boffset\else \advance\d_framed_height-\d_framed_boffset \settrue\c_framed_has_extra_offset \fi}
+   \ifzeropt\d_framed_loffset\else \advanceby\d_framed_width -\d_framed_loffset \settrue\c_framed_has_extra_offset \fi
+   \ifzeropt\d_framed_roffset\else \advanceby\d_framed_width -\d_framed_roffset \settrue\c_framed_has_extra_offset \fi
+   \ifzeropt\d_framed_toffset\else \advanceby\d_framed_height-\d_framed_toffset \settrue\c_framed_has_extra_offset \fi
+   \ifzeropt\d_framed_boffset\else \advanceby\d_framed_height-\d_framed_boffset \settrue\c_framed_has_extra_offset \fi}
 
 \def\pack_framed_apply_extra_offsets
   {\setbox\b_framed_normal\vpack\bgroup
-     \advance\d_framed_toffset\d_framed_applied_offset
-     \advance\d_framed_boffset\d_framed_applied_offset
-     \advance\d_framed_loffset\d_framed_applied_offset
-     \advance\d_framed_roffset\d_framed_applied_offset
+     \advanceby\d_framed_toffset\d_framed_applied_offset
+     \advanceby\d_framed_boffset\d_framed_applied_offset
+     \advanceby\d_framed_loffset\d_framed_applied_offset
+     \advanceby\d_framed_roffset\d_framed_applied_offset
      \kern\d_framed_toffset
      \hpack\bgroup
         \kern\d_framed_loffset
@@ -2120,7 +2198,7 @@
    \fi}
 
 \def\pack_framed_format_format_yes
-  {\vbox to \d_framed_height
+  {\vbox to \d_framed_height \p_framed_adaptive
      \bgroup
        \let\postprocessframebox\relax
      % \pack_framed_forgetall
@@ -2303,12 +2381,12 @@
 %D It is possible to let the frame macro calculate the width of a centered box
 %D automatically (\type {fit}). When doing so, we need to reshape the box:
 
-\newcount\framednoflines
-\newdimen\framedfirstheight
-\newdimen\framedlastdepth
-\newdimen\framedminwidth
-\newdimen\framedmaxwidth
-\newdimen\framedaveragewidth
+% \newinteger  \framednoflines
+% \newdimension\framedfirstheight
+% \newdimension\framedlastdepth
+% \newdimension\framedminwidth
+% \newdimension\framedmaxwidth
+% \newdimension\framedaveragewidth
 
 \def\pack_framed_reshape_reset
   {\framednoflines    \zerocount
@@ -2318,8 +2396,26 @@
    \framedmaxwidth    \zeropoint
    \framedaveragewidth\zeropoint}
 
-\def\pack_framed_reshape_process{\ifvbox\b_framed_normal\clf_doreshapeframedbox\b_framed_normal\relax\fi}
-\def\pack_framed_reshape_analyze{\ifvbox\b_framed_normal\clf_doanalyzeframedbox\b_framed_normal\relax\fi}
+\def\pack_framed_reshape_process
+  {\ifvbox\b_framed_normal
+     \ifconditional\c_pack_resync
+       \clf_doresyncframedbox
+     \else
+       \clf_doreshapeframedbox
+     \fi\b_framed_normal\relax
+     \ifx\p_framed_adaptive\s!delay
+       \adaptivecheckbox\b_framed_normal
+     \fi
+   \fi}
+
+\def\pack_framed_reshape_analyze
+  {\ifvbox\b_framed_normal
+     \ifconditional\c_pack_resync
+       \clf_doresyncframedbox
+     \else
+       \clf_doanalyzeframedbox
+     \fi\b_framed_normal\relax
+   \fi}
 
 % torture test / strange case (much depth) / method 2 needed
 %
@@ -2629,29 +2725,33 @@
     \frozen\instance\protected\edefcsname        \currentframedtext\endcsname{\pack_framed_text_direct[\currentframedtext]}%
 \to \everydefineframedtext
 
-\setvalue{\??framedtextlocation\v!left  }{\letframedtextparameter\c!left \relax
-                                          \letframedtextparameter\c!right\hfill}
+\defcsname\??framedtextlocation\v!left\endcsname
+  {\letframedtextparameter\c!left \relax
+   \letframedtextparameter\c!right\hfill}
 
-\setvalue{\??framedtextlocation\v!right }{\letframedtextparameter\c!left \hfill
-                                          \letframedtextparameter\c!right\relax}
+\defcsname\??framedtextlocation\v!right\endcsname
+  {\letframedtextparameter\c!left \hfill
+   \letframedtextparameter\c!right\relax}
 
-\setvalue{\??framedtextlocation\v!middle}{\letframedtextparameter\c!left \hfill
-                                          \letframedtextparameter\c!right\hfill}
+\defcsname\??framedtextlocation\v!middle\endcsname
+  {\letframedtextparameter\c!left \hfill
+   \letframedtextparameter\c!right\hfill}
 
-\setvalue{\??framedtextlocation\v!none  }{\letframedtextparameter\c!left \relax
-                                          \letframedtextparameter\c!right\relax
-                                          \settrue\c_framed_text_location_none}
+\defcsname\??framedtextlocation\v!none\endcsname
+  {\letframedtextparameter\c!left \relax
+   \letframedtextparameter\c!right\relax
+   \settrue\c_framed_text_location_none}
 
 \tolerant\protected\def\pack_framed_text_start[#1]#*[#2]#*[#3]% or #1#*[#2]#*[#3]% and pass {#1}
   {\bgroup
-   \edef\currentframedtext{#1}
+   \edef\currentframedtext{#1}%
    \doifelseassignment{#2}
-     {\pack_framed_text_start_continue\empty{#2}}
-     {\pack_framed_text_start_continue{#2}{#3}}}
+     {\pack_framed_text_start_indeed\empty{#2}}
+     {\pack_framed_text_start_indeed{#2}{#3}}}
 
-% todo: sort out first/lastline ht/dp
+% todo: sort out first/lastline ht/dp . . will be a more advanced mechanism some day (soon)
 
-\def\pack_framed_text_start_continue#1#2%
+\def\pack_framed_text_start_indeed#1#2%
   {\setupframedtexts[\currentframedtext][#2]%
    \doifsomething{#1}{\setframedtextparameter\c!location{#1}}% does not listen to #3
    \setfalse\c_framed_text_location_none
@@ -2673,7 +2773,7 @@
          \else
             \bgroup
          \fi
-         \vskip-\strutdp % brrr why is this needed ... needs to be sorted out, see testcase 1
+         % no longer: \vskip-\strutdp % brrr why is this needed ... needs to be sorted out, see testcase 1
          \doinhibitblank
          \useindentingparameter\framedtextparameter
          \useframedtextstyleandcolor\c!style\c!color
@@ -2786,7 +2886,7 @@
      \blank[\v!disable]%
      \enforced\let\\\endgraf
      \useframedtextstyleandcolor\c!style\c!color
-     \vskip-\strutdp % brrr why is this needed ... needs to be sorted out, see testcase 1
+     % no longer: \vskip-\strutdp % brrr why is this needed ... needs to be sorted out, see testcase 1
      \framedtextparameter\c!inner
      \ifx\p_framed_text_strut\v!no
         \let\pack_framed_strut\relax
@@ -2823,7 +2923,7 @@
     \ifcsname\??regularframedlevel\currentframed\endcsname
       % already defined, keeps settings
     \else
-      \expandafter\newcount\csname\??regularframedlevel\currentframed\endcsname
+      \expandafter\newinteger\csname\??regularframedlevel\currentframed\endcsname
     \fi
 \to \everypresetframed
 
@@ -2831,7 +2931,7 @@
     \frozen\instance\setuevalue{\currentframed}{\pack_framed_defined_process[\currentframed]}%
 \to \everydefineframed
 
-\newcount\c_temp_framed_crap
+\newinteger\c_temp_framed_crap
 
 % \permanent\tolerant\protected\def\pack_framed_defined_process[#1]#*[#2]% official (not much checking, todo: parent)
 %   {\bgroup
@@ -2841,7 +2941,7 @@
 %    \else
 %      \let\c_pack_framed_temp\c_temp_framed_crap
 %    \fi
-%    \advance\c_pack_framed_temp\plusone
+%    \advanceby\c_pack_framed_temp\plusone
 %    \defcsname\??framed#1>\the\c_pack_framed_temp:\s!parent\endcsname{\??framed#1}% \inheritlocalframed
 %    \bgroup
 %    \edef\currentframed{#1>\the\c_pack_framed_temp}%
@@ -2857,7 +2957,7 @@
    \else
      \scratchcounter\c_temp_framed_crap
    \fi
-   \advance\scratchcounter\plusone
+   \advanceby\scratchcounter\plusone
    \defcsname\??framed#1>\the\scratchcounter:\s!parent\endcsname{\??framed#1}% \inheritlocalframed
    \bgroup
    \edef\currentframed{#1>\the\scratchcounter}%
@@ -2949,8 +3049,8 @@
      \scratchrightoffset \framedcontentparameter\c!rightoffset \relax
      \scratchtopoffset   \framedcontentparameter\c!topoffset   \relax
      \scratchbottomoffset\framedcontentparameter\c!bottomoffset\relax
-     \advance\hsize\dimexpr-\scratchleftoffset-\scratchrightoffset \relax
-     \advance\vsize\dimexpr-\scratchtopoffset -\scratchbottomoffset\relax
+     \advanceby\hsize\dimexpr-\scratchleftoffset-\scratchrightoffset \relax
+     \advanceby\vsize\dimexpr-\scratchtopoffset -\scratchbottomoffset\relax
      \kern\scratchleftoffset
      \vpack\bgroup
        \vskip\scratchtopoffset

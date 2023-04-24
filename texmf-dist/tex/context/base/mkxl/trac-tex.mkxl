@@ -24,7 +24,7 @@
 % \def\enabletextracerwhatever {...}
 % \def\disabletextracerwhatever{...}
 
-\mutable\let\alltextracers\empty % so that we can report available tracers
+\mutable\lettonothing\alltextracers % so that we can report available tracers
 
 \permanent\protected\def\installtextracer#1%
   {\addtocommalist{#1}\alltextracers}
@@ -56,14 +56,14 @@
 \permanent\protected\def\profilemacro#1% an oldie, but modernized a bit
   {\edef\p_name{\csstring#1}%
    \ifcsname\??profilemacrocount\p_name\endcsname \else
-     \expandafter\newcount\csname\??profilemacrocount\p_name\endcsname
+     \expandafter\newinteger\csname\??profilemacrocount\p_name\endcsname
      \letcsname\??profilemacromacro\p_name\endcsname#1%
      \xtoksapp\t_syst_profile
        {\writestatus
           {profile}%
           {\string#1: \noexpand\the\csname\??profilemacrocount\p_name\endcsname}}%
      \enforced\protected\xdef#1%
-       {\global\advance\csname\??profilemacrocount\p_name\endcsname\plusone
+       {\global\advanceby\csname\??profilemacrocount\p_name\endcsname\plusone
         \expandafter\noexpand\csname\??profilemacromacro\p_name\endcsname}%
    \fi}
 

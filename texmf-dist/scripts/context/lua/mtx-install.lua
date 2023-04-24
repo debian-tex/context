@@ -14,7 +14,7 @@ local helpinfo = [[
  <metadata>
   <entry name="name">mtx-install</entry>
   <entry name="detail">ConTeXt Installer</entry>
-  <entry name="version">2.00</entry>
+  <entry name="version">2.01</entry>
  </metadata>
  <flags>
   <category name="basic">
@@ -28,27 +28,55 @@ local helpinfo = [[
     <flag name="update"><short>update context</short></flag>
     <flag name="erase"><short>wipe the cache</short></flag>
     <flag name="identify"><short>create list of files</short></flag>
+    <flag name="secure"><short>use curl for https</short></flag>
    </subcategory>
   </category>
  </flags>
 </application>
 ]]
 
+local type, tonumber = type, tonumber
 local gsub, find, escapedpattern = string.gsub, string.find, string.escapedpattern
 local round = math.round
 local savetable, loadtable, sortedhash = table.save, table.load, table.sortedhash
 local copyfile, joinfile, filesize, dirname, addsuffix, basename = file.copy, file.join, file.size, file.dirname, file.addsuffix, file.basename
 local isdir, isfile, walkdir, pushdir, popdir, currentdir = lfs.isdir, lfs.isfile, lfs.dir, lfs.chdir, dir.push, dir.pop, currentdir
 local mkdirs, globdir = dir.mkdirs, dir.glob
-local osremove, osexecute, ostype = os.remove, os.execute, os.type
+local osremove, osexecute, ostype, resultof = os.remove, os.execute, os.type, os.resultof
 local savedata = io.savedata
 local formatters = string.formatters
+local httprequest = socket.http.request
 
-local fetch = socket.http.request
+local usecurl = false
+
+local function checkcurl()
+    local s = resultof("curl --version")
+    return type(s) == "string" and find(s,"libcurl") and find(s,"rotocols")
+end
+
+local function fetch(url)
+    local data   = nil
+    local detail = nil
+    if usecurl and find(url,"^https") then
+        data = resultof("curl " .. url)
+    else
+        data, detail = httprequest(url)
+    end
+    if type(data) ~= "string" then
+        data = false
+    elseif #data < 2048 then
+        local n, t = find(data,"<head>%s*<title>%s*(%d+)%s(.-)</title>")
+        if tonumber(n) then
+            data   = false
+            detail = n .. " " .. t
+        end
+    end
+    return data, detail
+end
 
 local application = logs.application {
     name     = "mtx-install",
-    banner   = "ConTeXt Installer 2.00",
+    banner   = "ConTeXt Installer 2.01",
     helpinfo = helpinfo,
 }
 
@@ -75,11 +103,14 @@ local platforms = {
     ["windows"]        = "mswin",
     ["win32"]          = "mswin",
     ["win"]            = "mswin",
+    ["arm32"]          = "windows-arm32",
+    ["windows-arm32"]  = "windows-arm32",
     --
     ["mswin-64"]       = "win64",
     ["windows-64"]     = "win64",
     ["win64"]          = "win64",
     ["arm64"]          = "windows-arm64",
+    ["windows-arm64"]  = "windows-arm64",
     --
     ["linux"]          = "linux",
     ["linux-32"]       = "linux",
@@ -93,9 +124,9 @@ local platforms = {
     --
     ["linux-armhf"]    = "linux-armhf",
     --
-    ["openbsd"]        = "openbsd6.8",
-    ["openbsd-i386"]   = "openbsd6.8",
-    ["openbsd-amd64"]  = "openbsd6.8-amd64",
+    ["openbsd"]        = "openbsd7.2",
+    ["openbsd-i386"]   = "openbsd7.2",
+    ["openbsd-amd64"]  = "openbsd7.2-amd64",
     --
     ["freebsd"]        = "freebsd",
     ["freebsd-i386"]   = "freebsd",
@@ -121,10 +152,8 @@ local platforms = {
     ["macosx"]         = "osx-64",
     ["osx"]            = "osx-64",
     ["osx-64"]         = "osx-64",
---     ["osx-arm"]        = "osx-arm64",
---     ["osx-arm64"]      = "osx-arm64",
-    ["osx-arm"]        = "osx-64",
-    ["osx-arm64"]      = "osx-64",
+    ["osx-arm"]        = "osx-arm64",
+    ["osx-arm64"]      = "osx-arm64",
     --
  -- ["solaris-intel"]  = "solaris-intel",
     --
@@ -589,6 +618,11 @@ function install.update()
     end
     run("%s --make en", contextbin)
 
+    -- in case we also install luatex:
+
+    run("%s --luatex --generate",contextbin)
+    run("%s --luatex --make en", contextbin)
+
     -- in calling script: update mtxrun.exe and mtxrun.lua
 
     report("")
@@ -600,6 +634,14 @@ function install.update()
     report("")
 
     report("update, done")
+end
+
+if environment.argument("secure") then
+    usecurl = checkcurl()
+    if not usecurl then
+        report("no curl installed, quitting")
+        os.exit()
+    end
 end
 
 if environment.argument("identify") then

@@ -55,8 +55,8 @@
 \def\m_strc_references_prefix_yes{+}
 \def\m_strc_references_prefix_nop{-}
 
-\mutable\let\currentstructurereferenceprefix\empty
-\mutable\let\currentstructurereferencetext  \empty
+\mutable\lettonothing\currentstructurereferenceprefix
+\mutable\lettonothing\currentstructurereferencetext
 
 \installglobalmacrostack\currentstructurereferenceprefix
 
@@ -64,8 +64,12 @@
   {\ifempty\currentstructurereferenceprefix
      % nothing
    \orelse\ifx\currentstructurereferenceprefix\m_strc_references_prefix_yes
-     \global\advance\prefixcounter \plusone % temp here
-     \setupglobalreferenceprefix[\the\prefixcounter]%
+     \ifempty\currentstructurereference
+       \global\advanceby\prefixcounter \plusone % temp here
+       \setupglobalreferenceprefix[\the\prefixcounter]%
+     \else
+       \setupglobalreferenceprefix[\currentstructurereference]%
+     \fi
    \orelse\ifx\currentstructurereferenceprefix\m_strc_references_prefix_nop
      \setupglobalreferenceprefix[]%
    \else
@@ -101,15 +105,16 @@
 \permanent\def\namedstructureheadlocation#1% expandable, maybe [#1]
   {\csname\??savedinternalreference\ifcsname\??savedinternalreference#1\endcsname#1\else\s!default\fi\endcsname}
 
-\mutable\let\currentheadbackreference       \empty
-\mutable\let\currentheaddefault             \empty
-\mutable\let\currentheadincrement           \empty
-\mutable\let\currentheadinteraction         \empty
-\mutable\let\currentheadlabeltag            \empty
-\mutable\let\currentheadnumber              \!!zerocount
-\mutable\let\currentheadrenderingalternative\empty
-\mutable\let\currentheadrenderingsetup      \empty
-\mutable\let\currentheadtext                \empty
+\mutable\lettonothing\currentheadbackreference
+\mutable\lettonothing\currentheaddefault
+\mutable\lettonothing\currentheadincrement
+\mutable\lettonothing\currentheadinteraction
+\mutable\lettonothing\currentheadlabeltag
+\mutable\lettonothing\currentheadrenderingalternative
+\mutable\lettonothing\currentheadrenderingsetup
+\mutable\lettonothing\currentheadtext
+
+\mutable\let\currentheadnumber\!!zerocount
 
 % zeros:
 %
@@ -119,6 +124,8 @@
 %     \chapter{Blabla}                 \subsection{bla 1 1} \subsection{bla 1 2}
 %                      \section{bla 2} \subsection{bla 2 1} \subsection{bla 2 2}
 % }
+
+\mutable\lettonothing\currentstructureextradata
 
 \protected\def\strc_sectioning_register#1#2#3% #1=interfaced-settings, #2=optional user data (not yet supported)
   {\begingroup
@@ -138,6 +145,7 @@
    \xdef\currentstructuresaveinlist     {\structureparameter\c!saveinlist}%
    \xdef\currentstructureincrementnumber{\structureparameter\c!incrementnumber}%
    \xdef\currentstructureplaceholder    {\structureparameter\c!placeholder}%
+   \xdef\currentstructureextradata      {\structureparameter\c!extradata}%
    \ifx\currentstructureexpansion\s!xml
      \xmlstartraw
        \xdef\currentstructuretitle        {\structureparameter\c!title}%
@@ -453,9 +461,9 @@
    \setstructurelevel\currenthead{\thenamedheadlevel\currenthead}%
 \to \everyredefinehead
 
-\mutable\let\currentsectionheadcoupling\empty
-\mutable\let\currentsectionheadsection \empty
-\mutable\let\currentsectionlevel       \empty
+\mutable\lettonothing\currentsectionheadcoupling
+\mutable\lettonothing\currentsectionheadsection
+\mutable\lettonothing\currentsectionlevel
 
 \appendtoks
     % beware, this is a global register
@@ -498,22 +506,22 @@
    \pop_macro_currentheadparent
    \pop_macro_currenthead}
 
-\mutable\let\currentnamedsection\empty
+\mutable\lettonothing\currentnamedsection
 
 \installmacrostack\currentnamedsection
 
 % structure sections (the parents of chapter etc)
 
-\aliased\let\firstsectionname\empty
-\aliased\let\lastsectionname \empty
+\mutable\lettonothing\firstsectionname
+\mutable\lettonothing\lastsectionname
 
 %aliased\let\resetallstructuremarks            \relax
 %aliased\let\resetcurrentstructuremarks        \relax
 \aliased\let\resetcurrentstructuremarkswithpage\relax
 
-\permanent\protected\def\resetallstructuremarks            {\resetmarking[\firstsectionname]} % will become option (was \v!section-1)
-\permanent\protected\def\resetcurrentstructuremarks        {\resetmarking[\lastsectionname]}  % will become option
-%permanent\protected\def\resetcurrentstructuremarkswithpage{\resetmarking[\lastsectionname]}  % will become option
+\permanent\protected\def\resetallstructuremarks            {\clearmarking[\firstsectionname]} % will become option (was \v!section-1)
+\permanent\protected\def\resetcurrentstructuremarks        {\clearmarking[\lastsectionname]}  % will become option
+%permanent\protected\def\resetcurrentstructuremarkswithpage{\clearmarking[\lastsectionname]}  % will become option
 
 % We could use a commandhandler here but sections are somewhat special in the
 % sense that we have two ways of chaining: the main section (levels) as well
@@ -524,7 +532,7 @@
 %  0 = block
 % +1 = structurelevel 1 .. n
 
-\newcount\maxstructuredepth
+\newinteger\maxstructuredepth
 
 \permanent\def\sectionlevel#1%
   {\csname\??headlevel\ifcsname\??headlevel#1\endcsname#1\else\v!none\fi\endcsname}
@@ -550,14 +558,14 @@
 
 \newtoks\everydefinesection
 
-\mutable\let\currentsection\empty % historic alias
+\mutable\lettonothing\currentsection % historic alias
 
 \permanent\protected\def\definesection[#1]%
   {\ifcsname\??headlevel#1\endcsname \else
      \edef\currenthead{#1}%
      \let\currentsection\currenthead % just an alias
-     \global\advance\maxstructuredepth\plusone
-     \setevalue{\??headlevel#1}{\the\maxstructuredepth}%
+     \global\advanceby\maxstructuredepth\plusone
+     \edefcsname\??headlevel#1\endcsname{\the\maxstructuredepth}%
      \setstructurelevel{#1}{\sectionlevel{#1}}%
      \normalexpanded{\setheadparameter{\s!parent}{\??head\lastsectionname}}% TO BE CHECKED, WE HAVE A HELPER
      \the\everydefinesection
@@ -769,10 +777,6 @@
 
 \newtoks\everyheadsynchronization
 
-% \appendtoks
-%     \currentstructuresynchronize
-% \to \everyheadsynchronization
-
 \aliased\let\currentstructuresynchronize\donothing
 
 \appendtoks
@@ -780,9 +784,15 @@
     \enforced\glet\currentstructuresynchronize\donothing
 \to \everyheadsynchronization
 
+
 \permanent\protected\def\theheadsynchronization % public
   {% no, interferes: \signalcharacter
-   \the\everyheadsynchronization}
+   \the\everyheadsynchronization
+   % new, this might move to a better place, e.g. first in the box
+   \currentstructureextradata
+   \lettonothing\currentstructureextradata
+   % done (can be used for e.g. index entries)
+  }
 
 % BEWARE: \marking[section]{my text} does not work as we use list indices instead
 % so we need a 'keep track of raw set option' (or maybe a funny internal prefix)
@@ -815,9 +825,10 @@
    \fi
    \dostoptagged}
 
-\mutable\let\currenthead        \empty
-\mutable\let\currentheadcoupling\empty
-\mutable\let\currentheadsection \empty
+\mutable\lettonothing\currenthead
+\mutable\lettonothing\currentheadcoupling
+\mutable\lettonothing\currentheadsection
+
 \mutable\let\currentheadlevel   \!!zerocount
 \mutable\let\currentheadcounter \!!zerocount
 
@@ -847,7 +858,7 @@
 \permanent\tolerant\protected\def\placeheadtext[#1]%
   {\dontleavehmode
    \begingroup
-   \protected\def\\{\space}% messy here, but the default (and needs to be grouped)
+   \enforced\permanent\protected\def\\{\space}% messy here, but the default (and needs to be grouped)
    \global\settrue\headisdisplay % triggers interlinespace checking
    \edef\currenthead{#1}% maybe only when #1 is given
    \strc_rendering_initialize_style_and_color\c!textstyle\c!textcolor
@@ -872,9 +883,9 @@
 \newtoks\everybeforesectionheadhandle
 \newtoks\everyaftersectionheadhandle
 
-\mutable\let\getheadnumber\empty
-\mutable\let\getheadtitle \empty
-\mutable\let\getheadsyncs \empty
+\mutable\lettonothing\getheadnumber
+\mutable\lettonothing\getheadtitle
+\mutable\lettonothing\getheadsyncs
 
 \def\strc_sectioning_handle#1#2#3% name data userdata (we can move #1 to the caller)
   {\xdef\currenthead        {#1}%
@@ -901,9 +912,9 @@
    %
    % \currentstructuresynchronize % will move
    %
-   \let\getheadnumber\empty
-   \let\getheadtitle \empty
-   \let\getheadsyncs \empty
+   \lettonothing\getheadnumber
+   \lettonothing\getheadtitle
+   \lettonothing\getheadsyncs
    \ifconditional\c_strc_sectioning_increment
      \ifconditional\c_strc_sectioning_place
        \strc_sectioning_before_yes
@@ -981,14 +992,12 @@
    \setfalse\c_strc_sectioning_ignore_page
    % ignorespaces prevents spaces creeping in when after=\dontleavehmode
    \dostarttagged\t!sectioncontent\empty
-   \ifempty\currentstructureplaceholder
-      \ifconditional\headisdisplay
-        \doubleexpandafter\ignorespaces
-      \else
-        \doubleexpandafter\ignorepars
-      \fi
+   \unless\ifempty\currentstructureplaceholder
+     \expandafter\strc_sectioning_placeholder
+   \orelse\ifconditional\headisdisplay
+     \expandafter\ignorespaces
    \else
-      \expandafter\strc_sectioning_placeholder
+     \expandafter\ignorepars
    \fi}
 
 %D \starttyping
@@ -1030,21 +1039,46 @@
      \smashedbox\b_sectioning_delayed
    \fi}
 
-\protected\def\strc_rendering_place_head_section % see hidden below
-  {\global\setbox\b_sectioning_delayed\hpack\bgroup
-     \setmarking[\currentheadcoupling]{li::\currentstructurelistnumber}%
-     \hpack\headreferenceattributes{}% also does the mark
-     \theheadsynchronization
-   \egroup}
+\ifdefined\??markingclass % uses a node, so we need to embed / bind
 
-\protected\def\strc_rendering_place_head_hidden % maybe trialtypesetting check
-  {\xdefcsname\??hiddenheadattr\currenthead\endcsname
-     {\headreferenceattributes}% can be used when making a box
-   \xdefcsname\??hiddenheadsync\currenthead\endcsname
-     {\noexpand\letgvalue{\??hiddenheadsync\currenthead}\relax
-      \noexpand\setmarking[\currentheadcoupling]{li::\currentstructurelistnumber}%
-      \hpack\headreferenceattributes{}% otherwise no destination ... maybe tag ref as hidden and fall back on page reference
-      \theheadsynchronization}} % and it's a node anyway
+    \protected\def\strc_rendering_place_head_section % see hidden below
+      {\global\setbox\b_sectioning_delayed\hpack\bgroup
+         \hpack\headreferenceattributes\bgroup
+            \setmarking[\currentheadcoupling]{li::\currentstructurelistnumber}% also does the mark
+         \egroup
+         \theheadsynchronization
+       \egroup}
+
+    \protected\def\strc_rendering_place_head_hidden % maybe trialtypesetting check
+      {\xdefcsname\??hiddenheadattr\currenthead\endcsname
+         {\headreferenceattributes}% can be used when making a box
+       \xdefcsname\??hiddenheadsync\currenthead\endcsname
+         {\noexpand\gletcsname\??hiddenheadsync\currenthead\endcsname\relax
+       % {\noexpand\gletcsname\??hiddenheadsync\currenthead\endcsname\relax
+          \hpack\headreferenceattributes\bgroup
+            \noexpand\setmarking[\currentheadcoupling]{li::\currentstructurelistnumber}% otherwise no destination ... maybe tag ref as hidden and fall back on page reference
+          \egroup
+          \theheadsynchronization}} % and it's a node anyway
+
+\else % uses attributes so no interference
+
+    \protected\def\strc_rendering_place_head_section % see hidden below
+      {\global\setbox\b_sectioning_delayed\hpack\bgroup
+         \setmarking[\currentheadcoupling]{li::\currentstructurelistnumber}%
+         \hpack\headreferenceattributes{}% also does the mark
+         \theheadsynchronization
+       \egroup}
+
+    \protected\def\strc_rendering_place_head_hidden % maybe trialtypesetting check
+      {\xdefcsname\??hiddenheadattr\currenthead\endcsname
+         {\headreferenceattributes}% can be used when making a box
+       \xdefcsname\??hiddenheadsync\currenthead\endcsname
+         {\noexpand\gletcsname\??hiddenheadsync\currenthead\endcsname\relax
+          \noexpand\setmarking[\currentheadcoupling]{li::\currentstructurelistnumber}%
+          \hpack\headreferenceattributes{}% otherwise no destination ... maybe tag ref as hidden and fall back on page reference
+          \theheadsynchronization}} % and it's a node anyway
+
+\fi
 
 \permanent\def\synchronizehead           #1{\begincsname\??hiddenheadsync#1\endcsname}
 \permanent\def\theheadreferenceattributes#1{\begincsname\??hiddenheadattr#1\endcsname}
@@ -1121,14 +1155,14 @@
      \doifelselayouttextline\v!footer{\normalexpanded{\setuplayouttext[\v!footer][\c!state=\p_footer]}}\donothing
    \fi}
 
-\newcount      \c_strc_sectioning_preceding_level     \c_strc_sectioning_preceding_level\plusone
+\newinteger    \c_strc_sectioning_preceding_level     \c_strc_sectioning_preceding_level\plusone
 \newconditional\c_strc_sectioning_auto_break          \settrue\c_strc_sectioning_auto_break
 \newconditional\c_strc_sectioning_ignore_page
-\newsignal     \d_strc_sectioning_continuous_signal
+\newboundary   \c_strc_sectioning_boundary
 
 \protected\def\strc_sectioning_inject_continuous_signal
   {\ifhmode
-     \hskip\d_strc_sectioning_continuous_signal\relax
+     \boundary\c_strc_sectioning_boundary
    \fi}
 
 % \let\dotagsectionlevel\relax
@@ -1161,7 +1195,7 @@
   {\ifhmode
      \scratchcounter\lastpenalty
      \unpenalty % no beauty in this
-     \ifdim\lastskip=\d_strc_sectioning_continuous_signal
+     \ifnum\lastboundary=\c_strc_sectioning_boundary
        % no page break
        \ifconditional\c_strc_sectioning_ignore_page
          \setfalse\c_strc_sectioning_ignore_page
@@ -1187,7 +1221,7 @@
 %permanent\def\previoussectioncountervalue{\clf_depthnumber\numexpr\thenamedheadlevel\currenthead+\minusone\relax}
 \permanent\def\previoussectioncountervalue{\clf_depthnumber\numexpr\thenamedheadlevel\previoushead\relax}
 
-\mutable\let\previoushead\empty
+\mutable\lettonothing\previoushead
 
 \def\strc_sectioning_handle_page_nop
   {\edef\p_continue{\headparameter\c!continue}%
@@ -1217,7 +1251,7 @@
            \spac_vspacing_same_page\currentheadlevel\zerocount
          \fi
          \headparameter\c!before\relax
-         \indent
+         \indent % hm, not a clever one?
      \else
          \page_otr_command_flush_side_floats
          \ifconditional\c_strc_sectioning_auto_break
@@ -1252,7 +1286,6 @@
      \spac_vspacing_same_page\currentheadlevel\plustwo
    \fi}
 
-
 % We do support negative numbers but it can have side effects that we won't catch:
 %
 % \chapter{some} \setupheadnumber[chapter][3] \chapter{more}
@@ -1272,8 +1305,8 @@
 \permanent\def\namedheadnumber      #1{\getstructurenumber    {\thenamedheadlevel{#1}}}
 \permanent\def\somenamedheadnumber#1#2{\getsomestructurenumber{\thenamedheadlevel{#1}}{#2}}
 
-\permanent\tolerant\protected\def\headnumber[#1]#*[#2]% simple case is just a number
-  {\getsomefullstructurenumber{\ifparameter#1\or\thenamedheadlevel{#1}\fi}{#2}}
+\permanent\tolerant\protected\def\headnumber[#1]#*[#2]%
+  {\getsomefullstructurenumber{\thenamedheadlevel{#1}}{#2}}
 
 \permanent\tolerant\protected\def\someheadnumber[#1]#*[#2]%
   {\dontleavehmode
@@ -1316,6 +1349,10 @@
 \appendtoks
     \finalizeautostructurelevels
 \to \everystoptext
+
+%D Defined at the \LUA\ end:
+
+% \doifelsefirstsectionpage{chapter}{do this}{or that} % in pagebody building
 
 \stopcontextdefinitioncode
 

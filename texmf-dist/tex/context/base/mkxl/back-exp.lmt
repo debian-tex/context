@@ -44,6 +44,7 @@ local formatters = string.formatters
 local todimen = number.todimen
 local replacetemplate = utilities.templates.replace
 local settings_to_array = utilities.parsers.settings_to_array
+local settings_to_hash = utilities.parsers.settings_to_hash
 
 local addsuffix, joinfile, nameonly, basename, filesuffix = file.addsuffix, file.join, file.nameonly, file.basename, file.suffix
 
@@ -74,8 +75,6 @@ local v_hidden          = variables.hidden
 
 local implement         = interfaces.implement
 
-local included          = backends.included
-
 local tasks             = nodes.tasks
 local fontchar          = fonts.hashes.characters
 local fontquads         = fonts.hashes.quads
@@ -100,12 +99,12 @@ local overloads         = fonts.mappings.overloads
 
 -- todo: more locals (and optimize)
 
-local exportversion     = "0.35"
-local mathmlns          = "http://www.w3.org/1998/Math/MathML"
-local contextns         = "http://www.contextgarden.net/context/export" -- whatever suits
-local cssnamespaceurl   = "@namespace context url('%namespace%') ;"
-local cssnamespace      = "context|"
------ cssnamespacenop   = "/* no namespace */"
+local exportversion     <const> = "0.35"
+local mathmlns          <const> = "http://www.w3.org/1998/Math/MathML"
+local contextns         <const> = "http://www.contextgarden.net/context/export" -- whatever suits
+local cssnamespaceurl   <const> = "@namespace context url('%namespace%') ;"
+local cssnamespace      <const> = "context|"
+----- cssnamespacenop   <const> = "/* no namespace */"
 
 local usecssnamespace   = false
 
@@ -137,7 +136,6 @@ local currentdepth      = 0
 local wrapups           = { }
 
 local tree              = { data = { }, fulltag == "root" } -- root
-local treeroot          = tree
 local treehash          = { }
 local extras            = { }
 local checks            = { }
@@ -297,7 +295,7 @@ structurestags.backend = {
     destinationhash = destinationhash,
 }
 
-local namespacetemplate = [[
+local namespacetemplate <const> = [[
 /* %what% for file %filename% */
 
 %cssnamespaceurl%
@@ -313,7 +311,7 @@ do
     -- /* text-justify : inter-word ; */
     -- /* text-align : justify ; */
 
-local documenttemplate = [[
+local documenttemplate <const> = [[
 document,
 %namespace%div.document {
     font-size  : %size% !important ;
@@ -322,7 +320,7 @@ document,
     hyphens    : %hyphens% !important ;
 }]]
 
-local styletemplate = [[
+local styletemplate <const> = [[
 %element%[detail="%detail%"],
 %namespace%div.%element%.%detail% {
     display      : inline ;
@@ -335,9 +333,9 @@ local styletemplate = [[
 
     local numbertoallign = {
         [0] = "justify", ["0"] = "justify", [variables.normal    ] = "justify",
-        [1] = "right",   ["1"] = "right",   [variables.flushright] = "right",
-        [2] = "center",  ["2"] = "center",  [variables.middle    ] = "center",
-        [3] = "left",    ["3"] = "left",    [variables.flushleft ] = "left",
+              "right",   ["1"] = "right",   [variables.flushright] = "right",
+              "center",  ["2"] = "center",  [variables.middle    ] = "center",
+              "left",    ["3"] = "left",    [variables.flushleft ] = "left",
     }
 
     function wrapups.allusedstyles(filename)
@@ -410,7 +408,7 @@ end
 
 do
 
-local imagetemplate = [[
+local imagetemplate <const> = [[
 %element%[id="%id%"], %namespace%div.%element%[id="%id%"] {
     display           : block ;
     background-image  : url('%url%') ;
@@ -561,9 +559,7 @@ do
         setattribute(di,"language",languagenames[texgetcount("mainlanguagenumber")])
         if not less_state then
             setattribute(di,"file",tex.jobname)
-            if included.date then
-                setattribute(di,"date",os.fulltime())
-            end
+            setattribute(di,"date",os.fulltime())
             setattribute(di,"context",environment.version)
             setattribute(di,"version",exportversion)
             setattribute(di,"xmlns:m",mathmlns)
@@ -845,9 +841,9 @@ do
         used[element][detail or ""] = { nature, specification.parents }  -- for template css
         -- also in last else ?
         local metadata = specification.metadata
-        if metadata then
+        if metadata and next(metadata) then
             result[#result+1] = f_metadata_begin(depth)
-            for k, v in table.sortedpairs(metadata) do
+            for k, v in sortedhash(metadata) do
                 if v ~= "" then
                     result[#result+1] = f_metadata(depth+1,k,lpegmatch(p_entity,v))
                 end
@@ -921,7 +917,9 @@ do
                     local element = di.element
                     if not element then
                         -- skip
-                    elseif element == "break" then -- or element == "pagebreak"
+                    elseif element == "break" then -- or element == "pagebreak" -- todo: use empty flag
+                        emptytag(result,element,nature,di)
+                    elseif element == "mspace" then -- todo: use empty flag
                         emptytag(result,element,nature,di)
                     elseif element == "" or di.skip == "ignore" then
                         -- skip
@@ -941,6 +939,11 @@ do
                             flushtree(result,di.after,nature)
                         end
                     end
+                else
+--                     local element = di.element
+--                     if element == "mspace" then -- todo: use empty flag
+--                         emptytag(result,element,nature,di)
+--                     end
                 end
             end
         end
@@ -961,8 +964,8 @@ do
                     -- skip
                 elseif di.skip == "ignore" then
                     -- skip (new)
-elseif di.tg == "ignore" then
-    -- skip (new)
+                elseif di.tg == "ignore" then
+                    -- skip (new)
                 elseif di.content then
                     if di.samepar then
                         prevparnumber = false
@@ -1046,12 +1049,22 @@ elseif di.tg == "ignore" then
     -- also tabulaterow reconstruction .. maybe better as a checker
     -- i.e cell attribute
 
+    local function showtree(data,when,where)
+        if data then
+            for i=1,#data do
+                local d = data[i]
+                if type(d) == "table" and d.element then
+                    print(when,where,i,d.element,d.parnumber or 0)
+                end
+            end
+        end
+    end
+
     local function collapsetree(tree)
---         for tag, trees in sortedhash(treehash) do
+     -- showtree(data,"before","collapse")
+     -- for tag, trees in sortedhash(treehash) do
         for tag, trees in next, treehash do
             local d = trees[1].data
--- print("!!!!!!!!",tag)
--- inspect(trees)
             if d then
                 local nd = #d
                 if nd > 0 then
@@ -1097,30 +1110,22 @@ elseif di.tg == "ignore" then
                 end
             end
         end
+     -- showtree(data,"after","collapse")
     end
 
     local function finalizetree(tree)
+     -- showtree(data,"before","finalize")
         for _, finalizer in next, finalizers do
             finalizer(tree)
         end
+     -- showtree(data,"after","finalize")
     end
-
- -- local function showtree(data,when,where)
- --     if data then
- --         for i=1,#data do
- --             local d = data[i]
- --             if type(d) == "table" and d.element then
- --                 print(when,where,i,d.element,d.parnumber or 0)
- --             end
- --         end
- --     end
- -- end
 
     local function indextree(tree)
         local data = tree.data
         if data then
-            local n, new = 0, { }
          -- showtree(data,"before","index")
+            local n, new = 0, { }
             for i=1,#data do
                 local d = data[i]
                 if not d then
@@ -1148,9 +1153,12 @@ elseif di.tg == "ignore" then
             for i=1,#data do
                 local d = data[i]
                 if type(d) == "table" then
-                    local check = checks[d.tg]
-                    if check then
-                        check(d,data,i)
+                    local tg = d.tg
+                    if tg then
+                        local check = checks[tg]
+                        if check then
+                            check(d,data,i)
+                        end
                     end
                     checktree(d) -- so parts can pass twice
                 end
@@ -1166,9 +1174,12 @@ elseif di.tg == "ignore" then
             for i=1,#data do
                 local d = data[i]
                 if type(d) == "table" then
-                    local fix = fixes[d.tg]
-                    if fix then
-                        fix(d,data,i)
+                    local tg = d.tg
+                    if tg then
+                        local fix = fixes[tg]
+                        if fix then
+                            fix(d,data,i)
+                        end
                     end
                     fixtree(d) -- so parts can pass twice
                 end
@@ -1406,29 +1417,30 @@ end
 
 local collectresults  do -- too many locals otherwise
 
-    local nodecodes        = nodes.nodecodes
-    local gluecodes        = nodes.gluecodes
-    local listcodes        = nodes.listcodes
-    local whatsitcodes     = nodes.whatsitcodes
+    local nodecodes          = nodes.nodecodes
+    local gluecodes          = nodes.gluecodes
+    local listcodes          = nodes.listcodes
+    local whatsitcodes       = nodes.whatsitcodes
 
-    local subtypes         = nodes.subtypes
+    local subtypes           = nodes.subtypes
 
-    local hlist_code       = nodecodes.hlist
-    local vlist_code       = nodecodes.vlist
-    local glyph_code       = nodecodes.glyph
-    local glue_code        = nodecodes.glue
-    local kern_code        = nodecodes.kern
-    local disc_code        = nodecodes.disc
-    local whatsit_code     = nodecodes.whatsit
-    local par_code         = nodecodes.par
+    local hlist_code         = nodecodes.hlist
+    local vlist_code         = nodecodes.vlist
+    local glyph_code         = nodecodes.glyph
+    local glue_code          = nodecodes.glue
+    local kern_code          = nodecodes.kern
+    local disc_code          = nodecodes.disc
+    local whatsit_code       = nodecodes.whatsit
+    local par_code           = nodecodes.par
 
-    local userskip_code    = gluecodes.userskip
-    local rightskip_code   = gluecodes.rightskip
-    local parfillskip_code = gluecodes.parfillskip
-    local spaceskip_code   = gluecodes.spaceskip
-    local xspaceskip_code  = gluecodes.xspaceskip
+    local userskip_code      = gluecodes.userskip
+    local rightskip_code     = gluecodes.rightskip
+    local parfillskip_code   = gluecodes.parfillskip
+    local spaceskip_code     = gluecodes.spaceskip
+    local xspaceskip_code    = gluecodes.xspaceskip
+    local intermathskip_code = gluecodes.intermathskip
 
-    local linelist_code    = listcodes.line
+    local linelist_code      = listcodes.line
 
     local userdefinedwhatsit_code  = whatsitcodes.userdefined
 
@@ -1456,7 +1468,7 @@ local collectresults  do -- too many locals otherwise
     local getkern          = nuts.getkern
     local getwidth         = nuts.getwidth
 
-    local start_of_par     = nuts.start_of_par
+    local startofpar       = nuts.startofpar
 
     local nexthlist        = nuts.traversers.hlist
     local nextnode         = nuts.traversers.node
@@ -1654,6 +1666,21 @@ local collectresults  do -- too many locals otherwise
                         currentcontent[nofcurrentcontent] = c
                     end
                 elseif subtype == userskip_code then
+-- local at = getattr(n,a_tagged)
+-- local tl = taglist[at]
+-- if tl and structurestags.strip(tl.taglist[#tl.taglist]) == "mspace" then
+--     if nofcurrentcontent > 0 then
+--         pushcontent()
+--         pushentry(currentnesting) -- ??
+--     end
+--     -- in the past we'd push a space here ... check mkiv : otherwise no threshold with mspace
+--     pushentry(tl)
+--     if trace_export then
+--         report_export("%w<!-- processing mspace tagged %a",currentdepth,at)
+--     end
+--     last = nil
+--     currentparagraph = nil
+-- else
                     if getwidth(n) > threshold then
                         if last and not somespace[currentcontent[nofcurrentcontent]] then
                             local a = getattr(n,a_tagged) or pat
@@ -1681,6 +1708,7 @@ local collectresults  do -- too many locals otherwise
                             end
                         end
                     end
+-- end
                 elseif subtype == spaceskip_code or subtype == xspaceskip_code then
                     if not somespace[currentcontent[nofcurrentcontent]] then
                         local a = getattr(n,a_tagged) or pat
@@ -1703,6 +1731,8 @@ local collectresults  do -- too many locals otherwise
                             currentattribute = last
                         end
                     end
+                elseif subtype == intermathskip_code then
+                    -- put this as attribute when it differs, maybe more ... check mathml
                 elseif subtype == rightskip_code then
                     -- a line
                     if nofcurrentcontent > 0 then
@@ -1769,49 +1799,50 @@ local collectresults  do -- too many locals otherwise
             elseif id == kern_code then
                 local kern = getkern(n)
                 if kern > 0 then
-local a = getattr(n,a_tagged) or pat
-local t = taglist[a]
-if not t or t.tagname ~= "ignore" then -- maybe earlier on top)
-                    local limit = threshold
-                    if p then
-                        local c, f = isglyph(p)
-                        if c then
-                            limit = fontquads[f] / 4
+                    local a = getattr(n,a_tagged) or pat
+                    local t = taglist[a]
+                    if not t or t.tagname ~= "ignore" then -- maybe earlier on top)
+                        local limit = threshold
+                        if p then
+                            local c, f = isglyph(p)
+                            if c then
+                                limit = fontquads[f] / 4
+                            end
                         end
-                    end
-                    if kern > limit then
-                        if last and not somespace[currentcontent[nofcurrentcontent]] then
---                             local a = getattr(n,a_tagged) or pat
-                            if a == last then
-                                if not somespace[currentcontent[nofcurrentcontent]] then
+                        if kern > limit then
+                            if last and not somespace[currentcontent[nofcurrentcontent]] then
+                             -- local a = getattr(n,a_tagged) or pat
+                                if a == last then
+                                    if not somespace[currentcontent[nofcurrentcontent]] then
+                                        if trace_export then
+                                            report_export("%w<!-- injecting spacing 8 (kern %p) -->",currentdepth,kern)
+                                        end
+                                        nofcurrentcontent = nofcurrentcontent + 1
+                                        currentcontent[nofcurrentcontent] = " "
+                                    end
+                                elseif a then
+                                    -- e.g LOGO<space>LOGO
                                     if trace_export then
-                                        report_export("%w<!-- injecting spacing 8 (kern %p) -->",currentdepth,kern)
+                                        report_export("%w<!-- processing kern, threshold %p, tag %s => %s -->",currentdepth,limit,last,a)
+                                    end
+                                    last = a
+                                    pushcontent()
+                                    if trace_export then
+                                        report_export("%w<!-- injecting spacing 9 (kern %p) -->",currentdepth,kern)
                                     end
                                     nofcurrentcontent = nofcurrentcontent + 1
                                     currentcontent[nofcurrentcontent] = " "
+                                 -- currentnesting = taglist[last]
+                                    currentnesting = t
+                                    pushentry(currentnesting)
+                                    currentattribute = last
                                 end
-                            elseif a then
-                                -- e.g LOGO<space>LOGO
-                                if trace_export then
-                                    report_export("%w<!-- processing kern, threshold %p, tag %s => %s -->",currentdepth,limit,last,a)
-                                end
-                                last = a
-                                pushcontent()
-                                if trace_export then
-                                    report_export("%w<!-- injecting spacing 9 (kern %p) -->",currentdepth,kern)
-                                end
-                                nofcurrentcontent = nofcurrentcontent + 1
-                                currentcontent[nofcurrentcontent] = " "
---                                 currentnesting = taglist[last]
-currentnesting = t
-                                pushentry(currentnesting)
-                                currentattribute = last
                             end
                         end
                     end
-end
                 end
             elseif id == whatsit_code then
+                -- todo (lmtx)
                 if subtype == userdefinedwhatsit_code then
                     -- similar to images, see above
                     local at = getattr(n,a_tagged)
@@ -1826,7 +1857,7 @@ end
                     last = nil
                     currentparagraph = nil
                 end
-            elseif not paragraph and id == par_code and start_of_par(n) then
+            elseif not paragraph and id == par_code and startofpar(n) then
                 paragraph = getattr(n,a_taggedpar)
             elseif id == disc_code then
                 -- very unlikely because we stripped them
@@ -1849,18 +1880,25 @@ end
         end
     end
 
+    local enabled = true
+
+    updaters.register("tagging.state.disable",function() enabled = false end)
+    updaters.register("tagging.state.enable", function() enabled = true  end)
+
     function nodes.handlers.export(head) -- hooks into the page builder
-        starttiming(treehash)
-        if trace_export then
-            report_export("%w<!-- start flushing page -->",currentdepth)
+        if enabled then
+            starttiming(treehash)
+            if trace_export then
+                report_export("%w<!-- start flushing page -->",currentdepth)
+            end
+         -- continueexport()
+            restart = true
+            collectresults(head)
+            if trace_export then
+                report_export("%w<!-- stop flushing page -->",currentdepth)
+            end
+            stoptiming(treehash)
         end
-     -- continueexport()
-        restart = true
-        collectresults(head)
-        if trace_export then
-            report_export("%w<!-- stop flushing page -->",currentdepth)
-        end
-        stoptiming(treehash)
         return head
     end
 
@@ -1869,13 +1907,15 @@ end
         return p
     end
 
+    -- needs checking!
+
     function builders.paragraphs.tag(head)
         noftextblocks = noftextblocks + 1
         for n, subtype in nexthlist, head do
             if subtype == linelist_code then
                 setattr(n,a_textblock,noftextblocks)
-            elseif subtype == glue_code or subtype == kern_code then -- no need to set fontkerns
-                setattr(n,a_textblock,0)
+         -- elseif subtype == glue_code or subtype == kern_code then -- weird, no list
+         --     setattr(n,a_textblock,0)
             end
         end
         return false
@@ -1888,7 +1928,11 @@ do
     local xmlcollected  = xml.collected
     local xmlsetcomment = xml.setcomment
 
-local xmlpreamble = [[
+local xmlpreamble_nop = [[
+<?xml version="1.0" encoding="UTF-8" standalone="%standalone%" ?>
+]]
+
+local xmlpreamble_yes = [[
 <?xml version="1.0" encoding="UTF-8" standalone="%standalone%" ?>
 
 <!--
@@ -1904,11 +1948,11 @@ local xmlpreamble = [[
 
     local flushtree = wrapups.flushtree
 
-    local function wholepreamble(standalone)
-        return replacetemplate(xmlpreamble, {
+    local function wholepreamble(standalone,nocomment)
+        return replacetemplate(nocomment and xmlpreamble_nop or xmlpreamble_yes, {
             standalone     = standalone and "yes" or "no",
             filename       = tex.jobname,
-            date           = included.date and os.fulltime(),
+            date           = os.fulltime(),
             contextversion = environment.version,
             exportversion  = exportversion,
         })
@@ -1923,7 +1967,18 @@ local cssheadlink = [[
 <link type="text/css" rel="stylesheet" href="%filename%" />
 ]]
 
-    local function allusedstylesheets(cssfiles,files,path)
+-- great, these suggested valuess attributes
+
+local mathmlheadscript = [[
+<script
+    type="text/javascript"
+    id="MathJax-script"
+    async="async"
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-chtml.js">
+</script>
+]]
+
+    local function allusedstylesheets(cssfiles,files,path,extra)
         local done   = { }
         local result = { }
         local extras = { }
@@ -1942,10 +1997,13 @@ local cssheadlink = [[
                 done[cssfile]     = true
             end
         end
+        if extra then
+            extras[#extras+1] = extra
+        end
         return concat(result), concat(extras)
     end
 
-local elementtemplate = [[
+local elementtemplate <const> = [[
 /* element="%element%" detail="%detail%" chain="%chain%" */
 
 %element%,
@@ -1953,7 +2011,7 @@ local elementtemplate = [[
     display: %display% ;
 }]]
 
-local detailtemplate = [[
+local detailtemplate <const> = [[
 /* element="%element%" detail="%detail%" chain="%chain%" */
 
 %element%[detail=%detail%],
@@ -1963,7 +2021,7 @@ local detailtemplate = [[
 
 -- <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN" "http://www.w3.org/2002/04/xhtml-math-svg/xhtml-math-svg.dtd" >
 
-local htmltemplate = [[
+local htmltemplate <const> = [[
 %preamble%
 
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:math="http://www.w3.org/1998/Math/MathML">
@@ -2033,13 +2091,20 @@ local htmltemplate = [[
         return concat(result,"\n\n")
     end
 
-    local function allcontent(tree,embed)
-        local result   = { }
+    local function allcontent(tree)
+        local result = { }
+        local data   = tree.data
+        for i=1,#data do
+            if data[i].tg ~= "document" then
+                data[i] = { }
+            end
+        end
         flushtree(result,tree.data,"display") -- we need to collect images
         result = concat(result)
         -- no need to lpeg .. fast enough
         result = gsub(result,"\n *\n","\n")
         result = gsub(result,"\n +([^< ])","\n%1")
+        --
         return result
     end
 
@@ -2237,11 +2302,16 @@ local htmltemplate = [[
             if not c.special then
                 local tg = c.tg
                 local ns = c.ns
+                local at = c.at
                 if ns == "m" then
-                    if false then -- yes or no
+                    -- should happen elsewhere
+                 -- if false then -- yes or no
                         c.ns = ""
-                        c.at["xmlns:m"] = nil
-                    end
+                        at["xmlns:m"] = nil
+                        if tg == "math" then
+                            at["xmlns"]   = mathmlns
+                        end
+                 -- end
              -- elseif tg == "a" then
              --     c.ns = ""
                 else
@@ -2255,7 +2325,6 @@ local htmltemplate = [[
                             comment = c.dt
                         end
                     end
-                    local at    = c.at
                     local class = nil
                     local label = nil
                     if tg == "document" then
@@ -2316,6 +2385,83 @@ local htmltemplate = [[
 
     local embedfile = false  directives.register("export.embed",function(v) embedfile = v end)
 
+    local justexport = nodes.handlers.export
+
+    local function wrapuptree(tree)
+        wrapups.fixtree(tree)
+        wrapups.collapsetree(tree)
+        wrapups.indextree(tree)
+        wrapups.checktree(tree)
+        wrapups.breaktree(tree)
+        wrapups.finalizetree(tree)
+    end
+
+    local function localexport(head)
+        starttiming(treehash)
+
+        local saved_treestack    = treestack
+        local saved_nesting      = nesting
+        local saved_currentdepth = currentdepth
+        local saved_tree         = tree
+        local saved_treehash     = treehash
+        local saved_nofbreaks    = nofbreaks
+        local saved_show_comment = show_comment
+
+        treestack         = { }
+        nesting           = { }
+        currentdepth      = 0
+        tree              = { data = { }, fulltag == "root" } -- root
+        treehash          = { }
+        nofbreaks         = 0
+        show_comment      = false
+
+        justexport(head)
+        finishexport()
+        wrapuptree(tree)
+
+     -- tree.data = tree.data[1].data
+
+        local result = concat {
+            wholepreamble(true,true),
+            allcontent(tree),
+        }
+
+        treestack    = saved_treestack
+        nesting      = saved_nesting
+        currentdepth = saved_currentdepth
+        tree         = saved_tree
+        treehash     = saved_treehash
+        nofbreaks    = saved_nofbreaks
+        show_comment = saved_show_comment
+
+        stoptiming(treehash)
+
+        return result
+
+    end
+
+    structurestags.localexport = localexport
+
+    function structures.tags.exportbox(n,filename,buffername)
+        local list = nodes.nuts.getbox(n)
+        if n then
+            local e = localexport(list)
+            if filename and filename ~= "" then
+                io.savedata(filename,e)
+            elseif buffername then
+                buffers.assign(buffername == interfaces.variables.yes and "" or buffername,e)
+            else
+                return e
+            end
+        end
+    end
+
+    interfaces.implement {
+        name      = "exportbox",
+        arguments = { "integer", "string", "string" },
+        actions   = structures.tags.exportbox
+    }
+
     function structurestags.finishexport()
 
         if exporting then
@@ -2338,14 +2484,7 @@ local htmltemplate = [[
         end
         report_export("")
         --
-        wrapups.fixtree(tree)
-        wrapups.collapsetree(tree)
-        wrapups.indextree(tree)
-        wrapups.checktree(tree)
-        wrapups.breaktree(tree)
-        wrapups.finalizetree(tree)
-        --
-        wrapups.hashlistdata()
+        wrapuptree(tree)
         --
         local askedname = finetuning.file
         --
@@ -2439,14 +2578,7 @@ local htmltemplate = [[
         -- representation that uses verbose element names and carries information in
         -- attributes
 
-        local data = tree.data
-        for i=1,#data do
-            if data[i].tg ~= "document" then
-                data[i] = { }
-            end
-        end
-
-        local result = allcontent(tree,embedmath) -- embedfile is for testing
+        local result = allcontent(tree)
 
         -- ugly but so be it:
 
@@ -2488,7 +2620,7 @@ local htmltemplate = [[
             os.remove(htmlfilename)
 
             result = concat {
-                wholepreamble(true),
+                wholepreamble(true,true),
                 "<!-- This export file is used for filtering runtime only! -->\n",
                 result,
             }
@@ -2526,7 +2658,10 @@ local htmltemplate = [[
             end
         end
 
-        local x_styles, h_styles = allusedstylesheets(cssfiles,files,"styles")
+
+        local script = settings_to_hash(finetuning.option or "").mathjax and mathmlheadscript or nil
+
+        local x_styles, h_styles = allusedstylesheets(cssfiles,files,"styles",script)
 
         local attach = backends.nodeinjections.attachfile
 
@@ -2703,6 +2838,7 @@ implement {
             { "svgstyle" },
             { "cssfile" },
             { "file" },
+            { "option" },
             { "export" },
         }
     }

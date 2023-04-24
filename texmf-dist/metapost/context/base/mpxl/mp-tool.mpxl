@@ -32,7 +32,7 @@ if not known mpversion : string mpversion ; mpversion := "0.641" ; fi ;
 
 % newinternal metapostversion ; metapostversion := scantokens(mpversion) ;
 
-newinternal metapostversion ; metapostversion := 2.0 ; permanent metapostversion ;
+newinternal metapostversion ; metapostversion := 3.0 ; permanent metapostversion ;
 
 %D We always want \EPS\ conforming output, so we say:
 
@@ -141,12 +141,6 @@ enddef ;
 permanent dispose ;
 
 %D Colors:
-
-newinternal nocolormodel   ; nocolormodel   := 1 ;
-newinternal greycolormodel ; greycolormodel := 3 ;
-newinternal graycolormodel ; graycolormodel := 3 ;
-newinternal rgbcolormodel  ; rgbcolormodel  := 5 ;
-newinternal cmykcolormodel ; cmykcolormodel := 7 ;
 
 let grayscale = graycolor ;
 let greyscale = greycolor ;
@@ -262,7 +256,7 @@ def stopsavingdata =
 enddef ;
 
 def finishsavingdata =
-    lua.mp.mf_finish_saving_data() ;
+  % lua.mp.mf_finish_saving_data() ;
 enddef ;
 
 %D Instead of a keystroke eating save and allocation sequence, you can use the \quote
@@ -332,26 +326,53 @@ enddef ;
 % let push_boundingbox = pushboundingbox ; % downward compatible
 % let pop_boundingbox  = popboundingbox  ; % downward compatible
 
-vardef boundingbox primary p =
-    if (path p) or (picture p) :
-        llcorner p -- lrcorner p -- urcorner p -- ulcorner p
-    else :
-        origin
-    fi -- cycle
-enddef;
+% vardef boundingbox primary p =
+%     if (path p) or (picture p) :
+%         llcorner p -- lrcorner p -- urcorner p -- ulcorner p
+%     else :
+%         origin
+%     fi -- cycle
+% enddef;
+
+% vardef boundingbox primary p =
+%     if (path p) or (picture p) :
+%         save a, b ; pair a, b ; a := llcorner p ; b:= urcorner p ;
+%         a -- (xpart b, ypart a) -- b -- (xpart a, ypart b)
+%     else :
+%         origin
+%     fi -- cycle
+% enddef;
+
+% vardef innerboundingbox primary p =
+%     top  rt llcorner p --
+%     top lft lrcorner p --
+%     bot lft urcorner p --
+%     bot  rt ulcorner p -- cycle
+% enddef;
+
+% vardef outerboundingbox primary p =
+%     bot lft llcorner p --
+%     bot  rt lrcorner p --
+%     top  rt urcorner p --
+%     top lft ulcorner p -- cycle
+% enddef;
+
+let boundingbox = corners ;
 
 vardef innerboundingbox primary p =
-    top  rt llcorner p --
-    top lft lrcorner p --
-    bot lft urcorner p --
-    bot  rt ulcorner p -- cycle
+    save b ; path b ; b := corners p ;
+    top  rt point 0 of b --
+    top lft point 1 of b --
+    bot lft point 2 of b --
+    bot  rt point 3 of b -- cycle
 enddef;
 
 vardef outerboundingbox primary p =
-    bot lft llcorner p --
-    bot  rt lrcorner p --
-    top  rt urcorner p --
-    top lft ulcorner p -- cycle
+    save b ; path b ; b := corners p ;
+    bot lft point 0 of b --
+    bot  rt point 1 of b --
+    top  rt point 2 of b --
+    top lft point 3 of b -- cycle
 enddef;
 
 % def inner_boundingbox = innerboundingbox enddef ;
@@ -375,11 +396,12 @@ enddef;
 
 vardef boundingradius primary p =
     if picture p :
+        pair c ; c := -center p;
         max(
-            abs((llcorner p) shifted -center p),
-            abs((lrcorner p) shifted -center p),
-            abs((urcorner p) shifted -center p),
-            abs((ulcorner p) shifted -center p)
+            abs((llcorner p) shifted c),
+            abs((lrcorner p) shifted c),
+            abs((urcorner p) shifted c),
+            abs((ulcorner p) shifted c)
         )
     elseif pen p :
         boundingradius image(draw makepath p ;)
@@ -551,28 +573,37 @@ def mfun_tool_striped_number_action text extra =
 enddef ;
 
 def mfun_tool_striped_set_options(expr option) =
-    save isinner, swapped ;
-    boolean isinner, swapped ;
-    if option = 1 :
+    save isinner, swapped, isdrawn ;
+    boolean isinner, swapped, isdrawn ;
+    if option = 0 :
+        isdrawn := true;
+        isinner := true ;
+        swapped := false ;
+    elseif option = 1 :
+        isdrawn := false ;
         isinner := false ;
         swapped := false ;
     elseif option = 2 :
+        isdrawn := false ;
         isinner := true ;
         swapped := false ;
     elseif option = 3 :
+        isdrawn := false ;
         isinner := false ;
         swapped := true ;
     elseif option = 4 :
+        isdrawn := false ;
         isinner := true ;
         swapped := true ;
     else :
+        isdrawn := false ;
         isinner := false ;
         swapped := false ;
     fi ;
 enddef ;
 
 vardef mfun_tool_striped_number(expr option, p, asked_n, asked_slot) text extra =
-    image (
+%     image (
         begingroup ;
         save pattern, shape, bounds, penwidth, used_n, used_slot ;
         picture pattern, shape ; path bounds ; numeric used_s, used_slot ;
@@ -601,7 +632,9 @@ vardef mfun_tool_striped_number(expr option, p, asked_n, asked_slot) text extra 
                 endfor ;
             fi ;
         ) ;
-        if swapped :
+        if isdrawn :
+            addto currentpicture also pattern ;
+        elseif swapped :
             addto currentpicture also shape ;
             addto currentpicture also pattern ;
         else :
@@ -609,18 +642,26 @@ vardef mfun_tool_striped_number(expr option, p, asked_n, asked_slot) text extra 
             addto currentpicture also shape ;
         fi ;
         endgroup ;
-    )
+%     )
 enddef ;
+
+% def mfun_tool_striped_angle_action text extra =
+%     for i = minimum -.5used_gap step used_gap until maximum :
+%         draw (minimum,i) -- (maximum,i) extra ;
+%     endfor ;
+%     currentpicture := currentpicture rotated used_angle ;
+% enddef ;
 
 def mfun_tool_striped_angle_action text extra =
     for i = minimum -.5used_gap step used_gap until maximum :
-        draw (minimum,i) -- (maximum,i) extra ;
+        nodraw (minimum,i) -- (maximum,i) extra ;
     endfor ;
+    dodraw origin ;
     currentpicture := currentpicture rotated used_angle ;
 enddef ;
 
 vardef mfun_tool_striped_angle(expr option, p, asked_angle, asked_gap) text extra =
-    image (
+%     image (
         begingroup ;
         save pattern, shape, mask, maximum, minimum, centrum, used_angle, used_gap ;
         picture pattern, shape, mask ; numeric maximum, minimum ; pair centrum ; numeric used_angle, used_gap ;
@@ -628,17 +669,22 @@ vardef mfun_tool_striped_angle(expr option, p, asked_angle, asked_gap) text extr
         used_angle := if asked_angle = 0 : stripe_angle else : asked_angle fi ;
         used_gap := if asked_gap = 0 : stripe_gap else : asked_gap fi ;
         shape := image(draw p) ;
-        centrum := center shape ;
+      % centrum := center shape ;
+        centrum := llcorner shape ;
         shape := shape shifted - centrum ;
         mask := shape rotated used_angle ;
         maximum := max (xpart llcorner mask, xpart urcorner mask, ypart llcorner mask, ypart urcorner mask) ;
         minimum := min (xpart llcorner mask, xpart urcorner mask, ypart llcorner mask, ypart urcorner mask) ;
+        % a hack:
+maximum := maximum + max(xpart urcorner shape, ypart urcorner shape);
+minimum := minimum - max(xpart urcorner shape, ypart urcorner shape);
+        %
         pattern := image (
             if isinner :
                 mfun_tool_striped_angle_action extra ;
                 for s within shape :
                     if stroked s or filled s :
-                        clip currentpicture to pathpart s ;
+                       clip currentpicture to pathpart s ;
                     fi
                 endfor ;
             else :
@@ -652,7 +698,9 @@ vardef mfun_tool_striped_angle(expr option, p, asked_angle, asked_gap) text extr
                 endfor ;
             fi ;
         ) ;
-        if swapped :
+        if isdrawn :
+            addto currentpicture also pattern ;
+        elseif swapped :
             addto currentpicture also shape ;
             addto currentpicture also pattern ;
         else :
@@ -661,7 +709,7 @@ vardef mfun_tool_striped_angle(expr option, p, asked_angle, asked_gap) text extr
         fi ;
         currentpicture := currentpicture shifted centrum ;
         endgroup ;
-    )
+%     )
 enddef;
 
 newinternal striped_normal_inner  ; striped_normal_inner  := 1 ;
@@ -670,11 +718,13 @@ newinternal striped_normal_outer  ; striped_normal_outer  := 3 ;
 newinternal striped_reverse_outer ; striped_reverse_outer := 4 ;
 
 secondarydef p anglestriped s =
-    mfun_tool_striped_angle(redpart s,p,greenpart s,bluepart s)
+  % mfun_tool_striped_angle(redpart s,p,greenpart s,bluepart s)
+    image(mfun_tool_striped_angle(redpart s,p,greenpart s,bluepart s)) % for 'withcolor'
 enddef ;
 
 secondarydef p numberstriped s =
-    mfun_tool_striped_number(redpart s,p,greenpart s,bluepart s)
+  % mfun_tool_striped_number(redpart s,p,greenpart s,bluepart s)
+    image(mfun_tool_striped_number(redpart s,p,greenpart s,bluepart s)) % for 'withcolor'
 enddef ;
 
 % for old times sake:
@@ -695,31 +745,220 @@ def do_stripe_path_a (text asked_spec) (text asked_draw) (expr asked_path) text 
     draw image(asked_draw asked_path asked_text) anglestriped(3,0,0) asked_spec ;
 enddef ;
 
+%D A more efficient variant by Mikael:
+
+% path p ; p := fullcircle scaled 3cm && (unitsquare scaled 2cm shifted (4cm,4cm)) && cycle ;
+% draw hatch(p,30,0.2cm) ; draw p ;
+
+vardef hatch(expr p, a, d) =
+    save thestripe, diag, b ; picture thestripe ; numeric diag ; path b ;
+    b := boundingbox p;
+    diag := 0.55 * ( abs((urcorner b) - (llcorner b)) ) ;
+    thestripe := image (
+        draw (-diag,0) -- (diag, 0) &&
+        for i = d step d until diag:
+            (-diag, i) -- (diag, i) &&
+            (-diag,-i) -- (diag,-i) &&
+        endfor nocycle
+        withpen currentpen ;
+    ) ;
+    thestripe := thestripe shifted center b ;
+    thestripe := thestripe rotatedaround(center b, a) ;
+    clip thestripe to p ;
+    thestripe
+enddef ;
+
 %D A few normalizing macros:
 
+% primarydef p xsized w =
+%     (p if (bbwidth (p) > 0) and (w > 0) : scaled (w/bbwidth (p)) fi)
+% enddef ;
+% primarydef p xsized w =
+%     begingroup
+%     save b, l ; path b;
+%     b := corners p ;
+%     l := xpart point 1 of b - xpart point 0 of b ;
+%     (p if (l > 0) and (w > 0) : scaled (w/l) fi)
+%     endgroup
+% enddef ;
 primarydef p xsized w =
-    (p if (bbwidth (p) > 0) and (w > 0) : scaled (w/bbwidth (p)) fi)
-enddef ;
-
-primarydef p ysized h =
-    (p if (bbheight(p) > 0) and (h > 0) : scaled (h/bbheight(p)) fi)
-enddef ;
-
-primarydef p xysized s =
     begingroup
-    save wh, w, h ; pair wh ; numeric w, h ;
-    wh := paired (s) ; w := bbwidth(p) ; h := bbheight(p) ;
+    save r, l ; pair r;
+    r := xrange p ;
+    l := ypart r - xpart r ;
+    (p if (l > 0) and (w > 0) : scaled (w/l) fi)
+    endgroup
+enddef ;
+
+% primarydef p ysized h =
+%     (p if (bbheight(p) > 0) and (h > 0) : scaled (h/bbheight(p)) fi)
+% enddef ;
+% primarydef p ysized h =
+%     begingroup
+%     save b, l ; path b;
+%     b := corners p ;
+%     l := ypart point 2 of b - ypart point 1 of b ;
+%     (p if (l > 0) and (h > 0) : scaled (h/l) fi)
+%     endgroup
+% enddef ;
+primarydef p ysized h =
+    begingroup
+    save r, l ; pair r ;
+    r := yrange p ;
+    l := ypart r - xpart r ;
+    (p if (l > 0) and (h > 0) : scaled (h/l) fi)
+    endgroup
+enddef ;
+
+% primarydef p xysized s = % a one step transform might be faster
+%     begingroup
+%     save wh, w, h ; pair wh ; numeric w, h ;
+%     wh := paired (s) ; w := bbwidth(p) ; h := bbheight(p) ;
+%     p
+%         if (w > 0) and (h > 0) :
+%             if xpart wh > 0 : xscaled (xpart wh/w) fi
+%             if ypart wh > 0 : yscaled (ypart wh/h) fi
+%         fi
+%     endgroup
+% enddef ;
+primarydef p xysized s = % a one step transform might be faster
+    begingroup
+    save wh, w, h, b ; pair wh ; path b;
+    b := corners p ;
+    w := xpart point 1 of b - xpart point 0 of b ;
+    h := ypart point 2 of b - ypart point 1 of b ;
+    wh := paired (s) ;
     p
-        if (w>0) and (h>0) :
+        if (w > 0) and (h > 0) :
             if xpart wh > 0 : xscaled (xpart wh/w) fi
             if ypart wh > 0 : yscaled (ypart wh/h) fi
         fi
     endgroup
 enddef ;
 
+% to be tested
+%
+% primarydef p xysized s =
+%     begingroup
+%     save wh, w, h ; pair wh ; numeric w, h ;
+%     wh := paired (s) ; w := bbwidth(p) ; h := bbheight(p) ;
+%     if (w > 0) and (h > 0) :
+%         transform t ; t := identity if xpart wh > 0 : xscaled (xpart wh/w) fi if ypart wh > 0 : yscaled (ypart wh/h)
+%     fi ;
+%     p if (w > 0) and (h > 0) : transformed t fi
+%     endgroup
+% enddef ;
+
 let sized = xysized ;
 
 permanent xsized, ysized, xysized, sized ;
+
+% primarydef p xynormalized s =
+%     begingroup
+%     save w, h ; numeric w, h ;
+%     w := bbwidth(p) ;
+%     h := bbheight(p) ;
+%     if (w > 0) and (h > 0) :
+%         save t, wh ; transform t ; pair wh ;
+%         wh := paired (s) ;
+%         t := identity
+%             shifted - llcorner p
+%             if xpart wh > 0 : xscaled (xpart wh/w) fi
+%             if ypart wh > 0 : yscaled (ypart wh/h) fi
+%         ;
+%         p transformed t
+%     else :
+%         p
+%     fi
+%     endgroup
+% enddef ;
+primarydef p xynormalized s =
+    begingroup save w, h, b ; path b;
+    b := corners p ;
+    w := xpart point 1 of b - xpart point 0 of b ;
+    h := ypart point 2 of b - ypart point 1 of b ;
+    if (w > 0) and (h > 0) :
+        save t, wh ; transform t ; pair wh ;
+        wh := paired (s) ;
+        t := identity
+            shifted - llcorner p
+            if xpart wh > 0 : xscaled (xpart wh/w) fi
+            if ypart wh > 0 : yscaled (ypart wh/h) fi
+        ;
+        p transformed t
+    else :
+        p
+    fi
+    endgroup
+enddef ;
+
+% primarydef p xnormalized s =
+%     begingroup
+%     save w ; numeric w ;
+%     w := bbwidth(p) ;
+%     if (w > 0) :
+%         save t ; transform t ;
+%         t := identity
+%             shifted - llcorner p
+%             if s > 0 : xscaled (s/w) fi
+%         ;
+%         p transformed t
+%     else :
+%         p
+%     fi
+%     endgroup
+% enddef ;
+primarydef p xnormalized s =
+    begingroup save h, r ; pair r ;
+    r := xrange p ;
+    w := ypart r - xpart r ;
+    if (w > 0) :
+        save t ; transform t ;
+        t := identity
+            shifted - llcorner p
+            if s > 0 : xscaled (s/w) fi
+        ;
+        p transformed t
+    else :
+        p
+    fi
+    endgroup
+enddef ;
+
+% primarydef p ynormalized s =
+%     begingroup
+%     save h ; numeric h ;
+%     h := bbheight(p) ;
+%     if (h > 0) :
+%         save t ; transform t ;
+%         t := identity
+%             shifted - llcorner p
+%             if s > 0 : yscaled (s/h) fi
+%         ;
+%         p transformed t
+%     else :
+%         p
+%     fi
+%     endgroup
+% enddef ;
+primarydef p ynormalized s =
+    begingroup save h, r ; pair r ;
+    r := yrange p ;
+    h := ypart r - xpart r ;
+    if (h > 0) :
+        save t ; transform t ;
+        t := identity
+            shifted - llcorner p
+            if s > 0 : yscaled (s/h) fi
+        ;
+        p transformed t
+    else :
+        p
+    fi
+    endgroup
+enddef ;
+
+permanent xnormalized, ynormalized, xynormalized ;
 
 % def xscale_currentpicture(expr w) = % obsolete
 %     currentpicture := currentpicture xsized w ;
@@ -757,10 +996,10 @@ lrcircle := origin -- (0,-.5) & (0,-.5){right} .. (+.5,0) & (+.5,0) -- cycle ;
 
 path tcircle, bcircle, lcircle, rcircle ;
 
-tcircle = origin -- (+.5,0) & (+.5,0) {up}    .. (0,+.5) .. {down}  (-.5,0) -- cycle ;
-bcircle = origin -- (-.5,0) & (-.5,0) {down}  .. (0,-.5) .. {up}    (+.5,0) -- cycle ;
-lcircle = origin -- (0,+.5) & (0,+.5) {left}  .. (-.5,0) .. {right} (0,-.5) -- cycle ;
-rcircle = origin -- (0,-.5) & (0,-.5) {right} .. (+.5,0) .. {left}  (0,+.5) -- cycle ;
+tcircle := origin -- (+.5,0) & (+.5,0) {up}    .. (0,+.5) .. {down}  (-.5,0) -- cycle ;
+bcircle := origin -- (-.5,0) & (-.5,0) {down}  .. (0,-.5) .. {up}    (+.5,0) -- cycle ;
+lcircle := origin -- (0,+.5) & (0,+.5) {left}  .. (-.5,0) .. {right} (0,-.5) -- cycle ;
+rcircle := origin -- (0,-.5) & (0,-.5) {right} .. (+.5,0) .. {left}  (0,+.5) -- cycle ;
 
 path urtriangle, ultriangle, lltriangle, lrtriangle ; % watch out: it's contrary to what you expect and starts in the origin
 
@@ -783,13 +1022,24 @@ path unitdiamond, fulldiamond ;
 unitdiamond := (.5,0) -- (1,.5) -- (.5,1) -- (0,.5) -- cycle ;
 fulldiamond := unitdiamond shifted - center unitdiamond ;
 
+path unitoctagon, fulloctagon ;
+
+unitoctagon := for i within (unitcircle rotated 45/2) : pathpoint -- endfor cycle ;
+fulloctagon := unitoctagon shifted - center unitoctagon ;
+
+path unithexagon, fullhexagon ;
+
+%%%%hexagon := for i = 0 upto 5 : .5dir (60i) -- endfor cycle ;
+fullhexagon := for i = 0 step 60 until 360 : .5 dir(i) -- endfor cycle ;
+unithexagon := fullhexagon shifted (.5,.5) ;
+
 permanent
     fullsquare, unitcircle,
     urcircle, ulcircle, llcircle, lrcircle,
     tcircle, bcircle, lcircle, rcircle,
     urtriangle, ultriangle, lltriangle, lrtriangle,
     triangle, uptriangle, downtriangle, lefttriangle, righttriangle,
-    unitdiamond, fulldiamond ;
+    unitdiamond, fulldiamond, unitoctagon, fulloctagon, unithexagon, fullhexagon ;
 
 %D More robust:
 
@@ -852,12 +1102,11 @@ enddef ;
 
 %D usage: \type{innerpath peepholed outerpath}.
 %D
-%D beginfig(1);
-%D   def fullsquare = (unitsquare shifted -center unitsquare) enddef ;
+%D \startMPcode
 %D   fill (fullsquare scaled 200) withcolor red ;
 %D   path p ; p := (fullcircle scaled 100) ; bboxmargin := 0 ;
 %D   fill p peepholed bbox p ;
-%D endfig;
+%D \stopMPcode
 
 secondarydef p peepholed q =
     begingroup
@@ -1100,11 +1349,24 @@ primarydef p crossed d = (
     fi
 ) enddef ;
 
+% vardef laddered primary p = % was expr
+%     point 0 of p
+%     for i=1 upto length(p) :
+%         -- (xpart (point i of p), ypart (point (i-1) of p)) -- (point i of p)
+%     endfor
+% enddef ;
+
 vardef laddered primary p = % was expr
-    point 0 of p
-    for i=1 upto length(p) :
-        -- (xpart (point i of p), ypart (point (i-1) of p)) -- (point i of p)
+    save a; pair a ; a := point 0 of p ; a --
+    for i within p :
+        if i > 0 : (xpart pathpoint, ypart a) -- pathpoint -- fi
+        hide(a := pathpoint)
     endfor
+    if cycle p :
+        (xpart point 0 of p, ypart a) -- point 0 of p -- cycle
+    else :
+        nocycle
+    fi
 enddef ;
 
 permanent crossed, laddered ;
@@ -1150,18 +1412,55 @@ primarydef p randomshifted s =
     endgroup
 enddef ;
 
+% vardef mfun_randomized_path(expr p,s) =
+%     for i=0 upto length(p)-1 :
+%          (point       i    of p) .. controls
+%         ((postcontrol i    of p) randomshifted s) and
+%         ((precontrol (i+1) of p) randomshifted s) ..
+%     endfor
+%     if cycle p :
+%         cycle
+%     else :
+%         (point length(p) of p)
+%     fi
+% enddef;
+%
+% Here is a Mikael Sundqvist improved version. This time we also use
+% some new functionality.
+
 vardef mfun_randomized_path(expr p,s) =
-    for i=0 upto length(p)-1 :
-         (point       i    of p) .. controls
-        ((postcontrol i    of p) randomshifted s) and
-        ((precontrol (i+1) of p) randomshifted s) ..
-    endfor
-    if cycle p :
-        cycle
-    else :
-        (point length(p) of p)
-    fi
-enddef;
+    save r, oldr, newr, firstr, l ; pair r, oldr, newr, firstr ;
+    r := paired(s) ;
+    l := length(p) ;
+    newr := (-1/2+uniformdeviate(1),-1/2+uniformdeviate(1)) xyscaled r ;
+    firstr := newr ;
+    for i within p :
+        hide (
+            oldr := newr ;
+            newr := (-1/2+uniformdeviate(1),-1/2+uniformdeviate(1)) xyscaled r ;
+        )
+        pathpoint ..
+        controls  (pathpostcontrol shifted oldr )
+        and      ((deltaprecontrol 1) shifted if (i <> l - 1) : - newr else : - firstr fi) ..
+    endfor if cycle p : cycle else : nocycle fi
+enddef ;
+
+
+vardef mfun_randomrotated_path(expr p, s) =
+    save r, oldr, newr, firstr, l ;
+    l := length(p) ;
+    newr := (-1/2+uniformdeviate(1))*s ;
+    firstr := newr ;
+    for i within p :
+        hide (
+            oldr := newr ;
+            newr := (-1/2+uniformdeviate(1)) * s ;
+        )
+        pathpoint ..
+        controls  (pathpostcontrol rotatedaround(pathpoint, oldr) )
+        and      ((deltaprecontrol 1) rotatedaround(deltapoint 1, if (i <> l - 1) : newr else : firstr fi)) ..
+    endfor if cycle p : cycle else : nocycle fi
+enddef ;
 
 vardef mfun_randomized_picture(expr p,s)(text rnd) =
     save currentpicture ;
@@ -1195,6 +1494,16 @@ primarydef p randomizedcontrols s = (
         mfun_randomized_path(p,s)
     elseif picture p :
         mfun_randomized_picture(p,s)(randomizedcontrols)
+    else :
+        p randomized s
+    fi
+) enddef ;
+
+primarydef p randomrotatedcontrols s = (
+    if path p :
+        mfun_randomrotated_path(p,s)
+    elseif picture p :
+        mfun_randomized_picture(p,s)(randomrotatedcontrols)
     else :
         p randomized s
     fi
@@ -1253,7 +1562,8 @@ primarydef p randomized s = (
     fi
 ) enddef ;
 
-permanent superellipsed, squeezed, randomshifted, randomized, randomizedcontrols ;
+permanent superellipsed, squeezed, randomshifted, randomized,
+    randomizedcontrols, randomrotatedcontrols ;
 
 %D Not perfect (alternative for interpath)
 
@@ -1502,22 +1812,33 @@ def drawcontrollines  expr c = path temp_c ; temp_c := c ; mfun_draw_controlline
 def drawpointlabels   expr c = path temp_c ; temp_c := c ; mfun_draw_pointlabels   enddef ;
 
 def mfun_draw_points text t =
-    for i=0 upto length(temp_c) if cycle temp_c : -1 fi :
-        normaldraw point i of temp_c mfun_opt_pnt t ;
+%     for i=0 upto length(temp_c) if cycle temp_c : -1 fi :
+%         normaldraw point i of temp_c mfun_opt_pnt t ;
+%     endfor ;
+    for i within temp_c :
+        normaldraw pathpoint mfun_opt_pnt t ;
     endfor ;
 enddef;
 
 def mfun_draw_controlpoints text t =
-    for i=0 upto length(temp_c) :
-        normaldraw precontrol  i of temp_c mfun_opt_ctr t ;
-        normaldraw postcontrol i of temp_c mfun_opt_ctr t ;
+%     for i=0 upto length(temp_c) :
+%         normaldraw precontrol  i of temp_c mfun_opt_ctr t ;
+%         normaldraw postcontrol i of temp_c mfun_opt_ctr t ;
+%     endfor ;
+    for i within temp_c :
+        normaldraw pathprecontrol  t mfun_opt_ctr t ;
+        normaldraw pathpostcontrol t mfun_opt_ctr t ;
     endfor ;
 enddef;
 
 def mfun_draw_controllines text t =
-    for i=0 upto length(temp_c) :
-        normaldraw point i of temp_c -- precontrol  i of temp_c mfun_opt_lin t ;
-        normaldraw point i of temp_c -- postcontrol i of temp_c mfun_opt_lin t ;
+%     for i=0 upto length(temp_c) :
+%         normaldraw point i of temp_c -- precontrol  i of temp_c mfun_opt_lin t ;
+%         normaldraw point i of temp_c -- postcontrol i of temp_c mfun_opt_lin t ;
+%     endfor ;
+    for i within temp_c :
+        normaldraw pathpoint -- pathprecontrol  t mfun_opt_lin t ;
+        normaldraw pathpoint -- pathpostcontrol t mfun_opt_lin t ;
     endfor ;
 enddef;
 
@@ -1526,6 +1847,7 @@ numeric pointlabelscale ; pointlabelscale := 0 ;
 string  pointlabelfont  ; pointlabelfont  := "" ;
 
 def mfun_draw_pointlabels text asked_options =
+    % todo: for i within temp_c : pathdirection
     for i=0 upto length(temp_c) if cycle temp_c : -1 fi :
         pair temp_u ; temp_u := unitvector(direction i of temp_c) rotated if swappointlabels : - fi 90 ;
         pair temp_p ; temp_p := (point i of temp_c) ;
@@ -2575,7 +2897,24 @@ primarydef p cornered c =
     endfor cycle)
 enddef ;
 
-permanent smoothed, cornered ;
+% Mikael Sundqvist came up with this one. We made it robust for points being too close
+% for smoothing.
+
+primarydef p smoothcornered c =
+    ( begingroup ;
+        save cc ;
+        if not cycle p: (point 0 of p) -- fi
+        for i=1 upto length(p) :
+            hide (cc := min(c,arclength (subpath(i-1,i) of p)/2);)
+            (point i-1 of p) shifted (cc*(unitvector(point i   of p - point i-1 of p))) --
+            (point i   of p) shifted (cc*(unitvector(point i-1 of p - point i   of p))) ..
+            controls point i of p ..
+        endfor
+        if cycle p : cycle else : point 1 along p fi
+    endgroup )
+enddef ;
+
+permanent smoothed, cornered, smoothcornered ;
 
 % cmyk color support
 
@@ -2596,12 +2935,31 @@ permanent smoothed, cornered ;
 %         0
 %     fi
 % enddef ;
-
+% vardef bbwidth primary p =
+%     if unknown p :
+%         0
+%     elseif path p or picture p :
+%         xpart (lrcorner p - llcorner p)
+%     else :
+%         0
+%     fi
+% enddef ;
+% vardef bbwidth primary p =
+%     if unknown p :
+%         0
+%     elseif path p or picture p :
+%         save b ; path b; b := corners p ;
+%         xpart point 0 of b - xpart point 1 of b
+%     else :
+%         0
+%     fi
+% enddef ;
 vardef bbwidth primary p =
     if unknown p :
         0
     elseif path p or picture p :
-        xpart (lrcorner p - llcorner p)
+        save r ; pair r ; r := xrange p ;
+        ypart r - xpart r
     else :
         0
     fi
@@ -2618,12 +2976,31 @@ enddef ;
 %         0
 %     fi
 % enddef ;
-
+% vardef bbheight primary p =
+%     if unknown p :
+%         0
+%     elseif path p or picture p :
+%         ypart (urcorner p - lrcorner p)
+%     else :
+%         0
+%     fi
+% enddef ;
+% vardef bbheight primary p =
+%     if unknown p :
+%         0
+%     elseif path p or picture p :
+%         save b ; path b; b := corners p ;
+%         ypart point 2 of b - ypart point 1 of b
+%     else :
+%         0
+%     fi
+% enddef ;
 vardef bbheight primary p =
     if unknown p :
         0
     elseif path p or picture p :
-        ypart (urcorner p - lrcorner p)
+        save r ; pair r ; r := yrange p ;
+        ypart r - xpart r
     else :
         0
     fi
@@ -2782,15 +3159,19 @@ permanent withgray ;
 
 % an improved plain mp macro
 
-vardef center primary p =
-    if pair p :
-        p
-    else :
-        .5[llcorner p, urcorner p]
-    fi
-enddef;
+% vardef center primary p =
+%     if pair p :
+%         p
+%     else :
+%         .5[llcorner p, urcorner p]
+%     fi
+% enddef;
+%
+% permanent center ;
 
-permanent center ;
+vardef center primary p =
+    centerof p
+enddef ;
 
 % new, yet undocumented
 
@@ -3006,12 +3387,28 @@ permanent break ;
 
 %D New too:
 
+% primarydef p xstretched w = (
+%     p if (bbwidth (p)>0) and (w>0) : xscaled (w/bbwidth (p)) fi
+% ) enddef ;
+%
+% primarydef p ystretched h = (
+%     p if (bbheight(p)>0) and (h>0) : yscaled (h/bbheight(p)) fi
+% ) enddef ;
+
 primarydef p xstretched w = (
-    p if (bbwidth (p)>0) and (w>0) : xscaled (w/bbwidth (p)) fi
+    begingroup save l, r ; pair r;
+    r := xrange p ;
+    l := ypart r - xpart r ;
+    p if (l > 0) and (w > 0) : xscaled (w/l) fi
+    endgroup
 ) enddef ;
 
 primarydef p ystretched h = (
-    p if (bbheight(p)>0) and (h>0) : yscaled (h/bbheight(p)) fi
+    begingroup save l, r ; pair r;
+    r := yrange p ;
+    l := ypart r - xpart r ;
+    p if (l > 0) and (h > 0) : yscaled (h/l) fi
+    endgroup
 ) enddef ;
 
 permanent xstretched, ystretched ;
@@ -3651,7 +4048,7 @@ primarydef p outsideof q =
     not (p insideof q)
 enddef ;
 
-permanent crossingdebug, crossingscale, crossingnumberm, infotext, crossingunder, insideof, outsideof ;
+permanent crossingdebug, crossingscale, crossingnumbermax, infotext, crossingunder, insideof, outsideof ;
 
 %D Also handy:
 
@@ -3792,7 +4189,23 @@ vardef bymatrix(expr rx, sx, sy, ry, tx, ty) =
     t
 enddef ;
 
-permanent totransform, bymatrix ;
+% vardef bytopdownmatrix(expr rx, sx, sy, ry, tx, ty) =
+%     save t ; transform t ;
+%     xxpart t =  rx ; yypart t =  ry ;
+%     xypart t = -sy ; yxpart t = -sx ;
+%     xpart  t =  tx ; ypart  t =  ty ;
+%     t
+% enddef ;
+
+vardef closedcurve primary p =
+    p if (path p and not cycle p) or (pair p) : .. cycle fi
+enddef ;
+
+vardef closedlines primary p =
+    p if (path p and not cycle p) or (pair p) : -- cycle fi
+enddef ;
+
+permanent totransform, bymatrix, closedcurve, closedlines ;
 
 let xslanted = slanted ;
 
@@ -3829,3 +4242,212 @@ vardef processpath (expr p) (text pp) =
 enddef ;
 
 permanent processpath ;
+
+% By Bogluslaw Jackowski (public domain):
+%
+% draw hatched (fullcircle scaled 10cm) (45, 4, 1) withcolor "red" ;
+
+newinternal hatch_match; hatch_match := 1;
+
+vardef hatched(expr o) primary c =
+    save a_, b_, d_, l_, i_, r_, za_, zb_, zc_, zd_;
+    path b_; picture r_; pair za_, zb_, zc_, zd_;
+    r_ := image (
+        a_ := redpart(c) mod 180 ;
+        l_ := greenpart(c) ;
+        d_ := -bluepart(c) ;
+        b_ := o rotated -a_ ;
+        b_ :=
+            if a_ >= 90 :
+                (lrcorner b_ -- llcorner b_ -- ulcorner b_ -- urcorner b_ -- cycle)
+            else :
+                (llcorner b_ -- lrcorner b_ -- urcorner b_ -- ulcorner b_ -- cycle)
+            fi
+            rotated a_ ;
+        za_ := point 0 of b_ ;
+        zb_ := point 1 of b_ ;
+        zc_ := point 2 of b_ ;
+        zd_ := point 3 of b_ ;
+        if hatch_match > 0 :
+            n_ := round(length(zd_-za_) / l_) ;
+            if n_ < 2:
+                n_ := 2 ;
+            fi ;
+            l_ := length(zd_-za_) / n_ ;
+        else :
+            n_ := length(zd_-za_) / l_ ;
+        fi
+        save currentpen; pen currentpen ; pickup pencircle scaled d_;
+        % we use a single path instead:
+        for i_ := if hatch_match > 0 : 1 else : 0 fi upto ceiling n_ - 1 :
+            nodraw (i_/n_)[zd_,za_] -- (i_/n_)[zc_,zb_] ;
+        endfor
+        dodraw origin ;
+    ) ;
+    clip r_ to o;
+    r_
+enddef;
+
+permanent hatched ;
+
+% By Mikael Sundqvist, with a little evolution:
+
+numeric mfun_dash_on, mfun_dash_off ;
+
+% primarydef p withdashes len =
+%     hide (
+%         save l, t, n, m ; pair t ;
+%         l := arclength p ;
+%         t := paired(len) ;
+%         m := xpart t + ypart t ;
+%         n := l / (l div m) / m ;
+%         mfun_dash_on  := n * xpart t ;
+%         mfun_dash_off := n * ypart t ;
+%     )
+%     p dashed dashpattern (on mfun_dash_on off mfun_dash_off)
+% enddef ;
+
+primarydef p withdashes len =
+    hide (
+        save l, t, n, m, don, doff; pair t ;
+        l := arclength p ;
+        t := paired (len) ;
+        m := xpart t + ypart t ;
+        n := (l if not cycle p : - xpart t fi) div m ;
+        (n if not cycle p : + 1 fi) * don + n * doff = l ;
+        don*(ypart t) = doff*(xpart t) ;
+        mfun_dash_on := don ;
+        mfun_dash_off := doff ;
+    )
+    p dashed dashpattern (on mfun_dash_on off mfun_dash_off)
+enddef ;
+
+permanent withdashes ;
+
+%D For Mikael:
+
+path mfun_b ;
+pair mfun_k ;
+
+path mfun_nullpath ;
+
+tertiarydef p sortedintersectiontimes q =
+    sortedpath (p intersectiontimeslist q)
+enddef ;
+
+tertiarydef p intersectionpath q =
+    begingroup ;
+    save mfun_b ; path mfun_b ; mfun_b := sortedpath (p intersectiontimeslist q) ;
+    save mfun_k ; pair mfun_k ; mfun_k := point 0 of mfun_b;
+    if mfun_k <> (-1,-1) :
+        .5[point xpart mfun_k of p, point ypart mfun_k of q]
+        for i = 1 upto length(mfun_b) :
+            hide(mfun_k := point i of mfun_b;)
+            -- .5[point xpart mfun_k of p, point ypart mfun_k of q]
+        endfor
+    else :
+        mfun_nullpath
+    fi
+    endgroup
+enddef ;
+
+tertiarydef p firstintersectionpath q =
+    begingroup ;
+    save mfun_b ; path mfun_b ; mfun_b := sortedpath (p intersectiontimeslist q) ;
+    if (point 0 of mfun_b) <> (-1,-1) :
+        point xpart (point 0 of mfun_b) of p
+        for i = 1 upto length(mfun_b) :
+            -- point xpart (point i of mfun_b) of p
+        endfor
+    else :
+        mfun_nullpath
+    fi
+    endgroup
+enddef ;
+
+tertiarydef p secondintersectionpath q =
+    q firstintersectionpath p
+enddef;
+
+vardef intersectionsfound expr p =
+    (point 0 of p) <> (-1,-1)
+enddef ;
+
+%D As part of our intersection journey MS came up with:
+
+tertiarydef p cutbeforefirst q =
+    begingroup ;
+    save mfun_b, mfun_p ; path mfun_b, mfun_p ; mfun_b := sortedpath (p intersectiontimeslist q) ;
+    if (point 0 of mfun_b) <> (-1,-1) :
+        mfun_p := subpath(xpart point 0 of mfun_b, length p) of p;
+    else :
+        mfun_p := p ;
+    fi ;
+    mfun_p
+    endgroup
+enddef ;
+
+tertiarydef p cutafterfirst q =
+    begingroup ;
+    save mfun_b, mfun_p ; path mfun_b, mfun_p ; mfun_b := sortedpath (p intersectiontimeslist q) ;
+    if (point 0 of mfun_b) <> (-1,-1) :
+        mfun_p := subpath(0, xpart point 0 of mfun_b) of p;
+    else :
+        mfun_p := p ;
+    fi ;
+    mfun_p
+    endgroup
+enddef ;
+
+
+tertiarydef p cutbeforelast q =
+    begingroup ;
+    save mfun_b, mfun_p ; path mfun_b, mfun_p ; mfun_b := sortedpath (p intersectiontimeslist q) ;
+    if (point 0 of mfun_b) <> (-1,-1) :
+        mfun_p := subpath(xpart point (length mfun_b) of mfun_b, length p) of p;
+    else :
+        mfun_p := p ;
+    fi ;
+    mfun_p
+    endgroup
+enddef ;
+
+tertiarydef p cutafterlast q =
+    begingroup ;
+    save mfun_b, mfun_p ; path mfun_b, mfun_p ; mfun_b := sortedpath (p intersectiontimeslist q) ;
+    if (point 0 of mfun_b) <> (-1,-1) :
+        mfun_p := subpath(0, xpart point (length mfun_b) of mfun_b) of p;
+    else :
+        mfun_p := p ;
+    fi ;
+    mfun_p
+    endgroup
+enddef ;
+
+% I don't want to define this path every time I make a demo:
+
+vardef starring(expr e) =
+    save a, b, c, d ;
+    pair a, b, c, d ;
+    a := (-1,-1) ; b := ( 1,-1) ;
+    c := ( 1, 1) ; d := (-1, 1) ;
+    a -- (.5[a,b] shifted (0,-e)) --
+    b -- (.5[b,c] shifted (e, 0)) --
+    c -- (.5[c,d] shifted (0, e)) --
+    d -- (.5[d,a] shifted (-e,0)) -- cycle
+enddef ;
+
+vardef dashing (expr pth, shp, stp) =
+    for i within arcpointlist stp of pth :
+        shp
+            rotated angle(pathdirection)
+            shifted pathpoint
+        &&
+    endfor nocycle
+enddef ;
+
+% like center, mod and div this is a candidate for a primitive
+
+% vardef centerofmass primary p =
+%     (origin for i within p : + pathpoint endfor) / length(p)
+% enddef ;

@@ -24,7 +24,9 @@ local implement    = interfaces.implement
 
 local ioflush      = io.flush
 local ioread       = io.read
-local writenl      = texio.write_nl
+local ossleep      = os.sleep
+local osexit       = os.exit
+local writenl      = texio.writenl
 local write        = texio.write
 
 local runlocal     = tex.runlocal
@@ -135,7 +137,7 @@ local nop = function() end
 local resetmessages = status.resetmessages or nop
 
 local function processerror(offset,errortype)
-    local readstate      = status.readstate
+    local readstate      = status.getreadstate()
     local filename       = readstate.filename
     local linenumber     = readstate.linenumber
     local skiplinenumber = readstate.skiplinenumber
@@ -163,6 +165,7 @@ local function processerror(offset,errortype)
     if job and type(job.disablesave) == "function" then
         job.disablesave()
     end
+    lua.setexitcode(1)
 end
 
 directives.register("system.quitonerror",function(v)
@@ -248,9 +251,11 @@ function tracers.printerror(specification)
             report_str(tracers.showlines(filename,linenumber,offset,tonumber(luaerrorline)))
             report_nl()
         end
-        local errname = file.addsuffix(tex.jobname .. "-error","log")
         if quitonerror then
-            table.save(errname,specification)
+            local name = tex.jobname or ""
+            if name ~= "" then
+                table.save(name .. "-error.log",specification)
+            end
             local help = specification.lasttexhelp
             if help and #help > 0 then
                 report_nl()
@@ -264,7 +269,7 @@ function tracers.printerror(specification)
     end
 end
 
-luatex.wrapup(function() os.remove(file.addsuffix(tex.jobname .. "-error","log")) end)
+luatex.wrapup(function() os.remove(tex.jobname .. "-error.log") end)
 
 local function processwarning(offset)
     local warningstate = status.warningstate
@@ -315,7 +320,7 @@ local function reportback(lmxname,default,variables)
 end
 
 local function showerror(lmxname)
-    local readstate    = status.readstate()
+    local readstate    = status.getreadstate()
     local filename     = readstate.filename
     local linenumber   = tonumber(readstate.linenumber) or 0
     local errorcontext = ""
@@ -327,7 +332,7 @@ local function showerror(lmxname)
     end
     local variables = {
         ['title']                = 'ConTeXt Error Information',
-        ['errormessage']         = status.errorstatus.error or "?",
+        ['errormessage']         = status.geterrorstate().error or "?",
         ['linenumber']           = linenumber,
         ['color-background-one'] = lmx.get('color-background-yellow'),
         ['color-background-two'] = lmx.get('color-background-purple'),
@@ -345,8 +350,8 @@ function lmx.overloaderror(v)
         usescitelexer = true
     end
     callback.register('show_error_message',  function() showerror() end)
-    callback.register('intercept_lua_error', function() showerror() end)
-    callback.register('intercept_tex_error', function() showerror() end)
+--     callback.register('intercept_lua_error', function() showerror() end)
+--     callback.register('intercept_tex_error', function() showerror() end)
 end
 
 directives.register("system.showerror", lmx.overloaderror)
@@ -415,3 +420,28 @@ directives.register("system.profile",function(n)
     logs.report("system","profiler started")
     debugger.enable()
 end)
+
+local report = logs.reporter("[[diagnostic]]")
+
+implement {
+    name      = "diagnostic",
+    public    = true,
+ -- protected = false, -- expandable
+    arguments = { "optional", "string" },
+    actions   = function(t,s)
+        if t == "quit" then
+            report(s)
+            osexit()
+        else
+            t = tonumber(t)
+            if t then
+                report("%s (sleep: %.3N)",s,t)
+                ioflush()
+                ossleep(t)
+            else
+                report(s)
+                ioflush()
+            end
+        end
+    end
+}

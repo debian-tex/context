@@ -255,7 +255,7 @@ function helpers.analyze(entry,specification)
     if not section then
         return entry, false, "no section"
     end
-    local sectiondata = sections.collected[references.section]
+    local sectiondata = references.sectiondata or sections.collected[references.section] -- so we use an already resolved external one
     if not sectiondata then
         return entry, false, "no section data"
     end
@@ -272,7 +272,7 @@ function helpers.analyze(entry,specification)
     return entry, sectiondata, "okay"
 end
 
-function helpers.prefix(data,prefixspec,nosuffix)
+function helpers.prefix(data,prefixspec,nosuffix) -- not only page
     if data then
         local _, prefixdata, status = helpers.analyze(data,prefixspec)
         if prefixdata then
@@ -320,10 +320,6 @@ function pages.on_right(n)
     else
         return true
     end
-end
-
-function pages.has_changed()
-    return texconditionals.layouthaschanged
 end
 
 function pages.in_body(n)

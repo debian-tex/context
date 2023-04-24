@@ -19,12 +19,14 @@
 
 \unprotect
 
-\registerctxluafile{node-bck}{autosuffix,optimize}
+\registerctxluafile{node-bck}{autosuffix}
 
 % \backgroundvbox[green] {\input tufte } \par
 % \backgroundvbox[blue]  {\input ward } \par
 % \backgroundvbox[red]   {\input knuth } \par
 % \backgroundhbox[yellow]{\rotate[rotation=45]{hello world}} \par
+
+% todo: use new register feature (but not used that much so ...)
 
 \permanent\def\colorattr#1%
   {\ifcsname\??colorattribute\currentcolorprefix#1\endcsname
@@ -74,7 +76,7 @@
 \permanent\protected\def\backgroundline{\dontleavehmode\node_backgrounds_boxes_add\hbox}
 
 \def\node_backgrounds_boxes_add#1[#2]%
-  {\clf_enablebackgroundboxes
+  {\localcontrolled{\clf_enablebackgroundboxes}% permits assignment
    #1\backgroundcolorattr{#2}}
 
 \protect \endinput

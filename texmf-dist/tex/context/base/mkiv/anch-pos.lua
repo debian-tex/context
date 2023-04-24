@@ -49,6 +49,7 @@ local context           = context
 local ctx_latelua       = context.latelua
 
 local tex               = tex
+local texgetdimen       = tex.getdimen
 local texgetcount       = tex.getcount
 local texgetinteger     = tex.getintegervalue or tex.getcount
 local texsetcount       = tex.setcount
@@ -574,8 +575,8 @@ implement {
     actions = function()
         nofparagraphs = nofparagraphs + 1
         texsetcount("global","c_anch_positions_paragraph",nofparagraphs)
-        local box = getbox("strutbox")
-        local w, h, d = getwhd(box)
+        local h = texgetdimen("strutht")
+        local d = texgetdimen("strutdp")
         local t = {
             p  = true,
             c  = true,
@@ -704,8 +705,8 @@ implement {
     name      = "dosetpositionstrut",
     arguments = "string",
     actions   = function(name)
-        local box = getbox("strutbox")
-        local w, h, d = getwhd(box)
+        local h = texgetdimen("strutht")
+        local d = texgetdimen("strutdp")
         local spec = {
             p   = true,
             c   = column,
@@ -726,8 +727,8 @@ implement {
     name      = "dosetpositionstrutkind",
     arguments = { "string", "integer" },
     actions   = function(name,kind)
-        local box = getbox("strutbox")
-        local w, h, d = getwhd(box)
+        local h = texgetdimen("strutht")
+        local d = texgetdimen("strutdp")
         local spec = {
             k   = kind,
             p   = true,
@@ -985,7 +986,7 @@ local function overlapping(one,two,overlappingmargin) -- hm, strings so this is 
 end
 
 local function onsamepage(list,page)
-    for id in gmatch(list,"(, )") do
+    for id in gmatch(list,"([^,%s]+)") do
         local jpi = collected[id]
         if jpi then
             local p = jpi.p

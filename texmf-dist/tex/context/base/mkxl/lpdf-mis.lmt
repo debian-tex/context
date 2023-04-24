@@ -20,15 +20,15 @@ local format, gsub, formatters = string.format, string.gsub, string.formatters
 local concat, flattened = table.concat, table.flattened
 local settings_to_array = utilities.parsers.settings_to_array
 
-local backends, lpdf, nodes = backends, lpdf, nodes
-
-local nodeinjections       = backends.pdf.nodeinjections
-local codeinjections       = backends.pdf.codeinjections
-local registrations        = backends.pdf.registrations
+local pdfbackend           = backends and backends.registered.pdf or { }
+local nodeinjections       = pdfbackend.nodeinjections
+local codeinjections       = pdfbackend.codeinjections
+local registrations        = pdfbackend.registrations
 
 local getpagedimensions    = layouts.getpagedimensions
 local getcanvas            = layouts.getcanvas
 
+local nodes                = nodes
 local nuts                 = nodes.nuts
 local copy_node            = nuts.copy
 
@@ -36,6 +36,7 @@ local nodepool             = nuts.pool
 local setstate             = nodepool.setstate
 local register             = nodepool.register
 
+local lpdf                 = lpdf
 local pdfdictionary        = lpdf.dictionary
 local pdfarray             = lpdf.array
 local pdfconstant          = lpdf.constant
@@ -44,25 +45,15 @@ local pdfunicode           = lpdf.unicode
 local pdfverbose           = lpdf.verbose
 local pdfstring            = lpdf.string
 local pdfaction            = lpdf.action
+local pdfflushobject       = lpdf.flushobject
+local pdfflushstreamobject = lpdf.flushstreamobject
+local pdfminorversion      = lpdf.minorversion
 
-local pdfflushobject
-local pdfflushstreamobject
-local pdfminorversion
-
-updaters.register("backend.update.lpdf",function()
-    pdfflushobject       = lpdf.flushobject
-    pdfflushstreamobject = lpdf.flushstreamobject
-    pdfminorversion      = lpdf.minorversion
-end)
-
-local formattedtimestamp   = lpdf.pdftimestamp
 local adddocumentextgstate = lpdf.adddocumentextgstate
 local addtocatalog         = lpdf.addtocatalog
 local addtoinfo            = lpdf.addtoinfo
 local addtopageattributes  = lpdf.addtopageattributes
 local addtonames           = lpdf.addtonames
-
-local pdfgetmetadata       = lpdf.getmetadata
 
 local texset               = tex.set
 
@@ -195,80 +186,9 @@ end
 lpdf.registerpagefinalizer    (flushpageactions,    "page actions")
 lpdf.registerdocumentfinalizer(flushdocumentactions,"document actions")
 
---- info : this can change and move elsewhere
+-- the code above will move to scrn-ini
 
-local identity = { }
-
-function codeinjections.setupidentity(specification)
-    for k, v in next, specification do
-        if v ~= "" then
-            identity[k] = v
-        end
-    end
-end
-
-function codeinjections.getidentityvariable(name)
-    return identity[name]
-end
-
-local done = false  -- using "setupidentity = function() end" fails as the meaning is frozen in register
-
-local function setupidentity()
-    if not done then
-        local metadata = pdfgetmetadata()
-        local creator  = metadata.creator
-        local version  = metadata.contextversion
-        local time     = metadata.time
-        local jobname  = environment.jobname or tex.jobname or "unknown"
-        --
-        local title = identity.title
-        if not title or title == "" then
-            title = tex.jobname
-        end
-        addtoinfo("Title", pdfunicode(title), title)
-        local subtitle = identity.subtitle or ""
-        if subtitle ~= "" then
-            addtoinfo("Subject", pdfunicode(subtitle), subtitle)
-        end
-        local author = identity.author or ""
-        if author ~= "" then
-            addtoinfo("Author",  pdfunicode(author), author) -- '/Author' in /Info, 'Creator' in XMP
-        end
-        addtoinfo("Creator", pdfunicode(creator), creator)
-        addtoinfo("CreationDate", pdfstring(formattedtimestamp(time)))
-        local date = identity.date or ""
-        local pdfdate = date and formattedtimestamp(date)
-        if pdfdate then
-            addtoinfo("ModDate", pdfstring(pdfdate), date)
-        else
-            -- users should enter the date in 2010-01-19T23:27:50+01:00 format
-            -- and if not provided that way we use the creation time instead
-            addtoinfo("ModDate", pdfstring(formattedtimestamp(time)),time)
-        end
-        local keywords = identity.keywords or ""
-        if keywords ~= "" then
-            keywords = concat(settings_to_array(keywords), " ")
-            addtoinfo("Keywords", pdfunicode(keywords), keywords)
-        end
-        local id = lpdf.id()
-        addtoinfo("ID", pdfstring(id), id) -- needed for pdf/x
-        --
-        addtoinfo("ConTeXt.Version",version)
-        addtoinfo("ConTeXt.Time",os.date("%Y-%m-%d %H:%M"))
-        addtoinfo("ConTeXt.Jobname",jobname)
-        addtoinfo("ConTeXt.Url","www.pragma-ade.com")
-        addtoinfo("ConTeXt.Support","contextgarden.net")
-        addtoinfo("TeX.Support","tug.org")
-        --
-        done = true
-    else
-        -- no need for a message
-    end
-end
-
-lpdf.registerpagefinalizer(setupidentity,"identity")
-
--- or when we want to be able to set things after pag e1:
+-- or when we want to be able to set things after page 1:
 --
 -- lpdf.registerdocumentfinalizer(setupidentity,1,"identity")
 
@@ -363,7 +283,7 @@ local pagespecs = {
     [v_doublesided] = {
         mode   = "UseNone",
         layout = "TwoColumnRight",
-        fit = true,
+        fit    = true,
     },
     [v_singlesided] = {
         mode   = "UseNone"
@@ -447,7 +367,6 @@ local function documentspecification()
             end
         end
     end
-
     -- maybe interfaces.variables
     local layout    = spec.layout
     local mode      = spec.mode
@@ -496,14 +415,7 @@ local function documentspecification()
     addtocatalog("Lang",    pdfstring(tokens.getters.macro("currentmainlanguage")))
 end
 
--- temp hack: the mediabox is not under our control and has a precision of 5 digits
-
-local factor  = number.dimenfactors.bp
-local f_value = formatters["%.6N"]
-
-local function boxvalue(n) -- we could share them
-    return pdfverbose(f_value(factor * n))
-end
+local bpfactor = number.dimenfactors.bp
 
 local function pagespecification()
     local canvas      = getcanvas()
@@ -520,10 +432,10 @@ local function pagespecification()
     local function extrabox(WhatBox,offset,always)
         if offset ~= 0 or always then
             addtopageattributes(WhatBox, pdfarray {
-                boxvalue(llx + offset),
-                boxvalue(lly + offset),
-                boxvalue(urx - offset),
-                boxvalue(ury - offset),
+                (llx + offset) * bpfactor,
+                (lly + offset) * bpfactor,
+                (urx - offset) * bpfactor,
+                (ury - offset) * bpfactor,
             })
         end
     end
@@ -619,6 +531,8 @@ local function featurecreep()
                     conversion = getset("structure:conversions",p.block,conversionset,1,"numbers")
                 end
             end
+            -- If needed we can do some preroll on a prefix (label) but this is a rather useless
+            -- feature (creep) anyway so why bother.
             conversion = conversion and map[conversion] or map.numbers
             if number == 1 or oldlabel ~= label or oldconversion ~= conversion then
                 list[#list+1] = i - 1 -- pdf starts numbering at 0

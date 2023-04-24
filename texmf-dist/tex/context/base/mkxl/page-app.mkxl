@@ -21,9 +21,9 @@
 
 \installframedcommandhandler \??fittingpage {fittingpage} \??fittingpage
 
-\newdimen\d_page_fitting_width
-\newdimen\d_page_fitting_height
-\newbox  \b_page_fitting
+\newdimension\d_page_fitting_width
+\newdimension\d_page_fitting_height
+\newbox      \b_page_fitting
 
 \definepapersize
   [fittingpage]
@@ -75,6 +75,7 @@
       \bgroup
       \inheritedfittingpageframed
       \bgroup
+      \pack_framed_initialize
       \gobblespacetokens}
 
 \protected\def\page_fitting_stop_normal % todo: figure out why a small mp image gets shifted
@@ -95,10 +96,10 @@
      {\setbox\b_page_fitting\hpack\bgroup
         \scale[\c!scale=\fittingpageparameter\c!scale]{\box\b_page_fitting}%
       \egroup}%
-   \ifdim\ht\b_page_fitting=\zeropoint
+   \ifzeropt\ht\b_page_fitting
      \ht\b_page_fitting\onepoint
    \fi
-   \ifdim\wd\b_page_fitting=\zeropoint
+   \ifzeropt\wd\b_page_fitting
      \wd\b_page_fitting\onepoint
    \fi
    \d_page_fitting_width \wd\b_page_fitting
@@ -123,7 +124,7 @@
 \setupfittingpage
   [%\c!scale=1000,
    %\c!pagestate=,
-   \c!strut=\v!no,
+   \c!strut=\v!none, % was no, but we get a noindent then (with the danger of a lineskip)
    \c!align=\v!normal,
    \c!offset=\v!overlay,
    \c!width=\v!fit,
@@ -193,7 +194,7 @@
   {\bgroup
    \setupexternalfigure[\v!page:\v!figure][\c!offset=\v!overlay,#2]%
    \startTEXpage[\c!offset=\namedexternalfigureparameter{\v!page:\v!figure}\c!offset,\c!align=\v!normal]%
-     \externalfigure[#1]\ignorespaces} % so we can put some text below the graphic
+     \externalfigure[#1][\v!page:\v!figure]\ignorespaces} % so we can put some text below the graphic
 
 \permanent\protected\def\stoppagefigure
   {\stopTEXpage

@@ -7,8 +7,6 @@ if not modules then modules = { } end modules ['supp-box'] = {
     license   = "see context related readme files"
 }
 
--- this is preliminary code, use insert_before etc
-
 local report_hyphenation = logs.reporter("languages","hyphenation")
 
 local tonumber, next, type = tonumber, next, type
@@ -32,6 +30,8 @@ local glyph_code    = nodecodes.glyph
 local par_code      = nodecodes.par
 
 local indent_code   = nodes.listcodes.indent
+local topskip_code  = nodes.gluecodes.topskip
+local line_code     = nodes.listcodes.line
 
 local hmode_code    = tex.modelevels.horizontal
 
@@ -71,20 +71,20 @@ local setattrlist   = nuts.setattrlist
 local setwhd        = nuts.setwhd
 local setglue       = nuts.setglue
 
-local flush_node    = nuts.flush_node
-local flush_list    = nuts.flush_list
+local flushnode     = nuts.flushnode
+local flushlist     = nuts.flushlist
 local copy_node     = nuts.copy
-local copy_list     = nuts.copy_list
+local copylist      = nuts.copylist
 local find_tail     = nuts.tail
 local getdimensions = nuts.dimensions
 local hpack         = nuts.hpack
 local vpack         = nuts.vpack
-local traverse_id   = nuts.traverse_id
+local traverseid    = nuts.traverseid
 local traverse      = nuts.traverse
 local free          = nuts.free
 local findtail      = nuts.tail
 local reverse       = nuts.reverse
-local effective_glue= nuts.effective_glue
+local effectiveglue = nuts.effectiveglue
 
 local nextdisc      = nuts.traversers.disc
 local nextdir       = nuts.traversers.dir
@@ -101,8 +101,17 @@ local setlistcolor  = nodes.tracers.colors.setlist
 
 local texget        = tex.get
 local texgetbox     = tex.getbox
+local texisdimen    = tex.isdimen
 local texsetdimen   = tex.setdimen
 local texgetnest    = tex.getnest
+
+local d_lastnaturalboxwd = texisdimen("lastnaturalboxwd")
+local d_lastnaturalboxht = texisdimen("lastnaturalboxht")
+local d_lastnaturalboxdp = texisdimen("lastnaturalboxdp")
+
+local d_givenwidth       = texisdimen("givenwidth")
+local d_givenheight      = texisdimen("givenheight")
+local d_givendepth       = texisdimen("givendepth")
 
 local function hyphenatedlist(head,usecolor)
     local current = head and tonut(head)
@@ -122,7 +131,7 @@ local function hyphenatedlist(head,usecolor)
                 setlistcolor(post,"darkyellow")
             end
             if replace then
-                flush_list(replace)
+                flushlist(replace)
             end
             setdisc(current)
             if pre then
@@ -164,218 +173,226 @@ implement {
     arguments = "integer",
     actions   = function(n)
         -- we just hyphenate (as we pass a hpack) .. a bit too much casting but ...
-        local l = languages.hyphenators.handler(tonode(checkedlist(n)))
+        local l = languages.hyphenators.handler(checkedlist(n))
         report_hyphenation("show: %s",listtoutf(l,false,true))
     end
 }
 
-local function applytochars(current,doaction,noaction,nested)
-    while current do
-        local id = getid(current)
-        if nested and (id == hlist_code or id == vlist_code) then
-            context.beginhbox()
-            applytochars(getlist(current),doaction,noaction,nested)
-            context.endhbox()
-        elseif id ~= glyph_code then
-            noaction(tonode(copy_node(current)))
-        else
-            doaction(tonode(copy_node(current)))
-        end
-        current = getnext(current)
-    end
-end
+do
 
-local function applytowords(current,doaction,noaction,nested)
-    local start
-    while current do
-        local id = getid(current)
-        if id == glue_code then
-            if start then
-                doaction(tonode(copy_list(start,current)))
-                start = nil
+    local function applytochars(current,doaction,noaction,nested)
+        while current do
+            local id = getid(current)
+            if nested and (id == hlist_code or id == vlist_code) then
+                context.beginhbox()
+                applytochars(getlist(current),doaction,noaction,nested)
+                context.endhbox()
+            elseif id ~= glyph_code then
+                noaction(tonode(copy_node(current)))
+            else
+                doaction(tonode(copy_node(current)))
             end
-            noaction(tonode(copy_node(current)))
-        elseif nested and (id == hlist_code or id == vlist_code) then
-            context.beginhbox()
-            applytowords(getlist(current),doaction,noaction,nested)
-            context.egroup()
-        elseif not start then
-            start = current
+            current = getnext(current)
         end
-        current = getnext(current)
     end
-    if start then
-        doaction(tonode(copy_list(start)))
-    end
-end
 
-local methods = {
-    char       = applytochars,
-    characters = applytochars,
-    word       = applytowords,
-    words      = applytowords,
-}
-
-implement {
-    name      = "applytobox",
-    arguments = {
-        {
-            { "box", "integer" },
-            { "command" },
-            { "method" },
-            { "nested", "boolean" },
-        }
-    },
-    actions   = function(specification)
-        local list   = checkedlist(specification.box)
-        local action = methods[specification.method or "char"]
-        if list and action then
-            action(list,context[specification.command or "ruledhbox"],context,specification.nested)
+    local function applytowords(current,doaction,noaction,nested)
+        local start
+        while current do
+            local id = getid(current)
+            if id == glue_code then
+                if start then
+                    doaction(tonode(copylist(start,current)))
+                    start = nil
+                end
+                noaction(tonode(copy_node(current)))
+            elseif nested and (id == hlist_code or id == vlist_code) then
+                context.beginhbox()
+                applytowords(getlist(current),doaction,noaction,nested)
+                context.egroup()
+            elseif not start then
+                start = current
+            end
+            current = getnext(current)
         end
-     end
-}
-
-local split_char = lpeg.Ct(lpeg.C(1)^0)
-local split_word = lpeg.tsplitat(lpeg.patterns.space)
-local split_line = lpeg.tsplitat(lpeg.patterns.eol)
-
-local function processsplit(specification)
-    local str     = specification.data    or ""
-    local command = specification.command or "ruledhbox"
-    local method  = specification.method  or "word"
-    local spaced  = specification.spaced
-    if command then
-        command = context[command]
-    end
-    if method == "char" or method == "character" then
-        if spaced then
-            spaced = context.space
+        if start then
+            doaction(tonode(copylist(start)))
         end
-        local words = lpegmatch(split_char,str)
-        for i=1,#words do
-            local word = words[i]
-            if word == " " then
-                if spaced then
+    end
+
+    local methods = {
+        char       = applytochars,
+        characters = applytochars,
+        word       = applytowords,
+        words      = applytowords,
+    }
+
+    implement {
+        name      = "applytobox",
+        arguments = {
+            {
+                { "box", "integer" },
+                { "command" },
+                { "method" },
+                { "nested", "boolean" },
+            }
+        },
+        actions   = function(specification)
+            local list   = checkedlist(specification.box)
+            local action = methods[specification.method or "char"]
+            if list and action then
+                action(list,context[specification.command or "ruledhbox"],context,specification.nested)
+            end
+         end
+    }
+
+    local split_char = lpeg.Ct(lpeg.C(1)^0)
+    local split_word = lpeg.tsplitat(lpeg.patterns.space)
+    local split_line = lpeg.tsplitat(lpeg.patterns.eol)
+
+    local function processsplit(specification)
+        local str     = specification.data    or ""
+        local command = specification.command or "ruledhbox"
+        local method  = specification.method  or "word"
+        local spaced  = specification.spaced
+        if command then
+            command = context[command]
+        end
+        if method == "char" or method == "character" then
+            if spaced then
+                spaced = context.space
+            end
+            local words = lpegmatch(split_char,str)
+            for i=1,#words do
+                local word = words[i]
+                if word == " " then
+                    if spaced then
+                        spaced()
+                    end
+                elseif command then
+                    command(word)
+                else
+                    context(word)
+                end
+            end
+        elseif method == "word" then
+            if spaced then
+                spaced = context.space
+            end
+            local words = lpegmatch(split_word,str)
+            for i=1,#words do
+                local word = words[i]
+                if spaced and i > 1 then
                     spaced()
                 end
-            elseif command then
-                command(word)
-            else
-                context(word)
+                if command then
+                    command(word)
+                else
+                    context(word)
+                end
             end
-        end
-    elseif method == "word" then
-        if spaced then
-            spaced = context.space
-        end
-        local words = lpegmatch(split_word,str)
-        for i=1,#words do
-            local word = words[i]
-            if spaced and i > 1 then
-                spaced()
+        elseif method == "line" then
+            if spaced then
+                spaced = context.par
             end
-            if command then
-                command(word)
-            else
-                context(word)
+            local words = lpegmatch(split_line,str)
+            for i=1,#words do
+                local word = words[i]
+                if spaced and i > 1 then
+                    spaced()
+                end
+                if command then
+                    command(word)
+                else
+                    context(word)
+                end
             end
+        else
+            context(str)
         end
-    elseif method == "line" then
-        if spaced then
-            spaced = context.par
-        end
-        local words = lpegmatch(split_line,str)
-        for i=1,#words do
-            local word = words[i]
-            if spaced and i > 1 then
-                spaced()
-            end
-            if command then
-                command(word)
-            else
-                context(word)
-            end
-        end
-    else
-        context(str)
     end
-end
 
-implement {
-    name      = "processsplit",
-    actions   = processsplit,
-    arguments = {
-        {
-            { "data" },
-            { "command" },
-            { "method" },
-            { "spaced", "boolean" },
+    implement {
+        name      = "processsplit",
+        actions   = processsplit,
+        arguments = {
+            {
+                { "data" },
+                { "command" },
+                { "method" },
+                { "spaced", "boolean" },
+            }
         }
     }
-}
 
-local a_vboxtohboxseparator = attributes.private("vboxtohboxseparator")
+end
 
-implement {
-    name      = "vboxlisttohbox",
-    arguments = { "integer", "integer", "dimen" },
-    actions   = function(original,target,inbetween)
-        local current = getlist(getbox(original))
-        local head = nil
-        local tail = nil
-        while current do
-            local id   = getid(current)
-            local next = getnext(current)
-            if id == hlist_code then
-                local list = getlist(current)
-                if head then
-                    if inbetween > 0 then
-                        local n = new_glue(0,0,inbetween)
-                        setlink(tail,n)
-                        tail = n
-                    end
-                    setlink(tail,list)
-                else
-                    head = list
-                end
-                tail = find_tail(list)
-                -- remove last separator
-                if getid(tail) == hlist_code and getattribute(tail,a_vboxtohboxseparator) == 1 then
-                    local temp = tail
-                    local prev = getprev(tail)
-                    if next then
-                        local list = getlist(tail)
-                        setlink(prev,list)
-                        setlist(tail)
-                        tail = find_tail(list)
+do
+
+    local a_vboxtohboxseparator = attributes.private("vboxtohboxseparator")
+
+    implement {
+        name      = "vboxlisttohbox",
+        arguments = { "integer", "integer", "dimen" },
+        actions   = function(original,target,inbetween)
+            local current = getlist(getbox(original))
+            local head = nil
+            local tail = nil
+            while current do
+                local id   = getid(current)
+                local next = getnext(current)
+                if id == hlist_code then
+                    local list = getlist(current)
+                    if head then
+                        if inbetween > 0 then
+                            local n = new_glue(0,0,inbetween)
+                            setlink(tail,n)
+                            tail = n
+                        end
+                        setlink(tail,list)
                     else
-                        tail = prev
+                        head = list
                     end
-                    flush_node(temp)
+                    tail = find_tail(list)
+                    -- remove last separator
+                    if getid(tail) == hlist_code and getattribute(tail,a_vboxtohboxseparator) == 1 then
+                        local temp = tail
+                        local prev = getprev(tail)
+                        if next then
+                            local list = getlist(tail)
+                            setlink(prev,list)
+                            setlist(tail)
+                            tail = find_tail(list)
+                        else
+                            tail = prev
+                        end
+                        flushnode(temp)
+                    end
+                    -- done
+                    setnext(tail)
+                    setlist(current)
                 end
-                -- done
-                setnext(tail)
-                setlist(current)
+                current = next
             end
-            current = next
+            local result = new_hlist()
+            setlist(result,head)
+            setbox(target,result)
+         -- setbox(target,new_hlist(head))
         end
-        local result = new_hlist()
-        setlist(result,head)
-        setbox(target,result)
-     -- setbox(target,new_hlist(head))
-    end
-}
+    }
 
-implement {
-    name      = "hboxtovbox",
-    arguments = "integer",
-    actions   = function(n)
-        local b = getbox(n)
-        local factor = texget("baselineskip",false) / texget("hsize")
-        setdepth(b,0)
-        setheight(b,getwidth(b) * factor)
-    end
-}
+    implement {
+        name      = "hboxtovbox",
+        arguments = "integer",
+        actions   = function(n)
+            local b = getbox(n)
+            local factor = texget("baselineskip",false) / texget("hsize")
+            setdepth(b,0)
+            setheight(b,getwidth(b) * factor)
+        end
+    }
+
+end
 
 implement {
     name      = "boxtostring",
@@ -386,39 +403,14 @@ implement {
     end
 }
 
-local function getnaturaldimensions(n)
-    local w = 0
-    local h = 0
-    local d = 0
-    local l = getlist(getbox(n))
-    if l then
-        w, h, d = getdimensions(l)
-    end
-    texsetdimen("lastnaturalboxwd",w)
-    texsetdimen("lastnaturalboxht",h)
-    texsetdimen("lastnaturalboxdp",d)
-    return w, h, d
-end
+do
 
-implement {
-    name      = "getnaturaldimensions",
-    arguments = "integer",
-    actions   = getnaturaldimensions
-}
+    -- we can now move this to the tex end
 
-implement {
-    name      = "naturalwd",
-    arguments = "integer",
-    actions   = function(n)
-        getnaturaldimensions(n)
-        context.lastnaturalboxwd(false)
-    end
-}
+    local values          = tokens.values
+    local dimension_value = values.dimension
 
-implement {
-    name      = "getnaturalwd",
-    arguments = "integer",
-    actions   = function(n)
+    local function getnaturaldimensions(n)
         local w = 0
         local h = 0
         local d = 0
@@ -426,25 +418,64 @@ implement {
         if l then
             w, h, d = getdimensions(l)
         end
-        context("\\dimexpr%i\\scaledpoint\\relax",w)
+        texsetdimen(d_lastnaturalboxwd,w)
+        texsetdimen(d_lastnaturalboxht,h)
+        texsetdimen(d_lastnaturalboxdp,d)
+        return w, h, d
     end
-}
 
-local function setboxtonaturalwd(n)
-    local old = takebox(n)
-    local new = hpack(getlist(old))
-    setlist(old,nil)
-    flush_node(old)
-    setbox(n,new)
+    local function setboxtonaturalwd(n)
+        local old = takebox(n)
+        local new = hpack(getlist(old))
+        setlist(old,nil)
+        flushnode(old)
+        setbox(n,new)
+    end
+
+    implement {
+        name      = "getnaturaldimensions",
+        arguments = "integer",
+        public    = true,
+        protected = true,
+        untraced  = true,
+        actions   = getnaturaldimensions
+    }
+
+    implement {
+        name      = "naturalwd",
+        arguments = "integer",
+        usage     = "value",
+        public    = true,
+        protected = true,
+        actions   = function(n)
+            return dimension_value, (getnaturaldimensions(n))
+        end
+    }
+
+    implement {
+        name      = "getnaturalwd",
+        arguments = "integer",
+        usage     = "value",
+        public    = true,
+        protected = true,
+        actions   = function(n)
+            local l = getlist(getbox(n))
+            return dimension_value, l and getdimensions(l) or 0
+        end
+    }
+
+    implement {
+        name      = "setnaturalwd",
+        arguments = "integer",
+        public    = true,
+        protected = true,
+        untraced  = true,
+        actions   = setboxtonaturalwd
+    }
+
+    nodes.setboxtonaturalwd = setboxtonaturalwd
+
 end
-
-implement {
-    name      = "setnaturalwd",
-    arguments = "integer",
-    actions   = setboxtonaturalwd
-}
-
-nodes.setboxtonaturalwd = setboxtonaturalwd
 
 local doifelse = commands.doifelse
 
@@ -488,14 +519,15 @@ do
 
     local tonut           = nodes.tonut
     local takebox         = nuts.takebox
-    local flush_list      = nuts.flush_list
-    local copy_list       = nuts.copy_list
+    local flushlist       = nuts.flushlist
+    local copylist        = nuts.copylist
     local getwhd          = nuts.getwhd
     local setbox          = nuts.setbox
     local new_hlist       = nuts.pool.hlist
 
     local values          = tokens.values
     local dimension_value = values.dimension
+    local cardinal_value  = values.cardinal
 
     local boxes           = { }
     nodes.boxes           = boxes
@@ -510,6 +542,9 @@ do
         local b = takebox(b)
         if trace then
             report("category %a, name %a, %s (%s)",category,name,"save",b and "content" or "empty")
+        end
+        if name == "+" then
+            name = #cache[category] + 1
         end
         cache[category][name] = b or false
     end
@@ -527,14 +562,23 @@ do
         return cache[category][name] and true or false
     end
 
+    function boxes.count(category)
+        return #cache[category]
+    end
+
     function boxes.direct(category,name,copy)
         name = tonumber(name) or name
         local c = cache[category]
         local b = c[name]
+-- if name == "+" then
+--         b = remove(c, 1)
+-- else
+--         b = c[name]
+-- end
         if not b then
             -- do nothing, maybe trace
         elseif copy then
-            b = copy_list(b)
+            b = copylist(b)
         else
             c[name] = false
         end
@@ -551,13 +595,13 @@ do
         local c = cache[category]
         local b = takebox(box)
         if b then
-            flush_list(b)
+            flushlist(b)
         end
         local b = c[name]
         if not b then
             -- do nothing, maybe trace
         elseif copy then
-            b = copy_list(b)
+            b = copylist(b)
         else
             c[name] = false
         end
@@ -565,6 +609,20 @@ do
             report("category %a, name %a, %s (%s)",category,name,"restore",b and "content" or "empty")
         end
         setbox(box,b or nil)
+    end
+
+    function boxes.prune(category)
+        -- this one assumes an indexed list
+        local c = cache[category]
+        local t = { }
+        local n = 0
+        for i=1,#c do
+            local ci = c[i]
+            if ci then
+                n = n + 1 ; t[n] = ci
+            end
+        end
+        cache[category] = t
     end
 
     local function dimensions(category,name)
@@ -585,7 +643,7 @@ do
         if name and name ~= "" then
             local b = c[name]
             if b then
-                flush_list(b)
+                flushlist(b)
                 c[name] = false
             end
             if trace then
@@ -594,7 +652,7 @@ do
         else
             for k, b in next, c do
                 if b then
-                    flush_list(b)
+                    flushlist(b)
                 end
             end
             cache[category] = { }
@@ -602,6 +660,11 @@ do
                 report("category %a, reset",category)
             end
         end
+    end
+
+    function boxes.dispose(category)
+        boxes.reset(category)
+        cache[category] = nil -- or false (for tracing)
     end
 
     implement {
@@ -662,7 +725,34 @@ do
         actions   = boxes.reset,
     }
 
+    implement {
+        name      = "pruneboxesincache",
+        public    = true,
+        protected = true,
+        arguments = "string",
+        actions   = boxes.prune,
+    }
+
+    implement {
+        name      = "disposeboxesincache",
+        public    = true,
+        protected = true,
+        arguments = "string",
+        actions   = boxes.dispose,
+    }
+
     -- we can share this ...
+
+    implement {
+        name      = "getboxcountfromcache",
+        public    = true,
+        protected = true,
+        usage     = "value",
+        arguments = "string",
+        actions   = function(category)
+            return cardinal_value, #cache[category]
+        end,
+    }
 
     implement {
         name      = "getboxwdfromcache",
@@ -701,6 +791,18 @@ do
     }
 
     implement {
+        name      = "getboxhtdpfromcache",
+        arguments = "2 strings",
+        public    = true,
+        protected = true,
+        usage     = "value",
+        actions   = function(category,name)
+            local w, h, d = dimensions(category,name)
+            return dimension_value, h + d
+        end,
+    }
+
+    implement {
         name      = "putnextboxincache",
         public    = true,
         protected = true,
@@ -720,9 +822,9 @@ end
 implement {
     name    = "lastlinewidth",
     actions = function()
-        local head = tex.lists.page_head
+        local head = tex.lists.pagehead
         -- list dimensions returns 3 value but we take the first
-        context(head and getdimensions(getlist(find_tail(tonut(tex.lists.page_head)))) or 0)
+        context(head and getdimensions(getlist(find_tail(tonut(tex.lists.pagehead)))) or 0)
     end
 }
 
@@ -752,9 +854,9 @@ implement {
         },
     },
     actions   = function(t)
-        texsetdimen("givenwidth", t.width  or 0)
-        texsetdimen("givenheight",t.height or 0)
-        texsetdimen("givendepth", t.depth  or 0)
+        texsetdimen(d_givenwidth, t.width  or 0)
+        texsetdimen(d_givenheight,t.height or 0)
+        texsetdimen(d_givendepth, t.depth  or 0)
     end,
 }
 
@@ -772,7 +874,7 @@ local function stripglue(list)
     if first and first ~= list then
         -- we have discardables
         setsplit(getprev(first),first)
-        flush_list(list)
+        flushlist(list)
         list = first
         done = true
     end
@@ -789,7 +891,7 @@ local function stripglue(list)
         end
         if last ~= tail then
             -- we have discardables
-            flush_list(getnext(last))
+            flushlist(getnext(last))
             setnext(last)
             done = true
         end
@@ -843,7 +945,7 @@ local function limitate(t) -- don't pack the result !
         else
             maxleft  = maxleft  - swidth
         end
-        for n in traverse_id(glue_code,list) do
+        for n in traverseid(glue_code,list) do
             local width = getdimensions(list,n)
             if width > maxleft then
                 if not last then
@@ -855,7 +957,7 @@ local function limitate(t) -- don't pack the result !
             end
         end
         if last and maxright > 0 then
-            for n in traverse_id(glue_code,last) do
+            for n in traverseid(glue_code,last) do
                 local width = getdimensions(n)
                 if width < maxright then
                     first = n
@@ -884,7 +986,7 @@ local function limitate(t) -- don't pack the result !
                 end
                 setlink(last,sentinel)
                 setprev(rest)
-                flush_list(rest)
+                flushlist(rest)
             end
         end
     end
@@ -893,11 +995,11 @@ local function limitate(t) -- don't pack the result !
 
     if t.freeze then
         local l = hpack(list,total,"exactly")
-        for n in traverse_id(glue_code,list) do
-            setglue(n,(effective_glue(n,l)))
+        for n in traverseid(glue_code,list) do
+            setglue(n,(effectiveglue(n,l)))
         end
         setlist(l)
-        flush_node(l)
+        flushnode(l)
     end
 
     return tonode(list)
@@ -1178,7 +1280,7 @@ do
             else
                 setlink(p,temp,n)
             end
-            flush_node(found)
+            flushnode(found)
             getprop(box,"boxlines")[line] = temp
        end
     end
@@ -1206,6 +1308,8 @@ do
         ["rh"]  = function(p,l,found) return dimension_value, p.righthangskip end,
         ["lp"]  = function(p,l,found) return dimension_value, p.parfillleftskip end,
         ["rp"]  = function(p,l,found) return dimension_value, p.parfillrightskip end,
+        ["il"]  = function(p,l,found) return dimension_value, p.parinitleftskip end,
+        ["ir"]  = function(p,l,found) return dimension_value, p.parinitrightskip end,
         ["in"]  = function(p,l,found) return dimension_value, p.indent end,
 
         ["nw"]  = function(p,l,found) return dimension_value, naturaldimensions(p,l,found).naturalwidth end,
@@ -1303,6 +1407,8 @@ do
     define_one("boxlinerh",   "rh")
     define_one("boxlinelp",   "lp")
     define_one("boxlinerp",   "rp")
+    define_one("boxlineil",   "il")
+    define_one("boxlineir",   "ir")
     define_one("boxlinein",   "in")
     define_one("boxlinenw",   "nw")
     define_one("boxlinenh",   "nh")
@@ -1319,7 +1425,7 @@ do
     local getbox   = tex.getbox
     local setfield = nodes.setfield
     local getfield = nodes.getfield
-    local flush    = nodes.flush
+    local flush    = nodes.flushnode
     local copynode = nodes.copy
 
     local function get(n,field,copy)
@@ -1393,3 +1499,45 @@ do
     }
 
 end
+
+do
+
+    local function setsplitlisthtdp(n,ht,dp)
+        local box = getbox(n)
+        if box then
+            local head = getlist(box)
+            if head then
+                local tail = findtail(head)
+                local id = getid(head)
+                if id == glue_code and getsubtype(head) == topskip_code then
+                    head = getnext(head)
+                    id   = head and getid(head)
+                    ht   = ht - getwidth(head)
+                end
+                if id == hlist_code and getsubtype(head) == line_code and getheight(head) < ht then
+-- print("set height",ht)
+                    setheight(head,ht)
+                end
+                local id = getid(tail)
+                if id == glue_code then
+                    tail = getprev(tail)
+                    id   = tail and getid(tail)
+                    dp   = dp - getwidth(tail)
+                end
+                if id == hlist_code and getsubtype(tail) == line_code and getdepth(tail) < dp then
+                    setdepth(dept,dp)
+-- print("set depth",dp)
+                end
+            end
+        end
+    end
+
+    implement {
+        name      = "setsplitlisthtdp",
+        public    = true,
+        protected = true,
+        arguments = { "integer", "dimen", "dimen" },
+        actions   = setsplitlisthtdp,
+    }
+end
+
