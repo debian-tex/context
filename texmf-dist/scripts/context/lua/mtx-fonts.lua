@@ -12,11 +12,11 @@ local givenfiles  = environment.files
 
 local suffix, addsuffix, removesuffix, replacesuffix = file.suffix, file.addsuffix, file.removesuffix, file.replacesuffix
 local nameonly, basename, joinpath, collapsepath = file.nameonly, file.basename, file.join, file.collapsepath
-local lower = string.lower
+local lower, gsub = string.lower, string.gsub
 local concat = table.concat
 local write_nl = (logs and logs.writer) or (texio and texio.write_nl) or print
 
-local otlversion  = 3.113
+local otlversion  = 3.133
 
 local helpinfo = [[
 <?xml version="1.0"?>
@@ -58,6 +58,10 @@ local helpinfo = [[
    <title>Examples</title>
    <subcategory>
     <example><command>mtxrun --script font --list somename (== --pattern=*somename*)</command></example>
+   </subcategory>
+   <subcategory>
+    <example><command>mtxrun --script font --list --file filename</command></example>
+    <example><command>mtxrun --script font --list --name --pattern=*somefile*</command></example>
    </subcategory>
    <subcategory>
     <example><command>mtxrun --script font --list --name somename</command></example>
@@ -123,7 +127,7 @@ loadmodule("font-otr.lua")
 loadmodule("font-cff.lua")
 loadmodule("font-ttf.lua")
 loadmodule("font-tmp.lua")
-loadmodule("font-dsp.lua")
+loadmodule("font-dsp.lua") -- autosuffix
 loadmodule("font-oup.lua")
 
 loadmodule("font-otl.lua")
@@ -183,6 +187,9 @@ function fonts.names.simple(alsotypeone)
     local simplelist = { "ttf", "otf", "ttc", alsotypeone and "afm" or nil }
     local name = "luatex-fonts-names.lua"
     local path = collapsepath(caches.getwritablepath("..","..","generic","fonts","data"))
+
+    path = gsub(path, "luametatex%-cache", "luatex-cache") -- maybe have an option to force it
+
     fonts.names.filters.list = simplelist
     fonts.names.version = simpleversion -- this number is the same as in font-dum.lua
     report("generating font database for 'luatex-fonts' version %s",fonts.names.version)
@@ -288,7 +295,7 @@ local function showfeatures(tag,specification)
                         else
                             done = true
                         end
-                        report("  % -8s % -8s % -8s",f,s,concat(table.sortedkeys(ss), " ")) -- todo: padd 4
+                        report("  %-8s %-8s %-8s",f,s,concat(table.sortedkeys(ss), " ")) -- todo: padd 4
                     end
                 end
             end
@@ -310,7 +317,7 @@ local function showfeatures(tag,specification)
             report("  method   feature         formats")
             report()
             for k, v in table.sortedhash(methods) do
-                report("  % -8s % -14s  %s",k,v.feature,v.format)
+                report("  %-8s %-14s  %s",k,v.feature,v.format)
             end
         end
     end
@@ -406,46 +413,46 @@ function scripts.fonts.list()
 
     if getargument("name") then
         if pattern then
-            --~ mtxrun --script font --list --name --pattern=*somename*
+            -- mtxrun --script font --list --name --pattern=*somename*
             list_matches(fonts.names.list(string.topattern(pattern,true),reload,all),info)
         elseif filter then
             report("not supported: --list --name --filter",name)
         elseif given then
-            --~ mtxrun --script font --list --name somename
+            -- mtxrun --script font --list --name somename
             list_matches(fonts.names.list(given,reload,all),info)
         else
             report("not supported: --list --name <no specification>",name)
         end
     elseif getargument("spec") then
         if pattern then
-            --~ mtxrun --script font --list --spec --pattern=*somename*
+            -- mtxrun --script font --list --spec --pattern=*somename*
             report("not supported: --list --spec --pattern",name)
         elseif filter then
-            --~ mtxrun --script font --list --spec --filter="fontname=somename"
+            -- mtxrun --script font --list --spec --filter="fontname=somename"
             list_specifications(fonts.names.getlookups(filter),info)
         elseif given then
-            --~ mtxrun --script font --list --spec somename
+            -- mtxrun --script font --list --spec somename
             list_specifications(fonts.names.collectspec(given,reload,all),info)
         else
             report("not supported: --list --spec <no specification>",name)
         end
     elseif getargument("file") then
         if pattern then
-            --~ mtxrun --script font --list --file --pattern=*somename*
+            -- mtxrun --script font --list --file --pattern=*somename*
             list_specifications(fonts.names.collectfiles(string.topattern(pattern,true),reload,all),info)
         elseif filter then
             report("not supported: --list --spec",name)
         elseif given then
-            --~ mtxrun --script font --list --file somename
+            -- mtxrun --script font --list --file somename
             list_specifications(fonts.names.collectfiles(given,reload,all),info)
         else
             report("not supported: --list --file <no specification>",name)
         end
     elseif pattern then
-        --~ mtxrun --script font --list --pattern=*somename*
+        -- mtxrun --script font --list --pattern=*somename*
         list_matches(fonts.names.list(string.topattern(pattern,true),reload,all),info)
     elseif given then
-        --~ mtxrun --script font --list somename
+        -- mtxrun --script font --list somename
         list_matches(fonts.names.list(given,reload,all),info)
     elseif all then
         pattern = "*"

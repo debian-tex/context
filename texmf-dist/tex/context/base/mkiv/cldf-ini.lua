@@ -20,16 +20,8 @@ if not modules then modules = { } end modules ['cldf-ini'] = {
 -- more efficient approach is stable enough to move the original code to the obsolete
 -- module.
 --
--- to be considered:
---
--- 0.528 local foo = tex.ctxcatcodes
--- 0.651 local foo = getcount("ctxcatcodes")
--- 0.408 local foo = getcount(ctxcatcodes) -- local ctxcatcodes = tex.iscount("ctxcatcodes")
-
 -- maybe:  (escape) or 0x2061 (apply function) or 0x2394 (software function ⎔) (old)
 -- note : tex.print == line with endlinechar appended
--- todo : context("%bold{total: }%s",total)
--- todo : context.documentvariable("title")
 --
 -- During the crited project we ran into the situation that luajittex was 10-20 times
 -- slower that luatex ... after 3 days of testing and probing we finally figured out that
@@ -98,16 +90,21 @@ local texsprint         = tex.sprint    -- just appended (no space,eol treatment
 local texprint          = tex.print     -- each arg a separate line (not last in directlua)
 ----- texwrite          = tex.write     -- all 'space' and 'character'
 
-local isnode            = node.is_node
+-- In this stage we don't yet have nodes populated so we access the library directly ...
+
+local isnode            = node.isnode   or node.is_node
+local copynodelist      = node.copylist or node.copy_list
 local writenode         = node.write
-local copynodelist      = node.copy_list
 local tonut             = node.direct.todirect
 local tonode            = node.direct.tonode
 
-local istoken           = token.is_token
 local newtoken          = token.new
-local createtoken       = token.create
-local setluatoken       = token.set_lua
+----- createtoken       = token.create
+
+local istoken           = token.istoken or token.is_token
+local setluatoken       = token.setlua  or token.set_lua
+
+-- ... till here.
 
 local isprintable       = tex.isprintable or function(n)
     return n and (type(n) == "string" or isnode(n) or istoken(n))
@@ -403,19 +400,22 @@ local registerscanner if CONTEXTLMTXMODE > 0 then
 
     -- always permanent but we can consider to obey permanent==false
 
+    -- todo: make bitset instead of keys (nil is skipped anyway)
+
     local function toflags(specification)
-        local protected = specification.protected and "protected" -- or ""
+        local protected = specification.protected and "protected"
+        local untraced  = specification.untraced  and "untraced"
         local usage     = specification.usage
         if usage == "value" then
-            return "global", "value", "permanent", protected
+            return "global", "value", "permanent", "untraced", protected
         elseif usage == "condition" then
-            return "global", "conditional", "permanent", protected
+            return "global", "conditional", "permanent", "untraced", protected
         elseif specification.frozen then
-            return "global", "frozen", protected
+            return "global", "frozen", untraced, protected
         elseif specification.permanent == false or specification.onlyonce then -- for now onlyonce here
-            return "global", protected
+            return "global", untraced, protected
         else
-            return "global", "permanent", protected
+            return "global", "permanent", untraced, protected
         end
     end
 
@@ -425,6 +425,7 @@ local registerscanner if CONTEXTLMTXMODE > 0 then
         storedscanners[name] = n
         namesofscanners[n] = name
         name = specification.public and name or (privatenamespace .. name)
+     -- print(name,n,toflags(specification))
         setluatoken(name,n,toflags(specification))
     end
 
@@ -577,6 +578,7 @@ local space         = patterns.spacer
 local spacing       = newline * space^0
 local content       = lpegC((1-spacing)^1)            -- texsprint
 local emptyline     = space^0 * newline^2             -- texprint("")
+                    + newline * space^1 * newline^1
 local endofline     = space^0 * newline * space^0     -- texsprint(" ")
 local simpleline    = endofline * lpegP(-1)           --
 
@@ -796,7 +798,7 @@ local function writer(parent,command,...) -- already optimized before call
                     flush(currentcatcodes,"}")
                 end
             elseif typ == "number" then
-                -- numbers never have funny catcodesz
+                -- numbers never have funny catcodes
                 flush(currentcatcodes,"{",ti,"}")
             elseif typ == "table" then
                 local tn = #ti
@@ -850,7 +852,7 @@ local function writer(parent,command,...) -- already optimized before call
                     else
                         flush(currentcatcodes,"[",tj,"]")
                     end
-                else -- is concat really faster than flushes here? probably needed anyway (print artifacts)
+                else
                     flush(currentcatcodes,"[")
                     for j=1,tn do
                         local tj = ti[j]
@@ -1138,10 +1140,12 @@ end)
 
 -- The cmd names were synchronized with the normal call cmd names.
 
-local luacalls = {              --  luatex     luametatex
-    lua_expandable_call = true, --  normal
-    lua_call            = true, --  protected  normal
-    lua_protected_call  = true, --             protected
+local luacalls = {
+    lua_function_call  = true,
+    lua_protected_call = true,
+    lua_value          = true,
+    lua_local_call     = true,
+    lua_call           = true,
 }
 
 local function userdata(argument)
@@ -1153,7 +1157,7 @@ local function userdata(argument)
          -- return formatters["<<\\%s>>"](csname)
             return formatters["\\%s"](csname)
         end
-        if luacall[argument.cmdname] then
+        if luacalls[argument.cmdname] then
             return "<<function>>" -- argument.mode
         end
         return "<<token>>"

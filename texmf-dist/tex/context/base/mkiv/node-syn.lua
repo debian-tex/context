@@ -125,7 +125,7 @@ if not modules then modules = { } end modules ['node-syn'] = {
 local type, rawset = type, rawset
 local concat = table.concat
 local formatters = string.formatters
-local replacesuffix, suffixonly, nameonly = file.replacesuffix, file.suffix, file.nameonly
+local replacesuffix, suffixonly, nameonly, collapsepath = file.replacesuffix, file.suffix, file.nameonly, file.collapsepath
 local openfile, renamefile, removefile = io.open, os.rename, os.remove
 
 local report_system = logs.reporter("system")
@@ -159,8 +159,8 @@ local fontkern_code      = kerncodes.fontkern
 
 local cancel_code        = nodes.dircodes.cancel
 
-local insert_before      = nuts.insert_before
-local insert_after       = nuts.insert_after
+local insertbefore       = nuts.insertbefore
+local insertafter        = nuts.insertafter
 
 local nodepool           = nuts.pool
 local new_latelua        = nodepool.latelua
@@ -170,7 +170,7 @@ local new_kern           = nodepool.kern
 local getdimensions      = nuts.dimensions
 local getrangedimensions = nuts.rangedimensions
 
-local getsynctexfields   = nuts.getsynctexfields or nuts.get_synctex_fields
+local getsynctexfields   = nuts.getsynctexfields
 local forcesynctextag    = tex.forcesynctextag   or tex.force_synctex_tag
 local forcesynctexline   = tex.forcesynctexline  or tex.force_synctex_line
 local getsynctexline     = tex.getsynctexline    or tex.get_synctex_line
@@ -231,7 +231,8 @@ local blockedsuffixes    = {
  -- lfg  = true,
 }
 
-local sttags = table.setmetatableindex(function(t,name)
+local sttags = table.setmetatableindex(function(t,fullname)
+    local name = collapsepath(fullname)
     if blockedsuffixes[suffixonly(name)] then
         -- Just so that I don't get the ones on my development tree.
         nofblocked = nofblocked + 1
@@ -247,6 +248,9 @@ local sttags = table.setmetatableindex(function(t,name)
     else
         noftags = noftags + 1
         t[name] = noftags
+        if name ~= fullname then
+            t[fullname] = noftags
+        end
         stnums[noftags] = name
         return noftags
     end
@@ -391,27 +395,27 @@ end
 -- end
 --
 -- local function b_vlist(head,current,t,l,w,h,d)
---     return insert_before(head,current,new_latelua(function() doaction(f_vlist,t,l,w,h,d) end))
+--     return insertbefore(head,current,new_latelua(function() doaction(f_vlist,t,l,w,h,d) end))
 -- end
 --
 -- local function b_hlist(head,current,t,l,w,h,d)
---     return insert_before(head,current,new_latelua(function() doaction(f_hlist,t,l,w,h,d) end))
+--     return insertbefore(head,current,new_latelua(function() doaction(f_hlist,t,l,w,h,d) end))
 -- end
 --
 -- local function e_vlist(head,current)
---     return insert_after(head,current,new_latelua(noaction(s_vlist)))
+--     return insertafter(head,current,new_latelua(noaction(s_vlist)))
 -- end
 --
 -- local function e_hlist(head,current)
---     return insert_after(head,current,new_latelua(noaction(s_hlist)))
+--     return insertafter(head,current,new_latelua(noaction(s_hlist)))
 -- end
 --
 -- local function x_vlist(head,current,t,l,w,h,d)
---     return insert_before(head,current,new_latelua(function() doaction(f_vlist_1,t,l,w,h,d) end))
+--     return insertbefore(head,current,new_latelua(function() doaction(f_vlist_1,t,l,w,h,d) end))
 -- end
 --
 -- local function x_hlist(head,current,t,l,w,h,d)
---     return insert_before(head,current,new_latelua(function() doaction(f_hlist_1,t,l,w,h,d) end))
+--     return insertbefore(head,current,new_latelua(function() doaction(f_hlist_1,t,l,w,h,d) end))
 -- end
 --
 -- generic
@@ -466,7 +470,7 @@ local x_hlist  do
 
     x_hlist = function(head,current,t,l,w,h,d)
         if filehandle then
-            return insert_before(head,current,new_latelua(function() doaction(t,l,w,h,d) end))
+            return insertbefore(head,current,new_latelua(function() doaction(t,l,w,h,d) end))
         else
             return head
         end
@@ -502,8 +506,8 @@ local function inject(head,first,last,tag,line)
         d = depth
     end
     if trace then
-        head = insert_before(head,first,new_rule(w,fulltrace and h or traceheight,fulltrace and d or tracedepth))
-        head = insert_before(head,first,new_kern(-w))
+        head = insertbefore(head,first,new_rule(w,fulltrace and h or traceheight,fulltrace and d or tracedepth))
+        head = insertbefore(head,first,new_kern(-w))
     end
     head = x_hlist(head,first,tag,line,w,h,d)
     return head
@@ -569,8 +573,8 @@ local function inject(parent,head,first,last,tag,line)
         d = depth
     end
     if trace then
-        head = insert_before(head,first,new_rule(w,fulltrace and h or traceheight,fulltrace and d or tracedepth))
-        head = insert_before(head,first,new_kern(-w))
+        head = insertbefore(head,first,new_rule(w,fulltrace and h or traceheight,fulltrace and d or tracedepth))
+        head = insertbefore(head,first,new_kern(-w))
     end
     head = x_hlist(head,first,tag,line,w,h,d)
     return head

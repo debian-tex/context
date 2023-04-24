@@ -86,18 +86,17 @@
     \let\page_otr_specifics_preset\page_otr_specifics_preset_traced
 \to \t_page_otr_tracers
 
-%D We have a couple of output routines and the default one is
-%D the single column routine. Then there is a multicolumn variant
-%D that can be used mixed, and a columnset variant that is more
-%D exclusive.
+%D We have a couple of output routines and the default one is the single column
+%D routine. Then there is a multicolumn variant that can be used mixed, and a
+%D columnset variant that is more exclusive.
 
 \installcorenamespace{otrtriggers}
 
 \newconstant\c_page_otr_eject_penalty   \c_page_otr_eject_penalty   -\plustenthousand
 \newconstant\c_page_otr_super_penalty   \c_page_otr_super_penalty   -\plustwentythousand
-\newcount   \c_page_otr_trigger_penalty \c_page_otr_trigger_penalty -100010
+\newinteger \c_page_otr_trigger_penalty \c_page_otr_trigger_penalty -100010
 
-\newcount   \c_page_otr_columns % we will share this one
+\newinteger \c_page_otr_columns % we will share this one
 
 \newif      \ifinotr % we keep this (name) for old times sake
 
@@ -136,7 +135,7 @@
    \endgroup}
 
 \permanent\protected\def\installoutputroutine#invoke#action% \invoke \action
-  {\global\advance\c_page_otr_trigger_penalty\minusone
+  {\global\advanceby\c_page_otr_trigger_penalty\minusone
    \frozen\protected\edef#invoke{\page_otr_trigger{\number\c_page_otr_trigger_penalty}}%
    \setvalue{\??otrtriggers\number\c_page_otr_trigger_penalty}{#action}}
 
@@ -175,26 +174,6 @@
       \the\everybeforeoutput
       #content\relax
       \the\everyafteroutput}}
-
-% Just as fuzzy (and in 'one' we are okay with \aftergroup anyway):
-%
-% \ifdefined\everybeforeoutputgroup \else \newtoks\everybeforeoutputgroup \fi
-% \ifdefined\everyafteroutputgroup  \else \newtoks\everyafteroutputgroup  \fi
-%
-% \def\page_otr_set_engine_output_routine#content%
-%   {\the\everybeforeoutputgroup
-%    \global\output
-%      {\inotrtrue
-%       \the\everybeforeoutput
-%       #content\relax
-%       \the\everyafteroutput
-%       \aftergroup\the\aftergroup\everyafteroutputgroup}}
-%
-% \appendtoks
-%     \ifnum\c_page_postponed_mode=\plusone
-%         \page_postponed_blocks_flush % and then not in \page_otr_construct_and_shipout
-%     \fi
-% \to \everyafteroutputgroup
 
 \page_otr_set_engine_output_routine\page_otr_triggered_output_routine
 
@@ -261,16 +240,14 @@
    \penalty\c_page_otr_super_penalty
    \resetpagebreak}
 
-%D For those who've read the plain \TEX\ book, we provide the next
-%D macro:
+%D For those who've read the plain \TEX\ book, we provide the next macro:
 
 \permanent\protected\def\bye
   {\writestatus\m!system{Sorry, you're not done yet, so no goodbye!}}
 
-%D We define a few constants because that (1) provides some checking
-%D and (2) is handier when aligning definitions (checks nicer). Most
-%D routines will use ard codes names but sometimes we want to adapt,
-%D which is why we have these:
+%D We define a few constants because that (1) provides some checking and (2) is
+%D handier when aligning definitions (checks nicer). Most routines will use ard
+%D codes names but sometimes we want to adapt, which is why we have these:
 
 \definesystemconstant{page_otr_command_routine}
 \definesystemconstant{page_otr_command_package_contents}
@@ -294,7 +271,6 @@
 \definesystemconstant{page_otr_command_flush_all_floats}
 \definesystemconstant{page_otr_command_flush_margin_blocks}
 \definesystemconstant{page_otr_command_test_column}
-\definesystemconstant{page_otr_command_flush_facing_floats}
 
 \definesystemconstant{singlecolumn}
 \definesystemconstant{multicolumn}   % will move
@@ -323,8 +299,7 @@
    \s!page_otr_command_flush_saved_floats,
    \s!page_otr_command_flush_all_floats,
    \s!page_otr_command_flush_margin_blocks,
-   \s!page_otr_command_test_column,
-   \s!page_otr_command_flush_facing_floats]
+   \s!page_otr_command_test_column]
 
 \appendtoks
     \setupoutputroutine[\s!singlecolumn]%

@@ -100,7 +100,7 @@ local function execute(specification)
                 end
             end
         else
-            db       = open_db(filename)
+            db       = sqlite_open(filename)
             preamble = f_preamble(filename,base,base)
         end
         if not db then
@@ -156,6 +156,7 @@ end
 local wraptemplate = [[
 local converters    = utilities.sql.converters
 local deserialize   = utilities.sql.deserialize
+local fromjson      = utilities.sql.fromjson
 
 local tostring      = tostring
 local tonumber      = tonumber

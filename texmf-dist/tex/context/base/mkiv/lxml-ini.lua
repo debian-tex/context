@@ -154,6 +154,79 @@ implement { name = "xmlstoptiming",        actions = function() statistics.stopt
 
 implement { name = "xmlloadentities",      actions = characters.registerentities, onceonly = true }
 
+if CONTEXTLMTXMODE > 0 then
+
+    local boolean_code = tokens.values.boolean
+
+    local getid        = lxml.getid
+    local found        = xml.found
+    local empty        = xml.empty
+    local checkedempty = xml.checkedempty
+    local ifatt        = lxml.ifatt
+    local ifattempty   = lxml.ifattempty
+
+    implement {
+        name      = "ifxml",
+        public    = true,
+        usage     = "condition",
+        arguments = "2 arguments",
+        actions   = function(id,pattern)
+            return boolean_code, found(getid(id),pattern) and true
+        end
+    }
+
+    implement {
+        name      = "ifxmltext",
+        public    = true,
+        usage     = "condition",
+        arguments = "2 arguments",
+        actions   = function(id,pattern)
+            return boolean_code, not empty(getid(id),pattern) and true
+        end
+    }
+
+    implement {
+        name      = "ifxmlatt",
+        public    = true,
+        usage     = "condition",
+        arguments = "3 arguments",
+        actions   = function(id,name,value)
+            return boolean_code, ifatt(getid(id),name,value)
+        end
+    }
+
+    implement {
+        name      = "ifxmlattempty",
+        public    = true,
+        usage     = "condition",
+        arguments = "2 arguments",
+        actions   = function(id,name)
+            return boolean_code, ifattempty(getid(id),name)
+        end
+    }
+
+    implement {
+        name      = "ifxmlempty",
+        public    = true,
+        usage     = "condition",
+        arguments = "2 arguments",
+        actions   = function(id,pattern)
+            return boolean_code, not checkedempty(getid(id),pattern) and true
+        end
+    }
+
+    implement {
+        name      = "ifxmlselfempty",
+        public    = true,
+        usage     = "condition",
+        arguments = "argument",
+        actions   = function(id)
+            return boolean_code, not checkedempty(getid(id)) and true
+        end
+    }
+
+end
+
 -- kind of special (3rd argument is a function)
 
 commands.xmlsetfunction = lxml.setaction

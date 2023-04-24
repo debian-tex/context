@@ -33,74 +33,125 @@ local v_frame            = variables.frame
 local v_empty            = variables.empty
 local v_none             = variables.none
 
+-- d:width d:height d:depth d:rulethickness b:outline b:advance b:baseline s:color
+
+-- local function initialize(tfmdata,key,value)
+--     if value then
+--         local vfspecials  = fonts.helpers.vfspecials
+--         local vfcommands  = fonts.helpers.commands
+--         local backgrounds = vfspecials.backgrounds
+--         local outlines    = vfspecials.outlines
+--         local characters  = tfmdata.characters
+--         local rulecache   = backgrounds
+--         local showchar    = true
+--         local color       = "palegray"
+--         if type(value) == "string" then
+--             value = settings_to_array(value)
+--             for i=1,#value do
+--                 local v = value[i]
+--                 if v == v_frame then
+--                     rulecache = outlines
+--                 elseif v == v_background then
+--                     rulecache = backgrounds
+--                 elseif v == v_empty then
+--                     showchar = false
+--                 elseif v == v_none then
+--                     color = nil
+--                 else
+--                     color = v
+--                 end
+--             end
+--         end
+--         local gray  = color and { "startcolor", color } or nil
+--         local black = gray  and { "stopcolor" }         or nil
+--         for unicode, character in next, characters do
+--             local width  = character.width  or 0
+--             local height = character.height or 0
+--             local depth  = character.depth  or 0
+--             local rule   = rulecache[height][depth][width]
+--             if showchar then
+--                 local commands = character.commands
+--                 if commands then
+--                     if gray then
+--                         character.commands = prependcommands (
+--                             commands, gray, rule, black
+--                         )
+--                     else
+--                         character.commands = prependcommands (
+--                             commands, rule
+--                         )
+--                     end
+--                 else
+--                     local char = charcommand[unicode]
+--                     if gray then
+--                         character.commands = {
+--                             gray, rule, black, char
+--                         }
+--                      else
+--                         character.commands = {
+--                             rule, char
+--                         }
+--                     end
+--                 end
+--             else
+--                 if gray then
+--                     character.commands = {
+--                         gray, rule, black
+--                     }
+--                 else
+--                     character.commands = {
+--                         rule
+--                     }
+--                 end
+--             end
+--         end
+--     end
+-- end
+
 local function initialize(tfmdata,key,value)
     if value then
         local vfspecials  = fonts.helpers.vfspecials
         local vfcommands  = fonts.helpers.commands
-        local backgrounds = vfspecials.backgrounds
-        local outlines    = vfspecials.outlines
+     -- local backgrounds = vfspecials.backgrounds
+     -- local outlines    = vfspecials.outlines
         local characters  = tfmdata.characters
-        local rulecache   = backgrounds
+        local rule        = { "frame", true, true, true, false, false, false, false, "palegray" }
         local showchar    = true
-        local color       = "palegray"
         if type(value) == "string" then
             value = settings_to_array(value)
             for i=1,#value do
                 local v = value[i]
                 if v == v_frame then
-                    rulecache = outlines
+                    rule[6] = true
                 elseif v == v_background then
-                    rulecache = backgrounds
+                    rule[6] = false
                 elseif v == v_empty then
                     showchar = false
                 elseif v == v_none then
-                    color = nil
+                    rule[9] = false
                 else
-                    color = v
+                    local thickness = string.todimen(v)
+                    if thickness and thickness > 0 then
+                        rule[5] = thickness
+                    else
+                        rule[9] = v
+                    end
                 end
             end
         end
-        local gray  = color and { "startcolor", color } or nil
-        local black = gray  and { "stopcolor" }         or nil
+        if not showchar then
+            rule = { rule }
+        end
         for unicode, character in next, characters do
-            local width  = character.width  or 0
-            local height = character.height or 0
-            local depth  = character.depth  or 0
-            local rule   = rulecache[height][depth][width]
             if showchar then
                 local commands = character.commands
                 if commands then
-                    if gray then
-                        character.commands = prependcommands (
-                            commands, gray, rule, black
-                        )
-                    else
-                        character.commands = prependcommands (
-                            commands, rule
-                        )
-                    end
+                    character.commands = prependcommands ( commands, rule )
                 else
-                    local char = charcommand[unicode]
-                    if gray then
-                        character.commands = {
-                            gray, rule, black, char
-                        }
-                     else
-                        character.commands = {
-                            rule, char
-                        }
-                    end
+                    character.commands = { rule, charcommand[unicode] }
                 end
             else
-                if gray then
-                    character.commands = {
-                        gray, rule, black
-                    }
-                else
-                    character.commands = {
-                        rule
-                    }
-                end
+                character.commands = rule
             end
         end
     end
@@ -127,7 +178,7 @@ local function initialize(tfmdata,key,value)
             local vfspecials  = fonts.helpers.vfspecials
             local vfcommands  = fonts.helpers.commands
             local backgrounds = vfspecials.backgrounds
-            local outlines    = vfspecials.outlines
+         -- local outlines    = vfspecials.outlines
             local characters  = tfmdata.characters
             local rulecache   = backgrounds
             local push        = vfcommands.push
@@ -139,9 +190,16 @@ local function initialize(tfmdata,key,value)
             local blcolor     = { "startcolor", "trace:3" } -- b / db
             local tlcolor     = { "startcolor", "trace:4" } -- y / dy
             for unicode, character in next, characters do
-                local mathkern = character.mathkern
-                local italic   = character.vert_italic or character.italic
-                if mathkern or (italic and italic ~= 0) then
+                local mathkerns = character.mathkerns
+                local italic    = character.vitalic or character.italic
+
+if italic ~= italic then
+    -- 8427 in pagella suddenly gets a "nan" assigned ... can this be a lua bug
+    -- test file : staircase-001.tex
+    italic = 0
+end
+
+                if mathkerns or (italic and italic ~= 0) then
                     local width  = character.width  or 0
                     local height = character.height or 0
                     local depth  = character.depth  or 0
@@ -151,15 +209,15 @@ local function initialize(tfmdata,key,value)
                         count = count + 1 list[count] = itcolor
                         count = count + 1 list[count] = push
                         count = count + 1 list[count] = { "offset", width + (italic < 0 and -italic or 0), 0 }
-                        count = count + 1 list[count] = rulecache[height][depth][abs(-italic)]
+                        count = count + 1 list[count] = rulecache[height][depth][italic < 0 and -italic or italic]
                         count = count + 1 list[count] = pop
                         count = count + 1 list[count] = black
                     end
-                    if mathkern then
-                        local br = mathkern.bottom_right
-                        local tr = mathkern.top_right
-                        local bl = mathkern.bottom_left
-                        local tl = mathkern.top_left
+                    if mathkerns then
+                        local br = mathkerns.bottomright
+                        local tr = mathkerns.topright
+                        local bl = mathkerns.bottomleft
+                        local tl = mathkerns.topleft
                         if br then
                             local done = false
                             for i=1,#br do
@@ -176,7 +234,7 @@ local function initialize(tfmdata,key,value)
                                     end
                                     count = count + 1 list[count] = push
                                     count = count + 1 list[count] = { "offset", width + (k < 0 and k or 0), - depth }
-                                    count = count + 1 list[count] = rulecache[h][0][abs(k)]
+                                    count = count + 1 list[count] = rulecache[h][0][k < 0 and -k or k]
                                     count = count + 1 list[count] = pop
                                 end
                             end
@@ -200,7 +258,7 @@ local function initialize(tfmdata,key,value)
                                     end
                                     count = count + 1 list[count] = push
                                     count = count + 1 list[count] = { "offset", width + (k < 0 and k or 0), height - h }
-                                    count = count + 1 list[count] = rulecache[h][0][abs(k)]
+                                    count = count + 1 list[count] = rulecache[h][0][k < 0 and k or k]
                                     count = count + 1 list[count] = pop
                                 end
                             end

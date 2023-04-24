@@ -133,6 +133,25 @@ do
         n = 1
     end
 
+    function metapost.getbuffer()
+        local b = { }
+        for i=1,n do
+            b[i] = buffer
+        end
+        return b, n
+    end
+
+    function metapost.setbuffer(b, s)
+        n = 0
+        for i=1,(s or #b) do
+            local bi = b[i]
+            if bi then
+                n = n + 1
+                buffer[n] = tostring(bi)
+            end
+        end
+    end
+
     function metapost.runscript(code)
         nesting = nesting + 1
         runs    = runs + 1
@@ -247,7 +266,7 @@ do
 
     -- writers
 
-    local function mpp(value)
+    local function rawmpp(value)
         n = n + 1
         local t = type(value)
         if t == "number" then
@@ -268,13 +287,13 @@ do
     local function mpprint(first,second,...)
         if second == nil then
             if first ~= nil then
-                mpp(first)
+                rawmpp(first)
             end
         else
             for i=1,select("#",first,second,...) do
                 local value = (select(i,first,second,...))
                 if value ~= nil then
-                    mpp(value)
+                    rawmpp(value)
                 end
             end
         end
@@ -652,6 +671,25 @@ do
     aux.fill = mpfill
 
     for k, v in next, aux do mp[k] = v end
+
+ -- mp.print = table.setmetatablecall(aux, function(t,...)
+ --     mpprint(...)
+ -- end)
+
+    mp.print = table.setmetatablecall(aux, function(t,first,second,...)
+        if second == nil then
+            if first ~= nil then
+                rawmpp(first)
+            end
+        else
+            for i=1,select("#",first,second,...) do
+                local value = (select(i,first,second,...))
+                if value ~= nil then
+                    rawmpp(value)
+                end
+            end
+        end
+    end)
 
 end
 

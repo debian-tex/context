@@ -17,19 +17,6 @@ newinternal boolean metafun_loaded_mlib ; metafun_loaded_mlib := true ; immutabl
 
 % numeric LUATEXFUNCTIONALITY ; LUATEXFUNCTIONALITY := runscript("mp.print(LUATEXFUNCTIONALITY or (status and status.development_id) or 6346)") ;
 
-%D Objects:
-
-vardef isobject expr p =
-    if picture p :
-      % lua.mp.isobject(prescriptpart p)
-        runscript("mp.isobject(" & prescriptpart p & ")")
-    else :
-        false
-    fi
-enddef ;
-
-permanent isobject ;
-
 %D Color and transparency
 %D
 %D Separable:
@@ -123,34 +110,13 @@ def withtransparency(expr a, t) =
     withprescript "tr_transparency=" & decimal t
 enddef ;
 
-% no, not compatible ... maybe only mpiv .. maybe withopacity
+% for svg:
 
-% let opacity = pair ;
-
-% def withtransparency expr t =
-%     withprescript "tr_alternative="  & decimal transparency_alternative_to_number(xpart t)
-%     withprescript "tr_transparency=" & decimal ypart t
-% enddef ;
-%
-% withtransparency (1,.5)
-% withtransparency ("normal",.5)
-%
-% withopacity      (1,.5)
-% withopacity      (normaltransparency,.5)
-% withopacity      .5
-
-def withopacity expr t =
-    if pair t :
-        withprescript "tr_alternative="  & decimal transparency_alternative_to_number(xpart t)
-        withprescript "tr_transparency=" & decimal ypart t
-    else :
-        mfun_with_opacity (transparency_alternative_to_number(t))
+def withopacity expr o =
+    if o <> 1 :
+        withprescript "tr_alternative="  & decimal normaltransparent
+        withprescript "tr_transparency=" & decimal o
     fi
-enddef ;
-
-def mfun_with_opacity (expr a) expr t =
-    withprescript "tr_alternative="  & decimal a
-    withprescript "tr_transparency=" & decimal t
 enddef ;
 
 % Provided for downward compability:
@@ -167,12 +133,11 @@ newinternal textextoffset ; textextoffset := 0 ;
 
 permanent textextoffset ;
 
-%%%%%%% mfun_tt_w[], mfun_tt_h[], mfun_tt_d[] ; % we can consider using colors (less hash space)
-color   mfun_tt_b ;
-numeric mfun_tt_n ; mfun_tt_n := 0 ;
-picture mfun_tt_p ; mfun_tt_p := nullpicture ;
-picture mfun_tt_o ; mfun_tt_o := nullpicture ;
-picture mfun_tt_c ; mfun_tt_c := nullpicture ;
+rgbcolor mfun_tt_r ;
+numeric  mfun_tt_n ; mfun_tt_n := 0 ;
+picture  mfun_tt_p ; mfun_tt_p := nullpicture ;
+picture  mfun_tt_o ; mfun_tt_o := nullpicture ;
+picture  mfun_tt_c ; mfun_tt_c := nullpicture ;
 
 if unknown mfun_trial_run :
     boolean mfun_trial_run ;
@@ -234,8 +199,9 @@ immutable inicatcoderegime, texcatcoderegime, luacatcoderegime, notcatcoderegime
 
 permanent catcoderegime ;
 
-newscriptindex mfid_sometextext ; mfid_sometextext := scriptindex "sometextext" ;
-newscriptindex mfid_madetextext ; mfid_madetextext := scriptindex "madetextext" ;
+newscriptindex mfid_sometextext   ; mfid_sometextext   := scriptindex "sometextext" ;
+newscriptindex mfid_madetextext   ; mfid_madetextext   := scriptindex "madetextext" ;
+newscriptindex mfid_boxdimensions ; mfid_boxdimensions := scriptindex "boxdimensions" ;
 
 vardef rawtextext(expr s) =
     if s = "" :
@@ -275,6 +241,10 @@ vardef rawmadetext =
     mfun_tt_c
 enddef ;
 
+% \setbox\scratchbox\hbox{!!!!!!!!!!!!!}
+% \putboxincache{one}{a}\scratchbox
+% \startMPcode draw rawtexbox("one","a") ; \stopMPcode
+
 vardef validtexbox(expr category, name) =
     if category == "" :
         false
@@ -290,11 +260,12 @@ enddef ;
 vardef rawtexbox(expr category, name) =
     mfun_tt_c := nullpicture ;
     if validtexbox(category,name) :
-        mfun_tt_b := lua.mp.mf_tb_dimensions(category, name) ;
+      % mfun_tt_r := lua.mp.mf_tb_dimensions(category, name) ;
+        mfun_tt_r := runscript mfid_boxdimensions category name ;
         addto mfun_tt_c doublepath unitsquare
-            xscaled wdpart mfun_tt_b
-            yscaled (htpart mfun_tt_b + dppart mfun_tt_b)
-            shifted (0,- dppart mfun_tt_b)
+            xscaled wdpart mfun_tt_r
+            yscaled (htpart mfun_tt_r + dppart mfun_tt_r)
+            shifted (0,- dppart mfun_tt_r)
             withprescript "mf_object=box"
             withprescript "bx_category=" & if numeric category : decimal fi category
             withprescript "bx_name=" & if numeric name : decimal fi name ;
@@ -332,7 +303,7 @@ pair mfun_laboff.llft   ; mfun_laboff.llft   := -(.7,.7) ;
 pair mfun_laboff.lrt    ; mfun_laboff.lrt    := (.7,-.7) ;
 
 pair mfun_laboff.d      ; mfun_laboff.d      := mfun_laboff     ;
-pair mfun_laboff.dflt   ; mfun_laboff.dflt   := mfun_laboff.lft ;
+pair mfun_laboff.dlft   ; mfun_laboff.dlft   := mfun_laboff.lft ;
 pair mfun_laboff.drt    ; mfun_laboff.drt    := mfun_laboff.rt  ;
 pair mfun_laboff.origin ; mfun_laboff.origin := mfun_laboff     ;
 pair mfun_laboff.raw    ; mfun_laboff.raw    := mfun_laboff     ;
@@ -361,7 +332,7 @@ mfun_labxf.llft     := mfun_labxf.l_b := mfun_labxf.b_l := 1   ;
 mfun_labxf.lrt      := mfun_labxf.r_b := mfun_labxf.b_r := 0   ;
 
 mfun_labxf.d        := mfun_labxf     ;
-mfun_labxf.dflt     := mfun_labxf.lft ;
+mfun_labxf.dlft     := mfun_labxf.lft ;
 mfun_labxf.drt      := mfun_labxf.rt  ;
 mfun_labxf.origin   := 0              ;
 mfun_labxf.raw      := 0              ;
@@ -377,7 +348,7 @@ mfun_labyf.llft     := mfun_labyf.l_b := mfun_labyf.b_l := 1   ;
 mfun_labyf.lrt      := mfun_labyf.r_b := mfun_labyf.b_r := 1   ;
 
 mfun_labyf.d        := mfun_labyf     ;
-mfun_labyf.dflt     := mfun_labyf.lft ;
+mfun_labyf.dlft     := mfun_labyf.lft ;
 mfun_labyf.drt      := mfun_labyf.rt  ;
 mfun_labyf.origin   := 0              ;
 mfun_labyf.raw      := 0              ;
@@ -392,7 +363,7 @@ mfun_labtype.urt    := mfun_labtype.r_t :=  mfun_labtype.t_r :=  6 ;
 mfun_labtype.llft   := mfun_labtype.l_b :=  mfun_labtype.b_l :=  7 ;
 mfun_labtype.lrt    := mfun_labtype.r_b :=  mfun_labtype.b_r :=  8 ;
 mfun_labtype.d                                               := 10 ;
-mfun_labtype.dflt                                            := 11 ;
+mfun_labtype.dlft                                            := 11 ;
 mfun_labtype.drt                                             := 12 ;
 mfun_labtype.origin                                          :=  0 ;
 mfun_labtype.raw                                             :=  0 ;
@@ -696,20 +667,27 @@ numeric mfun_shade_lx, mfun_shade_ly ;
 numeric mfun_shade_nx, mfun_shade_ny ;
 numeric mfun_shade_dx, mfun_shade_dy ;
 numeric mfun_shade_tx, mfun_shade_ty ;
+pair    mfun_shade_center ;
+path    mfun_shade_bbox ;
 
+numeric mfun_shade_height, mfun_shade_width;
 % first
 
 def mfun_with_shade_method_analyze(expr p) =
-    mfun_shade_path := p ;
-    mfun_shade_step := 1 ;
-    mfun_shade_fx   := xpart point 0 of p ;
-    mfun_shade_fy   := ypart point 0 of p ;
-    mfun_shade_lx   := mfun_shade_fx ;
-    mfun_shade_ly   := mfun_shade_fy ;
-    mfun_shade_nx   := 0 ;
-    mfun_shade_ny   := 0 ;
-    mfun_shade_dx   := abs(mfun_shade_fx - mfun_shade_lx) ;
-    mfun_shade_dy   := abs(mfun_shade_fy - mfun_shade_ly) ;
+    mfun_shade_path   := p ;
+    mfun_shade_center := center p;
+    mfun_shade_bbox   := boundingbox p;
+    mfun_shade_width  := bbwidth p;
+    mfun_shade_height := bbheight p;
+    mfun_shade_step   := 1 ;
+    mfun_shade_fx     := xpart point 0 of p ;
+    mfun_shade_fy     := ypart point 0 of p ;
+    mfun_shade_lx     := mfun_shade_fx ;
+    mfun_shade_ly     := mfun_shade_fy ;
+    mfun_shade_nx     := 0 ;
+    mfun_shade_ny     := 0 ;
+    mfun_shade_dx     := abs(mfun_shade_fx - mfun_shade_lx) ;
+    mfun_shade_dy     := abs(mfun_shade_fy - mfun_shade_ly) ;
     for i=1 upto length(p) :
         mfun_shade_tx := abs(mfun_shade_fx - xpart point i of p) ;
         mfun_shade_ty := abs(mfun_shade_fy - ypart point i of p) ;
@@ -724,6 +702,33 @@ def mfun_with_shade_method_analyze(expr p) =
             mfun_shade_dy := mfun_shade_ty ;
         fi ;
     endfor ;
+enddef ;
+
+% todo: native bbox
+
+vardef mfun_shade_center_fraction_do expr a =
+    ddecimal (
+        (xpart llcorner mfun_shade_bbox) + (xpart a) * mfun_shade_width,
+        (ypart llcorner mfun_shade_bbox) + (ypart a) * mfun_shade_height
+    )
+enddef ;
+
+def withshadecenterfraction expr a =
+    withprescript "sh_center_a=" & mfun_shade_center_fraction_do a
+    withprescript "sh_center_b=" & mfun_shade_center_fraction_do a
+enddef ;
+
+def withshadecenteronefraction expr a =
+    withprescript "sh_center_a=" & mfun_shade_center_fraction_do a
+enddef ;
+
+def withshadecentertwofraction expr a =
+    withprescript "sh_center_b=" & mfun_shade_center_fraction_do a
+enddef ;
+
+def withshaderadiusfraction expr a =
+    withprescript "sh_radius_a=0"
+    withprescript "sh_radius_b=" & decimal (a * sqrt(mfun_shade_width*mfun_shade_width+mfun_shade_height*mfun_shade_height)/2)
 enddef ;
 
 vardef mfun_max_radius(expr p) =
@@ -780,6 +785,14 @@ def withshadeorigin expr a =
     withprescript "sh_center_b=" & ddecimal a
 enddef ;
 
+def withshadecenterone expr a =
+    withprescript "sh_center_a=" & ddecimal a
+enddef ;
+
+def withshadecentertwo expr a =
+    withprescript "sh_center_b=" & ddecimal a
+enddef ;
+
 def withshadevector expr a =
     withprescript "sh_center_a=" & ddecimal (point xpart a of mfun_shade_path)
     withprescript "sh_center_b=" & ddecimal (point ypart a of mfun_shade_path)
@@ -827,6 +840,12 @@ def withshadefraction expr a =
         withprescript "sh_fraction_" & decimal mfun_shade_step & "=" & decimal a
     fi
 enddef ;
+
+% def withshadeopacity expr a =
+%     if mfun_shade_step > 0 :
+%         withprescript "sh_opacity_" & decimal mfun_shade_step & "=" & decimal a
+%     fi
+% enddef ;
 
 def withshadecolors (expr a, b) =
     if mfun_shade_step > 0 :
@@ -1099,6 +1118,11 @@ def figure primary filename =
     rawtextext("\externalfigure[" & filename & "]")
 enddef ;
 
+vardef svgembeddedfigure primary index =
+%     mfun_onetime_textext := true ;
+    rawtextext("\svgembeddedfigure{" & decimal index & "}")
+enddef ;
+
 permanent withmask, externalfigure, figure ;
 
 % Positions
@@ -1347,13 +1371,25 @@ permanent verbatim ;
 
 % New
 
-def bitmapimage(expr xresolution, yresolution, data) =
-    image (
-        addto currentpicture doublepath unitsquare
-            withprescript  "bm_xresolution=" & decimal xresolution
-            withprescript  "bm_yresolution=" & decimal yresolution
-            withpostscript data ;
-    )
+% def bitmapimage(expr xresolution, yresolution, data) =
+%     image (
+%         addto currentpicture doublepath unitsquare
+%             withprescript  "bm_xresolution=" & decimal xresolution
+%             withprescript  "bm_yresolution=" & decimal yresolution
+%             withpostscript data ;
+%     )
+% enddef ;
+
+vardef bitmapimage(expr xresolution, yresolution, data) =
+    save p ; picture p ; p := nullpicture ;
+    addto p doublepath unitsquare
+%         xscaled xresolution
+%         yscaled yresolution
+        withprescript  "bm_xresolution=" & decimal xresolution
+        withprescript  "bm_yresolution=" & decimal yresolution
+        withpostscript data
+    ;
+    p
 enddef ;
 
 permanent bitmapimage ;
@@ -1370,16 +1406,19 @@ vardef properties(text t) =
 enddef ;
 
 def withproperties expr p =
-    if colormodel p = 3 :
+    if colormodel p = graycolormodel :
         withcolor greypart p
-    elseif colormodel p = 5 :
+    elseif colormodel p = rgbcolormodel :
         withcolor (redpart p,greenpart p,bluepart p)
-    elseif colormodel p = 7 :
+    elseif colormodel p = cmykcolormodel :
         withcolor (cyanpart p,magentapart p,yellowpart p,blackpart p)
     fi
     withpen penpart p
     if length (dashpart p) > 0 :
         dashed dashpart p
+    fi
+    if stackingpart p <> 0 :
+        withstacking stackingpart p
     fi
     withprescript prescriptpart p
     withpostscript postscriptpart p
@@ -1398,15 +1437,74 @@ primarydef t asgroup s = % s = isolated|knockout
     temp_q:= nullpicture ;
     addto temp_q contour temp_r
         withprescript "gr_state=start"
-        withprescript "gr_type=" & s ;
+        withprescript "gr_type=" & s
+    ;
     addto temp_q also temp_p ;
     addto temp_q contour temp_r
-        withprescript "gr_state=stop" ;
+        withprescript "gr_state=stop"
+    ;
     temp_q
     endgroup
 enddef ;
 
 permanent asgroup ;
+
+% Even more experimental:
+
+pair    mfun_pattern_s ; mfun_pattern_s := origin ; % auto scale to fraction of shape (svg)
+boolean mfun_pattern_f ; mfun_pattern_f := false  ; % anchor or not (normally we do that)
+
+def withpatternscale primary s = hide (mfun_pattern_s := paired s ;) enddef ;
+def withpatternfloat primary s = hide (mfun_pattern_f := s ;) enddef ;
+
+primarydef t withpattern p =
+    begingroup
+    %
+    save temp_q, temp_r ;
+    picture temp_q ; path temp_r ;
+    % the combination
+    temp_q:= nullpicture ;
+    % the pattern
+    temp_r := boundingbox p ;
+    if mfun_pattern_s <> origin :
+        sx := (xpart mfun_pattern_s) * bbwidth (t) ;
+        sy := (ypart mfun_pattern_s) * bbheight(t) ;
+        temp_r := temp_r xysized (sx,sy) ;
+        addto temp_q contour temp_r
+            withprescript "pt_state=start"
+            withprescript "pt_action=set"
+            withprescript "pt_float=" & tostring(mfun_pattern_f)
+        ;
+        addto temp_q also (p xysized (sx,sy));
+    else :
+        addto temp_q contour temp_r
+            withprescript "pt_state=start"
+            withprescript "pt_action=set"
+            withprescript "pt_float=" & tostring(mfun_pattern_f)
+        ;
+        addto temp_q also p ;
+    fi ;
+    addto temp_q contour temp_r
+        withprescript "pt_state=stop"
+        withprescript "pt_action=set" ;
+    % the path
+    temp_r := boundingbox t ;
+    addto temp_q contour temp_r
+        withprescript "pt_state=start"
+        withprescript "pt_action=get"
+    ;
+    addto temp_q contour temp_r
+        withprescript "pt_state=stop"
+        withprescript "pt_action=get" ;
+    % make sure we fill only t
+    clip temp_q to t ;
+    % reset
+    mfun_pattern_s := origin ;
+    mfun_pattern_f := false ;
+    % the path
+    temp_q
+    endgroup
+enddef ;
 
 % Also experimental ... needs to be made better ... so it can change!
 
@@ -1577,102 +1675,20 @@ permanent tostring, topair, quote, quotation ;
 % but running lua is fast enough so we can gain on string construction in metapost
 % which is also not that efficient.
 
-vardef mfun_key_to_lua(expr k) =
-    if numeric k : decimal k else : "'" & k & "'" fi
-enddef ;
+newscriptindex mfid_passvariable ; mfid_passvariable := scriptindex("passvariable") ;
+newscriptindex mfid_pushvariable ; mfid_pushvariable := scriptindex("pushvariable") ;
+newscriptindex mfid_popvariable  ; mfid_popvariable  := scriptindex("popvariable") ;
 
-vardef mfun_point_to_lua(expr k,p,i) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & ",{" &
-        decimal xpart (point       i of p) & "," &
-        decimal ypart (point       i of p) & "," &
-        decimal xpart (precontrol  i of p) & "," &
-        decimal ypart (precontrol  i of p) & "," &
-        decimal xpart (postcontrol i of p) & "," &
-        decimal ypart (postcontrol i of p)
-    & "})" ) ;
-enddef ;
-
-vardef mfun_transform_to_lua(expr k,t) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & ",{" &
-        decimal xxpart t & "," &   % rx
-        decimal xypart t & "," &   % sx
-        decimal yxpart t & "," &   % sy
-        decimal yypart t & "," &   % ry
-        decimal xpart  t & "," &   % tx
-        decimal ypart  t           % ty
-    & "})" ) ;
-enddef ;
-
-vardef mfun_numeric_to_lua(expr k,n) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & "," & decimal n & ")" ) ;
-enddef ;
-
-vardef mfun_pair_to_lua(expr k,p) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & ",{" &
-        decimal xpart p & "," &
-        decimal ypart p
-    & "})" ) ;
-enddef ;
-
-vardef mfun_rgbcolor_to_lua(expr k,c) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & ",{" &
-        decimal redpart   c & "," &
-        decimal greenpart c & "," &
-        decimal bluepart  c
-    & "})" ) ;
-enddef ;
-
-vardef mfun_cmykcolor_to_lua(expr k,c) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & ",{" &
-        decimal cyanpart    c & "," &
-        decimal magentapart c & "," &
-        decimal yellowpart  c & "," &
-        decimal blackpart   c
-    & "})" ) ;
-enddef ;
-
-vardef mfun_path_to_lua(expr k,p) =
-    runscript("metapost.pushvariable(" & mfun_key_to_lua(k) & ")") ;
-    for i=0 upto length(p) :
-        mfun_point_to_lua(i+1,p,i) ;
-    endfor ;
-    runscript("metapost.popvariable()") ;
-enddef ;
-
-vardef mfun_boolean_to_lua(expr k,b) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & if b : ",true)" else : ",false)" fi ) ;
-enddef ;
-
-vardef mfun_string_to_lua(expr k,s) =
-    runscript( "metapost.setvariable(" & mfun_key_to_lua(k) & ",[==[" & s & "]==])" ) ;
-enddef ;
-
-def passvariable(expr key, value) =
-    if     numeric   value : mfun_numeric_to_lua  (key,value) ;
-    elseif pair      value : mfun_pair_to_lua     (key,value) ;
-    elseif string    value : mfun_string_to_lua   (key,value) ;
-    elseif boolean   value : mfun_boolean_to_lua  (key,value) ;
-    elseif path      value : mfun_path_to_lua     (key,value) ;
-    elseif rgbcolor  value : mfun_rgbcolor_to_lua (key,value) ;
-    elseif cmykcolor value : mfun_cmykcolor_to_lua(key,value) ;
-    elseif transform value : mfun_transform_to_lua(key,value) ;
-    fi ;
-enddef ;
+def passvariable        (expr key, value) = runscript mfid_passvariable key value ; enddef ;
+def startpassingvariable(expr key)        = runscript mfid_pushvariable key ; enddef ;
+def stoppassingvariable                   = runscript mfid_popvariable ; enddef ;
 
 def passarrayvariable(expr key)(suffix values)(expr first, last, stp) =
-    runscript("metapost.pushvariable(" & mfun_key_to_lua(key) & ")") ;
+    startpassingvariable(key) ;
     for i=first step stp until last :
         passvariable(i, values[i]) ;
     endfor
-    runscript("metapost.popvariable()") ;
-enddef ;
-
-def startpassingvariable(expr k) =
-    runscript("metapost.pushvariable(" & mfun_key_to_lua(k) & ")") ;
-enddef ;
-
-def stoppassingvariable =
-    runscript("metapost.popvariable()") ;
+    stoppassingvariable ;
 enddef ;
 
 permanent passvariable, passarrayvariable, startpassingvariable, stoppassingvariable ;
@@ -1750,20 +1766,20 @@ permanent format, formatted ;
 % def strfmt = format    enddef ; % old
 % def varfmt = formatted enddef ; % old
 
-
 % def fmttext = lua.mp.formatted enddef ;
 
 % new
 
-def fillup   text t = draw t withpostscript "both"    enddef ; % we use draw because we need the proper boundingbox
-def eofillup text t = draw t withpostscript "eoboth"  enddef ; % we use draw because we need the proper boundingbox
-def eofill   text t = fill t withpostscript "evenodd" enddef ;
-def nofill   text t = fill t withpostscript "collect" enddef ;
-def nodraw   text t = draw t withpostscript "collect" enddef ;
-def dodraw   text t = draw t withpostscript "flush"   enddef ;
-%   eodraw   text t = draw t withpostscript "evenodd" enddef ;
-def dofill   text t = fill t withpostscript "flush"   enddef ;
-def eoclip   text t = clip t withpostscript "evenodd" enddef ;
+def fillup   text t = draw t withpostscript "both"     enddef ; % we use draw because we need the proper boundingbox
+def eofillup text t = draw t withpostscript "eoboth"   enddef ; % we use draw because we need the proper boundingbox
+def eofill   text t = fill t withpostscript "evenodd"  enddef ;
+def nofill   text t = fill t withpostscript "collect"  enddef ;
+def nodraw   text t = draw t withpostscript "collect"  enddef ;
+def dodraw   text t = draw t withpostscript "flush"    enddef ;
+%   eodraw   text t = draw t withpostscript "evenodd"  enddef ;
+def dofill   text t = fill t withpostscript "flush"    enddef ;
+def eoclip   text t = clip t withpostscript "evenodd"  enddef ;
+def enfill   text t = fill t withpostscript "envelope" enddef ;
 
 permanent fillup, eofillup, eofill, nofill, nodraw, dodraw, dofill, eoclip ;
 
@@ -1796,14 +1812,29 @@ enddef ;
 
 permanent comment, report ;
 
-% This overloads a dummy:
+% This nechanism is not really promoted and more an experiment. It scales better than
+% \METAPOST\ own hash.
 
 % todo: use mfid_* cum suis
+
+newscriptindex mfid_hash_new     ; mfid_hash_new     := scriptindex("lmt_hash_new") ;
+newscriptindex mfid_hash_dispose ; mfid_hash_dispose := scriptindex("lmt_hash_dispose") ;
+newscriptindex mfid_hash_in      ; mfid_hash_in      := scriptindex("lmt_hash_in") ;
+newscriptindex mfid_hash_from    ; mfid_hash_from    := scriptindex("lmt_hash_from") ;
+newscriptindex mfid_hash_to      ; mfid_hash_to      := scriptindex("lmt_hash_to") ;
+
+def newhash                          = runscript mfid_hash_new                 enddef ; % optional, returns index
+def disposehash (expr n)             = runscript mfid_hash_dispose n           enddef ;
+def inhash      (expr n, key)        = runscript mfid_hash_in      n key       enddef ;
+def fromhash    (expr n, key)        = runscript mfid_hash_from    n key       enddef ;
+def tohash      (expr n, key, value) = runscript mfid_hash_to      n key value enddef ;
+
+string mfun_u_l_h ; mfun_u_l_h := "mfun_u_l_h" ;
 
 vardef uniquelist(suffix list) =
     % this can be optimized by passing all values at once and returning
     % a result but for now this is ok .. we need an undef foo
-    save i, j, h ;
+    save i, j ;
     if known lis[0] :
         i := 0 ;
         j := -1 ;
@@ -1811,20 +1842,34 @@ vardef uniquelist(suffix list) =
         i := 1 ;
         j := 0 ;
     fi ;
-    h := lua.mp.newhash() ;
+  % mfun_u_l_h := runscript mfid_hash_new ; % here mfun_u_l_h has to be a numeric
     forever :
         exitif unknown list[i] ;
-        if not lua.mp.inhash(h,list[i]) :
+        if not (runscript mfid_hash_in (mfun_u_l_h) list[i]) :
             j := j + 1 ;
             list[j] := list[i] ;
-            lua.mp.tohash(h,list[i]) ;
+            runscript mfid_hash_to (mfun_u_l_h) (j) list[i] ;
         fi ;
         i := i + 1 ;
     endfor ;
-    for n = j+1 step 1 until i-1 :
+    for n = j + 1 step 1 until i - 1 :
         dispose(list[n])
     endfor ;
-    lua.mp.disposehash(h) ;
+    runscript mfid_hash_dispose mfun_u_l_h ;
 enddef ;
 
 permanent uniquelist ;
+
+% This influences the decision for a curve or path segment; 1/4096 is the default but
+% 10/2048 works quite well.
+
+def withtolerance expr n =
+    withprescript ("tolerance=" & decimal n)
+enddef ;
+
+% fun stuff: randomseed := repeatablerandom("default") ;
+
+newscriptindex mfid_repeatablerandom ; mfid_repeatablerandom := scriptindex("repeatablerandom") ;
+
+def repeatablerandom = runscript mfid_repeatablerandom enddef ;
+

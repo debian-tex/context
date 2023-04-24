@@ -772,6 +772,8 @@ local tex_element
 
 if tokenizedxmlw then
 
+-- local expandmacro = token.expandmacro
+
     tex_element = function(e,handlers)
         if setfilename then
             syncfilename(e,"element")
@@ -793,6 +795,10 @@ if tokenizedxmlw then
                         addindex(rootname,false,true)
                         ix = e.ix
                     end
+-- lmtx only, same performance, a bit more immediate:
+--
+-- expandmacro(tokenizedxmlw,ctxcatcodes,true,command,true,rootname.."::"..ix)
+--
                     contextsprint(ctxcatcodes,tokenizedxmlw,"{",command,"}{",rootname,"::",ix,"}")
                 else
                     report_lxml("fatal error: no index for %a",command)
@@ -2064,6 +2070,28 @@ do
         end
     end
 
+    function lxml.ifatt(id,a,value)
+        local e = getid(id)
+        if e then
+            local at = e.at
+            att = at and at[a] or ""
+        else
+            att = ""
+        end
+        return att == value
+    end
+
+    function lxml.ifattempty(id,a)
+        local e = getid(id)
+        if e then
+            local at = e.at
+            att = at and at[a] or ""
+        else
+            att = ""
+        end
+        return att == ""
+    end
+
     function lxml.refatt(id,a)
         local e = getid(id)
         if e then
@@ -2223,7 +2251,7 @@ function lxml.snippet(id,i)
     if e then
         local dt = e.dt
         if dt then
-            local dti = dt[i]
+            local dti = dt[tonumber(i)] -- string in lxml
             if dti then
                 xmlsprint(dti,e)
             end
@@ -2321,6 +2349,8 @@ do
             return empty(getid(id),pattern)
         end
     end
+
+    xml.checkedempty = checkedempty
 
     function lxml.doifempty    (id,pattern) doif    (checkedempty(id,pattern)) end
     function lxml.doifnotempty (id,pattern) doifnot (checkedempty(id,pattern)) end
@@ -2726,6 +2756,8 @@ do
     end
 
 end
+
+-- hm, maybe to ini to, these implements
 
 implement {
     name      = "xmlsetinjectors",

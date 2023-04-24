@@ -19,6 +19,10 @@
 
 \unprotect
 
+\registerctxluafile{page-sel}{autosuffix}
+
+\startcontextdefinitioncode
+
 %D One can (mis)use this mechanism to (re)arrange pages of already produced files.
 %D
 %D \starttyping
@@ -51,7 +55,7 @@
 \installsetuponlycommandhandler \??withpages {withpages}
 %  \installdirectcommandhandler \??withpages {withpages}
 
-\newcount\c_page_selectors_n
+\newinteger\c_page_selectors_n
 
 \permanent\tolerant\protected\def\insertpages[#filename]#spacer[#emptylist]#spacer[#settings]%
   {\doifelseassignment{#emptylist}
@@ -63,9 +67,9 @@
    \dontcomplain
    \getfiguredimensions[#filename]%
    \setupcurrentwithpages
-     [\c!width=\zeropoint,%
-      \c!n=\noffigurepages,%
-      \c!category=,%
+     [\c!width=\zeropoint,
+      \c!n=\noffigurepages,
+      \c!category=,
       #settings]%
    \global\c_page_selectors_n\directwithpagesparameter\c!n\relax
    \scratchwidth\directwithpagesparameter\c!width\relax
@@ -85,9 +89,9 @@
    \dontcomplain
    \getfiguredimensions[#filename]%
    \setupcurrentwithpages
-     [\c!width=\zeropoint,%
-      \c!n=\noffigurepages,%
-      \c!category=,%
+     [\c!width=\zeropoint,
+      \c!n=\noffigurepages,
+      \c!category=,
       #settings]%
    \global\c_page_selectors_n\directwithpagesparameter\c!n\relax
    \scratchwidth\directwithpagesparameter\c!width\relax
@@ -114,7 +118,8 @@
    \egroup}
 
 \def\page_selectors_filter_a_page#filename#page%
-  {\hpack to \textwidth
+  {%\startpagemakeup
+   \hpack to \textwidth
      {\ifdim\scratchwidth>\zeropoint
         \rightorleftpageaction{\scratchwidth\zeropoint}{\hfill}%
       \fi
@@ -128,17 +133,17 @@
          \fi
          \hss}%
       \wd\scratchbox\zeropoint
-      \box\scratchbox}
-   \page}
+      \box\scratchbox}%
+   \page}%\stoppagemakeup}
 
 \permanent\tolerant\protected\def\copypages[#filename]#spacer[#settings]#spacer[#figuresettings]%
   {\bgroup
    \getfiguredimensions[#filename]%
    \setupcurrentwithpages
-     [\c!marking=\v!off,%
-      \c!offset=\zeropoint,%
-      \c!n=\noffigurepages,%
-      \c!category=,%
+     [\c!marking=\v!off,
+      \c!offset=\zeropoint,
+      \c!n=\noffigurepages,
+      \c!category=,
       #settings]%
    \global\c_page_selectors_n\directwithpagesparameter\c!n\relax
    \scratchoffset\directwithpagesparameter\c!offset\relax
@@ -148,8 +153,8 @@
          \centeredbox
            {\doifelse{\directwithpagesparameter\c!marking}\v!on\cuthbox\hpack % only place where cuthbox is used
               {\ifdim\scratchoffset>\zeropoint\relax
-                 \advance\vsize -2\scratchoffset
-                 \advance\hsize -2\scratchoffset
+                 \advanceby\vsize -2\scratchoffset
+                 \advanceby\hsize -2\scratchoffset
                  \externalfigure[#filename][\c!page=\recurselevel,#figuresettings,\c!scale=,\c!factor=\v!max,\c!offset=\v!overlay]%
                \else
                  \externalfigure[#filename][\c!page=\recurselevel,#figuresettings,\c!offset=\v!overlay]%
@@ -211,7 +216,7 @@
    \directwithpagesparameter\c!after
    \egroup}
 
-\setvalue{\??combinepagesalternative\v!a}% use hpacks
+\defcsname\??combinepagesalternative\v!a\endcsname % use hpacks
   {\global\combinedpagescounter\directwithpagesparameter\c!start\relax
    \doloop
      {\vbox to \textheight
@@ -236,9 +241,9 @@
                              \c!backgroundcolor=\directwithpagesparameter\c!backgroundcolor,
                              \c!frame=\directwithpagesparameter\c!frame]%
                         \fi
-                        \directwithpagesparameter\c!right}
+                        \directwithpagesparameter\c!right}%
                      \directwithpagesparameter\c!bottom}%
-                  \global\advance\combinedpagescounter\plusone
+                  \global\advanceby\combinedpagescounter\plusone
                   \hfil}%
                \hfilneg}
             \vfil}%
@@ -248,7 +253,7 @@
            \exitloop
          \fi}}
 
-\setvalue{\??combinepagesalternative\v!c}%
+\defcsname\??combinepagesalternative\v!c\endcsname
   {\global\combinedpagescounter\directwithpagesparameter\c!start\relax
    \doloop
      {\vbox to \textheight
@@ -275,7 +280,7 @@
                                 \c!backgroundcolor=\directwithpagesparameter\c!backgroundcolor,
                                 \c!frame=\directwithpagesparameter\c!frame]%
                            \fi}}
-                      \global\advance\combinedpagescounter\plusone
+                      \global\advanceby\combinedpagescounter\plusone
                       \directwithpagesparameter\c!bottom}}%
                 \hfil}%
             \hfilneg}}%
@@ -287,13 +292,13 @@
 \letcsname\??combinepagesalternative\v!horizontal\expandafter\endcsname\csname\??combinepagesalternative\v!a\endcsname
 \letcsname\??combinepagesalternative\v!vertical  \expandafter\endcsname\csname\??combinepagesalternative\v!c\endcsname
 
-\setvalue{\??combinepagesalternative\v!b}%
+\defcsname\??combinepagesalternative\v!b\endcsname
   {\global\combinedpagescounter\directwithpagesparameter\c!start\relax
    \doloop
      {\startbaselinecorrection
         \hbox to \textwidth
           {\dorecurse\scratchnx
-             {\global\advance\combinedpagescounter\plusone
+             {\global\advanceby\combinedpagescounter\plusone
               \ifnum\combinedpagescounter>\c_page_selectors_n \else
                  \normalexpanded{\externalfigure
                    [\directwithpagesparameter\c!name]
@@ -331,20 +336,23 @@
    \glet\slicedpagenumber\!!zerocount
    \getfiguredimensions[#filename]%
    \setupcurrentwithpages
-     [\c!offset=\zeropoint,%
-      \c!hoffset=\zeropoint,%
+     [\c!offset=\zeropoint,
+      \c!hoffset=\zeropoint,
       \c!voffset=\zeropoint,
-      \c!width=\figurewidth,%
-      \c!height=\figureheight,%
-      \c!n=\noffigurepages,%
-      \c!category=,%
+      \c!width=\figurewidth,
+      \c!height=\figureheight,
+      \c!n=\noffigurepages,
+      \c!category=,
       #oddsettings]%
    \global\c_page_selectors_n\directwithpagesparameter\c!n\relax
    \ifnum\c_page_selectors_n>\zerocount
      \definepapersize
-       [\s!dummy][\c!height=\directwithpagesparameter\c!height,\c!width=\directwithpagesparameter\c!width]%
+       [\s!dummy]
+       [\c!height=\directwithpagesparameter\c!height,
+        \c!width=\directwithpagesparameter\c!width]%
      \setuppapersize
-       [\s!dummy][\s!dummy]%
+       [\s!dummy]
+       [\s!dummy]%
      \setuplayout
        [\c!backspace=\zeropoint,\c!topspace=\zeropoint,
         \c!height=\v!middle,\c!width=\v!middle,
@@ -359,9 +367,9 @@
            \dorecurse\c_page_selectors_n
              {\let\slicedpagestepy\recurselevel
               \clip
-                [\c!nx=\c_page_selectors_n,\c!ny=\c_page_selectors_n,\c!x=\slicedpagestepx,\c!y=\slicedpagestepy]
+                [\c!nx=\c_page_selectors_n,\c!ny=\c_page_selectors_n,\c!x=\slicedpagestepx,\c!y=\slicedpagestepy]%
                 {\scale
-                   [\c!scale=\number\c_page_selectors_n000]
+                   [\c!scale=\number\c_page_selectors_n000]%
                    {\externalfigure[#filename][\c!page=\slicedpagenumber]}}%
               \page}}%
       \else
@@ -384,21 +392,21 @@
 \permanent\protected\def\trimpages[#1]% was for a over decade in p-pdf-51.tex
   {\begingroup
    \getdummyparameters
-     [\c!file=dummy,
+     [\c!file=dummy,%
       \c!hoffset=\zeropoint,
       \c!voffset=\zeropoint,
       \c!width=17cm,
       \c!height=24cm,
       \c!x=\zeropoint,
       \c!y=\zeropoint,
-      #1]
+      #1]%
    \getfiguredimensions
      [\dummyparameter\c!file]
-     [\c!object=\v!no]
+     [\c!object=\v!no]%
    \dorecurse\noffigurepages
      {\scale
         [\c!width=\paperwidth,
-         \c!height=\paperheight]
+         \c!height=\paperheight]%
         {\offset
            [\c!x=\dummyparameter\c!x,
             \c!y=\dummyparameter\c!y]
@@ -416,5 +424,41 @@
                  \box\nextbox
                \fi}}}}%
    \endgroup}
+
+\stopcontextdefinitioncode
+
+%D Implemented in Lua:
+
+% crap.tex:
+%
+% \starttext
+%     \dorecurse{10}{
+%         \startchapter[title=Chapter #1,reference=chapter:#1]
+%             \dorecurse{10}{
+%                 \startsubject[title=Subject #1]
+%                     \dorecurse{2}{\samplefile{tufte}\par}
+%                 \stopsubject
+%                 \startsection[title=Section #1.##1,reference=#1.##1]
+%                     \dorecurse{10}{\samplefile{tufte}\par}
+%                 \stopsection
+%             }
+%         \stopchapter
+%     }
+% \stoptext
+%
+% load.tex:
+%
+% \starttext
+%     \dostepwiserecurse {\firstsectionpage[crap][chapter:3]} {\lastsectionpage[crap][chapter:3]} {1} {
+%         \startpagemakeup
+%             \externalfigure[crap.pdf][page=#1]
+%         \stoppagemakeup
+%     }
+%     \dostepwiserecurse {\firstsectionpage[crap][chapter:5]} {\lastsectionpage[crap][chapter:5]} {1} {
+%         \dontleavehmode
+%         \externalfigure[crap.pdf][page=#1,width=3cm,frame=on]%
+%         \space\allowbreak
+%     }
+% \stoptext
 
 \protect \endinput

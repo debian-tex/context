@@ -324,18 +324,30 @@
 
 % e.g.: \definemathematics[i:mp][setups=i:tight,openup=yes]
 
-\newmuskip\defaultthickmuskip     \defaultthickmuskip  5mu plus 5mu
-\newmuskip\defaultmedmuskip       \defaultmedmuskip    4mu plus 2mu minus 4mu
-\newmuskip\defaultthinmuskip      \defaultthinmuskip   3mu
+\newmuskip\defaultthickmuskip \defaultthickmuskip 5mu plus 5mu
+\newmuskip\defaultmedmuskip   \defaultmedmuskip   4mu plus 2mu minus 4mu
+\newmuskip\defaultthinmuskip  \defaultthinmuskip  3mu
 
-\newmuskip\halfthickmuskip        \halfthickmuskip     2.5mu plus 2.5mu
-\newmuskip\halfmedmuskip          \halfmedmuskip       2.0mu plus 1.0mu minus 2.0mu
-\newmuskip\halfthinmuskip         \halfthinmuskip      1.5mu
+\newmuskip\halfthickmuskip \halfthickmuskip 2.5mu plus 2.5mu
+\newmuskip\halfmedmuskip   \halfmedmuskip   2.0mu plus 1.0mu minus 2.0mu
+\newmuskip\halfthinmuskip  \halfthinmuskip  1.5mu
 
-\newcount \defaultrelpenalty      \defaultrelpenalty       500
-\newcount \defaultbinoppenalty    \defaultbinoppenalty     700
-\newcount \defaultprerelpenalty   \defaultprerelpenalty   -100
-\newcount \defaultprebinoppenalty \defaultprebinoppenalty -100
+\newcount \defaultrelpenalty        \defaultrelpenalty         500
+\newcount \defaultbinoppenalty      \defaultbinoppenalty       700
+\newcount \defaultprerelpenalty     \defaultprerelpenalty     -100
+\newcount \defaultprebinoppenalty   \defaultprebinoppenalty   -100
+\newcount \defaultdisplayprepenalty \defaultdisplayprepenalty  -10
+
+% For the moment this way:
+
+% \appendtoks
+%     \setmathprepenalty \mathbinarycode         \defaultdisplayprepenalty
+%   % \setmathpostpenalty\mathbinarycode         \zerocount
+%     \setmathprepenalty \mathrelationcode       \defaultdisplayprepenalty
+%   % \setmathpostpenalty\mathrelationcode       \zerocount
+%     \setmathpostpenalty\mathtextpunctuationcode\defaultdisplayprepenalty
+%   % \setmathprepenalty \mathtextpunctuationcode\zerocount
+% \to \everybeforedisplayformula
 
 % we need to control these otherwise:
 %
@@ -1586,11 +1598,11 @@
 % \unexpanded\def\disablemathpunctuation{\setfalse\automathpunctuation}
 %
 % \appendtoks
-%     \doifelse{\mathematicsparameter\v!autopunctuation}\v!yes\settrue\setfalse\automathpunctuation
+%     \doifelse{\mathematicsparameter\c!autopunctuation}\v!yes\settrue\setfalse\automathpunctuation
 % \to \everyswitchmathematics
 %
 % \setupmathematics
-%   [\v!autopunctuation=\v!no]
+%   [\c!autopunctuation=\v!no]
 %
 % \def\math_punctuation_next{\ifx\nexttoken\blankspace\signalcharacter\fi}
 %
@@ -1676,9 +1688,9 @@
            \let\math_punctuation_yes_period   \math_punctuation_nop_period
            \let\math_punctuation_yes_semicolon\math_punctuation_all_semicolon
 
-\def\math_punctuation_comma_next    {\begingroup\Umathcode\c_math_comma    \ifx\nexttoken\blankspace\mathordcode\else\mathordcode\fi\zerocount\c_math_comma    ,\endgroup}
-\def\math_punctuation_period_next   {\begingroup\Umathcode\c_math_period   \ifx\nexttoken\blankspace\mathordcode\else\mathordcode\fi\zerocount\c_math_period   .\endgroup}
-\def\math_punctuation_semicolon_next{\begingroup\Umathcode\c_math_semicolon\ifx\nexttoken\blankspace\mathordcode\else\mathordcode\fi\zerocount\c_math_semicolon;\endgroup}
+\def\math_punctuation_comma_next    {\begingroup\Umathcode\c_math_comma    \ifx\nexttoken\blankspace\mathpunctcode\else\mathordcode\fi\zerocount\c_math_comma    ,\endgroup}
+\def\math_punctuation_period_next   {\begingroup\Umathcode\c_math_period   \ifx\nexttoken\blankspace\mathpunctcode\else\mathordcode\fi\zerocount\c_math_period   .\endgroup}
+\def\math_punctuation_semicolon_next{\begingroup\Umathcode\c_math_semicolon\ifx\nexttoken\blankspace\mathpunctcode\else\mathordcode\fi\zerocount\c_math_semicolon;\endgroup}
 
 \installcorenamespace {mathautopunctuation}
 
@@ -1745,12 +1757,12 @@
     \mathcode\c_math_comma    \c_math_special
     \mathcode\c_math_period   \c_math_special
     \mathcode\c_math_semicolon\c_math_special
-    \begincsname\??mathautopunctuation\mathematicsparameter\v!autopunctuation\endcsname
+    \begincsname\??mathautopunctuation\mathematicsparameter\c!autopunctuation\endcsname
 \to \everymathematics
 
 \appendtoks
-    \ifcsname\??mathautopunctuation\mathematicsparameter\v!autopunctuation\endcsname \else
-        \letmathematicsparameter\v!autopunctuation\v!no
+    \ifcsname\??mathautopunctuation\mathematicsparameter\c!autopunctuation\endcsname \else
+        \letmathematicsparameter\c!autopunctuation\v!no
     \fi
 \to \everysetupmathematics
 
@@ -1758,7 +1770,7 @@
 \def\disablemathpunctuation{\csname\??mathautopunctuation\v!yes\endcsname}
 
 \setupmathematics
-  [\v!autopunctuation=\v!no] % no | yes | all | comma | yes,semicolon | all,semicolon
+  [\c!autopunctuation=\v!no] % no | yes | all | comma | yes,semicolon | all,semicolon
 
 %D The consequences of setting this are as follows:
 %D
@@ -2930,6 +2942,10 @@
   {\ifdim#2\points=\zeropoint\else
      \math_openup_parameter#1{#2}%
    \fi}
+
+%D For now (needed in asciimath):
+
+\def\math_relax_limits{\let\limits\relax}
 
 \protect \endinput
 

@@ -71,10 +71,10 @@
 
 % todo: \strc_labels_command for user
 
-\let\m_strc_labels_sub\empty
+\lettonothing\m_strc_labels_sub
 
 \appendtoks
-    \let\m_strc_labels_sub\empty
+    \lettonothing\m_strc_labels_sub
     \ifempty\currentlabelparent
        % clone => parent | subclone => clone | subsubclone => subclone
        \strc_define_commands_label
@@ -106,12 +106,12 @@
    \letlabelparameter\s!counter\p_counter
 \to \everydefinelabel
 
-\let\p_strc_constructions_title \empty
-\let\p_strc_constructions_number\empty
+\lettonothing\p_strc_constructions_title
+\lettonothing\p_strc_constructions_number
 
 \newconditional\c_strc_constructions_number_keep
 
-\setvalue{\??constructioninitializer\v!label}%
+\defcsname\??constructioninitializer\v!label\endcsname
   {\let         \currentlabel                    \currentconstruction
    \enforced\let\constructionparameter           \labelparameter
    \enforced\let\constructionnamespace           \??label
@@ -139,7 +139,7 @@
      \setfalse\c_strc_constructions_title_state
    \fi}
 
-\setvalue{\??constructionfinalizer\v!label}%
+\defcsname\??constructionfinalizer\v!label\endcsname
   {\ifconditional\c_strc_constructions_number_state
      \iftrialtypesetting
        \strc_counters_restore\currentconstructionnumber
@@ -148,8 +148,8 @@
 
 %D Interfaces:
 
-\protected\def\strc_labels_command{\setfalse\c_strc_constructions_number_keep\strc_descriptions_command}
-\protected\def\strc_labels_current{\settrue \c_strc_constructions_number_keep\strc_descriptions_command}
+\protected\def\strc_labels_command{\setfalse\c_strc_constructions_number_keep\nameddescription}
+\protected\def\strc_labels_current{\settrue \c_strc_constructions_number_keep\nameddescription}
 
 \protected\def\strc_labels_next   {\strc_constructions_next_indeed \namedlabelparameter} % #1#2
 \protected\def\strc_labels_reset  {\strc_constructions_reset_indeed\namedlabelparameter} % #1#2
@@ -173,12 +173,12 @@
 
 \letcsname\??constructionmainhandler\v!label\expandafter\endcsname\csname\??constructionmainhandler\v!description\endcsname
 
-\protected\setevalue{\??constructioncommandhandler\v!label}%
+\protected\edefcsname\??constructioncommandhandler\v!label\endcsname
   {\csname\??constructionstarthandler\v!construction\endcsname
    \csname\??constructionstophandler \v!construction\endcsname
    \endgroup}
 
-\protected\setvalue{\??constructiontexthandler\v!label}%
+\protected\defcsname\??constructiontexthandler\v!label\endcsname
   {\begingroup
    \useconstructionstyleandcolor\c!headstyle\c!headcolor
    \strc_labels_text

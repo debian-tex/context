@@ -17,7 +17,6 @@ local concat, merged = table.concat, table.merged
 local abs = math.abs
 local expandname = file.expandname
 local allocate = utilities.storage.allocate
-local bor, band = bit32.bor, bit32.band
 local isfile = lfs.isfile
 
 local trace_links       = false  trackers.register("figures.links",    function(v) trace_links    = v end)
@@ -30,27 +29,22 @@ local report_comment    = logs.reporter("backend","comment")
 local report_field      = logs.reporter("backend","field")
 local report_outline    = logs.reporter("backend","outline")
 
-local lpdf              = lpdf
-local backends          = backends
 local context           = context
 
-local nodeinjections    = backends.pdf.nodeinjections
+local pdfbackend        = backends.registered.pdf
+local nodeinjections    = pdfbackend.nodeinjections
+local codeinjections    = pdfbackend.codeinjections
+----- registrations     = pdfbackend.registrations
 
 local setmacro          = tokens.setters.macro
 
+local lpdf              = lpdf
 local pdfarray          = lpdf.array
 local pdfdictionary     = lpdf.dictionary
 local pdfconstant       = lpdf.constant
 local pdfreference      = lpdf.reference
-
-local pdfreserveobject
-local pdfgetpos
-
-updaters.register("backend.update.lpdf",function()
-    pdfreserveobject = lpdf.reserveobject
-    pdfgetpos        = lpdf.getpos
-end)
-
+local pdfreserveobject  = lpdf.reserveobject
+local pdfgetpos         = lpdf.getpos
 local pdfcopyboolean    = lpdf.copyboolean
 local pdfcopyunicode    = lpdf.copyunicode
 local pdfcopyarray      = lpdf.copyarray
@@ -70,7 +64,6 @@ local loadpdffile       = lpdf.epdf.load
 local nameonly          = file.nameonly
 
 local variables         = interfaces.variables
-local codeinjections    = backends.pdf.codeinjections
 ----- urlescaper        = lpegpatterns.urlescaper
 ----- utftohigh         = lpegpatterns.utftohigh
 local escapetex         = characters.filters.utf.private.escape
@@ -85,7 +78,7 @@ local layerspec = {
     "epdfcontent"
 }
 
-local getpos = function() getpos = backends.codeinjections.getpos return getpos() end
+local getpos = function() getpos = codeinjections.getpos return getpos() end
 
 local collected = allocate()
 local tobesaved = allocate()
@@ -548,7 +541,7 @@ local annotationflags = lpdf.flags.annotations
 
 local function copyF(v,lock) -- todo: bxor 24
     if lock then
-        v = bor(v or 0,annotationflags.ReadOnly + annotationflags.Locked + annotationflags.LockedContents)
+        v = (v or 0) | (annotationflags.ReadOnly + annotationflags.Locked + annotationflags.LockedContents)
     end
     if v then
         return pdfcopyinteger(v)
@@ -556,7 +549,7 @@ local function copyF(v,lock) -- todo: bxor 24
 end
 
 -- Speed is not really an issue so we don't optimize this code too much. In the end (after
--- testing we end up with less code that we started with.
+-- testing) we ended up with less code that we started with.
 
 function codeinjections.mergecomments(specification)
     local specification, fullname, document = validdocument(specification)
@@ -715,7 +708,7 @@ local function flagstoset(flag,flags)
     local t = { }
     if flags then
         for k, v in next, flags do
-            if band(flag,v) ~= 0 then
+            if (flag & v) ~= 0 then
                 t[k] = true
             end
         end
@@ -874,6 +867,33 @@ function codeinjections.mergefields(specification)
     end
 end
 
+-- The crappy parts of pdf .. too unpredictable.
+
+function codeinjections.mergerenditions(specification)
+--  local specification, fullname, document = validdocument(specification)
+--  if not document then
+--      return ""
+--  end
+--  local pagenumber  = specification.page or 1
+--  local pagedata    = document.pages[pagenumber]
+--  local annotations = pagedata and pagedata.Annots
+--  if annotations and #annotations > 0 then
+--      local llx, lly, urx, ury, width, height, xscale, yscale = getmediasize(specification,pagedata,xscale,yscale)
+--      initializelayer(height,width)
+--      --
+--      for i=1,#annotations do
+--          -- we keep the order
+--          local annotation = annotations[i]
+--          if annotation then
+--              local subtype = annotation.Subtype
+--              if subtype == "Screen" then
+--                  print("not done")
+--              end
+--          end
+--      end
+--  end
+end
+
 -- Beware, bookmarks can be in pdfdoc encoding or in unicode. However, in mkiv we
 -- write out the strings in unicode (hex). When we read them in, we check for a bom
 -- and convert to utf.
@@ -1021,7 +1041,7 @@ function codeinjections.mergebookmarks(specification)
     end
     if specification then
         local fullname  = specification.fullname
-        local bookmarks = backends.codeinjections.getbookmarks(fullname)
+        local bookmarks = codeinjections.getbookmarks(fullname)
         local realpage  = tonumber(specification.page) or 1
         for i=1,#bookmarks do
             local b = bookmarks[i]

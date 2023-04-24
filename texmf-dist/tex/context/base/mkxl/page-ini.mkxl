@@ -13,7 +13,7 @@
 
 \writestatus{loading}{ConTeXt Page Macros / Initializations}
 
-\registerctxluafile{page-ini}{}
+\registerctxluafile{page-ini}{autosuffix}
 
 %D The \type {\processpage} command has become obsolete. It's original
 %D purpose was to flush only parts of a document but nowadays we have
@@ -28,10 +28,10 @@
 
 %D Shipout control.
 
-\newcount\nofshipouts
+\newinteger\nofshipouts
 
 \appendtoks
-    \global\advance\nofshipouts\plusone
+    \global\advanceby\nofshipouts\plusone
 \to \everyaftershipout
 
 \newconditional\c_otr_shipout_enabled \settrue\c_otr_shipout_enabled
@@ -47,7 +47,7 @@
 
 \protected\def\page_otr_shipout_nop
   {\writestatus\m!system{ignoring shipout of real page \the\realpageno}%
-   \global\advance\realpageno\minusone % else no flush of resources
+   \global\advanceby\realpageno\minusone % else no flush of resources
    \dowithnextbox{\deadcycles\zerocount}}
 
 % We don't support direct user \shipouts (weird: this does not work, bug?)
@@ -110,8 +110,15 @@
 \installoutputroutine\savepagecontent
   {\global\setbox\b_page_otr_saved\box\normalpagebox}
 
-\permanent\protected\def\flushpagecontent
-  {\ifvoid\b_page_otr_saved\else\unvbox\b_page_otr_saved\fi}
+% \permanent\protected\def\flushpagecontent
+%   {\ifvoid\b_page_otr_saved\else\unvbox\b_page_otr_saved\fi}
+
+\permanent\protected\def\flushpagecontent % used in postponing
+  {\ifvoid\b_page_otr_saved\else
+     \scratchdepth\dp\b_page_otr_saved
+     \unvbox\b_page_otr_saved
+     \prevdepth\scratchdepth
+  \fi}
 
 % Test case: assumes one group level for output routine, todo:
 % a toks.
@@ -148,6 +155,8 @@
 %
 % \stoptext
 
+\ifdefined\page_check_weird_page \else \let\page_check_weird_page\relax \fi
+
 \def\page_otr_construct_and_shipout#1#2#3%
   {\forgetall
    \page_boxes_shipout{\page_boxes_constructed_page#1#2}% \hbox removed
@@ -162,7 +171,6 @@
    \strc_pagenumbers_increment_counters % should hook into an every
    \page_adapts_synchronize
    \page_otr_check_for_pending_inserts
-   \page_otr_command_flush_facing_floats
    \page_floats_flush_page_floats % before postponed blocks
    \page_spread_flush % defined later
    \ifnum#3=\plusone
@@ -174,7 +182,8 @@
      \fi
    \else
      \page_postponed_blocks_flush
-   \fi}
+   \fi
+   \page_check_weird_page}
 
 % Can't we get rid of this hackery? It's used in some widgets
 % stuff so probably not.
@@ -224,17 +233,30 @@
 
 \newconditional\c_page_marks_building_successive_pages \settrue\c_page_marks_building_successive_pages
 
-\def\page_marks_synchronize_page#1% box
-  {\strc_markings_synchronize\v!page{#1}{\ifconditional\c_page_marks_building_successive_pages\v!keep\fi}}
 
-\def\page_marks_synchronize_column#1#2#3#4% first last column box
-  {\ifnum#3=#1\relax
-     \strc_markings_synchronize{\number#3,\v!column:\number#3,\v!first,\v!column:\v!first}{#4}{}%
-   \orelse\ifnum#3=#2\relax
-     \strc_markings_synchronize{\number#3,\v!column:\number#3,\v!last, \v!column:\v!last }{#4}{}%
-   \else
-     \strc_markings_synchronize{\number#3,\v!column:\number#3                            }{#4}{}%
-   \fi}
+\ifdefined\??markingclass
+
+    \def\page_marks_synchronize_page#1% box
+      {} % \strc_markings_synchronize\v!page{1}{#1}
+
+    \def\page_marks_synchronize_column#1#2#3#4% first last column box
+      {\strc_markings_synchronize\v!column{#3}{#4}}
+
+\else
+
+    \def\page_marks_synchronize_page#1% box
+      {\strc_markings_synchronize\v!page{#1}{\ifconditional\c_page_marks_building_successive_pages\v!keep\fi}}
+
+    \def\page_marks_synchronize_column#1#2#3#4% first last column box
+      {\ifnum#3=#1\relax
+         \strc_markings_synchronize{\number#3,\v!column:\number#3,\v!first,\v!column:\v!first}{#4}{}%
+       \orelse\ifnum#3=#2\relax
+         \strc_markings_synchronize{\number#3,\v!column:\number#3,\v!last,\v!column:\v!last}{#4}{}%
+       \else
+         \strc_markings_synchronize{\number#3,\v!column:\number#3}{#4}{}%
+       \fi}
+
+\fi
 
 % Page body building
 
@@ -277,6 +299,7 @@
 
 \appendtoks
     \restoreglobalbodyfont
+    \restoreglobalinterlinespace
     \pickupattributes
 \to \everybeforepagebody
 
@@ -317,47 +340,41 @@
 
 \aliased\let\doiftopofpageelse\doifelsetopofpage
 
-% %D Idea:
-%
-% \newinsert\thispageinsert % <- installinsertion
-%
-% \def\flushatthispage
-%   {\bgroup
-%    \dowithnextbox{\insert\thispageinsert{\box\nextbox}\egroup}%
-%    \hbox}
-%
-% \appendtoks
-%     \ifvoid\thispageinsert\else\hbox{\smashedbox\thispageinsert}\fi
-% \to \everyshipout
-
-% not yet in i-* file
-
 \installcorenamespace{markedpage}
 
 % todo: just define at the lua end ... less hassle
 
-\permanent\tolerant\protected\def\markpage  [#1]#*[#2]{\clf_markpage      {#1}{#2}}
-\permanent                   \def\markedpages     [#1]{\clf_markedpages       {#1}} % expandable
-\permanent\protected         \def\doifelsemarkedpage#1{\clf_doifelsemarkedpage{#1}}
-\permanent\protected         \def\startmarkpages  [#1]{\clf_startmarkpages    {#1}}
-\permanent\protected         \def\stopmarkpages       {\clf_stopmarkpages         }
+\permanent\tolerant\protected\def\markpage  [#1]#*[#2]#*[#3]{\clf_markpage{#1}{#2}{#3}}
+\permanent\tolerant\protected\def\startmarkpages  [#1]#*[#2]{\clf_startmarkpages{#1}{#2}}
+%permanent         \protected\def\stopmarkpages             {\clf_stopmarkpages}
+\permanent                   \def\markedpages           [#1]{\clf_markedpages{#1}} % expandable
+%permanent         \protected\def\doifmarkedpage          #1{\clf_doifmarkedpage{#1}}
+%permanent         \protected\def\doifelsemarkedpage      #1{\clf_doifelsemarkedpage{#1}}
+%                            \def\markedpageparameter   #1#2{\clf_markedpageparameter{#1}{#2}}
+%permanent         \protected\def\checkmarkedpages          {\clf_checkmarkedpages}
+
+\appendtoks
+    \checkmarkedpages % defined at lua end
+\to \everyaftershipout
 
 %D Experimental:
 
 \newconstant\c_page_force_strut_depth_trace_mode
 
-\installtextracker
-  {otr.forcestrutdepth}
-  {\c_page_force_strut_depth_trace_mode\plusone}
-  {\c_page_force_strut_depth_trace_mode\zerocount}
+% \installtextracker
+%   {otr.forcestrutdepth}
+%   {\c_page_force_strut_depth_trace_mode\plusone}
+%   {\c_page_force_strut_depth_trace_mode\zerocount}
 
-\installoutputroutine\forcestrutdepth
-  {\clf_forcestrutdepth\normalpagebox\strutdp\c_page_force_strut_depth_trace_mode
-   \unvbox\normalpagebox}
+% todo: only in mvl!
 
-\installoutputroutine\forcestrutdepthplus % experimental
-  {\clf_forcestrutdepthplus\normalpagebox\strutdp\c_page_force_strut_depth_trace_mode
-   \unvbox\normalpagebox}
+% \installoutputroutine\forcestrutdepth
+%   {\clf_forcestrutdepth\normalpagebox\strutdp\c_page_force_strut_depth_trace_mode
+%    \unvbox\normalpagebox}
+
+% \installoutputroutine\forcestrutdepthplus % experimental
+%   {\clf_forcestrutdepthplus\normalpagebox\strutdp\c_page_force_strut_depth_trace_mode
+%    \unvbox\normalpagebox}
 
 % maybe better:
 %

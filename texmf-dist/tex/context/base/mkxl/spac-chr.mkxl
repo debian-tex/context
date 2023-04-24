@@ -15,7 +15,7 @@
 
 \unprotect
 
-\registerctxluafile{spac-chr}{autosuffix,optimize}
+\registerctxluafile{spac-chr}{autosuffix}
 
 \definesystemattribute[characters][public]
 
@@ -66,13 +66,18 @@
 
 \popoverloadmode
 
-\immutable\chardef\optionalspace"1F % will be space unless before punctuation
+\immutable\chardef\optionalspace    "1F % will be space unless before punctuation
+\immutable\chardef\autoinsertedspace"1E % a more clever \autoinsertspace
 
 % Shortcuts:
 
 % unexpanded as otherwise we need to intercept / cleanup a lot
 
+\pushoverloadmode
+
 \protected\def~{\nobreakspace}
+
+\popoverloadmode
 
 \protect \endinput
 

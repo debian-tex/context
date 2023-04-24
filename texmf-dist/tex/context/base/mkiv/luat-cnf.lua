@@ -24,26 +24,9 @@ texconfig.expand_depth    =    10000
 texconfig.half_error_line =      125
 texconfig.max_print_line  =   100000
 texconfig.max_strings     =   500000
-texconfig.hash_extra      =   200000
+texconfig.hash_extra      =   250000
 texconfig.function_size   =    32768
 texconfig.properties_size =    10000
-texconfig.level_max       =      500
-texconfig.level_chr       =       46 -- period
-
-if CONTEXTLMTXMODE > 0 then
-
-texconfig.max_in_open     =     2000
-texconfig.nest_size       =    10000
-texconfig.param_size      =   100000
-texconfig.save_size       =   500000
-texconfig.stack_size      =   100000
-texconfig.buffer_size     = 10000000
-texconfig.token_size      = 10000000
-texconfig.node_size       = 50000000
-texconfig.max_pool        = 10000000
-
-else
-
 texconfig.max_in_open     =     1000
 texconfig.nest_size       =     1000
 texconfig.param_size      =    25000
@@ -52,29 +35,7 @@ texconfig.stack_size      =    10000
 texconfig.buf_size        = 10000000
 texconfig.fix_mem_init    =  1000000
 
-end
-
-local variablenames = CONTEXTLMTXMODE > 0 and {
-    error_line      = false,
-    half_error_line = false,
-    max_print_line  = false,
-    max_in_open     = false,
-    expand_depth    = true,
-    hash_extra      = true,
-    nest_size       = true,
-    max_strings     = true,
-    max_pool        = true,
-    param_size      = true,
-    save_size       = true,
-    stack_size      = true,
-    function_size   = true,
-    properties_size = true,
-    token_size      = true,
-    node_size       = true,
-    buffer_size     = true,
-    level_max       = true,
-    level_chr       = true,
-} or {
+local variablenames = {
     error_line      = false,
     half_error_line = false,
     max_print_line  = false,
@@ -89,8 +50,6 @@ local variablenames = CONTEXTLMTXMODE > 0 and {
     function_size   = true,
     properties_size = true,
     fix_mem_init    = true,
-    level_max       = true,
-    level_chr       = true,
 }
 
 local stub = [[
@@ -221,7 +180,7 @@ function texconfig.init()
          -- local b = callbytecode(i)
             local e, b = pcall(callbytecode,i)
             if not e then
-                print(string.format("\nfatal error : unable to load bytecode register %%i, maybe wipe the cache first\n",i))
+                print(string.format("fatal error : unable to load bytecode register %%i, maybe wipe the cache first\n",i))
                 os.exit()
             end
             if b then
@@ -250,7 +209,7 @@ function texconfig.init()
 
 end
 
-CONTEXTLMTXMODE = %s
+CONTEXTLMTXMODE = 0
 
 -- we provide a qualified path
 
@@ -297,9 +256,9 @@ local function makestub()
         end
     end
     t[#t+1] = ""
-    t[#t+1] = format(stub,firsttable,tostring(CONTEXTLMTXMODE or 0))
+    t[#t+1] = format(stub,firsttable)
     io.savedata(name,concat(t,"\n"))
     logs.newline()
 end
 
-lua.registerfinalizer(makestub,"create stub file")
+lua.registerinitexfinalizer(makestub,"create stub file")

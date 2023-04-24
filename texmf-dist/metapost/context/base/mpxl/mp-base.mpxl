@@ -61,45 +61,43 @@ mutable ? ;
 
 % These need to be adapted to a library approach:
 
-warningcheck     := 1 ;
+warningcheck := 1 ;
 
 def interact = % sets up to make "show" commands stop
     hide (
-        showstopping  := 1 ;
-        tracingonline := 1 ;
+        interim showstopping  := 1 ;
+        interim tracingonline := 1 ;
     )
 enddef ;
 
 def loggingall = % puts tracing info into the log
-    tracingcommands  := 3 ;
-    tracingtitles    := 1 ;
-    tracingequations := 1 ;
-    tracingcapsules  := 1 ;
-    tracingspecs     := 2 ;
-    tracingchoices   := 1 ;
-    tracingstats     := 1 ;
-    tracingoutput    := 1 ;
-    tracingmacros    := 1 ;
-    tracingrestores  := 1 ;
+    interim tracingtitles    := 1 ;
+    interim tracingequations := 1 ;
+    interim tracingcapsules  := 1 ;
+    interim tracingspecs     := 2 ;
+    interim tracingchoices   := 1 ;
+    interim tracingstats     := 1 ;
+    interim tracingmacros    := 1 ;
+    interim tracingcommands  := 3 ;
+    interim tracingrestores  := 1 ;
 enddef ;
 
 def tracingall = % turns on every form of tracing
-    tracingonline := 1 ;
-    showstopping  := 1 ;
+    interim tracingonline := 1 ;
+    interim showstopping  := 1 ;
     loggingall ;
 enddef ;
 
 def tracingnone = % turns off every form of tracing
-    tracingcommands  := 0 ;
-    tracingtitles    := 0 ;
-    tracingequations := 0 ;
-    tracingcapsules  := 0 ;
-    tracingspecs     := 0 ;
-    tracingchoices   := 0 ;
-    tracingstats     := 0 ;
-    tracingoutput    := 0 ;
-    tracingmacros    := 0 ;
-    tracingrestores  := 0 ;
+    interim tracingrestores  := 0 ;
+    interim tracingcommands  := 0 ;
+    interim tracingtitles    := 0 ;
+    interim tracingequations := 0 ;
+    interim tracingcapsules  := 0 ;
+    interim tracingspecs     := 0 ;
+    interim tracingchoices   := 0 ;
+    interim tracingstats     := 0 ;
+    interim tracingmacros    := 0 ;
 enddef ;
 
 permanent interact, loggingall, tracingall, tracingnone ;
@@ -208,20 +206,26 @@ let graycolor = numeric ;
 
 % color part (will be overloaded)
 
+newinternal nocolormodel   ; nocolormodel   := 0 ;
+newinternal greycolormodel ; greycolormodel := 1 ;
+newinternal graycolormodel ; graycolormodel := 1 ;
+newinternal rgbcolormodel  ; rgbcolormodel  := 2 ;
+newinternal cmykcolormodel ; cmykcolormodel := 3 ;
+
 def colorpart primary t =
-    if colormodel t = 7:
+    if colormodel t = cmykcolormodel:
         (cyanpart t, magentapart t, yellowpart t, blackpart t)
-    elseif colormodel t = 5 :
+    elseif colormodel t = rgbcolormodel :
         (redpart t, greenpart t, bluepart t)
-    elseif colormodel t = 3 :
+    elseif colormodel t = graycolormodel :
         (greypart t)
-    elseif colormodel t = 1 :
+    elseif colormodel t = nocolormodel :
         false
-    elseif defaultcolormodel = 7 :
+    elseif defaultcolormodel = cmykcolormodel :
         (0,0,0,1)
-    elseif defaultcolormodel = 5 :
+    elseif defaultcolormodel = rgbcolormodel :
         black
-    elseif defaultcolormodel = 3 :
+    elseif defaultcolormodel = graycolormodel :
         0
     else :
         false
@@ -284,7 +288,8 @@ vardef round primary u =
             round(point i of u) ..
             controls round(postcontrol i of u) and round(precontrol i+1 of u) ..
         endfor
-        if cycle u : cycle else : point infinity of u fi
+%         if cycle u : cycle else : point infinity of u fi
+        if cycle u : cycle else : nocycle fi
     else :
         u
     fi
@@ -431,9 +436,9 @@ newinternal temp_internal_n ;
 path        temp_path_a, temp_path_b ;
 pair        temp_pair_dz, temp_pair_z[] ;
 
-vardef direction expr t of p =
-    postcontrol t of p - precontrol t of p
-enddef ;
+% vardef direction expr t of p =
+%     postcontrol t of p - precontrol t of p
+% enddef ;
 
 vardef directionpoint expr z of p =
     temp_internal_a := directiontime z of p ;
@@ -475,7 +480,8 @@ tertiarydef p softjoin q =
     endgroup
 enddef ;
 
-permanent direction, directionpoint, intersectionpoint, softjoin ;
+% permanent direction, directionpoint, intersectionpoint, softjoin ;
+permanent directionpoint, intersectionpoint, softjoin ;
 
 newinternal join_radius ;
 path cuttings ; % what got cut off
@@ -495,7 +501,7 @@ tertiarydef a cutbefore b =  % tries to cut as little as possible
 enddef ;
 
 tertiarydef a cutafter b =
-    reverse (reverse a  cutbefore  b)
+    reverse (reverse a cutbefore  b) % inefficient, a and b are copied
     hide(cuttings := reverse cuttings)
 enddef ;
 
@@ -635,12 +641,13 @@ permanent interpath, solve, buildcycle, tolerance ;
 
 mm :=  2.83464 ;
 pt :=  0.99626 ;
-dd :=  1.06601 ;
+dd :=  1.06601 ; % 1.0660068107174
 bp :=  1 ;
 cm := 28.34645 ;
 pc := 11.95517 ;
 cc := 12.79213 ;
 in := 72 ;
+dk :=  6.41577 ; % 6.4157650704225 ;
 
 immutable mm, pt, bp, cm, in ; % we don't protect (yet): dd, pc cc (used as locals)
 
@@ -803,7 +810,8 @@ def plain_pickup_path primary q =
 enddef ;
 
 vardef savepen =
-    temp_pen_stack[incr temp_pen_count] = currentpen ;
+    temp_pen_count := temp_pen_count + 1 ;
+    temp_pen_stack[temp_pen_count] = currentpen ;
     temp_pen_l[temp_pen_count] = pen_lft ;
     temp_pen_r[temp_pen_count] = pen_rt ;
     temp_pen_t[temp_pen_count] = pen_top ;
@@ -989,7 +997,9 @@ string extra_beginfig, extra_endfig ;
 extra_beginfig := "" ;
 extra_endfig   := "" ;
 
-def beginfig(expr c) =
+newinternal boolean makingfigure ; makingfigure := false ;
+
+def beginfig(expr c) = % redefined in mp-grph !
     begingroup
     charcode := c ;
     clearxy ;
@@ -997,6 +1007,8 @@ def beginfig(expr c) =
     clearpen ;
     pickup defaultpen ;
     drawoptions() ;
+    interim stacking := 0 ;
+    interim makingfigure := true;
     scantokens extra_beginfig ;
 enddef ;
 

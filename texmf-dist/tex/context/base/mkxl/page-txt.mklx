@@ -90,8 +90,8 @@
     \fi
 \to \everysetuplayoutelement
 
-\mutable\let\currenttextstate \empty
-\mutable\let\previoustextstate\empty
+\mutable\lettonothing\currenttextstate
+\mutable\lettonothing\previoustextstate
 
 \def\page_layouts_reset_element_status#vertical%
   {\gdefcsname\??layouttextsreset#vertical\endcsname{\page_layouts_set_element_status_normal#vertical}}
@@ -175,7 +175,7 @@
 \permanent\protected\def\setupfootertexts{\setuptexts[\v!footer]}
 \permanent\protected\def\setupbottomtexts{\setuptexts[\v!bottom]}
 
-\mutable\let\currentlayoutelementstate\empty
+\mutable\lettonothing\currentlayoutelementstate
 
 \permanent\tolerant\protected\def\setuptexts[#vertical]#spacer[#horizontal]#spacer[#a]#spacer[#b]#spacer[#c]#spacer[#d]%
   {\ifarguments
@@ -219,9 +219,9 @@
 %D Left and right texts are swapped on odd and even pages, but only when double
 %D sided typesetting is enabled.
 
-\setvalue{\??layouttextstrut\v!yes}{\setstrut\strut} % maybe more variants
+\defcsname\??layouttextstrut\v!yes\endcsname{\setstrut\strut} % maybe more variants
 
-\let\m_page_layouts_element_content\empty
+\lettonothing\m_page_layouts_element_content
 
 \protected\def\page_layouts_process_element_single#content%
   {\edef\m_page_layouts_element_content{\detokenize{#content}}% so no \v!xxx
@@ -252,12 +252,12 @@
 \def\page_layouts_process_element_limited#content% are the {}{}{} still needed?
   {\limitated
       left     \p_width
-      text     {#content}
-      sentinel {\unknown}
+      text     {#content}%
+      sentinel {\unknown}%
    \relax}
 
-\setvalue{\??layouttextspecial\v!pagenumber}{\page_layouts_place_page_number}
-\setvalue{\??layouttextspecial\v!date      }{\currentdate}
+\defcsname\??layouttextspecial\v!pagenumber\endcsname{\page_layouts_place_page_number}
+\defcsname\??layouttextspecial\v!date      \endcsname{\currentdate}
 
 %D When specified, the texts are automatically limited in length.
 
@@ -270,9 +270,9 @@
 %D Texts can be disabled, moved up and ignored, depending in the \type {status}
 %D variable. This is handled by the next couple of macros.
 
-\newcount\c_page_layouts_element_state_n
+\newinteger\c_page_layouts_element_state_n
 
-\mutable\let\textlinestatus\empty
+\mutable\lettonothing\textlinestatus
 
 \def\page_layouts_set_element_status#vertical%
   {\c_page_layouts_element_state_n=0\namedlayoutelementparameter#vertical\c!n\relax
@@ -321,24 +321,24 @@
 
 \newconditional\resyncaftertextline
 
-\setvalue{\??layouttextsline\v!normal}{\page_layouts_place_text_line_indeed}
-\setvalue{\??layouttextsline\empty   }{\page_layouts_place_text_line_indeed}
+\defcsname\??layouttextsline\v!normal\endcsname{\page_layouts_place_text_line_indeed}
+\defcsname\??layouttextsline\empty   \endcsname{\page_layouts_place_text_line_indeed}
 
-\letvalue{\??layouttextsline\v!none}\gobbletwoarguments
-\letvalue{\??layouttextsline\v!stop}\gobbletwoarguments
+\letcsname\??layouttextsline\v!none\endcsname\gobbletwoarguments
+\letcsname\??layouttextsline\v!stop\endcsname\gobbletwoarguments
 
-\setvalue{\??layouttextsline\v!high}#vertical#height%
+\defcsname\??layouttextsline\v!high\endcsname#vertical#height%
   {\global\settrue\resyncaftertextline
    \page_layouts_reset_element_status#vertical}
 
-\setvalue{\??layouttextsline\v!empty}#vertical#height%
+\defcsname\??layouttextsline\v!empty\endcsname#vertical#height%
   {\page_layouts_reset_element_status#vertical}
 
-\setvalue{\??layouttextsline\v!start}#vertical#height%
+\defcsname\??layouttextsline\v!start\endcsname#vertical#height%
   {\page_layouts_reset_element_status#vertical%
    \page_layouts_place_text_line_indeed#vertical#height}
 
-\setvalue{\??layouttextsline\v!nomarking}#vertical#height%
+\defcsname\??layouttextsline\v!nomarking\endcsname#vertical#height%
   {\bgroup
    \page_layouts_reset_element_status#vertical%
    \settrue\inhibitgetmarking
@@ -367,7 +367,7 @@
    \page_layouts_place_text_line_indeed#vertical#height%
    \endgroup}
 
-\letvalue{\??layouttextsline\s!unknown}\page_layouts_place_text_line_unknown
+\letcsname\??layouttextsline\s!unknown\endcsname\page_layouts_place_text_line_unknown
 
 %D The following macro has to be called after a page is flushed.
 
@@ -451,8 +451,8 @@
    \box\b_page_layouts_element
    \vkern-#height\relax}
 
-\let\page_layouts_place_extra_text_left \empty % historic
-\let\page_layouts_place_extra_text_right\empty % historic
+\lettonothing\page_layouts_place_extra_text_left  % historic
+\lettonothing\page_layouts_place_extra_text_right % historic
 
 \def\page_layouts_place_text_line_right
   {\hpack
@@ -478,13 +478,13 @@
         \page_layouts_left_edge_element\c!righttext\c!rightstyle\c!rightcolor\c!rightwidth
       \fi
       \ifdim\leftmarginwidth>\zeropoint
-        \page_layouts_left_margin_element\c!righttext\c!rightstyle\c!rightcolor\c!rightwidth\zerocount
+        \page_layouts_left_margin_element\c!righttext\c!rightstyle\c!rightcolor\c!rightwidth\plusone
       \fi
       \ifdim\makeupwidth>\zeropoint
         \page_layouts_text_body_element_e_r_m_l
       \fi
       \ifdim\rightmarginwidth>\zeropoint
-        \page_layouts_right_margin_element\c!lefttext\c!leftstyle\c!leftcolor\c!leftwidth\plusone
+        \page_layouts_right_margin_element\c!lefttext\c!leftstyle\c!leftcolor\c!leftwidth\zerocount
       \fi
       \ifdim\rightedgewidth>\zeropoint
         \page_layouts_right_edge_element\c!lefttext\c!leftstyle\c!leftcolor\c!leftwidth
@@ -495,10 +495,10 @@
    \ifempty\p_text
      \kern\leftedgewidth
    \else
-      \hbox to \leftedgewidth\bgroup
-        \hss
-        \page_layouts_process_element_indeed#style#color#width%
-      \egroup
+     \hbox to \leftedgewidth\bgroup
+       \hss
+       \page_layouts_process_element_indeed#style#color#width%
+     \egroup
    \fi}
 
 \def\page_layouts_left_edge_element#text#style#color#width%
@@ -525,6 +525,9 @@
      {\page_layouts_right_edge_element_indeed#text#style#color#width}}
 
 % margin needs checking!
+
+% \hbox to \leftmarginwidth{\hss\layoutelementparameter\c!margintext}%
+% \hbox to \rightmarginwidth{\layoutelementparameter\c!margintext\hss}%
 
 \def\page_layouts_left_margin_element_indeed#text#style#color#width#margintoo%
   {\letfromlayoutelementparameter\p_text#text%
@@ -725,18 +728,31 @@
 
 %D A few more page breakers:
 
+% \installpagebreakmethod \v!empty
+%   {\page_otr_flush_all_floats
+%    \page_otr_command_next_page
+%    \doifnot{\namedlayoutelementparameter\v!header\c!state}\v!stop{\setuplayoutelement[\v!header][\c!state=\v!empty]}%
+%    \doifnot{\namedlayoutelementparameter\v!footer\c!state}\v!stop{\setuplayoutelement[\v!footer][\c!state=\v!empty]}%
+%    \page_otr_insert_dummy_page}
+%
+% \installpagebreakmethod \v!header
+%   {\doifnot{\namedlayoutelementparameter\v!header\c!state}\v!stop{\setuplayoutelement[\v!header][\c!state=\v!empty]}}
+%
+% \installpagebreakmethod \v!footer
+%   {\doifnot{\namedlayoutelementparameter\v!footer\c!state}\v!stop{\setuplayoutelement[\v!footer][\c!state=\v!empty]}}
+
 \installpagebreakmethod \v!empty
   {\page_otr_flush_all_floats
    \page_otr_command_next_page
-   \doifnot{\namedlayoutelementparameter\v!header\c!state}\v!stop{\setuplayoutelement[\v!header][\c!state=\v!empty]}%
-   \doifnot{\namedlayoutelementparameter\v!footer\c!state}\v!stop{\setuplayoutelement[\v!footer][\c!state=\v!empty]}%
+   \ifcstok{\namedlayoutelementparameter\v!header\c!state}\v!stop\else\setuplayoutelement[\v!header][\c!state=\v!empty]\fi
+   \ifcstok{\namedlayoutelementparameter\v!footer\c!state}\v!stop\else\setuplayoutelement[\v!footer][\c!state=\v!empty]\fi
    \page_otr_insert_dummy_page}
 
 \installpagebreakmethod \v!header
-  {\doifnot{\namedlayoutelementparameter\v!header\c!state}\v!stop{\setuplayoutelement[\v!header][\c!state=\v!empty]}}
+  {\ifcstok{\namedlayoutelementparameter\v!header\c!state}\v!stop\else\setuplayoutelement[\v!header][\c!state=\v!empty]\fi}
 
 \installpagebreakmethod \v!footer
-  {\doifnot{\namedlayoutelementparameter\v!footer\c!state}\v!stop{\setuplayoutelement[\v!footer][\c!state=\v!empty]}}
+  {\ifcstok{\namedlayoutelementparameter\v!footer\c!state}\v!stop\else\setuplayoutelement[\v!footer][\c!state=\v!empty]\fi}
 
 %D While the header and footer lines are moved away from the main text, the top and
 %D bottom lines are centered.
@@ -766,7 +782,7 @@
      % this can be done better now, no meaning hackery needed
      \edef\currentlayoutelement{\m_page_layouts_page_number_location_v:\m_page_layouts_page_number_location_h}%
      \edef\tempstring{\detokenizedlayoutelementparameter\m_page_layouts_page_number_location_x}%
-     \doif{\meaning\tempstring}{\meaning\page_layouts_place_page_number}
+     \doif{\normalmeaningless\tempstring}{\normalmeaningless\page_layouts_place_page_number}
        {\resetlayoutelementparameter\m_page_layouts_page_number_location_x}%
    \fi}
 
@@ -777,33 +793,33 @@
      \let\page_layouts_place_extra_text_left \page_layouts_place_page_number_left
      \let\page_layouts_place_extra_text_right\page_layouts_place_page_number_right
    \else
-     \let\page_layouts_place_extra_text_left \empty
-     \let\page_layouts_place_extra_text_right\empty
+     \lettonothing\page_layouts_place_extra_text_left
+     \lettonothing\page_layouts_place_extra_text_right
    \fi}
 
 \def\page_layouts_identify_page_number_location
   {\let\m_page_layouts_page_number_location_v\v!footer
    \let\m_page_layouts_page_number_location_h\v!text
    \let\m_page_layouts_page_number_location_x\c!middletext
-   \processallactionsinset[\directpagenumberingparameter\c!location]
-     [    \v!header=>\let\m_page_layouts_page_number_location_v\v!header,
-          \v!footer=>\let\m_page_layouts_page_number_location_v\v!footer,
+   \processallactionsinset[\directpagenumberingparameter\c!location]%
+     [    \v!header=>\let\m_page_layouts_page_number_location_v\v!header,%
+          \v!footer=>\let\m_page_layouts_page_number_location_v\v!footer,%
           \v!middle=>\let\m_page_layouts_page_number_location_h\v!text
-                     \let\m_page_layouts_page_number_location_x\c!middletext,
+                     \let\m_page_layouts_page_number_location_x\c!middletext,%
             \v!left=>\let\m_page_layouts_page_number_location_h\v!text
-                     \let\m_page_layouts_page_number_location_x\c!lefttext,
+                     \let\m_page_layouts_page_number_location_x\c!lefttext,%
            \v!right=>\let\m_page_layouts_page_number_location_h\v!text
-                     \let\m_page_layouts_page_number_location_x\c!righttext,
+                     \let\m_page_layouts_page_number_location_x\c!righttext,%
           \v!inleft=>\let\m_page_layouts_page_number_location_h\v!margin
-                     \let\m_page_layouts_page_number_location_x\c!lefttext,
+                     \let\m_page_layouts_page_number_location_x\c!lefttext,%
          \v!inright=>\let\m_page_layouts_page_number_location_h\v!margin
-                     \let\m_page_layouts_page_number_location_x\c!righttext,
+                     \let\m_page_layouts_page_number_location_x\c!righttext,%
         \v!inmargin=>\let\m_page_layouts_page_number_location_h\v!margin
-                     \def\m_page_layouts_page_number_location_x{\ifdoublesided\c!margintext\else\c!righttext\fi},
+                     \def\m_page_layouts_page_number_location_x{\ifdoublesided\c!margintext\else\c!righttext\fi},%
           \v!margin=>\let\m_page_layouts_page_number_location_h\v!margin
-                     \def\m_page_layouts_page_number_location_x{\ifdoublesided\c!margintext\else\c!righttext\fi},
+                     \def\m_page_layouts_page_number_location_x{\ifdoublesided\c!margintext\else\c!righttext\fi},%
         \v!atmargin=>\let\m_page_layouts_page_number_location_h\v!text
-                     \let\m_page_layouts_page_number_location_x\c!marginedgetext,
+                     \let\m_page_layouts_page_number_location_x\c!marginedgetext,%
       \v!marginedge=>\let\m_page_layouts_page_number_location_h\v!text
                      \let\m_page_layouts_page_number_location_x\c!marginedgetext]}
 
@@ -863,7 +879,7 @@
   {\setbox\b_page_layouts_element\vpack
      {\dontcomplain
       \calculatereducedvsizes
-      \page_layouts_swap_margins
+      \page_layouts_swap_margins\v!text
       \offinterlineskip
       \vkern\dimexpr-\topheight-\topdistance\relax
       \the\toptextcontent
@@ -884,10 +900,6 @@
   \smashbox\b_page_layouts_element
   \box\b_page_layouts_element}
 
-% \ifdefined\page_prepare_backgrounds\else
-%     \let\page_prepare_backgrounds\gobbleoneargument
-% \fi
-
 % only for very special controlled cases or experiments:
 
 \let\page_scale_text_box\gobbleoneargument
@@ -897,13 +909,12 @@
      {\offinterlineskip
       \calculatereducedvsizes
       \calculatehsizes
-      \page_layouts_swap_margins
+      \page_layouts_swap_margins\v!page
       \vkern\dimexpr\headerheight+\headerdistance+\textdistance\relax
       \dontleavehmode
-     %\page_prepare_backgrounds{#2}%
       \hpack to \makeupwidth
         {\begingroup
-           \page_layouts_swap_margins
+         % \page_layouts_swap_margins\v!page
            \goleftonpage
            \ifdim\leftedgewidth>\zeropoint
              \the\leftedgetextcontent
@@ -942,6 +953,8 @@
 %D overload the the stored version .. eventually i will clear up the experimental
 %D mess.
 
+\ifdefined\page_otr_flush_top_content\else \let\page_otr_flush_top_content\relax \fi
+
 \protected\def\settextpagecontent#1#2#3% #2 and #3 will disappear / is overloaded
   {\setbox#1\hpack to \makeupwidth
      {\hss                     % so don't change this
@@ -951,6 +964,7 @@
          \freezetextwidth
          \hsize\textwidth      % local variant of \sethsize  <<< in columns?
          \boxmaxdepth\maxdepth
+         \page_otr_flush_top_content
          \noindent             % content can be < \hsize
          \page_otr_command_package_contents#2#3}% this will vbox
       \hss}%

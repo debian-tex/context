@@ -13,7 +13,7 @@
 
 \writestatus{loading}{ConTeXt Structure Macros / Registers}
 
-\registerctxluafile{strc-reg}{}
+\registerctxluafile{strc-reg}{autosuffix}
 
 \unprotect
 
@@ -138,36 +138,37 @@
 %D test \index{test+one} test \index{test+two} more \index{more}
 %D \stoptyping
 
-\mutable\let\currentregistercharacter   \empty
-\mutable\let\currentregistercoding      \empty
-\mutable\let\currentregisterentries     \empty
-\mutable\let\currentregisterentriesa    \empty
-\mutable\let\currentregisterentriesb    \empty
-\mutable\let\currentregisterentriesc    \empty
-\mutable\let\currentregisterexpansion   \empty
-\mutable\let\currentregisterkeys        \empty
-\mutable\let\currentregisterkeysa       \empty
-\mutable\let\currentregisterkeysb       \empty
-\mutable\let\currentregisterkeysc       \empty
-\mutable\let\currentregisterlabel       \empty
-\mutable\let\currentregistermaxwidth    \empty
-\mutable\let\currentregistername        \empty
-\mutable\let\currentregisternumber      \empty
-\mutable\let\currentregisterownnumber   \empty
-\mutable\let\currentregisterpageindex   \empty
-\mutable\let\currentregisterpagesymbol  \empty
-\mutable\let\currentregistersectionindex\empty
-\mutable\let\currentregisterseeindex    \empty
-\mutable\let\currentregisterseeword     \empty
-\mutable\let\currentregistersynchronize \empty
-\mutable\let\currentregisterxmlsetup    \empty
-\mutable\let\currentregisterprocessors  \empty
-\mutable\let\currentregisterprocessorsa \empty
-\mutable\let\currentregisterprocessorsb \empty
-\mutable\let\currentregisterprocessorsc \empty
+\mutable\lettonothing\currentregistercharacter
+\mutable\lettonothing\currentregistercoding
+\mutable\lettonothing\currentregisterentries
+\mutable\lettonothing\currentregisterentriesa
+\mutable\lettonothing\currentregisterentriesb
+\mutable\lettonothing\currentregisterentriesc
+\mutable\lettonothing\currentregisterexpansion
+\mutable\lettonothing\currentregisterkeys
+\mutable\lettonothing\currentregisterkeysa
+\mutable\lettonothing\currentregisterkeysb
+\mutable\lettonothing\currentregisterkeysc
+\mutable\lettonothing\currentregisterlabel
+\mutable\lettonothing\currentregistermaxwidth
+\mutable\lettonothing\currentregistername
+\mutable\lettonothing\currentregisternumber
+\mutable\lettonothing\currentregisterownnumber
+\mutable\lettonothing\currentregisterpageindex
+\mutable\lettonothing\currentregisterpagesymbol
+\mutable\lettonothing\currentregistersectionindex
+\mutable\lettonothing\currentregisterseeindex
+\mutable\lettonothing\currentregisterseeword
+\mutable\lettonothing\currentregistersynchronize
+\mutable\lettonothing\currentregisterxmlsetup
+\mutable\lettonothing\currentregisterprocessors
+\mutable\lettonothing\currentregisterprocessorsa
+\mutable\lettonothing\currentregisterprocessorsb
+\mutable\lettonothing\currentregisterprocessorsc
 
 \newconditional\c_strc_registers_defining
 \setnewconstant\c_strc_registers_maxlevel \plusfive
+\newconditional\c_strc_registers_vertical \settrue\c_strc_registers_vertical
 
 \ifdefined\Word \else \protected\def\Word#1{#1} \fi
 
@@ -187,8 +188,8 @@
       \dorecurse\c_strc_registers_maxlevel{% weird, expanded should not be needed
         \normalexpanded{\defineregister[\currentregister:\recurselevel][\currentregister]}%
        %\defineregister[\currentregister:\recurselevel][\currentregister]%
-        \letregisterparameter{\c!entries:\recurselevel}\empty % needed as we use detokenize (ok, we can
-        \letregisterparameter{\c!keys   :\recurselevel}\empty % avoid it, but it's faster too)
+        \resetregisterparameter{\c!entries:\recurselevel}% needed as we use detokenize (ok, we can
+        \resetregisterparameter{\c!keys   :\recurselevel}% avoid it, but it's faster too)
       }%
       %
       \setfalse\c_strc_registers_defining
@@ -201,11 +202,13 @@
 
 %D Registering:
 
-\glet\currentregistername  \empty
-\glet\currentregisternumber\!!zerocount
+\glettonothing\currentregistername
+\glet         \currentregisternumber\!!zerocount
 
 \def\strc_registers_register_page_entry
   {\iftrialtypesetting
+     \expandafter\gobblethreearguments
+   \orelse\ifconditional\prerollrun
      \expandafter\gobblethreearguments
    \else
      \expandafter\strc_registers_register_page_entry_indeed
@@ -441,16 +444,16 @@
    \fi}
 
 \def\strc_registers_insert_entry_nop_par#1#2%
-  {\flushatnextpar{\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!entries={#2}}{}}}
+  {\ifprerolling\else\flushatnextpar{\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!entries={#2}}{}}\fi}
 
 \def\strc_registers_insert_entry_yes_par#1#2#3%
-  {\flushatnextpar{\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!alternative=#2,\c!entries={#3}}{}}}
+  {\ifprerolling\else\flushatnextpar{\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!alternative=#2,\c!entries={#3}}{}}\fi}
 
 \def\strc_registers_insert_entry_nop_txt#1#2%
-  {\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!entries={#2}}{}}
+  {\ifprerolling\else\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!entries={#2}}{}\fi}
 
 \def\strc_registers_insert_entry_yes_txt#1#2#3%
-  {\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!alternative=#2,\c!entries={#3}}{}}
+  {\ifprerolling\else\strc_registers_register_page_entry\currentregister{\c!keys={#1},\c!alternative=#2,\c!entries={#3}}{}\fi}
 
 %D This is one of the few commands where a stop has arguments.
 
@@ -754,6 +757,41 @@
 % todo \index{todo}
 % \stoptext
 
+%D Kind of new:
+
+% % index-1.tex:
+%
+% \setupinteraction[state=start]
+% \starttext
+%     test \index{entry    WB.1} \page empty \page
+%     test \index{another  WB.1} \page empty \page
+%     test \index{onemore  WB.1} \page empty \page
+%     test \index{whatever WB.1} \page empty \page
+%     test \index{common}        \page empty \page
+%     \placeregister[index]
+% \stoptext
+%
+% % index-2.tex:
+%
+% \setupinteraction[state=start]
+% \defineregister[xedni]
+% \useregister[workbook][index-1][index][WB ]
+% \starttext
+%     test \index{onemore TB.1} \page
+%     test \index{another TB.1} \page
+%     test \index{entry   TB.1} \page
+%     test \index{common}       \page
+%     test \xedni{onemore TB.2} \page
+%     test \xedni{another TB.2} \page
+%     test \xedni{entry   TB.2} \page
+%     test \xedni{common}       \page
+%     \placeregister[index,xedni,workbook]
+% \stoptext
+
+\permanent\protected\tolerant\def\useregister[#1]#*[#2]#*[#3]#*[#4]%  tag file class prefix
+  {\doifelsefiledefined{#1}{}{\usefile[#1][#2]}%
+   \clf_useregister{#1}{#2}{#3}{#4}}
+
 %D Character rendering (sections):
 
 \installcorenamespace{registerindicator}
@@ -798,7 +836,7 @@
    \endgroup
    \blank[\v!samepage]%
    \registerparameter\c!after
-   \par
+   \endgraf
    \nobreak}
 
 % b = <goodbreak> <before> <character> <after> <nobreak>
@@ -819,10 +857,10 @@
    \registerparameter\c!after
    \nobreak}
 
-\setvalue{\??registerindicator a}#1{\strc_registers_indicator_a{#1}{#1}}
-\setvalue{\??registerindicator A}#1{\strc_registers_indicator_a{#1}{\WORD{#1}}}
-\setvalue{\??registerindicator b}#1{\strc_registers_indicator_b{#1}{#1}}
-\setvalue{\??registerindicator B}#1{\strc_registers_indicator_b{#1}{\WORD{#1}}}
+\defcsname\??registerindicator a\endcsname#1{\strc_registers_indicator_a{#1}{#1}}
+\defcsname\??registerindicator A\endcsname#1{\strc_registers_indicator_a{#1}{\WORD{#1}}}
+\defcsname\??registerindicator b\endcsname#1{\strc_registers_indicator_b{#1}{#1}}
+\defcsname\??registerindicator B\endcsname#1{\strc_registers_indicator_b{#1}{\WORD{#1}}}
 
 %D The following macros are the interface to the rendering. These are
 %D generated by \LUA. This might change.
@@ -844,8 +882,19 @@
 %D placeindex as then flushing takes place inside the index. Took me hours
 %D to notice that.
 
-\newconstant\c_strc_registers_page_state % 0=nothing  1=page  2=see
-\newdimen   \d_strc_registers_distance
+\newconstant \c_strc_registers_page_state % 0=nothing  1=page  2=see
+\newdimension\d_strc_registers_distance
+\newinteger  \c_strc_register_level
+
+\def\strc_registers_update_text_properties
+  {\ifx\m_current_register\currentregister\else
+     \useregisterstyleandcolor\c!textstyle\c!textcolor
+   \fi}
+
+\def\strc_registers_update_page_properties
+  {\ifx\m_current_register\currentregister\else
+     \useregisterstyleandcolor\c!pagestyle\c!pagecolor
+   \fi}
 
 \permanent\protected\def\startregisteroutput
   {\endgraf
@@ -861,8 +910,70 @@
    \dostoptagged
    \endgroup}
 
-\newdimen\d_strc_registers_hangindent
-\newcount\c_strc_registers_hangafter
+\newdimension\d_strc_registers_hangindent
+\newinteger  \c_strc_registers_hangafter
+
+% \permanent\protected\def\usenestedregisterstyleandcolor#1#2% will change
+%   {\useregisterstyleandcolor#1#2%
+%    % how about style
+%    \ifconditional\c_strc_registers_text_interaction
+%      \ifempty\currentcolorparameter \else
+%        \resetinteractionparameter\c!color
+%        \resetinteractionparameter\c!contrastcolor
+%      \fi
+%    \fi}
+%
+% \permanent\protected\def\startregisterentries#1% depth
+%   {\endgraf
+%    \begingroup
+%    \c_strc_register_level\ifnum#1>\c_strc_registers_maxlevel\c_strc_registers_maxlevel\else#1\fi\relax
+%    \dostarttagged\t!registerentries\empty
+%  % \let\savedcurrentregister\currentregister
+%    \pushmacro\currentregister
+%    \edef\currentregister{\currentregister:\number\c_strc_register_level}%
+%    \usenestedregisterstyleandcolor\c!textstyle\c!textcolor
+%    \ifnum\c_strc_register_level>\plusone
+%      \advanceby\leftskip\d_strc_registers_distance\relax
+%    \fi
+%    \d_strc_registers_hangindent\registerparameter\c!distance\relax
+%    \c_strc_registers_hangafter \plusone
+%    \blank[\v!samepage]%
+%  % \let\currentregister\savedcurrentregister}
+%    \popmacro\currentregister}
+%
+% \permanent\protected\def\stopregisterentries
+%   {\endgraf
+%    \dostoptagged
+%    \endgroup}
+
+%D See test suite \type {registers/horizontal-001.tex} for a more extensive example
+%D of horizontal:
+%D
+%D \stoptyping
+%D \defineregister
+%D   [demo]
+%D   [n=1,
+%D    pagenumber=no,
+%D    textalternative=horizontal,
+%D    distance=0pt]
+%D
+%D \setupregister [demo] [2] [textstyle=bold,left={, }]
+%D \setupregister [demo] [3] [textstyle=italic,left={, }]
+%D
+%D \setregisterentry [demo] [entries:1={alpha}, entries:2={one}, entries:3={first}]
+%D \setregisterentry [demo] [entries:1={beta},  entries:2={two}, entries:3={last}]
+%D
+%D \starttext
+%D     \starttitle[title=Demo]
+%D         \placeregister[demo]
+%D     \stoptitle
+%D \stoptext
+%D \stoptyping
+
+\appendtoks
+    \doifelse{\registerparameter\c!textalternative}\v!horizontal
+      \setfalse\settrue\c_strc_registers_vertical
+\to \everysetupregister
 
 \permanent\protected\def\usenestedregisterstyleandcolor#1#2% will change
   {\useregisterstyleandcolor#1#2%
@@ -875,21 +986,24 @@
    \fi}
 
 \permanent\protected\def\startregisterentries#1% depth
-  {\endgraf
+  {\ifconditional\c_strc_registers_vertical
+     \endgraf
+   \fi
    \begingroup
-   \scratchcounter\ifnum#1>\c_strc_registers_maxlevel\c_strc_registers_maxlevel\else#1\fi\relax
+   \c_strc_register_level\ifnum#1>\c_strc_registers_maxlevel\c_strc_registers_maxlevel\else#1\fi\relax
    \dostarttagged\t!registerentries\empty
-%    \let\savedcurrentregister\currentregister
-   \pushmacro\currentregister
-   \edef\currentregister{\currentregister:\number\scratchcounter}%
+   \pushmacro\currentregister % bah
+   \edef\currentregister{\currentregister:\number\c_strc_register_level}%
+   \let\currentnestedregister\currentregister
    \usenestedregisterstyleandcolor\c!textstyle\c!textcolor
-   \ifnum\scratchcounter>\plusone
-     \advance\leftskip\d_strc_registers_distance\relax
+   \ifnum\c_strc_register_level>\plusone
+     \advanceby\leftskip\d_strc_registers_distance\relax
    \fi
    \d_strc_registers_hangindent\registerparameter\c!distance\relax
    \c_strc_registers_hangafter \plusone
-   \blank[\v!samepage]%
-%    \let\currentregister\savedcurrentregister}
+   \ifconditional\c_strc_registers_vertical
+     \blank[\v!samepage]%
+   \fi
    \popmacro\currentregister}
 
 \permanent\protected\def\stopregisterentries
@@ -897,17 +1011,40 @@
    \dostoptagged
    \endgroup}
 
+% \permanent\protected\def\startregisterentry#1% todo: level
+%   {\typo_injectors_check_register
+%    \begingroup
+%    \dostarttagged\t!registerentry\empty
+%    \global\setconstant\c_strc_registers_page_state\zerocount
+%    \hangindent\d_strc_registers_hangindent
+%    \hangafter \c_strc_registers_hangafter
+%    \typo_injectors_mark_register}
+%
+% \permanent\protected\def\stopregisterentry
+%   {\endgraf
+%    \global\setconstant\c_strc_registers_page_state\zerocount
+%    \dostoptagged
+%    \endgroup}
+
 \permanent\protected\def\startregisterentry#1% todo: level
   {\typo_injectors_check_register
    \begingroup
    \dostarttagged\t!registerentry\empty
    \global\setconstant\c_strc_registers_page_state\zerocount
-   \hangindent\d_strc_registers_hangindent
-   \hangafter \c_strc_registers_hangafter
+   \ifconditional\c_strc_registers_vertical
+     \hangindent\d_strc_registers_hangindent
+     \hangafter \c_strc_registers_hangafter
+   \else
+     \namedregisterparameter\currentnestedregister\c!left\relax
+   \fi
    \typo_injectors_mark_register}
 
 \permanent\protected\def\stopregisterentry
-  {\endgraf
+  {\ifconditional\c_strc_registers_vertical
+     \endgraf
+   \else
+     \namedregisterparameter\currentnestedregister\c!right\relax
+   \fi
    \global\setconstant\c_strc_registers_page_state\zerocount
    \dostoptagged
    \endgroup}
@@ -966,17 +1103,50 @@
 %      \applyprocessor{#1}{\registerparameter\c!pagecommand{#4}}%
 %    \fi}
 
-\permanent\protected\def\withregisterpagecommand#1#2#3#4%
+\let\currentregisterrealpage\!!zerocount % todo: more general accessor
+
+% keep as reference
+%
+% \permanent\protected\def\withregisterpagecommand#1#2#3#4%
+%   {\ifcase#3\relax
+%      {\tt [entry\space not\space flushed]}%
+%    \else
+%      \def\currentregisterpageindex{#2}%
+%      \def\currentregisterrealpage{#3}%
+%      \iflocation
+%        \strc_references_goto_internal{\applyprocessor{#1}{\registerparameter\c!pagecommand{#4}}}[internal(#2)]%
+%      \else
+%        \applyprocessor{#1}{\registerparameter\c!pagecommand{#4}}%
+%      \fi
+%    \fi}
+%
+% todo: adapt \strc_references_goto_internal to take an extra argument, the ref
+
+\permanent\protected\def\withregisterpagecommand#1#2#3#4% #1:processor #2:internal #3:realpage #4:page
   {\ifcase#3\relax
      {\tt [entry\space not\space flushed]}%
    \else
      \def\currentregisterpageindex{#2}%
-     \iflocation
-       \strc_references_goto_internal{\applyprocessor{#1}{\registerparameter\c!pagecommand{#4}}}[internal(#2)]%
+     \def\currentregisterrealpage{#3}%
+     \ifchknum\currentregisterpageindex\or
+       \lettonothing\currentregisterpageprefix
      \else
-       \applyprocessor{#1}{\registerparameter\c!pagecommand{#4}}%
+       \def\currentregisterpageprefix{\clf_registerprefix{\currentregisterpageindex}}%
      \fi
+     \iflocation
+       \ifempty\currentregisterpageprefix
+         \strc_references_get_simple_reference{internal(\currentregisterpageindex)}%
+       \else
+         \strc_references_get_simple_reference{\currentregisterpageindex::page(\currentregisterrealpage)}%
+       \fi
+       \global\lastsavedreferenceattribute\currentreferenceattribute
+       \c_attr_reference\currentreferenceattribute
+       \setlocationattributes
+     \fi
+     \applyprocessor{#1}{\currentregisterpageprefix\registerparameter\c!pagecommand{#4}}%
    \fi}
+
+\lettonothing\m_current_register
 
 \permanent\protected\def\pushcurrentregister#1%
   {\let\m_current_register\currentregister
@@ -987,6 +1157,7 @@
 
 \permanent\protected\def\registeronepage#1#2#3#4#5% #1:class #2:processor content
   {\pushcurrentregister{#1}%
+   \strc_registers_update_page_properties
    \edef\p_pagenumber{\registerparameter\c!pagenumber}%
    \ifx\p_pagenumber\v!no\else
      \registerpageseparator
@@ -1011,6 +1182,7 @@
 
 \permanent\protected\def\registerpagerange#1#2#3#4#5#6#7#8% #1:class #2:processor  content, content todo: -- configurable
   {\pushcurrentregister{#1}%
+   \strc_registers_update_page_properties
    \edef\p_pagenumber{\registerparameter\c!pagenumber}%
    \ifx\p_pagenumber\v!no\else
      \registerpageseparator
@@ -1037,16 +1209,19 @@
 
 \permanent\protected\def\defaultregisterentry#1#2#3#4#5% #1:class #2:processor #3:internal #4:seeindex #5:word
   {\pushcurrentregister{#1}%
+   \strc_registers_update_text_properties
    \def\currentregisterpageindex{#3}%
    \iflocation
      \def\currentregisterseeindex{#4}%
      \ifconditional\c_strc_registers_text_interaction
-       \strc_references_goto_internal{\setlocationcolor\doapplyregisterentrycommand{#2}{#5}}[internal(#3)]%
+       \ifchknum\currentregisterpageindex\or
+         \strc_references_goto_internal{\setlocationcolor\doapplyregisterentrycommand{#2}{#5}}[internal(#3)]%
+       \fi
      \else
        \doapplyregisterentrycommand{#2}{#5}%
      \fi
    \else
-     \let\currentregisterseeindex\empty
+     \lettonothing\currentregisterseeindex
      \doapplyregisterentrycommand{#2}{#5}%
    \fi
    \popcurrentregister}
@@ -1069,6 +1244,30 @@
      \applyprocessor{#1}{#2}%
    \fi}
 
+% \permanent\protected\def\defaultregisterseeword#1#2#3#4#5#6#7% class i n #3:processor #4:internal #5:seeindex #6:word
+%   {\pushcurrentregister{#1}%
+%    \ifnum#2=\plusone
+%      \registerpageseparator
+%    \fi
+%    \global\setconstant\c_strc_registers_page_state\plustwo
+%    \def\currentregisterpageindex{#5}%
+%    \dostarttagged\t!registersee\empty
+%    \settrue\c_strc_registers_page_done
+%    \iflocation
+%      \def\currentregisterseeindex{#6}%
+%    \else
+%      \lettonothing\currentregisterseeindex
+%    \fi
+%    \ifnum#2=\plusone
+%      \labeltexts\v!see{\doapplyregisterseecommand{#4}{#7}}%
+%    \orelse\ifnum#2=#3\relax
+%      \labeltexts\v!and{\doapplyregisterseecommand{#4}{#7}}%
+%    \else
+%      ,\space\doapplyregisterseecommand{#4}{#7}%
+%    \fi
+%    \dostoptagged
+%    \popcurrentregister}
+
 \permanent\protected\def\defaultregisterseeword#1#2#3#4#5#6#7% class i n #3:processor #4:internal #5:seeindex #6:word
   {\pushcurrentregister{#1}%
    \ifnum#2=\plusone
@@ -1076,19 +1275,30 @@
    \fi
    \global\setconstant\c_strc_registers_page_state\plustwo
    \def\currentregisterpageindex{#5}%
+   \def\currentregisterseeindex{#6}%
    \dostarttagged\t!registersee\empty
    \settrue\c_strc_registers_page_done
-   \iflocation
-     \def\currentregisterseeindex{#6}%
+   \ifchknum\currentregisterseeindex\or
+     \lettonothing\currentregisterpageprefix
    \else
-     \let\currentregisterseeindex\empty
+     \def\currentregisterpageprefix{\clf_registerprefix{\currentregisterseeindex}}%
+   \fi
+   \iflocation
+     \ifempty\currentregisterpageprefix
+       \strc_references_get_simple_reference{internal(\currentregisterseeindex)}%
+     \else
+       \strc_references_get_simple_reference{\currentregisterpageindex::page(\currentregisterrealpage)}%
+     \fi
+     \global\lastsavedreferenceattribute\currentreferenceattribute
+     \c_attr_reference\currentreferenceattribute
+     \setlocationattributes
    \fi
    \ifnum#2=\plusone
-     \labeltexts\v!see{\doapplyregisterseecommand{#4}{#7}}%
+     \labeltexts\v!see{\doapplyregisterseecommand{#4}{\currentregisterpageprefix#7}}%
    \orelse\ifnum#2=#3\relax
-     \labeltexts\v!and{\doapplyregisterseecommand{#4}{#7}}%
+     \labeltexts\v!and{\doapplyregisterseecommand{#4}{\currentregisterpageprefix#7}}%
    \else
-     ,\space\doapplyregisterseecommand{#4}{#7}%
+     ,\space\doapplyregisterseecommand{#4}{\currentregisterpageprefix#7}%
    \fi
    \dostoptagged
    \popcurrentregister}
@@ -1114,7 +1324,7 @@
    \iflocation
      \def\currentregistersectionindex{#6}%
    \else
-     \let\currentregistersectionindex\empty
+     \lettonothing\currentregistersectionindex
    \fi
    \ifnum#2=\plusone\else
       ,\space
@@ -1174,30 +1384,30 @@
 
 % not yet ok : new internal handler names
 
-\aliased\let\registerpageseparatorsymbol\empty
+\lettonothing\registerpageseparatorsymbol
 
 \permanent\protected\def\registerpagebuttonsymbol
   {\vrule\s!width\emwidth\s!height\exheight\s!depth\zeropoint\relax}
 
 \installcorenamespace{registersymbol}
 
-\setvalue{\??registersymbol n}%
+\defcsname\??registersymbol n\endcsname
   {\enforced\frozen\def\registerpageseparatorsymbol{,\space}}
 
-\setvalue{\??registersymbol a}%
+\defcsname\??registersymbol a\endcsname
   {\enforced\frozen\def\registerpageseparatorsymbol{,\space}} % now done via conversion
 
-\setvalue{\??registersymbol\v!none}%
-  {\enforced\frozen\let\registerpageseparatorsymbol\empty
+\defcsname\??registersymbol\v!none\endcsname
+  {\enforced\frozen\lettonothing\registerpageseparatorsymbol
    \enforced\frozen\let\registeronepage\gobblefivearguments
    \enforced\frozen\let\registerpagerange\gobbleeightarguments}
 
-\setvalue{\??registersymbol 1}%
+\defcsname\??registersymbol 1\endcsname
   {\enforced\frozen\let\registerpageseparatorsymbol\space
    \enforced\frozen\def\registeronepage{\symbol[1]\gobblefivearguments}%
    \enforced\frozen\def\registerpagerange{\symbol[1]\gobbleeightarguments}}
 
-\setvalue{\??registersymbol 2}%
+\defcsname\??registersymbol 2\endcsname
   {\enforced\frozen\let\registerpageseparatorsymbol\space
    \enforced\frozen\def\registeronepage{\registerpagebuttonsymbol\gobblefivearguments}%
    \enforced\frozen\def\registerpagerange{\registerpagebuttonsymbol\gobbleeightarguments}}
@@ -1274,3 +1484,190 @@
 \stopcontextdefinitioncode
 
 \protect \endinput
+
+% % maybe also more levels with [entries|keys|processors]:n
+% %
+% % \setregisterentry
+% %   [index]
+% %   [entries:1=one,
+% %    entries:2=two,
+% %    entries:3=three,
+% %    entries:4=four]
+% %
+% % test \blank \placeregister[index][balance=no]
+%
+% \def\expanddetokenizedregistervalues#1#2%
+%   {\edef\expandedregistervalue{\detokenizedregisterparameter{#1:#2}}%
+%    \ifempty\expandedregistervalue\else
+%       \letregisterparameter{#1:#2}\expandedregistervalue
+%       \expandafter\expanddetokenizedregistervalues
+%       \expandafter#1%
+%       \expandafter{\the\numexpr#2+1}%
+%    \fi}%
+%
+% \def\expandregistervalues#1#2%
+%   {\edef\expandedregistervalue{\registerparameter{#1:#2}}%
+%    \ifempty\expandedregistervalue\else
+%       \letregisterparameter{#1:#2}\expandedregistervalue
+%       \expandafter\expandregistervalues
+%       \expandafter#1%
+%       \expandafter{\the\numexpr#2+1}%
+%    \fi}%
+%
+% % \def\injectregistervalues#1#2%
+% %   {\beginlocalcontrol
+% %    \edef\expandedregistervalue{\registerparameter{#1:\the\numexpr#2}}%
+% %    \endlocalcontrol
+% %    \ifempty\expandedregistervalue\else
+% %       {\expandedregistervalue}%
+% %       \injectregistervalues#1{#2+1}%
+% %     \fi}%
+%
+% \def\injectregistervalues#1#2%
+%   {\iftok{\registerparameter{#1:\the\numexpr#2}}\emptytoks\else
+%       \expandafter{\lastnamedcs}%
+%       \injectregistervalues#1{#2+1}%
+%     \fi}%
+%
+% \def\strc_registers_register_page_expand_xml_entries
+%   {\xmlstartraw
+%      \beginlocalcontrol
+%      \expandregistervalues\c!entries1%
+%      \endlocalcontrol
+%    \xmlstopraw
+%    \glet\currentregistercoding\s!xml}
+%
+% \def\strc_registers_register_page_expand_yes_entries
+%   {\beginlocalcontrol
+%    \expandregistervalues\c!entries1%
+%    \endlocalcontrol
+%    \glet\currentregistercoding\s!tex}
+%
+% \def\strc_registers_register_page_expand_nop_entries
+%   {\beginlocalcontrol
+%    \expanddetokenizesregistervalues\c!entries1%
+%    \endlocalcontrol
+%    \glet\currentregistercoding\s!tex}
+%
+% \def\strc_registers_register_page_expand_nop_entries
+%   {\beginlocalcontrol
+%    \expandregistervalues\c!entries1%
+%    \endlocalcontrol
+%    \glet\currentregistercoding\s!tex}
+%
+% \def\strc_registers_register_page_expand_xml_keys
+%   {\xmlstartraw
+%      \beginlocalcontrol
+%      \expandregistervalues\c!keys1%
+%      \endlocalcontrol
+%    \xmlstopraw}
+%
+% \def\strc_registers_register_page_expand_yes_keys
+%   {\beginlocalcontrol
+%    \expandregistervalues\c!keys1%
+%    \endlocalcontrol}
+%
+% \def\strc_registers_register_page_expand_processors
+%   {\beginlocalcontrol
+%    \expandregistervalues\c!processors1%
+%    \endlocalcontrol}
+%
+% \def\strc_registers_register_page_entry_indeed#1#2#3% register data userdata
+%   {\begingroup
+%    \edef\currentregister{#1}%
+%    %\setupcurrentregister[\c!entries=,\c!label=,\c!keys=,\c!alternative=,#2]%
+%    \setupcurrentregister[#2]%
+%    \edef\currentregisterlabel     {\registerparameter\c!label}%
+%    \edef\currentregisterexpansion {\registerparameter\c!expansion}%
+%    \edef\currentregisterownnumber {\registerparameter\c!ownnumber}%
+%    \xdef\currentregisterkeys      {\registerparameter\c!keys}%
+%    \xdef\currentregisterentries   {\registerparameter\c!entries}%
+%    \xdef\currentregisterprocessors{\registerparameter\c!processors}%
+%    \xdef\currentregisterxmlsetup  {\registerparameter\c!xmlsetup}%
+%    \ifempty\currentregisterentries
+%      \ifx\currentregisterexpansion\s!xml
+%        \strc_registers_register_page_expand_xml_entries
+%      \orelse\ifx\currentregisterexpansion\v!yes
+%        \strc_registers_register_page_expand_yes_entries
+%      \else
+%        \strc_registers_register_page_expand_nop_entries
+%      \fi
+%    \else
+%      \ifx\currentregisterexpansion\s!xml
+%        \strc_registers_register_page_expand_xml
+%      \orelse\ifx\currentregisterexpansion\v!yes
+%        \strc_registers_register_page_expand_yes
+%      \else
+%        \strc_registers_register_page_expand_nop
+%      \fi
+%    \fi
+%    \ifempty\currentregisterkeys
+%      \ifx\currentregistercoding\s!xml
+%        \strc_registers_register_page_expand_xml_keys
+%      \else
+%        \strc_registers_register_page_expand_yes_keys
+%      \fi
+%    \fi
+%    \strc_registers_register_page_expand_processors
+%    \setnextinternalreference
+%    % we could consider storing register entries in a list which we
+%    % could then sort
+%    \glet\currentregistername\currentregister
+%    \xdef\currentregisternumber{\clf_storeregister % 'own' should not be in metadata
+%         metadata {%
+%             name     {\currentregister}%
+%             coding   {\currentregistercoding}%
+%         \ifx\currentregisterownnumber\v!yes
+%             own      {\registerparameter\c!alternative}% can be used instead of pagenumber
+%         \fi
+%         \ifx\currentreferencecoding\s!xml
+%             xmlroot  {\xmldocument} % only useful when text
+%         \fi
+%         \ifempty\currentregisterxmlsetup \else
+%             xmlsetup {\currentregisterxmlsetup}%
+%         \fi
+%         }%
+%         references {%
+%         \ifempty\currentregisterlabel \else
+%             label    {\currentregisterlabel}%
+%         \fi
+%          %  view     {\interactionparameter\c!focus}%
+%         }%
+%         entries {%
+%             % we need a special one for xml, this is just a single one
+%             \ifempty\currentregisterentries
+%                 entries {\injectregistervalues\c!entries1}%
+%             \else
+%                 entry {\currentregisterentries}%
+%             \fi
+%             \ifempty\currentregisterkeys
+%                 keys {\injectregistervalues\c!keys1}%
+%             \else
+%                 key {\currentregisterkeys}%
+%             \fi
+%             \ifempty\currentregisterprocessors
+%                 processors {\injectregistervalues\c!processors1}%
+%             \else
+%                 processor {\currentregisterprocessors}%
+%             \fi
+%         }%
+%         userdata {\detokenize\expandafter{\normalexpanded{#3}}}
+%    }%
+%    \clf_setinternalreference
+%       internal \locationcount
+%       view     {\interactionparameter\c!focus}%
+%    \relax % this will change
+%    \ifx\currentregisterownnumber\v!yes
+%      \glet\currentregistersynchronize\relax
+%    \else
+%      \xdef\currentregistersynchronize{\clf_deferredenhanceregister{\currentregister}\number\currentregisternumber}%
+%    \fi
+%    \currentregistersynchronize % here?
+%    % needs thinking ... bla\index{bla}. will break before the . but adding a
+%    % penalty is also no solution
+%    \dostarttagged\t!registerlocation\currentregister
+%    \c_attr_destination\lastdestinationattribute
+%    \signalcharacter % no \strut as it will be removed during cleanup
+%    \dotagregisterlocation
+%    \dostoptagged
+%    \endgroup}

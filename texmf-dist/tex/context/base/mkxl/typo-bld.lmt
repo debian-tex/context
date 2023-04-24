@@ -34,25 +34,23 @@ constructors.attribute   = a_parbuilder
 local unsetvalue         = attributes.unsetvalue
 local texsetattribute    = tex.setattribute
 local texnest            = tex.nest
-local texlists           = tex.lists
-
 local texget             = tex.get
 local texset             = tex.set
 
-local texgetdimen        = tex.getdimen
+local getspeciallist     = nodes.nuts.getspeciallist
+local setspeciallist     = nodes.nuts.setspeciallist
 
 local nodes              = nodes
 local nodeidstostring    = nodes.idstostring
 local nodepool           = nodes.pool
 local new_baselineskip   = nodepool.baselineskip
 local new_lineskip       = nodepool.lineskip
-local insert_node_before = nodes.insert_before
+local insertnodebefore   = nodes.insertbefore
 local hpack_node         = nodes.hpack
 
 local nuts               = nodes.nuts
 local tonode             = nodes.tonode
 local tonut              = nodes.tonut
-local count_nodes        = nuts.countall
 local getattr            = nuts.getattr
 
 local starttiming        = statistics.starttiming
@@ -157,9 +155,9 @@ function parbuilders.constructors.methods.oneline(head,followed_by_display)
     t.prevdepth = h.depth
     t.prevgraf  = 1
     if d < texget("lineskiplimit") then
-        return insert_node_before(h,h,new_lineskip(texget("lineskip",false))) -- no stretch etc
+        return insertnodebefore(h,h,new_lineskip(texget("lineskip",false))) -- no stretch etc
     else
-        return insert_node_before(h,h,new_baselineskip(d))
+        return insertnodebefore(h,h,new_baselineskip(d))
     end
 end
 
@@ -177,9 +175,7 @@ local function processor(head,followed_by_display)
     -- todo: not again in otr so we need to flag
     if enabled then
         starttiming(parbuilders)
-        head = tonut(head)
-        head = actions(head,followed_by_display)
-        head = tonode(head)
+        head = tonode(actions(tonut(head),followed_by_display))
         stoptiming(parbuilders)
         return head
     else
@@ -190,7 +186,7 @@ end
 function constructors.enable () enabled = true  end
 function constructors.disable() enabled = false end
 
-registercallback('linebreak_filter', processor, "breaking paragraps into lines")
+registercallback("linebreak_filter", processor, "breaking paragraps into lines")
 
 statistics.register("linebreak processing time", function()
     return statistics.elapsedseconds(parbuilders)
@@ -201,22 +197,13 @@ end)
 nodes.builders = nodes.builder or { }
 local builders = nodes.builders
 
-local vboxactions = nodes.tasks.actions("vboxbuilders")
+local vpackactions = nodes.tasks.actions("vboxbuilders")
 
 function builders.vpack_filter(head,groupcode,size,packtype,maxdepth,direction)
     local done = false
     if head then
         starttiming(builders)
-        head = tonut(head)
-        if trace_vbox_builder then
-            local before = count_nodes(head)
-            head, done = vboxactions(head,groupcode,size,packtype,maxdepth,direction)
-            local after = count_nodes(head)
-            nodes.processors.tracer("vpack",head,groupcode,before,after,done)
-        else
-            head, done = vboxactions(head,groupcode)
-        end
-        head = tonode(head)
+        head, done = vpackactions(head,groupcode)
         stoptiming(builders)
     end
     return head, done
@@ -228,51 +215,50 @@ end
 local pageactions = nodes.tasks.actions("mvlbuilders")
 ----- lineactions = nodes.tasks.actions("linebuilders")
 
-local function report(groupcode,head)
-    report_page_builder("trigger: %s",groupcode)
+local function report(pagecontext,head)
+    report_page_builder("trigger: %s at level %i",pagecontext,texnest.ptr)
     report_page_builder("  vsize    : %p",texget("vsize"))
     report_page_builder("  pagegoal : %p",texget("pagegoal"))
     report_page_builder("  pagetotal: %p",texget("pagetotal"))
     report_page_builder("  list     : %s",head and nodeidstostring(head) or "<empty>")
 end
 
--- check why box is called before after_linebreak .. maybe make categories and
--- call 'm less
+-- Watch out: contributehead can be any head (kind of) not per se the page one
+-- but that needs to be intercepted when needed by groupcode and level. At some
+-- point this one might be split by group.
 
--- this will be split into contribute_filter for these 4 so at some point
--- the check can go away
-
--- Todo: contrib_head can be any head (kind of) not per se the page one so maybe I will
--- intercept that in the engine with page_contribute_head or so.
-
-function builders.buildpage_filter(groupcode)
-    local head = texlists.contribute_head
+function builders.buildpage_filter(pagecontext)
+    local head, tail = getspeciallist("contributehead")
     if head then
-        local done = false
-        -- called quite often ... maybe time to remove timing
+        if trace_page_builder then
+            report(pagecontext,head)
+        end
         starttiming(builders)
-        if trace_page_builder then
-            report(groupcode,head)
-        end
-        head, done = pageactions(head,groupcode)
+        head = pageactions(head,pagecontext) -- todo: tail
         stoptiming(builders)
-     -- -- doesn't work here (not passed on?)
-     -- texset("pagegoal,texget("vsize") - texgetdimen("d_page_floats_inserted_top") - texgetdimen("d_page_floats_inserted_bottom")
-        texlists.contribute_head = head or nil -- needs checking
-     -- tex.setlist("contribute_head",head,head and nodes.tail(head))
-        return done and head or true -- no return value needed
+        setspeciallist("contributehead", head)
     else
-        -- happens quite often
         if trace_page_builder then
-            report(groupcode)
+            report(pagecontext)
         end
---         return nil, false -- no return value needed
-        return nil
     end
 end
 
-registercallback('vpack_filter',          builders.vpack_filter,      "vertical spacing etc")
-registercallback('buildpage_filter',      builders.buildpage_filter,  "vertical spacing etc (mvl)")
+registercallback('vpack_filter',     builders.vpack_filter,     "vertical spacing etc")
+registercallback('buildpage_filter', builders.buildpage_filter, "vertical spacing etc (mvl)")
+
+local vboxactions = nodes.tasks.actions("vboxhandlers")
+
+function builders.vbox_filter(head,groupcode)
+    if head then
+        starttiming(builders)
+        head = vboxactions(head,groupcode)
+        stoptiming(builders)
+    end
+    return head
+end
+
+registercallback('packed_vbox_filter', builders.vbox_filter, "packed vbox treatments")
 
 statistics.register("v-node processing time", function()
     return statistics.elapsedseconds(builders)
@@ -368,7 +354,7 @@ local function hpack_quality(how,detail,n,first,last,filename)
             setcolor(rule,"cyan")
         end
         rule = hpack(rule)
-        setwidth(rule,0)
+        setwidth(rule,0) -- maybe better whd all zero
         setdirection(rule,direction)
         return tonode(rule) -- can be a nut
     end

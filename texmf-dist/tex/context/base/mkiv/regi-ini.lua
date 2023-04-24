@@ -16,7 +16,6 @@ runtime.</p>
 
 local commands, context = commands, context
 
-
 local tostring = tostring
 local utfchar = utf.char
 local P, Cs, Cc, lpegmatch = lpeg.P, lpeg.Cs, lpeg.Cc, lpeg.match

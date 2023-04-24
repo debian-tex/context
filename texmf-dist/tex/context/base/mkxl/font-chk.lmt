@@ -12,7 +12,8 @@ if not modules then modules = { } end modules ['font-chk'] = {
 -- instead we just keep the method we use but slightly adapted to the backend
 -- of lmtx.
 
-local next = next
+local type, next = type, next
+local find, lower, gmatch = string.find, string.lower, string.gmatch
 local floor = math.floor
 
 local context              = context
@@ -22,11 +23,14 @@ local bpfactor             = number.dimenfactors.bp
 local fastcopy             = table.fastcopy
 local sortedkeys           = table.sortedkeys
 local sortedhash           = table.sortedhash
+local contains             = table.contains
 
 local report               = logs.reporter("fonts")
 local report_checking      = logs.reporter("fonts","checking")
 
 local allocate             = utilities.storage.allocate
+
+local getmacro             = tokens.getters.macro
 
 local fonts                = fonts
 
@@ -38,8 +42,8 @@ local fontdata             = fonthashes.identifiers
 local fontcharacters       = fonthashes.characters
 
 local currentfont          = font.current
-local addcharacters        = font.addcharacters
 
+local definers             = fonts.definers
 local helpers              = fonts.helpers
 
 local addprivate           = helpers.addprivate
@@ -64,7 +68,7 @@ local implement            = interfaces.implement
 
 local glyph_code           = nodes.nodecodes.glyph
 
-local hpack_node           = node.hpack
+local hpack_node           = nodes.hpack
 
 local nuts                 = nodes.nuts
 local tonut                = nuts.tonut
@@ -75,8 +79,8 @@ local setchar              = nuts.setchar
 local nextglyph            = nuts.traversers.glyph
 
 local remove_node          = nuts.remove
-local insert_node_after    = nuts.insert_after
-local insert_node_before   = nuts.insert_before
+local insertnodeafter      = nuts.insertafter
+local insertnodebefore     = nuts.insertbefore
 local copy_node            = nuts.copy
 
 local actions = false
@@ -155,15 +159,18 @@ checkers.mapping = mapping
 -- sure the dimensions are known at the lua and tex end. For previous variants see
 -- the mkiv files or older lmtx files. I decided to just drop the old stuff here.
 
-function checkers.placeholder(font,char)
-    local category = chardata[char].category or "lu" -- todo: unknown
-    local fakedata = mapping[category]
+function checkers.placeholder(font,char,category)
+    local category = category or chardata[char].category or "lu" -- todo: unknown
+    local fakedata = mapping[category] or mapping.lu
     local tfmdata  = fontdata[font]
     local units    = tfmdata.parameters.units or 1000
     local slant    = (tfmdata.parameters.slant or 0)/65536
     local scale    = units/1000
     local rawdata  = tfmdata.shared and tfmdata.shared.rawdata
     local weight   = (rawdata and rawdata.metadata and rawdata.metadata.pfmweight or 400)/400
+--     if slant then
+--         slant = 0.2
+--     end
     local specification = {
         code      = "MissingGlyph",
         scale     = scale,
@@ -191,7 +198,7 @@ function checkers.missing(head)
                     local c = chardata[char]
                     if c then
                         local s = c.specials
-                        if s and s[1] == "char" then
+                        if s and (s[1] == "char" or s[1] == "with") then -- with added
                             local l = #s
                             if l > 2 then
                                 -- check first
@@ -208,7 +215,7 @@ function checkers.missing(head)
                                     onetimemessage(font,char,"missing (decomposed)")
                                     setchar(n,s[l])
                                     for i=l-1,2,-1 do
-                                        head, o = insert_node_before(head,o,copy_node(n))
+                                        head, o = insertnodebefore(head,o,copy_node(n))
                                         setchar(o,s[i])
                                     end
                                     goto DONE
@@ -372,16 +379,11 @@ local function expandglyph(characters,index,done)
             if n then
                 d.next = expandglyph(characters,n,done)
             end
-            local h = d.horiz_variants
-            if h then
-                for i=1,#h do
-                    h[i].glyph = expandglyph(characters,h[i].glyph,done)
-                end
-            end
-            local v = d.vert_variants
-            if v then
-                for i=1,#v do
-                    v[i].glyph = expandglyph(characters,v[i].glyph,done)
+            local p = d.parts
+            if p then
+                for i=1,#p do
+                    local pi = p[i]
+                    pi.glyph = expandglyph(characters,pi.glyph,done)
                 end
             end
             return d
@@ -430,9 +432,11 @@ local function addvisualspace(tfmdata)
     if spacechar and not spacechar.commands then
         local w = spacechar.width
         local h = tfmdata.parameters.xheight
+     -- local h = tfmdata.parameters.xheight / 4 -- could be "visualspace=large" or so
         local c = {
             width    = w,
-            commands = { { "rule", h, w } }
+            commands = { { "rule", h, w } },
+         -- commands = { { "line", w, 5*h, h } },
         }
         local u = addprivate(tfmdata, "visualspace", c)
     end
@@ -450,3 +454,101 @@ local visualspace_specification = {
 
 registerotffeature(visualspace_specification)
 registerafmfeature(visualspace_specification)
+
+do
+
+
+    local reference = 88 -- string.byte("X")
+    local mapping   = { ss = "sans", rm = "serif", tt = "mono" }
+    local order     = {      "sans",      "serif",      "mono" }
+    local fallbacks = {       sans = { },  serif = { },  mono = { } }
+
+    local function locate(fallbacks,n,f,c)
+        for i=1,#fallbacks do
+            local id = fallbacks[i]
+            if type(id) == "string" then
+                local fid = definers.define { name = id }
+                report("using fallback font %!font:name! (id: %i)",fid,fid)
+                fallbacks[i] = fid
+                id = fid
+            end
+            if type(id) == "number" then
+                local cid = fontcharacters[id]
+                if cid[c] then
+                    local fc = fontcharacters[f]
+                    local sc = (fc[reference].height / cid[reference].height) * (n.scale or 1000)
+                    report("character %C in font %!font:name! (id: %i) is taken from fallback font %!font:name! (id: %i)",c,f,f,id,id)
+                    return { id, sc }
+                end
+            end
+        end
+        return false
+    end
+
+    local cache = table.setmetatableindex("table")
+
+    callback.register("missing_character", function(n,f,c)
+        local cached = cache[f]
+        local found  = cached[c]
+        if found == nil then
+            -- we can use fonts.helpers.name(f) but we need the monospace flag anyway so:
+            local metadata = fontdata[f].shared
+            if metadata then
+                metadata = metadata.rawdata
+                if metadata then
+                    metadata = metadata.metadata
+                    if metadata then
+                        if metadata.monospaced then
+                            found = locate(fallbacks.mono,n,f,c)
+                            if found then
+                                cached[c] = found
+                                goto done
+                            end
+                        end
+                        local fn = lower(metadata.fullname)
+                        for i=1,3 do
+                            local o = order[i]
+                            if find(fn,o) then
+                                found = locate(fallbacks[o],n,f,c)
+                                if found then
+                                    cached[c] = found
+                                    goto done
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            found = locate(fallbacks[mapping[getmacro("fontstyle")] or "mono"],n,f,c)
+            if found then
+                cached[c] = found
+                goto done
+            end
+        end
+      ::done::
+        if found then
+            n.font  = found[1]
+            n.scale = found[2]
+        end
+    end)
+
+    function definers.registerfallbackfont(style,list)
+        local l = fallbacks[style]
+        if l then
+            for s in gmatch(list,"[^, ]+") do
+                if not contains(l,s) then
+                    l[#l+1] = s
+                end
+            end
+        end
+    end
+
+    implement {
+        name      = "registerfallbackfont",
+        public    = true,
+        protected = true,
+        arguments = { "optional", "optional" },
+        actions   = definers.registerfallbackfont,
+    }
+
+end

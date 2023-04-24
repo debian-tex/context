@@ -13,6 +13,8 @@
 
 \unprotect
 
+\startcontextdefinitioncode
+
 %D The old one:
 
 \definemixedcolumns
@@ -30,6 +32,7 @@
   {\bgroup
    \setsimplecolumnshsize[#1]%
    \nopenalties
+   \enforced\permanent\protected\def\column{\vfill\break}% quick hack
    \setbox\scratchbox\vbox\bgroup
    \forgetall} % \blank[\v!disable]
 
@@ -49,8 +52,10 @@
    \edef\rigidcolumnlines
      {\directdummyparameter\c!lines}%
    \setrigidcolumnhsize
-     {\directdummyparameter\c!width}%
-     {\directdummyparameter\c!distance}%
+     {\directdummyparameter\c!width}
+     {\directdummyparameter\c!distance}
      {\directdummyparameter\c!n}}
+
+\stopcontextdefinitioncode
 
 \protect \endinput

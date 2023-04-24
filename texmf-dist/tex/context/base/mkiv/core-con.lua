@@ -17,7 +17,7 @@ slower but look nicer this way.</p>
 --ldx]]--
 
 local floor = math.floor
-local osdate, ostime = os.date, os.time
+local osdate, ostime, ostimezone = os.date, os.time, os.timezone
 local concat, insert, reverse = table.concat, table.insert, table.reverse
 local lower, upper, rep, match, gsub = string.lower, string.upper, string.rep, string.match, string.gsub
 local utfchar, utfbyte = utf.char, utf.byte
@@ -127,7 +127,8 @@ local counters = allocate {
         0xE050, 0xE051, 0xE052, 0xE053, 0xE054,
         0xE055, 0xE056, 0xE057, 0xE058, 0xE059
     },
-    ['devangari'] = {
+    ['devanagari'] = {
+     -- ० १ २ ३ ४ ५ ६ ७ ८ ९
         0x0966, 0x0967, 0x0968, 0x0969, 0x096A,
         0x096B, 0x096C, 0x096D, 0x096E, 0x096F
     },
@@ -197,7 +198,39 @@ local decimals = allocate {
     ['persian'] = {
         ["0"] = "۰", ["1"] = "۱", ["2"] = "۲", ["3"] = "۳", ["4"] = "۴",
         ["5"] = "۵", ["6"] = "۶", ["7"] = "۷", ["8"] = "۸", ["9"] = "۹",
-    }
+    },
+    ['devanagari'] = {
+        ["0"] = "०", ["1"] = "१", ["2"] = "२", ["3"] = "३", ["4"] = "४",
+        ["5"] = "५", ["6"] = "६", ["7"] = "७", ["8"] = "८", ["9"] = "९",
+    },
+    ['malayalam'] = {
+        ["0"] = "൦", ["1"] = "൧", ["2"] = "൨", ["3"] = "൩", ["4"] = "൪",
+        ["5"] = "൫", ["6"] = "൬", ["7"] = "൭", ["8"] = "൮", ["9"] = "൯",
+    },
+    ['tamil'] = {
+        ["0"] = "௦", ["1"] = "௧", ["2"] = "௨", ["3"] = "௩", ["4"] = "௪",
+        ["5"] = "௫", ["6"] = "௬", ["7"] = "௭", ["8"] = "௮", ["9"] = "௯",
+    },
+    ['kannada'] = {
+        ["0"] = "೦", ["1"] = "೧", ["2"] = "೨", ["3"] = "೩", ["4"] = "೪",
+        ["5"] = "೫", ["6"] = "೬", ["7"] = "೭", ["8"] = "೮", ["9"] = "೯",
+    },
+    ['telugu'] = {
+        ["0"] = "౦", ["1"] = "౧", ["2"] = "౨", ["3"] = "౩", ["4"] = "౪",
+        ["5"] = "౫", ["6"] = "౬", ["7"] = "౭", ["8"] = "౮", ["9"] = "౯",
+    },
+    ['bengali'] = {
+        ["0"] = "০", ["1"] = "১", ["2"] = "২", ["3"] = "৩", ["4"] = "৪",
+        ["5"] = "৫", ["6"] = "৬", ["7"] = "৭", ["8"] = "৮", ["9"] = "৯",
+    },
+    ['gujarati'] = {
+        ["0"] = "૦", ["1"] = "૧", ["2"] = "૨", ["3"] = "૩", ["4"] = "૪",
+        ["5"] = "૫", ["6"] = "૬", ["7"] = "૭", ["8"] = "૮", ["9"] = "૯",
+    },
+    ['gurmurkhi'] = {
+        ["0"] = "੦", ["1"] = "੧", ["2"] = "੨", ["3"] = "੩", ["4"] = "੪",
+        ["5"] = "੫", ["6"] = "੬", ["7"] = "੭", ["8"] = "੮", ["9"] = "੯",
+    },
 }
 
 languages.decimals = decimals
@@ -1152,6 +1185,8 @@ local ordinals = {
     french = function(n)
         if n == 1 then
             return "er"
+        else
+            return "e"
         end
     end,
 }
@@ -1414,6 +1449,111 @@ data.es = data.spanish
 -- print(translate(31))
 -- print(translate(101))
 -- print(translate(199))
+
+-- verbose swedish by Peter Kvillegard
+
+do
+
+    local words = {
+            [0] = "noll",
+            [1] = "ett",
+            [2] = "två",
+            [3] = "tre",
+            [4] = "fyra",
+            [5] = "fem",
+            [6] = "sex",
+            [7] = "sju",
+            [8] = "åtta",
+            [9] = "nio",
+           [10] = "tio",
+           [11] = "elva",
+           [12] = "tolv",
+           [13] = "tretton",
+           [14] = "fjorton",
+           [15] = "femton",
+           [16] = "sexton",
+           [17] = "sjutton",
+           [18] = "arton",
+           [19] = "nitton",
+           [20] = "tjugo",
+           [30] = "trettio",
+           [40] = "fyrtio",
+           [50] = "femtio",
+           [60] = "sextio",
+           [70] = "sjuttio",
+           [80] = "åttio",
+           [90] = "nittio",
+          [100] = "hundra",
+         [10^3] = "tusen",
+         [10^6] = "miljon",
+         [10^9] = "miljard",
+        [10^12] = "biljon",
+        [10^15] = "biljard",
+    }
+
+    local function translate(n,connector)
+        local w = words[n]
+        if w then
+            return w
+        else
+            local t = { }
+            local l = 0
+            -- group of three digits to words, e.g. 123 -> etthundratjugotre
+            local function triplets(n)
+                if floor(n/100) > 0 then
+                    l = l + 1 ; t[l] = words[floor(n/100)]
+                    l = l + 1 ; t[l] = words[100]
+                end
+                if n%100 > 20 then
+                    l = l + 1 ; t[l] = words[n%100-n%10]
+                    if n%10 > 0 then
+                        l = l + 1 ; t[l] = words[n%10]
+                    end
+                elseif n%100 > 0 then
+                    l = l + 1 ; t[l] = words[n%100]
+                end
+            end
+            -- loops through 10^15,10^12,...10^3, extracting groups of three digits
+            -- to make words from, then adding names for order of magnitude
+            for i=15,3,-3 do
+                local triplet = floor(n/10^i)%10^3
+                if triplet > 0 then
+                    -- grammar: "en" instead of "ett"
+                    if i > 3 and triplet == 1 then
+                        l = l + 1 ; t[l] = "en"
+                    else
+                        triplets(triplet)
+                    end
+                    -- grammar: plural form of "millions" etc
+                    l = l + 1 ; t[l] = words[10^i]
+                    if i > 3 and triplet > 1 then
+                        l = l + 1 ; t[l] = "er"
+                    end
+                end
+            end
+            -- add last group of three numbers (no word for magnitude)
+            n = n%1000
+            if n > 0 then
+                triplets(n)
+            end
+            t = concat(t," ")
+            -- grammar: spacing for numbers < 10^6 and repeated letters
+            if n < 10^6 then
+                t = gsub(t,"%stusen%s","tusen")
+                t = gsub(t,"etttusen","ettusen")
+            end
+            return t
+        end
+    end
+
+    data.swedish = {
+        words     = words,
+        translate = translate,
+    }
+
+    data.sv = data.swedish
+
+end
 
 -- verbose handler:
 
@@ -1864,14 +2004,37 @@ implement {
     actions   = { formatters["U+%05X"], context },
 }
 
-local n = R("09")^1 / tonumber
+-- totime might move to utilities.parsers as more general helper
+
+local n = R("09")^1 / tonumber -- lpegpatterns.digit
 
 local p = Cf( Ct("")
-    * Cg(Cc("year")  * (n           )) * P("-")^-1
-    * Cg(Cc("month") * (n + Cc(   1))) * P("-")^-1
-    * Cg(Cc("day")   * (n + Cc(   1))) * whitespace^-1
-    * Cg(Cc("hour")  * (n + Cc(   0))) * P(":")^-1
-    * Cg(Cc("min")   * (n + Cc(   0)))
+    -- year is mandate, month and day are optional
+    * Cg(Cc("year") * n)
+    * S("-/")^-1
+    * Cg(Cc("month") * (n + Cc(1)))
+    * S("-/")^-1
+    * Cg(Cc("day") * (n + Cc(1)))
+    -- time is optional, hour and minuta are mandate, seconds are optional
+    * (
+          whitespace^0
+        * P("T")^-1
+        * whitespace^0
+        * Cg(Cc("hour") * n)
+        * P(":")^-1
+        * Cg(Cc("min") * n)
+        * P(":")^-1
+        * Cg(Cc("sec") * (n + Cc(0)))
+    )^-1
+    -- zone is optional, hour is mandate, minutes are optional
+    * (
+          whitespace^0
+        * Cg(Cc("tzs") * (P("+") * Cc(1) + P("-") * Cc(-1) + Cc(1)))
+        * whitespace^0
+        * Cg(Cc("tzh") * n)
+        * P(":")^-1
+        * Cg(Cc("tzm") * (n + Cc(0)))
+    )^-1
     , rawset)
 
 function converters.totime(s)
@@ -1880,11 +2043,19 @@ function converters.totime(s)
     elseif type(s) == "table" then
         return s
     elseif type(s) == "string" then
-        return lpegmatch(p,s)
+        local t = lpegmatch(p,s)
+        if not t then
+            logs.report("system","invalid time specification %a",s)
+        elseif t.tzh then
+            local localtzh, localtzm = ostimezone(true)
+            t.hour = t.hour + localtzh - t.tzs * t.tzh
+            t.min  = t.min  + localtzm - t.tzs * t.tzm
+        end
+        return t
     end
     local n = tonumber(s)
     if n and n >= 0 then
-        return date("*t",n)
+        return osdate("*t",n)
     end
 end
 
@@ -2043,3 +2214,9 @@ local function field(n) return context(osdate("*t")[n]) end
 implement { name = "actualday",   public = true, actions = function() field("day")   end }
 implement { name = "actualmonth", public = true, actions = function() field("month") end }
 implement { name = "actualyear",  public = true, actions = function() field("year")  end }
+
+implement {
+    name    = "uuid",
+    public  = true,
+    actions = { os.uuid, context },
+}

@@ -211,6 +211,8 @@ do
       + P(1)
     )^0 * Carg(1)
 
+    -- cache this?
+
     local function loadpfbvector(filename,shapestoo,streams)
         -- for the moment limited to encoding only
 

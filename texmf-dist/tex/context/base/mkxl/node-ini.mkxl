@@ -15,34 +15,34 @@
 
 \unprotect
 
-\newcount\filterstate \filterstate\plusone % hm, public
+\newinteger\filterstate \filterstate\plusone % hm, public
 
 \registerctxluafile{node-cmp}{autosuffix}
 \registerctxluafile{node-ini}{autosuffix}
 \registerctxluafile{node-met}{autosuffix}
 \registerctxluafile{node-nut}{autosuffix}
 \registerctxluafile{node-res}{autosuffix}
-\registerctxluafile{node-ext}{autosuffix}
 %registerctxluafile{node-ppt}{} % experimental, not used so probably useless
 \registerctxluafile{node-aux}{autosuffix}
 \registerctxluafile{node-gcm}{autosuffix}
-\registerctxluafile{node-tst}{}
+\registerctxluafile{node-tst}{autosuffix}
 \registerctxluafile{node-tra}{autosuffix}
 \registerctxluafile{node-snp}{autosuffix}
-\registerctxluafile{node-tsk}{}
+\registerctxluafile{node-tsk}{autosuffix}
 \registerctxluafile{node-tex}{autosuffix}
-\registerctxluafile{node-dir}{} % experimental, not yet (and maybe never) used
+\registerctxluafile{node-dir}{autosuffix}
 \registerctxluafile{node-pro}{autosuffix}
 \registerctxluafile{node-ser}{autosuffix}
 \registerctxluafile{node-acc}{autosuffix} % experimental
 %registerctxluafile{node-prp}{} % makes no sense (yet)
 \registerctxluafile{node-scn}{autosuffix}
-\registerctxluafile{node-syn}{autosuffix}
+\registerctxluafile{node-scn}{autosuffix}
 \registerctxluafile{node-par}{autosuffix}
+%registerctxluafile{node-bwc}{autosuffix} % no longer used
 
 %D This might go away (needs checking anyway, very old code):
 
-\newcount\c_node_tracers_show_box % box number
+\newinteger\c_node_tracers_show_box % box number
 
 \permanent\protected\def\shownextnodes{\afterassignment\node_tracers_show_next\c_node_tracers_show_box}
 \permanent\protected\def\showflatnodes{\afterassignment\node_tracers_show_flat\c_node_tracers_show_box}

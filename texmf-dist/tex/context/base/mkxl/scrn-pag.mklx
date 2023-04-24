@@ -24,20 +24,20 @@
 \installparameterhandler \??interactionscreen {interactionscreen}
 \installsetuphandler     \??interactionscreen {interactionscreen}
 
-\newdimen\canvaswidth
-\newdimen\canvasheight
-\newdimen\canvasbackoffset
-\newdimen\canvastopoffset
-\newdimen\canvasmaxwidth
-\newdimen\canvasmaxheight
-\newdimen\canvascropoffset
-\newdimen\canvastrimoffset
-\newdimen\canvasbleedoffset
-\newdimen\canvasartoffset
+\newdimension\canvaswidth
+\newdimension\canvasheight
+\newdimension\canvasbackoffset
+\newdimension\canvastopoffset
+\newdimension\canvasmaxwidth
+\newdimension\canvasmaxheight
+\newdimension\canvascropoffset
+\newdimension\canvastrimoffset
+\newdimension\canvasbleedoffset
+\newdimension\canvasartoffset
 
-\mutable\let\currentinteractionscreendelay \empty
-\mutable\let\currentinteractionscreenheight\empty
-\mutable\let\currentinteractionscreenwidth \empty
+\mutable\lettonothing\currentinteractionscreendelay
+\mutable\lettonothing\currentinteractionscreenheight
+\mutable\lettonothing\currentinteractionscreenwidth
 
 \newconditional\c_scrn_canvas_tight_page
 
@@ -65,10 +65,10 @@
      \donefalse
      \ifdim\backspace>\canvaswidth
        \ifdim\backspace>\zeropoint\relax
-         \global\advance\canvasbackoffset -\canvaswidth
+         \global\advanceby\canvasbackoffset -\canvaswidth
        \fi
      \fi
-     \global\advance\canvaswidth\dimexpr
+     \global\advanceby\canvaswidth\dimexpr
        \makeupwidth
      + \rightcombitotal
      + 2\dimexpr
@@ -100,10 +100,10 @@
      \global\canvasheight\dimexpr\topheight+\topdistance\relax
      \ifdim\topspace>\canvasheight
        \ifdim\topspace>\zeropoint\relax
-         \global\advance\canvastopoffset -\canvasheight
+         \global\advanceby\canvastopoffset -\canvasheight
        \fi
      \fi
-     \global\advance\canvasheight\dimexpr
+     \global\advanceby\canvasheight\dimexpr
        \makeupheight
      + \bottomdistance
      + \bottomheight
@@ -140,10 +140,10 @@
    \fi
    \endgroup}
 
-\newdimen\layoutcropoffset
-\newdimen\layouttrimoffset
-\newdimen\layoutbleedoffset
-\newdimen\layoutartoffset
+\newdimension\layoutcropoffset
+\newdimension\layouttrimoffset
+\newdimension\layoutbleedoffset
+\newdimension\layoutartoffset
 
 \appendtoks
    \edef\p_cropoffset{\layoutparameter\c!cropoffset}%
@@ -210,7 +210,7 @@
 }
 
 \appendtoks
-    \let\scrn_canvas_synchronize_common\empty
+    \lettonothing\scrn_canvas_synchronize_common
 \to \everyaftershipout
 
 \def\scrn_canvas_synchronize_only
@@ -289,12 +289,12 @@
 
 %D Page transitions:
 
-\let\scrn_transitions_list\empty
+\lettonothing\scrn_transitions_list
 
 \permanent\tolerant\protected\def\setuppagetransitions[#list]%
   {\edef\scrn_transitions_list{#list}%
    \ifx\scrn_transitions_list\v!reset
-     \let\scrn_transitions_list\empty
+     \lettonothing\scrn_transitions_list
    \fi}
 
 \def\scrn_transitions_set

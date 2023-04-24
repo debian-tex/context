@@ -33,7 +33,6 @@ if not modules then modules = { } end modules ['spac-ver'] = {
 
 local next, type, tonumber = next, type, tonumber
 local gmatch, concat = string.gmatch, table.concat
-local ceil, floor, abs = math.ceil, math.floor, math.abs
 local lpegmatch = lpeg.match
 local unpack = unpack or table.unpack
 local allocate = utilities.storage.allocate
@@ -70,19 +69,12 @@ local v_split      = variables.split
 local v_min        = variables.min
 local v_max        = variables.max
 local v_none       = variables.none
-local v_line       = variables.line
-local v_noheight   = variables.noheight
-local v_nodepth    = variables.nodepth
-local v_line       = variables.line
-local v_halfline   = variables.halfline
-local v_line_m     = "-" .. v_line
-local v_halfline_m = "-" .. v_halfline
 local v_first      = variables.first
 local v_last       = variables.last
 local v_top        = variables.top
 local v_bottom     = variables.bottom
-local v_minheight  = variables.minheight
 local v_maxheight  = variables.maxheight
+local v_minheight  = variables.minheight
 local v_mindepth   = variables.mindepth
 local v_maxdepth   = variables.maxdepth
 local v_offset     = variables.offset
@@ -98,13 +90,12 @@ local v_blines     = variables.blines
 
 local trace_vbox_vspacing    = false  trackers.register("vspacing.vbox",     function(v) trace_vbox_vspacing    = v end)
 local trace_page_vspacing    = false  trackers.register("vspacing.page",     function(v) trace_page_vspacing    = v end)
-local trace_page_builder     = false  trackers.register("builders.page",     function(v) trace_page_builder     = v end)
 local trace_collect_vspacing = false  trackers.register("vspacing.collect",  function(v) trace_collect_vspacing = v end)
 local trace_vspacing         = false  trackers.register("vspacing.spacing",  function(v) trace_vspacing         = v end)
 local trace_vsnapping        = false  trackers.register("vspacing.snapping", function(v) trace_vsnapping        = v end)
 local trace_specials         = false  trackers.register("vspacing.specials", function(v) trace_specials         = v end)
 
-local remove_math_skips   = true  directives.register("vspacing.removemathskips", function(v) remnove_math_skips = v end)
+local remove_math_skips      = true   directives.register("vspacing.removemathskips", function(v) remnove_math_skips = v end)
 
 local report_vspacing     = logs.reporter("vspacing","spacing")
 local report_collapser    = logs.reporter("vspacing","collapsing")
@@ -117,6 +108,16 @@ local a_skiporder         = attributes.private('skiporder')
 local a_snapmethod        = attributes.private('snapmethod')
 local a_snapvbox          = attributes.private('snapvbox')
 
+local d_bodyfontstrutheight       = tex.isdimen("bodyfontstrutheight")
+local d_bodyfontstrutdepth        = tex.isdimen("bodyfontstrutdepth")
+local d_globalbodyfontstrutheight = tex.isdimen("globalbodyfontstrutheight")
+local d_globalbodyfontstrutdepth  = tex.isdimen("globalbodyfontstrutdepth")
+----- d_strutht                   = tex.isdimen("strutht")
+local d_strutdp                   = tex.isdimen("strutdp")
+local d_spac_overlay              = tex.isdimen("d_spac_overlay")
+
+local c_spac_vspacing_ignore_parskip = tex.iscount("c_spac_vspacing_ignore_parskip")
+
 local nuts                = nodes.nuts
 local tonut               = nuts.tonut
 
@@ -127,8 +128,9 @@ local getid               = nuts.getid
 local getlist             = nuts.getlist
 local setlist             = nuts.setlist
 local getattr             = nuts.getattr
-local getattrs            = nuts.getattrs
 local setattr             = nuts.setattr
+local setattrs            = nuts.setattrs
+local getattrs            = nuts.getattrs
 local getsubtype          = nuts.getsubtype
 local getbox              = nuts.getbox
 local getwhd              = nuts.getwhd
@@ -147,14 +149,16 @@ local getheight           = nuts.getheight
 local setdepth            = nuts.setdepth
 local getdepth            = nuts.getdepth
 local setnext             = nuts.setnext
+local setprev             = nuts.setprev
 
 local find_node_tail      = nuts.tail
-local flush_node          = nuts.flush_node
+local flushnode           = nuts.flushnode
 local remove_node         = nuts.remove
 local count_nodes         = nuts.countall
 local hpack_node          = nuts.hpack
 local vpack_node          = nuts.vpack
-local start_of_par        = nuts.start_of_par
+
+local startofpar          = nuts.startofpar
 
 local write_node          = nuts.write
 
@@ -162,8 +166,6 @@ local nextnode            = nuts.traversers.node
 local nexthlist           = nuts.traversers.hlist
 
 local nodereference       = nuts.reference
-
-local theprop             = nuts.theprop
 
 local listtoutf           = nodes.listtoutf
 local nodeidstostring     = nodes.idstostring
@@ -187,6 +189,7 @@ local hlist_code          = nodecodes.hlist
 local vlist_code          = nodecodes.vlist
 local rule_code           = nodecodes.rule
 local par_code            = nodecodes.par
+local boundary_code       = nodecodes.boundary
 
 local userskip_code       = gluecodes.userskip
 local lineskip_code       = gluecodes.lineskip
@@ -196,6 +199,8 @@ local topskip_code        = gluecodes.topskip
 local splittopskip_code   = gluecodes.splittopskip
 
 local linelist_code       = nodes.listcodes.line
+
+local setvisual           = function(...) setvisual = nuts.setvisual return setvisual(...) end
 
 local properties          = nodes.properties.data
 
@@ -289,7 +294,7 @@ end
 local function validvbox(parentid,list)
     if parentid == hlist_code then
         local id = getid(list)
-        if id == par_code and start_of_par(list) then
+        if id == par_code and startofpar(list) then
             list = getnext(list)
             if not next then
                 return nil
@@ -323,7 +328,7 @@ local function already_done(parentid,list,a_snapmethod) -- todo: done when only 
     -- problem: any snapped vbox ends up in a line
     if list and parentid == hlist_code then
         local id = getid(list)
-        if id == par_code and start_of_par(list) then
+        if id == par_code and startofpar(list) then
             list = getnext(list)
             if not list then
                 return false
@@ -351,354 +356,368 @@ local function already_done(parentid,list,a_snapmethod) -- todo: done when only 
     return false
 end
 
--- quite tricky: ceil(-something) => -0
-
-local function ceiled(n)
-    if n < 0 or n < 0.01 then
-        return 0
-    else
-        return ceil(n)
-    end
-end
-
-local function floored(n)
-    if n < 0 or n < 0.01 then
-        return 0
-    else
-        return floor(n)
-    end
-end
-
 -- check variables.none etc
 
-local function fixedprofile(current)
-    local profiling = builders.profiling
-    return profiling and profiling.fixedprofile(current)
-end
+local snap_hlist  do
 
-local function snap_hlist(where,current,method,height,depth) -- method[v_strut] is default
-    if fixedprofile(current) then
-        return
+    local v_noheight   = variables.noheight
+    local v_nodepth    = variables.nodepth
+    local v_line       = variables.line
+    local v_halfline   = variables.halfline
+    local v_line_m     = "-" .. v_line
+    local v_halfline_m = "-" .. v_halfline
+
+    local floor = math.floor
+    local ceil  = math.ceil
+
+    local function fixedprofile(current)
+        local profiling = builders.profiling
+        return profiling and profiling.fixedprofile(current)
     end
-    local list = getlist(current)
-    local t = trace_vsnapping and { }
-    if t then
-        t[#t+1] = formatters["list content: %s"](listtoutf(list))
-        t[#t+1] = formatters["snap method: %s"](method.name) -- not interfaced
-        t[#t+1] = formatters["specification: %s"](method.specification) -- not interfaced
-    end
-    local snapht, snapdp
-    if method[v_local] then
-        -- snapping is done immediately here
-        snapht = texgetdimen("bodyfontstrutheight")
-        snapdp = texgetdimen("bodyfontstrutdepth")
-        if t then
-            t[#t+1] = formatters["local: snapht %p snapdp %p"](snapht,snapdp)
-        end
-    elseif method[v_global] then
-        snapht = texgetdimen("globalbodyfontstrutheight")
-        snapdp = texgetdimen("globalbodyfontstrutdepth")
-        if t then
-            t[#t+1] = formatters["global: snapht %p snapdp %p"](snapht,snapdp)
-        end
-    else
-        -- maybe autolocal
-        -- snapping might happen later in the otr
-        snapht = texgetdimen("globalbodyfontstrutheight")
-        snapdp = texgetdimen("globalbodyfontstrutdepth")
-        local lsnapht = texgetdimen("bodyfontstrutheight")
-        local lsnapdp = texgetdimen("bodyfontstrutdepth")
-        if snapht ~= lsnapht and snapdp ~= lsnapdp then
-            snapht, snapdp = lsnapht, lsnapdp
-        end
-        if t then
-            t[#t+1] = formatters["auto: snapht %p snapdp %p"](snapht,snapdp)
+
+    -- quite tricky: ceil(-something) => -0
+
+    local function ceiled(n)
+        if n < 0 or n < 0.01 then
+            return 0
+        else
+            return ceil(n)
         end
     end
 
-    local wd, ht, dp = getwhd(current)
-
-    local h        = (method[v_noheight] and 0) or height or ht
-    local d        = (method[v_nodepth]  and 0) or depth  or dp
-    local hr       = method[v_hfraction] or 1
-    local dr       = method[v_dfraction] or 1
-    local br       = method[v_bfraction] or 0
-    local ch       = h
-    local cd       = d
-    local tlines   = method[v_tlines] or 1
-    local blines   = method[v_blines] or 1
-    local done     = false
-    local plusht   = snapht
-    local plusdp   = snapdp
-    local snaphtdp = snapht + snapdp
-    local extra    = 0
-
-    if t then
-        t[#t+1] = formatters["hlist: wd %p ht %p (used %p) dp %p (used %p)"](wd,ht,h,dp,d)
-        t[#t+1] = formatters["fractions: hfraction %s dfraction %s bfraction %s tlines %s blines %s"](hr,dr,br,tlines,blines)
+    local function floored(n)
+        if n < 0 or n < 0.01 then
+            return 0
+        else
+            return floor(n)
+        end
     end
 
-    if method[v_box] then
-        local br = 1 - br
-        if br < 0 then
-            br = 0
-        elseif br > 1 then
-            br = 1
+    snap_hlist = function(where,current,method,height,depth) -- method[v_strut] is default
+        if fixedprofile(current) then
+            return
         end
-        local n = ceiled((h+d-br*snapht-br*snapdp)/snaphtdp)
-        local x = n * snaphtdp - h - d
-        plusht = h + x / 2
-        plusdp = d + x / 2
+        local list = getlist(current)
+        local t = trace_vsnapping and { }
         if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_box,plusht,plusdp)
+            t[#t+1] = formatters["list content: %s"](listtoutf(list))
+            t[#t+1] = formatters["snap method: %s"](method.name) -- not interfaced
+            t[#t+1] = formatters["specification: %s"](method.specification) -- not interfaced
         end
-    elseif method[v_max] then
-        local n = ceiled((h+d)/snaphtdp)
-        local x = n * snaphtdp - h - d
-        plusht = h + x / 2
-        plusdp = d + x / 2
+        local snapht, snapdp
+        if method[v_local] then
+            -- snapping is done immediately here
+            snapht = texgetdimen(d_bodyfontstrutheight)
+            snapdp = texgetdimen(d_bodyfontstrutdepth)
+            if t then
+                t[#t+1] = formatters["local: snapht %p snapdp %p"](snapht,snapdp)
+            end
+        elseif method[v_global] then
+            snapht = texgetdimen(d_globalbodyfontstrutheight)
+            snapdp = texgetdimen(d_globalbodyfontstrutdepth)
+            if t then
+                t[#t+1] = formatters["global: snapht %p snapdp %p"](snapht,snapdp)
+            end
+        else
+            -- maybe autolocal
+            -- snapping might happen later in the otr
+            snapht = texgetdimen(d_globalbodyfontstrutheight)
+            snapdp = texgetdimen(d_globalbodyfontstrutdepth)
+            local lsnapht = texgetdimen(d_bodyfontstrutheight)
+            local lsnapdp = texgetdimen(d_bodyfontstrutdepth)
+            if snapht ~= lsnapht and snapdp ~= lsnapdp then
+                snapht, snapdp = lsnapht, lsnapdp
+            end
+            if t then
+                t[#t+1] = formatters["auto: snapht %p snapdp %p"](snapht,snapdp)
+            end
+        end
+
+        local wd, ht, dp = getwhd(current)
+
+        local h        = (method[v_noheight] and 0) or height or ht
+        local d        = (method[v_nodepth]  and 0) or depth  or dp
+        local hr       = method[v_hfraction] or 1
+        local dr       = method[v_dfraction] or 1
+        local br       = method[v_bfraction] or 0
+        local ch       = h
+        local cd       = d
+        local tlines   = method[v_tlines] or 1
+        local blines   = method[v_blines] or 1
+        local done     = false
+        local plusht   = snapht
+        local plusdp   = snapdp
+        local snaphtdp = snapht + snapdp
+        local extra    = 0
+
         if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_max,plusht,plusdp)
+            t[#t+1] = formatters["hlist: wd %p ht %p (used %p) dp %p (used %p)"](wd,ht,h,dp,d)
+            t[#t+1] = formatters["fractions: hfraction %s dfraction %s bfraction %s tlines %s blines %s"](hr,dr,br,tlines,blines)
         end
-    elseif method[v_min] then
-        -- we catch a lone min
-        if method.specification ~= v_min then
-            local n = floored((h+d)/snaphtdp)
+
+        if method[v_box] then
+            local br = 1 - br
+            if br < 0 then
+                br = 0
+            elseif br > 1 then
+                br = 1
+            end
+            local n = ceiled((h+d-br*snapht-br*snapdp)/snaphtdp)
             local x = n * snaphtdp - h - d
             plusht = h + x / 2
             plusdp = d + x / 2
-            if plusht < 0 then
-                plusht = 0
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_box,plusht,plusdp)
             end
-            if plusdp < 0 then
-                plusdp = 0
+        elseif method[v_max] then
+            local n = ceiled((h+d)/snaphtdp)
+            local x = n * snaphtdp - h - d
+            plusht = h + x / 2
+            plusdp = d + x / 2
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_max,plusht,plusdp)
             end
-        end
-        if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_min,plusht,plusdp)
-        end
-    elseif method[v_none] then
-        plusht, plusdp = 0, 0
-        if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_none,0,0)
-        end
-    end
-    -- for now, we actually need to tag a box and then check at several points if something ended up
-    -- at the top of a page
-    if method[v_halfline] then -- extra halfline
-        extra  = snaphtdp/2
-        plusht = plusht + extra
-        plusdp = plusdp + extra
-        if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_halfline,plusht,plusdp)
-        end
-    end
-    if method[v_line] then -- extra line
-        extra  = snaphtdp
-        plusht = plusht + extra
-        plusdp = plusdp + extra
-        if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_line,plusht,plusdp)
-        end
-    end
-    if method[v_halfline_m] then -- extra halfline
-        extra  = - snaphtdp/2
-        plusht = plusht + extra
-        plusdp = plusdp + extra
-        if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_halfline_m,plusht,plusdp)
-        end
-    end
-    if method[v_line_m] then -- extra line
-        extra  = - snaphtdp
-        plusht = plusht + extra
-        plusdp = plusdp + extra
-        if t then
-            t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_line_m,plusht,plusdp)
-        end
-    end
-    if method[v_first] then
-        local thebox = current
-        local id = getid(thebox)
-        if id == hlist_code then
-            thebox = validvbox(id,getlist(thebox))
-            id = thebox and getid(thebox)
-        end
-        if thebox and id == vlist_code then
-            local list = getlist(thebox)
-            local lw, lh, ld
-            for n in nexthlist, list do
-                lw, lh, ld = getwhd(n)
-                break
-            end
-            if lh then
-                local wd, ht, dp = getwhd(thebox)
-                if t then
-                    t[#t+1] = formatters["first line: height %p depth %p"](lh,ld)
-                    t[#t+1] = formatters["dimensions: height %p depth %p"](ht,dp)
+        elseif method[v_min] then
+            -- we catch a lone min
+            if method.specification ~= v_min then
+                local n = floored((h+d)/snaphtdp)
+                local x = n * snaphtdp - h - d
+                plusht = h + x / 2
+                plusdp = d + x / 2
+                if plusht < 0 then
+                    plusht = 0
                 end
-                local delta = h - lh
-                ch, cd = lh, delta + d
-                h, d = ch, cd
-                local shifted = hpack_node(getlist(current))
-                setshift(shifted,delta)
-                setlist(current,shifted)
-                done = true
-                if t then
-                    t[#t+1] = formatters["first: height %p depth %p shift %p"](ch,cd,delta)
+                if plusdp < 0 then
+                    plusdp = 0
                 end
-            elseif t then
-                t[#t+1] = "first: not done, no content"
             end
-        elseif t then
-            t[#t+1] = "first: not done, no vbox"
-        end
-    elseif method[v_last] then
-        local thebox = current
-        local id = getid(thebox)
-        if id == hlist_code then
-            thebox = validvbox(id,getlist(thebox))
-            id = thebox and getid(thebox)
-        end
-        if thebox and id == vlist_code then
-            local list = getlist(thebox)
-            local lw, lh, ld
-            for n in nexthlist, list do
-                lw, lh, ld = getwhd(n)
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_min,plusht,plusdp)
             end
-            if lh then
-                local wd, ht, dp = getwhd(thebox)
-                if t then
-                    t[#t+1] = formatters["last line: height %p depth %p" ](lh,ld)
-                    t[#t+1] = formatters["dimensions: height %p depth %p"](ht,dp)
+        elseif method[v_none] then
+            plusht, plusdp = 0, 0
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_none,0,0)
+            end
+        end
+        -- for now, we actually need to tag a box and then check at several points if something ended up
+        -- at the top of a page
+        if method[v_halfline] then -- extra halfline
+            extra  = snaphtdp/2
+            plusht = plusht + extra
+            plusdp = plusdp + extra
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_halfline,plusht,plusdp)
+            end
+        end
+        if method[v_line] then -- extra line
+            extra  = snaphtdp
+            plusht = plusht + extra
+            plusdp = plusdp + extra
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_line,plusht,plusdp)
+            end
+        end
+        if method[v_halfline_m] then -- extra halfline
+            extra  = - snaphtdp/2
+            plusht = plusht + extra
+            plusdp = plusdp + extra
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_halfline_m,plusht,plusdp)
+            end
+        end
+        if method[v_line_m] then -- extra line
+            extra  = - snaphtdp
+            plusht = plusht + extra
+            plusdp = plusdp + extra
+            if t then
+                t[#t+1] = formatters["%s: plusht %p plusdp %p"](v_line_m,plusht,plusdp)
+            end
+        end
+        if method[v_first] then
+            local thebox = current
+            local id = getid(thebox)
+            if id == hlist_code then
+                thebox = validvbox(id,getlist(thebox))
+                id = thebox and getid(thebox)
+            end
+            if thebox and id == vlist_code then
+                local list = getlist(thebox)
+                local lw, lh, ld
+                for n in nexthlist, list do
+                    lw, lh, ld = getwhd(n)
+                    break
                 end
-                local delta = d - ld
-                cd, ch = ld, delta + h
-                h, d = ch, cd
-                local shifted = hpack_node(getlist(current))
-                setshift(shifted,delta)
-                setlist(current,shifted)
-                done = true
-                if t then
-                    t[#t+1] = formatters["last: height %p depth %p shift %p"](ch,cd,delta)
+                if lh then
+                    local wd, ht, dp = getwhd(thebox)
+                    if t then
+                        t[#t+1] = formatters["first line: height %p depth %p"](lh,ld)
+                        t[#t+1] = formatters["dimensions: height %p depth %p"](ht,dp)
+                    end
+                    local delta = h - lh
+                    ch, cd = lh, delta + d
+                    h, d = ch, cd
+                    local shifted = hpack_node(getlist(current))
+                    setshift(shifted,delta)
+                    setlist(current,shifted)
+                    done = true
+                    if t then
+                        t[#t+1] = formatters["first: height %p depth %p shift %p"](ch,cd,delta)
+                    end
+                elseif t then
+                    t[#t+1] = "first: not done, no content"
                 end
             elseif t then
-                t[#t+1] = "last: not done, no content"
+                t[#t+1] = "first: not done, no vbox"
             end
-        elseif t then
-            t[#t+1] = "last: not done, no vbox"
+        elseif method[v_last] then
+            local thebox = current
+            local id = getid(thebox)
+            if id == hlist_code then
+                thebox = validvbox(id,getlist(thebox))
+                id = thebox and getid(thebox)
+            end
+            if thebox and id == vlist_code then
+                local list = getlist(thebox)
+                local lw, lh, ld
+                for n in nexthlist, list do
+                    lw, lh, ld = getwhd(n)
+                end
+                if lh then
+                    local wd, ht, dp = getwhd(thebox)
+                    if t then
+                        t[#t+1] = formatters["last line: height %p depth %p" ](lh,ld)
+                        t[#t+1] = formatters["dimensions: height %p depth %p"](ht,dp)
+                    end
+                    local delta = d - ld
+                    cd, ch = ld, delta + h
+                    h, d = ch, cd
+                    local shifted = hpack_node(getlist(current))
+                    setshift(shifted,delta)
+                    setlist(current,shifted)
+                    done = true
+                    if t then
+                        t[#t+1] = formatters["last: height %p depth %p shift %p"](ch,cd,delta)
+                    end
+                elseif t then
+                    t[#t+1] = "last: not done, no content"
+                end
+            elseif t then
+                t[#t+1] = "last: not done, no vbox"
+            end
         end
+        if method[v_minheight] then
+            ch = floored((h-hr*snapht)/snaphtdp)*snaphtdp + plusht
+            if t then
+                t[#t+1] = formatters["minheight: %p"](ch)
+            end
+        elseif method[v_maxheight] then
+            ch = ceiled((h-hr*snapht)/snaphtdp)*snaphtdp + plusht
+            if t then
+                t[#t+1] = formatters["maxheight: %p"](ch)
+            end
+        else
+            ch = plusht
+            if t then
+                t[#t+1] = formatters["set height: %p"](ch)
+            end
+        end
+        if method[v_mindepth] then
+            cd = floored((d-dr*snapdp)/snaphtdp)*snaphtdp + plusdp
+            if t then
+                t[#t+1] = formatters["mindepth: %p"](cd)
+            end
+        elseif method[v_maxdepth] then
+            cd = ceiled((d-dr*snapdp)/snaphtdp)*snaphtdp + plusdp
+            if t then
+                t[#t+1] = formatters["maxdepth: %p"](cd)
+            end
+        else
+            cd = plusdp
+            if t then
+                t[#t+1] = formatters["set depth: %p"](cd)
+            end
+        end
+        if method[v_top] then
+            ch = ch + tlines * snaphtdp
+            if t then
+                t[#t+1] = formatters["top height: %p"](ch)
+            end
+        end
+        if method[v_bottom] then
+            cd = cd + blines * snaphtdp
+            if t then
+                t[#t+1] = formatters["bottom depth: %p"](cd)
+            end
+        end
+        local offset = method[v_offset]
+        if offset then
+            -- we need to set the attr
+            if t then
+                local wd, ht, dp = getwhd(current)
+                t[#t+1] = formatters["before offset: %p (width %p height %p depth %p)"](offset,wd,ht,dp)
+            end
+            local shifted = hpack_node(getlist(current))
+            setshift(shifted,offset)
+            setlist(current,shifted)
+            if t then
+                local wd, ht, dp = getwhd(current)
+                t[#t+1] = formatters["after offset: %p (width %p height %p depth %p)"](offset,wd,ht,dp)
+            end
+            setattr(shifted,a_snapmethod,0)
+            setattr(current,a_snapmethod,0)
+        end
+        if not height then
+            setheight(current,ch)
+            if t then
+                t[#t+1] = formatters["forced height: %p"](ch)
+            end
+        end
+        if not depth then
+            setdepth(current,cd)
+            if t then
+                t[#t+1] = formatters["forced depth: %p"](cd)
+            end
+        end
+        local lines = (ch+cd)/snaphtdp
+        if t then
+            local original = (h+d)/snaphtdp
+            local whatever = (ch+cd)/(texgetdimen(d_globalbodyfontstrutheight) + texgetdimen(d_globalbodyfontstrutdepth))
+            t[#t+1] = formatters["final lines : %p -> %p (%p)"](original,lines,whatever)
+            t[#t+1] = formatters["final height: %p -> %p"](h,ch)
+            t[#t+1] = formatters["final depth : %p -> %p"](d,cd)
+        end
+    -- todo:
+    --
+    --     if h < 0 or d < 0 then
+    --         h = 0
+    --         d = 0
+    --     end
+        if t then
+            report_snapper("trace: %s type %s\n\t%\n\tt",where,nodecodes[getid(current)],t)
+        end
+        if not method[v_split] then
+            -- so extra will not be compensated at the top of a page
+            extra = 0
+        end
+        return h, d, ch, cd, lines, extra
     end
-    if method[v_minheight] then
-        ch = floored((h-hr*snapht)/snaphtdp)*snaphtdp + plusht
-        if t then
-            t[#t+1] = formatters["minheight: %p"](ch)
-        end
-    elseif method[v_maxheight] then
-        ch = ceiled((h-hr*snapht)/snaphtdp)*snaphtdp + plusht
-        if t then
-            t[#t+1] = formatters["maxheight: %p"](ch)
-        end
-    else
-        ch = plusht
-        if t then
-            t[#t+1] = formatters["set height: %p"](ch)
-        end
-    end
-    if method[v_mindepth] then
-        cd = floored((d-dr*snapdp)/snaphtdp)*snaphtdp + plusdp
-        if t then
-            t[#t+1] = formatters["mindepth: %p"](cd)
-        end
-    elseif method[v_maxdepth] then
-        cd = ceiled((d-dr*snapdp)/snaphtdp)*snaphtdp + plusdp
-        if t then
-            t[#t+1] = formatters["maxdepth: %p"](cd)
-        end
-    else
-        cd = plusdp
-        if t then
-            t[#t+1] = formatters["set depth: %p"](cd)
-        end
-    end
-    if method[v_top] then
-        ch = ch + tlines * snaphtdp
-        if t then
-            t[#t+1] = formatters["top height: %p"](ch)
-        end
-    end
-    if method[v_bottom] then
-        cd = cd + blines * snaphtdp
-        if t then
-            t[#t+1] = formatters["bottom depth: %p"](cd)
-        end
-    end
-    local offset = method[v_offset]
-    if offset then
-        -- we need to set the attr
-        if t then
-            local wd, ht, dp = getwhd(current)
-            t[#t+1] = formatters["before offset: %p (width %p height %p depth %p)"](offset,wd,ht,dp)
-        end
-        local shifted = hpack_node(getlist(current))
-        setshift(shifted,offset)
-        setlist(current,shifted)
-        if t then
-            local wd, ht, dp = getwhd(current)
-            t[#t+1] = formatters["after offset: %p (width %p height %p depth %p)"](offset,wd,ht,dp)
-        end
-        setattr(shifted,a_snapmethod,0)
-        setattr(current,a_snapmethod,0)
-    end
-    if not height then
-        setheight(current,ch)
-        if t then
-            t[#t+1] = formatters["forced height: %p"](ch)
-        end
-    end
-    if not depth then
-        setdepth(current,cd)
-        if t then
-            t[#t+1] = formatters["forced depth: %p"](cd)
-        end
-    end
-    local lines = (ch+cd)/snaphtdp
-    if t then
-        local original = (h+d)/snaphtdp
-        local whatever = (ch+cd)/(texgetdimen("globalbodyfontstrutheight") + texgetdimen("globalbodyfontstrutdepth"))
-        t[#t+1] = formatters["final lines : %p -> %p (%p)"](original,lines,whatever)
-        t[#t+1] = formatters["final height: %p -> %p"](h,ch)
-        t[#t+1] = formatters["final depth : %p -> %p"](d,cd)
-    end
--- todo:
---
---     if h < 0 or d < 0 then
---         h = 0
---         d = 0
---     end
-    if t then
-        report_snapper("trace: %s type %s\n\t%\n\tt",where,nodecodes[getid(current)],t)
-    end
-    if not method[v_split] then
-        -- so extra will not be compensated at the top of a page
-        extra = 0
-    end
-    return h, d, ch, cd, lines, extra
+
 end
 
-local categories = {
-     [0] = "discard",
-     [1] = "largest",
-     [2] = "force",
-     [3] = "penalty",
-     [4] = "add",
-     [5] = "disable",
-     [6] = "nowhite",
-     [7] = "goback",
-     [8] = "packed",
-     [9] = "overlay",
-    [10] = "enable",
-    [11] = "notopskip",
+local categories = { [0] =
+    "discard",
+    "largest",
+    "force",
+    "penalty",
+    "add",
+    "disable",
+    "nowhite",
+    "goback",
+    "packed",
+    "overlay",
+    "enable",
+    "notopskip",
 }
 
 categories          = allocate(table.swapped(categories,categories))
@@ -731,6 +750,126 @@ vspacingdata.skip = vspacingdata.skip or { } -- allocate ?
 storage.register("builders/vspacing/data/map",  vspacingdata.map,  "builders.vspacing.data.map")
 storage.register("builders/vspacing/data/skip", vspacingdata.skip, "builders.vspacing.data.skip")
 
+local setspecification, getspecification
+
+-- 1 statepool  : 2 : more overhead : a bit slower than properties
+-- 2 attributes : 1 : more overhead : feels faster than properties
+-- 3 properties : 3 : more natural  : feels slower than attributes
+-- 4 data       : 1 : more native   : is little faster than attributes (limited penalty)
+
+-- testfile: t:/bugs/bottomfloats-001.tex
+
+local method = 1 -- better tracing
+-- local method = 2
+-- local method = 3
+-- local method = 4
+
+-- todo: not true but only visual a_visual,tex.getattribute(a_visual)
+
+if method == 1 then
+
+    local registervalue = attributes.registervalue
+    local getvalue      = attributes.getvalue
+    local values        = attributes.values
+
+    setspecification = function(n,category,penalty,order)
+        local detail = { category, penalty, order or 1 }
+        local value  = registervalue(a_skipcategory,detail)
+        setattr(n,a_skipcategory,value)
+    end
+
+    getspecification = function(n)
+        local value = getattr(n,a_skipcategory)
+        if value then
+            local detail = getvalue(a_skipcategory,value)
+         -- local detail = attributes.values[a_skipcategory][value]
+         -- local detail = values[a_skipcategory][value]
+            if detail then
+                return detail[1], detail[2], detail[3]
+            end
+        end
+        return false, false, 1
+    end
+
+elseif method == 2 then
+
+    -- quite okay but more memory due to attributes (not many)
+
+    setspecification = function(n,category,penalty,order)
+        setattrs(n,false,a_skipcategory,category or nil,a_skippenalty,penalty or nil,a_skiporder,order or 1)
+    end
+
+    getspecification = function(n)
+        local c, p, o = getattrs(n,a_skipcategory,a_skippenalty,a_skiporder)
+        return c or false, p or false, o or 1
+    end
+
+elseif method == 3 then
+
+    -- more natural as we stay in lua
+
+    setspecification = function(n,category,penalty,order)
+        -- we know that there are no properties
+        properties[n] = {
+            [a_skipcategory] = category,
+            [a_skippenalty]  = penalty,
+            [a_skiporder]    = order or 1,
+        }
+    end
+
+    getspecification = function(n)
+        local p = properties[n]
+        if p then
+            return p[a_skipcategory], p[a_skippenalty], p[a_skiporder]
+        end
+    end
+
+elseif method == 4 then
+
+    -- quite efficient but needs testing because we limit values
+
+    local getdata = nuts.getdata
+    local setdata = nuts.setdata
+
+    setspecification = function(n,category,penalty,order)
+        if not category or category > 0xF then
+            category = 0xF
+        end
+        if not order or order > 0xFF then
+            order = 0xFF
+        end
+        if not penalty or penalty > 0x7FFFF then
+            penalty = 0x7FFFF
+        elseif penalty < -0x7FFFF then
+            penalty = -0x7FFFF
+        end
+        -- we need overflow checks
+        setdata(n, (penalty << 12) + (order << 4) + category)
+    end
+
+    getspecification = function(n)
+        local data = getdata(n)
+        if data and data ~= 0 then
+            local category =  data        & 0x0F
+            local order    = (data >>  4) & 0xFF
+            local penalty  =  data >> 12
+            if category == 0xF then
+                category = nil
+            end
+            if order == 0xFF then
+                order = nil
+            end
+            if penalty == 0x7FFFF then
+                penalty = nil
+            end
+            return category, penalty, order
+        else
+            return nil, nil, nil
+        end
+    end
+
+end
+
 do
 
     local P, C, R, S, Cc, Cs = lpeg.P, lpeg.C, lpeg.R, lpeg.S, lpeg.Cc, lpeg.Cs
@@ -750,9 +889,10 @@ do
 
     local k_fixed    = variables.fixed
     local k_flexible = variables.flexible
-    local k_category = "category"
-    local k_penalty  = "penalty"
-    local k_order    = "order"
+
+    local k_category <const> = "category"
+    local k_penalty  <const> = "penalty"
+    local k_order    <const> = "order"
 
     function vspacing.setmap(from,to)
         map[from] = to
@@ -765,13 +905,11 @@ do
         end
     end
 
-    local expandmacro = token.expand_macro
+    local expandmacro = token.expandmacro -- todo
  -- local runlocal    = tex.runlocal
  -- local setmacro    = tokens.setters.macro
  -- local settoks     = tex.settoks
     local toscaled    = tex.toscaled
-
-    local setattrs    = nuts.setattrs
 
     local b_done     = false
     local b_packed   = false
@@ -817,8 +955,10 @@ do
 
     local function inject()
         local n = new_glue(b_amount,b_stretch,b_shrink)
-        setattrs(n,false,a_skipcategory,b_category,a_skippenalty,b_penalty,a_skiporder,b_order or 1)
+        setspecification(n,b_category,b_penalty,b_order or 1)
+        setvisual(k)
         write_node(n)
+        -- todo: inject via value
     end
 
     local function flush()
@@ -832,6 +972,9 @@ do
 
  -- local cmd = token.create("vspacingfromtempstring")
  -- local cmd = token.create("vspacingpredefinedvalue") -- not yet known
+
+    ----- s_predefined = "s_spac_vspacing_predefined"
+    local s_predefined = tex.isskip("s_spac_vspacing_predefined")
 
     local function handler(multiplier, keyword, detail)
         if not keyword then
@@ -887,7 +1030,7 @@ do
                  -- setmacro("tempstring",keyword)
                  -- runlocal(ctx_vspacingfromtempstring)
                     --
-                    amount, stretch, shrink = texgetglue("scratchskip")
+                    amount, stretch, shrink = texgetglue(s_predefined)
                     if not stretch then
                         stretch = 0
                     end
@@ -924,7 +1067,7 @@ do
         end
         b_done   = false
         b_packed = false
-        b_grid   = grid
+        b_grid   = grid == true or grid == 1
         before()
         lpegmatch(pattern,str)
         after()
@@ -941,19 +1084,25 @@ do
 
     function vspacing.injectpenalty(penalty)
         local n = new_glue()
-        setattrs(n,false,a_skipcategory,categories.penalty,a_skippenalty,penalty,a_skiporder,1)
+     -- setattrs(n,false,a_skipcategory,categories.penalty,a_skippenalty,penalty,a_skiporder,1)
+        setspecification(n,categories.penalty,penalty,1)
+        setvisual(k)
         write_node(n)
     end
 
     function vspacing.injectskip(amount)
         local n = new_glue(amount)
-        setattrs(n,false,a_skipcategory,categories.largest,a_skippenalty,false,a_skiporder,1)
+     -- setattrs(n,false,a_skipcategory,categories.largest,a_skippenalty,false,a_skiporder,1)
+        setspecification(n,categories.largest,false,1)
+        setvisual(k)
         write_node(n)
     end
 
     function vspacing.injectdisable(amount)
         local n = new_glue()
-        setattrs(n,false,a_skipcategory,categories.disable,a_skippenalty,false,a_skiporder,1)
+     -- setattrs(n,false,a_skipcategory,categories.disable,a_skippenalty,false,a_skiporder,1)
+        setspecification(n,categories.disable,false,1)
+        setvisual(k)
         write_node(n)
     end
 
@@ -961,7 +1110,7 @@ end
 
 -- implementation
 
--- alignment box begin_of_par vmode_par hmode_par insert penalty before_display after_display
+-- alignment box begin_of_par vmodepar hmodepar insert penalty before_display after_display
 
 function vspacing.snapbox(n,how)
     local sv = snapmethods[how]
@@ -1018,8 +1167,8 @@ end
 
 do
 
-    local insert_node_after  = nuts.insert_after
-    local insert_node_before = nuts.insert_before
+    local insertnodeafter  = nuts.insertafter
+    local insertnodebefore = nuts.insertbefore
 
     local abovedisplayskip_code      = gluecodes.abovedisplayskip
     local belowdisplayskip_code      = gluecodes.belowdisplayskip
@@ -1059,7 +1208,7 @@ do
     end
 
     local function trace_skip(str,sc,so,sp,data)
-        trace_list[#trace_list+1] = { "skip", formatters["%s | %p | category %s | order %s | penalty %s"](str, getwidth(data), sc or "-", so or "-", sp or "-") }
+        trace_list[#trace_list+1] = { "skip", formatters["%s | %p | category %s | order %s | penalty %s | subtype %s"](str, getwidth(data), sc or "-", so or "-", sp or "-", gluecodes[getsubtype(data)]) }
         tracing_info = true
     end
 
@@ -1115,16 +1264,22 @@ do
         end
         if width == 0 then
             -- do nothing
-        elseif where == "after" then
-            head, current = insert_node_after(head,current,new_rule(w,h,d))
-            head, current = insert_node_after(head,current,new_kern(width))
-            head, current = insert_node_after(head,current,new_rule(w,h,d))
         else
-            local c = current
-            head, current = insert_node_before(head,current,new_rule(w,h,d))
-            head, current = insert_node_before(head,current,new_kern(width))
-            head, current = insert_node_before(head,current,new_rule(w,h,d))
-            current = c
+            local b = new_rule(w,h,d)
+            local k = new_kern(width)
+            local a = new_rule(w,h,d)
+            setvisual(k)
+            if where == "after" then
+                head, current = insertnodeafter(head,current,b)
+                head, current = insertnodeafter(head,current,k)
+                head, current = insertnodeafter(head,current,a)
+            else
+                local c = current
+                head, current = insertnodebefore(head,current,b)
+                head, current = insertnodebefore(head,current,k)
+                head, current = insertnodebefore(head,current,a)
+                current = c
+            end
         end
         if trace then
             report_vspacing("inserting forced skip of %p",width)
@@ -1301,13 +1456,15 @@ do
             end
             --
             local delta = n_ht + skips + p_dp
-            texsetdimen("global","d_spac_overlay",-delta) -- for tracing
+            texsetdimen("global",d_spac_overlay,-delta) -- for tracing
             -- we should adapt pagetotal ! (need a hook for that) .. now we have the wrong pagebreak
             local k = new_kern(-delta)
-            head = insert_node_before(head,n,k)
+            setvisual(k)
+            head = insertnodebefore(head,n,k)
             if n_ht > p_ht then
                 local k = new_kern(n_ht-p_ht)
-                head = insert_node_before(head,p,k)
+                setvisual(k)
+                head = insertnodebefore(head,p,k)
             end
             if trace_vspacing then
                 report_vspacing("overlaying, prev height: %p, prev depth: %p, next height: %p, skips: %p, move up: %p",p_ht,p_dp,n_ht,skips,delta)
@@ -1347,7 +1504,7 @@ do
                     -- quit, we're not on the mvl
                 else
                     -- inefficient when we're at the end of a page
-                    local c = tonut(texlists.page_head)
+                    local c = tonut(texlists.pagehead)
                     while c and c ~= n do
                         local id = getid(c)
                         if id == hlist_code then
@@ -1366,6 +1523,21 @@ do
         -- in fact, we could try again later ... so then no remove (a few tries)
         return remove_node(head,current,true)
     end
+
+    -- where -> scope
+    -- what  -> where (original context)
+
+    local checkslide = false
+
+    directives.register("vspacing.checkslide", function(v)
+        if v then
+            checkslide = function(head,where,what)
+                nuts.checkslide(head,where .. " : " .. what)
+            end
+        else
+            checkslide = false
+        end
+    end)
 
     local function collapser(head,where,what,trace,snap,a_snapmethod) -- maybe also pass tail
         if trace then
@@ -1390,16 +1562,23 @@ do
         local pagetail
         --
         -- todo: keep_together: between headers
+        -- todo: make this nicer in the engine
         --
         local function getpagelist()
             if not pagehead then
-                pagehead = texlists.page_head
+                pagehead = texlists.pagehead -- pagehead, pagetail = tex.getlist("pagehead")
                 if pagehead then
                     pagehead = tonut(pagehead)
                     pagetail = find_node_tail(pagehead) -- no texlists.page_tail yet-- no texlists.page_tail yet
                 end
             end
         end
+        --
+     -- local function getpagelist()
+     --     if not pagehead then
+     --         pagehead, pagetail = texgetlist("pagehead")
+     --     end
+     -- end
         --
         local function compensate(n)
             local g = 0
@@ -1442,6 +1621,7 @@ do
                                 local d = g - t
                                 if d < -e then
                                     local penalty = new_penalty(1000000)
+                                    setvisual(penalty)
                                     setlink(penalty,head)
                                     head = penalty
                                     report_snapper("force pagebreak due to extra space at bottom: %p",e)
@@ -1470,6 +1650,7 @@ do
         local function flush(why)
             if penalty_data then
                 local p = new_penalty(penalty_data)
+                setvisual(p)
                 if trace then
                     trace_done("flushed due to " .. why,p)
                 end
@@ -1477,12 +1658,12 @@ do
                     local prev = getprev(current)
                     if getid(prev) == glue_code then -- maybe go back more, or maybe even push back before any glue
                             -- tricky case: spacing/grid-007.tex: glue penalty glue
-                        head = insert_node_before(head,prev,p)
+                        head = insertnodebefore(head,prev,p)
                     else
-                        head = insert_node_before(head,current,p)
+                        head = insertnodebefore(head,current,p)
                     end
                 else
-                    head = insert_node_before(head,current,p)
+                    head = insertnodebefore(head,current,p)
                 end
              -- if penalty_data > special_penalty_min and penalty_data < special_penalty_max then
                 local props = properties[p]
@@ -1501,22 +1682,22 @@ do
                         trace_done("flushed due to forced " .. why,glue_data)
                     end
                     head = forced_skip(head,current,getwidth(glue_data,width),"before",trace)
-                    flush_node(glue_data)
+                    flushnode(glue_data)
                 else
                     local width, stretch, shrink = getglue(glue_data)
                     if width ~= 0 then
                         if trace then
                             trace_done("flushed due to non zero " .. why,glue_data)
                         end
-                        head = insert_node_before(head,current,glue_data)
+                        head = insertnodebefore(head,current,glue_data)
                     elseif stretch ~= 0 or shrink ~= 0 then
                         if trace then
                             trace_done("flushed due to stretch/shrink in" .. why,glue_data)
                         end
-                        head = insert_node_before(head,current,glue_data)
+                        head = insertnodebefore(head,current,glue_data)
                     else
                      -- report_vspacing("needs checking (%s): %p",gluecodes[getsubtype(glue_data)],w)
-                        flush_node(glue_data)
+                        flushnode(glue_data)
                     end
                 end
             end
@@ -1531,10 +1712,10 @@ do
         --
         if trace_vsnapping then
             report_snapper("global ht/dp = %p/%p, local ht/dp = %p/%p",
-                texgetdimen("globalbodyfontstrutheight"),
-                texgetdimen("globalbodyfontstrutdepth"),
-                texgetdimen("bodyfontstrutheight"),
-                texgetdimen("bodyfontstrutdepth")
+                texgetdimen(d_globalbodyfontstrutheight),
+                texgetdimen(d_globalbodyfontstrutdepth),
+                texgetdimen(d_bodyfontstrutheight),
+                texgetdimen(d_bodyfontstrutdepth)
             )
         end
         if trace then
@@ -1542,6 +1723,9 @@ do
         end
         if snap and where == "page" then
             removetopsnap()
+        end
+        if checkslide then
+            checkslide(head,where,what)
         end
         while current do
             local id = getid(current)
@@ -1613,7 +1797,8 @@ do
             elseif id == glue_code then
                 local subtype = getsubtype(current)
                 if subtype == userskip_code then
-                    local sc, so, sp = getattrs(current,a_skipcategory,a_skiporder,a_skippenalty)
+                 -- local sc, so, sp = getattrs(current,a_skipcategory,a_skiporder,a_skippenalty)
+                    local sc, sp, so = getspecification(current)
                     if not so then
                         so = 1 -- the others have no default value
                     end
@@ -1647,7 +1832,7 @@ do
                             if trace then
                                 trace_done("flush",glue_data)
                             end
-                            head = insert_node_before(head,current,glue_data)
+                            head = insertnodebefore(head,current,glue_data)
                             if trace then
                                 trace_natural("natural",current)
                             end
@@ -1737,7 +1922,7 @@ do
                             trace_skip("force",sc,so,sp,current)
                         end
                         glue_order = so
-                        flush_node(glue_data)
+                        flushnode(glue_data)
                         head, current, glue_data = remove_node(head,current)
                     elseif glue_order == so then
                         -- is now exclusive, maybe support goback as combi, else why a set
@@ -1748,7 +1933,7 @@ do
                                 if trace then
                                     trace_skip("largest",sc,so,sp,current)
                                 end
-                                flush_node(glue_data)
+                                flushnode(glue_data)
                                 head, current, glue_data = remove_node(head,current)
                             else
                                 if trace then
@@ -1760,7 +1945,7 @@ do
                             if trace then
                                 trace_skip("goback",sc,so,sp,current)
                             end
-                            flush_node(glue_data)
+                            flushnode(glue_data)
                             head, current, glue_data = remove_node(head,current)
                         elseif sc == force then
                             -- last one counts, some day we can provide an accumulator and largest etc
@@ -1768,13 +1953,13 @@ do
                             if trace then
                                 trace_skip("force",sc,so,sp,current)
                             end
-                            flush_node(glue_data)
+                            flushnode(glue_data)
                             head, current, glue_data = remove_node(head,current)
                         elseif sc == penalty then
                             if trace then
                                 trace_skip("penalty",sc,so,sp,current)
                             end
-                            flush_node(glue_data)
+                            flushnode(glue_data)
                             glue_data = nil
                             head, current = remove_node(head,current,true)
                         elseif sc == add then
@@ -1855,7 +2040,7 @@ do
                     elseif glue_data then
                         local w = getwidth(current)
                         if w ~= 0 and w > getwidth(glue_data) then
-flush_node(glue_data)
+                            flushnode(glue_data)
                             glue_data = current
                             if trace then
                                 trace_natural("taking parskip",current)
@@ -1875,8 +2060,9 @@ flush_node(glue_data)
                     end
                 elseif subtype == topskip_code or subtype == splittopskip_code then
                     local next = getnext(current)
-                    if next and getattr(next,a_skipcategory) == notopskip then
-                        nuts.setglue(current) -- zero
+                 -- if next and getattr(next,a_skipcategory) == notopskip then
+                    if next and getspecification(next) == notopskip then
+                        setglue(current) -- zero
                     end
                     if snap then
                         local s = getattr(current,a_snapmethod)
@@ -1963,6 +2149,7 @@ flush_node(glue_data)
         if penalty_data then
             tail = find_node_tail(head)
             local p = new_penalty(penalty_data)
+            setvisual(p)
             if trace then
                 trace_done("result",p)
             end
@@ -1985,14 +2172,15 @@ flush_node(glue_data)
             end
             if force_glue then
                 head, tail = forced_skip(head,tail,getwidth(glue_data),"after",trace)
-                flush_node(glue_data)
+                flushnode(glue_data)
                 glue_data = nil
             elseif tail then
                 setlink(tail,glue_data)
-setnext(glue_data)
+                setnext(glue_data)
             else
                 head = glue_data
             end
+            -- texsetnest("top","prevdepth",0)
             texnest[texnest.ptr].prevdepth = 0 -- appending to the list bypasses tex's prevdepth handler
         end
         if trace then
@@ -2007,6 +2195,22 @@ setnext(glue_data)
         return head
     end
 
+--     local function collapser(head,...)
+--         local current = head
+--         while current do
+--             local id = getid(current)
+--             if id == glue_code then
+--                 if getsubtype(current) == userskip_code then
+--                     local glue_data
+--                     head, current, glue_data = remove_node(head,current)
+--                     head, current = insertnodebefore(head,current,glue_data)
+--                 end
+--             end
+--             current = getnext(current)
+--         end
+--         return head
+--     end
+
     local stackhead, stacktail, stackhack = nil, nil, false
 
     local function report(message,where,lst)
@@ -2020,6 +2224,8 @@ setnext(glue_data)
     -- ugly code: we get partial lists (check if this stack is still okay) ... and we run
     -- into temp nodes (sigh)
 
+    -- this really need a rework
+
     local forceflush = false
 
     function vspacing.pagehandler(newhead,where)
@@ -2027,26 +2233,27 @@ setnext(glue_data)
             local newtail = find_node_tail(newhead) -- best pass that tail, known anyway
             local flush = false
             stackhack = true -- todo: only when grid snapping once enabled
-            -- todo: fast check if head = tail
-            for n, id, subtype in nextnode, newhead do -- we could just look for glue nodes
+
+            for n, id, subtype in nextnode, newhead do
                 if id ~= glue_code then
                     flush = true
                 elseif subtype == userskip_code then
-                    if getattr(n,a_skipcategory) then
+                 -- local sc = getattr(n,a_skipcategory)
+                    local sc = getspecification(n)
+                    if sc then
                         stackhack = true
                     else
                         flush = true
                     end
                 elseif subtype == parskip_code then
                     -- if where == new_graf then ... end
-                    if texgetcount("c_spac_vspacing_ignore_parskip") > 0 then
-                     -- texsetcount("c_spac_vspacing_ignore_parskip",0)
+                    if texgetcount(c_spac_vspacing_ignore_parskip) > 0 then
                         setglue(n)
                      -- maybe removenode
                     end
                 end
             end
-            texsetcount("c_spac_vspacing_ignore_parskip",0)
+            texsetcount(c_spac_vspacing_ignore_parskip,0)
 
             if forceflush then
                 forceflush = false
@@ -2101,18 +2308,16 @@ setnext(glue_data)
         forceflush = true
     end
 
-    local ignore = table.tohash {
-        "split_keep",
-        "split_off",
-     -- "vbox",
+    local ignored = table.tohash {
+        "splitkeep",
+        "splitoff",
+--        "insert",
     }
 
     function vspacing.vboxhandler(head,where)
-        if head and not ignore[where] and getnext(head) then
-            if getnext(head) then -- what if a one liner and snapping?
-                head = collapser(head,"vbox",where,trace_vbox_vspacing,true,a_snapvbox) -- todo: local snapper
-                return head
-            end
+        if head and not ignored[where] and getnext(head) then
+-- if getid(head) == glue_code and getsubtype(head) == topskip_code then
+            head = collapser(head,"vbox",where,trace_vbox_vspacing,true,a_snapvbox) -- todo: local snapper
         end
         return head
     end
@@ -2154,7 +2359,9 @@ do
         enabled = v
     end)
 
-    local ignoredepth = -65536000
+    local function ignoredepth()
+        return texgetdimen("ignoredepthcriterium") -- -65536000
+    end
 
     -- A previous version analyzed the number of lines moved to the next page in
     -- synchronizepage because prevgraf is unreliable in that case. However, we cannot
@@ -2166,7 +2373,7 @@ do
     function vspacing.getnofpreviouslines(head)
         if enabled then
             if not thead then
-                head = texlists.page_head
+                head = texlists.pagehead
             end
             local noflines = 0
             if head then
@@ -2217,35 +2424,38 @@ do
             if trace then
                 local newdepth = outer.prevdepth
                 local olddepth = newdepth
-                if not texlists.page_head then
-                    newdepth = ignoredepth
-                    texset("prevdepth",ignoredepth)
-                    outer.prevdepth = ignoredepth
+                if not texlists.pagehead then
+                    newdepth = ignoredepth()
+                    texset("prevdepth",newdepth)
+                    outer.prevdepth = newdepth
                 end
                 report("page %i, prevdepth %p => %p",texgetcount("realpageno"),olddepth,newdepth)
              -- report("list %s",nodes.idsandsubtypes(head))
             else
-                if not texlists.page_head then
-                    texset("prevdepth",ignoredepth)
-                    outer.prevdepth = ignoredepth
+                if not texlists.pagehead then
+                    local newdepth = ignoredepth()
+                    texset("prevdepth",newdepth)
+                    outer.prevdepth = newdepth
                 end
             end
         end
     end
 
-    local trace      = false
-    local last       = nil
-    local vmode_code = tex.modelevels.vertical
-    local temp_code  = nodecodes.temp
-    local getnest    = tex.getnest
-    local getlist    = tex.getlist
+    local trace       = false
+    local abs         = math.abs
+ -- local last        = nil
+    local vmode_code  = tex.modelevels.vertical
+    local temp_code   = nodecodes.temp
+    local texgetnest  = tex.getnest
+    local texgetlist  = tex.getlist
+    local getnodetail = nodes.tail
 
-    trackers.register("vspacing.forcestrutdepth",function(v) trace = v end)
+ -- trackers.register("vspacing.forcestrutdepth",function(v) trace = v end)
 
     -- abs : negative is inner
 
     function vspacing.checkstrutdepth(depth)
-        local nest = getnest()
+        local nest = texgetnest()
         if abs(nest.mode) == vmode_code and nest.head then
             local tail = nest.tail
             local id   = tail.id
@@ -2254,10 +2464,10 @@ do
                     tail.depth = depth
                 end
                 nest.prevdepth = depth
-            elseif id == temp_code and getnest("ptr") == 0 then
-                local head = getlist("page_head")
+            elseif id == temp_code and texgetnest("ptr") == 0 then
+                local head = texgetlist("pagehead")
                 if head then
-                    tail = nodes.tail(head)
+                    tail = getnodetail(head)
                     if tail and tail.id == hlist_code then
                         if tail.depth < depth then
                             tail.depth = depth
@@ -2277,68 +2487,233 @@ do
         actions   = vspacing.checkstrutdepth,
     }
 
-    function vspacing.forcestrutdepth(n,depth,trace_mode,plus)
-        local box = texgetbox(n)
-        if box then
-            box = tonut(box)
-            local head = getlist(box)
-            if head then
-                local tail = find_node_tail(head)
-                if tail then
-                    if getid(tail) == hlist_code then
-                        local dp = getdepth(tail)
-                        if dp < depth then
-                            setdepth(tail,depth)
-                            outer.prevdepth = depth
-                            if trace or trace_mode > 0 then
-                                nuts.setvisual(tail,"depth")
+ -- function vspacing.forcestrutdepth(n,depth,trace_mode,plus)
+ --     local box = texgetbox(n)
+ --     if box then
+ --         box = tonut(box)
+ --         local head = getlist(box)
+ --         if head then
+ --             local tail = find_node_tail(head)
+ --             if tail then
+ --                 if getid(tail) == hlist_code then
+ --                     local dp = getdepth(tail)
+ --                     if dp < depth then
+ --                         setdepth(tail,depth)
+ --                         outer.prevdepth = depth
+ --                         if trace or trace_mode > 0 then
+ --                             nuts.setvisual(tail,"depth")
+ --                         end
+ --                     end
+ --                 end
+ --              -- last = nil
+ --              -- if plus then
+ --              --     -- penalty / skip ...
+ --              --     local height = 0
+ --              --     local sofar  = 0
+ --              --     local same   = false
+ --              --     local seen   = false
+ --              --     local list   = { }
+ --              --           last   = nil
+ --              --     while tail do
+ --              --         local id = getid(tail)
+ --              --         if id == hlist_code or id == vlist_code then
+ --              --             local w, h, d = getwhd(tail)
+ --              --             height = height + h + d + sofar
+ --              --             sofar  = 0
+ --              --             last   = tail
+ --              --         elseif id == kern_code then
+ --              --             sofar = sofar + getkern(tail)
+ --              --         elseif id == glue_code then
+ --              --             if seen then
+ --              --                 sofar = sofar + getwidth(tail)
+ --              --                 seen  = false
+ --              --             else
+ --              --                 break
+ --              --             end
+ --              --         elseif id == penalty_code then
+ --              --             local p = getpenalty(tail)
+ --              --             if p >= 10000 then
+ --              --                 same = true
+ --              --                 seen = true
+ --              --             else
+ --              --                 break
+ --              --             end
+ --              --         else
+ --              --             break
+ --              --         end
+ --              --         tail = getprev(tail)
+ --              --     end
+ --              --     texsetdimen("global","d_spac_prevcontent",same and height or 0)
+ --              -- end
+ --             end
+ --         end
+ --     end
+ -- end
+
+    local hlist_code  = nodes.nodecodes.hlist
+    local insert_code = nodes.nodecodes.insert
+    local mark_code   = nodes.nodecodes.mark
+    local line_code   = nodes.listcodes.line
+
+ -- local nuts             = nodes.nuts
+ -- local getid            = nuts.getid
+ -- local getsubtype       = nuts.getsubtype
+ -- local getdepth         = nuts.getdepth
+ -- local setdepth         = nuts.setdepth
+    local gettotal         = nuts.gettotal
+    local getspeciallist   = nuts.getspeciallist
+    local setspeciallist   = nuts.setspeciallist
+
+    local triggerbuildpage = tex.triggerbuildpage
+
+ -- local texgetdimen = tex.getdimen
+ -- local texsetdimen = tex.setdimen
+    local texgetnest  = tex.getnest
+ -- local texget      = tex.get
+ -- local texset      = tex.set
+
+    local trace = false  trackers.register("otr.forcestrutdepth", function(v)
+        trace = v and function(n)
+            setvisual(nuts.tonut(n),nodes.visualizers.modes.depth)
+        end
+    end)
+
+    local treversenode = nuts.treversers.node
+
+    local function flushcontributions()
+        if texgetnest("ptr") == 0 then
+            -- this flushes the contributions
+            local prev  = nil
+            local cycle = 1
+            while cycle <= 10 do
+                local head = getspeciallist("contributehead")
+                if head == prev then
+                    -- This can happen .. maybe 10 is already too much ... e.g.
+                    -- extreme side float case in m4all.
+                    cycle = cycle + 1
+                else
+                    triggerbuildpage()
+                    prev = head
+                end
+            end
+            return true
+        else
+            return false
+        end
+    end
+
+    vspacing.flushcontributions = flushcontributions
+
+    function vspacing.forcestrutdepth()
+        -- check if in mvl
+        if flushcontributions() then
+            -- now we consult the last line (if present)
+            local head, tail = getspeciallist("pagehead")
+            if tail then
+                for n, id, subtype in treversenode, tail do
+                    if id == hlist_code then
+                        if subtype == line_code then
+                            local strutdp = texgetdimen(d_strutdp)
+                            local delta   = strutdp - getdepth(n)
+                            if delta > 0 then
+                                setdepth(n,strutdp)
+                                texset("pagetotal",texget("pagetotal") + delta)
+                                texset("pagedepth",strutdp)
+                                if trace then
+                                    trace(n)
+                                end
                             end
                         end
+                        break
+                    elseif id == insert_code or id == mark_code then
+                        -- prev
+                    else
+                        break
                     end
-                    last = nil
-                    if plus then
-                        -- penalty / skip ...
-                        local height = 0
-                        local sofar  = 0
-                        local same   = false
-                        local seen   = false
-                        local list   = { }
-                              last   = nil
-                        while tail do
-                            local id = getid(tail)
-                            if id == hlist_code or id == vlist_code then
-                                local w, h, d = getwhd(tail)
-                                height = height + h + d + sofar
-                                sofar  = 0
-                                last   = tail
-                            elseif id == kern_code then
-                                sofar = sofar + getkern(tail)
-                            elseif id == glue_code then
-                                if seen then
-                                    sofar = sofar + getwidth(tail)
-                                    seen  = false
+                end
+            end
+        else
+            local nest = texgetnest()
+         -- if abs(nest.mode) == vmode_code and nest.head then
+                local tail = nest.tail
+                if tail.id == hlist_code and tail.subtype == line_code then
+                    local strutdp = texgetdimen(d_strutdp)
+                    if tail.depth < strutdp then
+                        tail.depth = strutdp
+                    end
+                    nest.prevdepth = strutdp
+                    if trace then
+                        trace(tail)
+                    end
+                end
+         -- end
+        end
+    end
+
+    -- highly experimental, only for m4all now; todo: tracing
+
+    local setbox = nuts.setbox
+
+    function vspacing.interceptsamepagecontent(box)
+        if vspacing.flushcontributions() then
+            -- now we consult the last line (if present)
+            local head, tail = getspeciallist("pagehead")
+            if tail and getid(tail) == glue_code then
+                local prev = getprev(tail)
+                if prev and getid(prev) == penalty_code then
+                    if getpenalty(prev) >= 10000 then
+                        local state = nil
+                        local first = nil
+                        local last  = tail
+                        local c = getprev(prev)
+                        while c do
+                            if getid(c) == glue_code then
+                                local p = getprev(c)
+                                if p and getid(p) == penalty_code then
+                                    if getpenalty(p) < 10000 then
+                                        state = 1
+                                    end
                                 else
+                                    state = 2
                                     break
                                 end
-                            elseif id == penalty_code then
-                                local p = getpenalty(tail)
-                                if p >= 10000 then
-                                    same = true
-                                    seen = true
-                                else
-                                    break
-                                end
-                            else
-                                break
                             end
-                            tail = getprev(tail)
+                            first = c
+                            c = getprev(c)
                         end
-                        texsetdimen("global","d_spac_prevcontent",same and height or 0)
+                        if first and first ~= head then
+                            setnext(getprev(first))
+                            setprev(first)
+                            local vbox = vpack_node(first)
+                            setvisual(vbox)
+                            setbox(box,vbox)
+                            report_vspacing("same page intercept, case %i")
+                        end
                     end
                 end
             end
         end
     end
+
+    interfaces.implement {
+        name      = "interceptsamepagecontent",
+        arguments = "integer",
+        actions   = vspacing.interceptsamepagecontent,
+    }
+
+ -- interfaces.implement {
+ --     name    = "removelastline",
+ --     actions = function()
+ --         local h, t = getspeciallist("pagehead")
+ --         if t and getid(t) == hlist_code and getsubtype(t) == line_code then
+ --             local total = gettotal(t)
+ --             h = remove_node(h,t,true)
+ --             setspeciallist(h)
+ --             texset("pagetotal",texget("pagetotal") - total)
+ --             -- set prevdepth
+ --         end
+ --     end
+ -- }
 
     function vspacing.pushatsame()
         -- needs better checking !
@@ -2390,18 +2765,25 @@ do
         scope     = "private"
     }
 
-    implement {
-        name      = "forcestrutdepth",
-        arguments = { "integer", "dimension", "integer" },
-        actions   = vspacing.forcestrutdepth,
-        scope     = "private"
-    }
+ -- implement {
+ --     name      = "forcestrutdepth",
+ --     arguments = { "integer", "dimension", "integer" },
+ --     actions   = vspacing.forcestrutdepth,
+ --     scope     = "private"
+ -- }
+
+ -- implement {
+ --     name      = "forcestrutdepthplus",
+ --     arguments = { "integer", "dimension", "integer", true },
+ --     actions   = vspacing.forcestrutdepth,
+ --     scope     = "private"
+ -- }
 
     implement {
-        name      = "forcestrutdepthplus",
-        arguments = { "integer", "dimension", "integer", true },
+        name      = "forcestrutdepth",
+        public    = true,
+        protected = true,
         actions   = vspacing.forcestrutdepth,
-        scope     = "private"
     }
 
     implement {
@@ -2448,7 +2830,7 @@ do
         name      = "vspacingsnap",
         actions   = vspacing.snapbox,
         scope     = "private",
-        arguments = { "integer", "integer" }
+        arguments = "2 integers",
     }
 
     implement {
@@ -2464,10 +2846,10 @@ do
  -- interfaces.implement {
  --     name    = "fakenextstrutline",
  --     actions = function()
- --         local head = texlists.page_head
+ --         local head = texlists.pagehead
  --         if head then
  --             local head = remove_node(head,find_node_tail(head),true)
- --             texlists.page_head = head
+ --             texlists.pagehead = head
  --             buildpage()
  --         end
  --     end
@@ -2476,13 +2858,13 @@ do
     implement {
         name    = "removelastline",
         actions = function()
-            local head = texlists.page_head
+            local head = texlists.pagehead
             if head then
                 local tail = find_node_tail(head)
                 if tail then
                     -- maybe check for hlist subtype 1
                     local head = remove_node(head,tail,true)
-                    texlists.page_head = head
+                    texlists.pagehead = head
                     buildpage()
                 end
             end
@@ -2492,7 +2874,7 @@ do
     implement {
         name    = "showpagelist", -- will improve
         actions = function()
-            local head = texlists.page_head
+            local head = texlists.pagehead
             if head then
                 print("start")
                 while head do
@@ -2511,6 +2893,17 @@ do
     implement {
         name    = "forcepageflush",
         actions = vspacing.forcepageflush
+    }
+
+end
+
+do
+
+    implement {
+        name      = "injectzerobaselineskip",
+        protected = true,
+        public    = true,
+        actions   = { nodes.pool.baselineskip, context },
     }
 
 end

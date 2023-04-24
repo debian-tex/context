@@ -18,16 +18,14 @@ local trace_info = false  trackers.register("structures.tags.info", function(v) 
 
 local report_tags = logs.reporter("backend","tags")
 
-local backends            = backends
-local lpdf                = lpdf
-local nodes               = nodes
-
-local nodeinjections      = backends.pdf.nodeinjections
-local codeinjections      = backends.pdf.codeinjections
+local pdfbackend          = backends.registered.pdf
+local nodeinjections      = pdfbackend.nodeinjections
+local codeinjections      = pdfbackend.codeinjections
 
 local enableaction        = nodes.tasks.enableaction
 local disableaction       = nodes.tasks.disableaction
 
+local lpdf                = lpdf
 local pdfdictionary       = lpdf.dictionary
 local pdfarray            = lpdf.array
 local pdfboolean          = lpdf.boolean
@@ -39,18 +37,13 @@ local pdfmakenametree     = lpdf.makenametree
 local addtocatalog        = lpdf.addtocatalog
 local addtopageattributes = lpdf.addtopageattributes
 
-local pdfflushobject
-local pdfreserveobject
-local pdfpagereference
-
-updaters.register("backend.update.lpdf",function()
-    pdfflushobject   = lpdf.flushobject
-    pdfreserveobject = lpdf.reserveobject
-    pdfpagereference = lpdf.pagereference
-end)
+local pdfflushobject      = lpdf.flushobject
+local pdfreserveobject    = lpdf.reserveobject
+local pdfpagereference    = lpdf.pagereference
 
 local texgetcount         = tex.getcount
 
+local nodes               = nodes
 local nodecodes           = nodes.nodecodes
 
 local hlist_code          = nodecodes.hlist
@@ -87,6 +80,8 @@ local parent_ref       -- delayed
 local root             -- delayed
 local names               = { }
 local tree                = { }
+local firstintree         = false
+local lastintree          = false
 local elements            = { }
 
 local structurestags      = structures.tags
@@ -139,24 +134,59 @@ end
 
 -- mostly the same as the annotations tree
 
+local usenamespace = false  experiments.register("structures.tags.namespaces", function(v) usenamespace = v end)
+
+local namespaceurls = {
+    mathml = "http://www.w3.org/1998/Math/MathML",
+}
+
 local function finishstructure()
     if root and #structure_kids > 0 then
         local nums   = pdfarray()
         local n      = 0
-        for i=1,#tree do
-            n = n + 1 ; nums[n] = i - 1
-            n = n + 1 ; nums[n] = pdfreference(pdfflushobject(tree[i]))
+        for i=firstintree,lastintree do
+            local ti = tree[i]
+            if ti then
+                n = n + 1 ; nums[n] = i - 1
+                n = n + 1 ; nums[n] = pdfreference(pdfflushobject(ti))
+            else
+                report_tags("beware: missing page %i in tree", i)
+            end
         end
         local parenttree = pdfdictionary {
             Nums = nums
         }
         local idtree = pdfmakenametree(names)
         --
-        local rolemap = pdfdictionary()
+        local rolemaps = usenamespace and { }
+        local rolemap  = pdfdictionary() -- main one
         for k, v in next, usedmapping do
             k = usedlabels[k] or k
             local p = properties[k]
-            rolemap[k] = pdfconstant(p and p.pdf or "Span") -- or "Div"
+            if not p then
+                print("UNDEFINED", k)
+            end
+            local n = p and p.namespace
+            if rolemaps and n then
+                local r = rolemaps[n]
+                if not r then
+                    r = pdfdictionary()
+                    rolemaps[n] = r
+                end
+                r[k] = pdfconstant(k) -- maybe other tag
+            else
+                rolemap[k] = pdfconstant(p and p.pdf or "Span") -- or "Div"
+            end
+        end
+        local namespaces = rolemaps and next(rolemaps) and pdfarray { } or nil
+        if namespaces then
+            for k, v in table.sortedhash(rolemaps) do
+                namespaces[#namespaces+1] = pdfdictionary {
+                    Type      = pdfconstant("Namespace"),
+                    NS        = pdfunicode(namespaceurls[k] or k),
+                    RoleMapNS = v,
+                }
+            end
         end
         local structuretree = pdfdictionary {
             Type       = pdfconstant("StructTreeRoot"),
@@ -164,6 +194,7 @@ local function finishstructure()
             ParentTree = pdfreference(pdfflushobject(parent_ref,parenttree)),
             IDTree     = idtree,
             RoleMap    = rolemap, -- sorted ?
+            Namespaces = namespaces,
         }
         pdfflushobject(structure_ref,structuretree)
         addtocatalog("StructTreeRoot",pdfreference(structure_ref))
@@ -179,7 +210,20 @@ local function finishstructure()
         end
         --
         for fulltag, element in sortedhash(elements) do -- sorting is easier on comparing pdf
-            pdfflushobject(element.knum,element.kids)
+            local kids = element.kids
+         -- if element.tag == "link" then
+         --     local d = kids[2]
+         --     if type(d) == "table" then
+         --         local refatt = element.refatt
+         --         if refatt then
+         --             local refobj = codeinjections.getrefobj(refatt)
+         --             if refobj then
+         --                 d.Obj = pdfreference(refobj)
+         --             end
+         --         end
+         --     end
+         -- end
+            pdfflushobject(element.knum,kids)
         end
     end
 end
@@ -191,12 +235,26 @@ local index, pageref, pagenum, list = 0, nil, 0, nil
 local pdf_mcr            = pdfconstant("MCR")
 local pdf_struct_element = pdfconstant("StructElem")
 local pdf_s              = pdfconstant("S")
+local pdf_objr           = pdfconstant("OBJR")
 
 local function initializepage()
     index   = 0
     pagenum = texgetcount("realpageno")
     pageref = pdfreference(pdfpagereference(pagenum))
     list    = pdfarray()
+    -- hm, can be later than 1
+    if not firstintree then
+        if pagenum > 1 then
+            report_tags("beware: first page in tree is %i", pagenum)
+        end
+        firstintree = pagenum
+        lastintree  = pagenum
+    end
+    if pagenum > lastintree then
+        lastintree = pagenum
+    else
+     -- report_tags("beware: page order problem in tree at page %i", pagenum)
+    end
     tree[pagenum] = list -- we can flush after done, todo
 end
 
@@ -237,7 +295,7 @@ local function makeelement(fulltag,parent)
     local attributes    = nil
     if tagname == "ignore" then
         return false
-    elseif tagname == "mstackertop" or tagname == "mstackerbot" or tagname == "mstackermid"then
+    elseif tagname == "mstackertop" or tagname == "mstackerbot" or tagname == "mstackermid" then
         -- TODO
         return true
     elseif tagname == "tabulatecell" then
@@ -324,7 +382,10 @@ end
 
 local f_BDC = formatters["/%s <</MCID %s>> BDC"]
 
-local function makecontent(parent,id,specification)
+local a_destination = attributes.private('destination')
+local a_reference   = attributes.private('reference')
+
+local function makecontent(start,parent,id,specification)
     local tag  = parent.tag
     local kids = parent.kids
     local last = index
@@ -341,6 +402,16 @@ local function makecontent(parent,id,specification)
         kids[#kids+1] = d
     elseif pagenum == parent.pnum then
         kids[#kids+1] = last
+     -- if tag == "link" then
+     --     local ra = getattr(start,a_reference)
+     --     if ra then
+     --         parent.refatt = ra
+     --         kids[#kids+1] = pdfdictionary {
+     --             Type = pdf_objr,
+     --             Obj  = pdfreference(0),
+     --         }
+     --     end
+     -- end
     else
         local d = pdfdictionary {
             Type = pdf_mcr,
@@ -366,15 +437,25 @@ end
 local EMCliteral = nil
 local visualize  = nil
 
+local enabled = true
+
+updaters.register("tagging.state.disable",function() enabled = false end)
+updaters.register("tagging.state.enable", function() enabled = true  end)
+
 function nodeinjections.addtags(head)
+
+    if not enabled then
+        return
+    end
 
     if not EMCliteral then
         EMCliteral = register(setstate("EMC"))
     end
 
-    local last   = nil
-    local ranges = { }
-    local range  = nil
+    local last      = nil
+    local ranges    = { }
+    local range     = nil
+    local nofranges = 0
 
     if not root then
         structure_kids = pdfarray()
@@ -388,28 +469,23 @@ function nodeinjections.addtags(head)
         for n, id in nextnode, head do
             if id == glyph_code then
                 -- maybe also disc
-if getchar(n) ~= 0 then
-                local at = getattr(n,a_tagged) or false -- false: pagebody or so, so artifact
-             -- if not at then
-             --     range = nil
-             -- elseif ...
-                if last ~= at then
-                    range = { at, "glyph", n, n, list } -- attr id start stop list
-                    ranges[#ranges+1] = range
-                    last = at
-                elseif range then
-                    range[4] = n -- stop
+                if getchar(n) ~= 0 then
+                    local at = getattr(n,a_tagged) or false -- false: pagebody or so, so artifact
+                    if last ~= at then
+                        range = { at, "glyph", n, n, list } -- attr id start stop list
+                        nofranges = nofranges + 1
+                        ranges[nofranges] = range
+                        last = at
+                    elseif range then
+                        range[4] = n -- stop
+                    end
                 end
-end
             elseif id == hlist_code or id == vlist_code then
                 local at = getattr(n,a_image)
                 if at then
                     local at = getattr(n,a_tagged) or false -- false: pagebody or so, so artifact
-                 -- if not at then
-                 --     range = nil
-                 -- else
-                        ranges[#ranges+1] = { at, "image", n, n, list } -- attr id start stop list
-                 -- end
+                    nofranges = nofranges + 1
+                    ranges[nofranges] = { at, "image", n, n, list } -- attr id start stop list
                     last = nil
                 else
                     local list = getlist(n)
@@ -429,7 +505,7 @@ end
 -- inspect(ranges)
 
     if trace_tags then
-        for i=1,#ranges do
+        for i=1,nofranges do
             local range = ranges[i]
             local attr  = range[1]
             local id    = range[2]
@@ -471,7 +547,12 @@ end
         end
     end
 
-    for i=1,#ranges do
+--     local function inject(start,stop,list,literal,left,right)
+--         setlink(getprev(start) or list or true,literal,left or true,start)
+--         setlink(stop,right or true,copy_node(EMCliteral),getnext(stop))
+--     end
+
+    for i=1,nofranges do
 
         local range = ranges[i]
         local attr  = range[1]
@@ -516,7 +597,7 @@ end
                 end
             end
             if prev then
-                literal = setstate(makecontent(prev,id,specification))
+                literal = setstate(makecontent(start,prev,id,specification))
             elseif ignore then
                 literal = setstate(makeignore(specification))
             else
@@ -662,7 +743,7 @@ end
 --          -- else
 --                 prev = prv
 --                 r = r + 1
---                 result[r] = makecontent(prev,id)
+--                 result[r] = makecontent(start,prev,id)
 --          -- end
 --         end
 --

@@ -15,6 +15,17 @@
 
 \installcorenamespace{graphicvariable}
 
+% \unprotect
+
+% \newdimension\d_adaptive_width
+% \newdimension\d_adaptive_height
+% \newdimension\d_adaptive_depth
+% \newdimension\d_adaptive_line
+% \newdimension\d_adaptive_hsize
+% \newbox      \b_adaptive_box
+
+% \protect
+
 \registerctxluafile{mlib-fio}{autosuffix}
 \registerctxluafile{mlib-run}{autosuffix}
 \registerctxluafile{mlib-ctx}{autosuffix}
@@ -26,8 +37,10 @@
 \registerctxluafile{mlib-lmp}{autosuffix}
 \registerctxluafile{mlib-int}{autosuffix}
 \registerctxluafile{mlib-lmt}{autosuffix}
-\registerctxluafile{mlib-cnt}{autosuffix,optimize}
-\registerctxluafile{mlib-svg}{autosuffix,optimize}
+\registerctxluafile{mlib-pos}{autosuffix}
+\registerctxluafile{mlib-cnt}{autosuffix}
+\registerctxluafile{mlib-svg}{autosuffix}
+\registerctxluafile{mlib-fnt}{autosuffix} % outline fun
 
 \unprotect
 

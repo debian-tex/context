@@ -65,12 +65,7 @@ appendaction("processors",   "lists",       "typesetters.kerns.handler",        
 appendaction("processors",   "lists",       "typesetters.digits.handler",                       nil, "nut",    "disabled"  )
 appendaction("processors",   "lists",       "typesetters.italics.handler",                      nil, "nut",    "disabled"  )
 appendaction("processors",   "lists",       "languages.visualizediscretionaries",               nil, "nut",    "disabled"  )
-
-if CONTEXTLMTXMODE == 0 then
-
 appendaction("processors",   "lists",       "nodes.handlers.migrate",                           nil, "nut",    "disabled"  )
-
-end
 
 appendaction("processors",   "after",       "typesetters.marksuspects",                         nil, "nut",    "disabled"  )
 
@@ -120,16 +115,14 @@ appendaction("math",         "normalizers", "noads.handlers.italics",           
 appendaction("math",         "normalizers", "noads.handlers.kernpairs",                         nil, "nonut",  "disabled"  )
 appendaction("math",         "normalizers", "noads.handlers.classes",                           nil, "nonut",  "disabled"  )
 
-appendaction("math",         "builders",    "builders.kernel.mlist_to_hlist",                   nil, "nut",    "enabled"   )  -- mandate
+appendaction("math",         "builders",    "builders.kernel.mlisttohlist",                     nil, "nut",    "enabled"   )  -- mandate
 appendaction("math",         "builders",    "typesetters.directions.processmath",               nil, "nut",    "disabled"  )
 appendaction("math",         "builders",    "noads.handlers.makeup",                            nil, "nonut",  "disabled"  )
 appendaction("math",         "builders",    "noads.handlers.align",                             nil, "nonut",  "enabled"   )
 
-if CONTEXTLMTXMODE == 0 then
-
 appendaction("finalizers",   "lists",       "typesetters.paragraphs.normalize",                 nil, "nut",    "enabled"   ) -- "disabled"
-
-end
+appendaction("finalizers",   "lists",       "nodes.handlers.showhyphenation",                   nil, "nut",    "disabled"  )
+appendaction("finalizers",   "lists",       "nodes.handlers.visualizehyphenation",              nil, "nut",    "disabled"  )
 
 appendaction("finalizers",   "lists",       "typesetters.margins.localhandler",                 nil, "nut",    "disabled"  )
 appendaction("finalizers",   "lists",       "builders.paragraphs.keeptogether",                 nil, "nut",    "disabled"  )
@@ -137,8 +130,10 @@ appendaction("finalizers",   "fonts",       "builders.paragraphs.solutions.split
 appendaction("finalizers",   "lists",       "builders.paragraphs.tag",                          nil, "nut",    "disabled"  )
 appendaction("finalizers",   "lists",       "nodes.linefillers.handler",                        nil, "nut",    "disabled"  )
 
+
 appendaction("contributers", "normalizers", "nodes.handlers.flattenline",                       nil, "nut",    "disabled"  )
 appendaction("contributers", "normalizers", "nodes.handlers.textbackgrounds",                   nil, "nut",    "disabled"  )
+
 
 appendaction("vboxbuilders", "normalizers", "nodes.handlers.backgroundsvbox",                   nil, "nut",    "disabled"  )
 ------------("vboxbuilders", "normalizers", "typesetters.margins.localhandler",                 nil, "nut",    "disabled"  )

@@ -71,10 +71,33 @@
 \permanent\tolerant\protected\def\placeinitial[#1]% old command
   {\par
    \namedinitialparameter{#1}\c!before
-   \edef\typo_initial_handle{\typo_initial_handle_indeed{#1}{}}}
+   \enforced\edef\typo_initial_handle{\typo_initial_handle_indeed{#1}{}}}
 
 \permanent\tolerant\protected\def\setinitial[#1]#*[#2]%
-  {\edef\typo_initial_handle{\typo_initial_handle_indeed{#1}{#2}}}
+  {\enforced\edef\typo_initial_handle{\typo_initial_handle_indeed{#1}{#2}}}
+
+\permanent\tolerant\protected\def\flushinitial % when used inside a mechanism that forgets
+  {\typo_initial_handle}
+
+\newconstant   \c_initial_lines
+\newconditional\c_initial_synchronize
+
+% First experiment:
+%
+% \startluacode
+%     function nodes.handlers.forgetinitial(mode,indented,context)
+%         token.expandmacro("forgetinitial")
+%         return indented
+%     end
+%     utilities.sequencers.prependaction("paragraph","system","nodes.handlers.forgetinitial")
+%     utilities.sequencers.enableaction("paragraph","nodes.handlers.forgetinitial")
+% \stopluacode
+%
+% Second experiment:
+%
+% \appendtoks
+%     \forgetinitial
+% \to \everybeforepar
 
 \protected\def\typo_initial_handle_indeed#1#2%
   {\dontleavehmode
@@ -90,26 +113,66 @@
    \scratchcounter \initialparameter\c!n\relax
    \scratchvoffset\dimexpr\ifx\p_voffset\v!line\scratchcounter\lineheight-\lineheight\else\p_voffset\fi\relax
    \clf_setinitial
-        location  {\initialparameter\c!location}%
-        enabled   true\space
-        n         \scratchcounter
-        m         \numexpr\initialparameter\c!m\relax
-        method    {\initialparameter\c!method}%
-        distance  \dimexpr\initialparameter\c!distance\relax
-        hoffset   \dimexpr\initialparameter\c!hoffset\relax
-        voffset   \scratchvoffset
-        ma        \c_attr_colormodel
-        ca        \c_attr_color
-        ta        \c_attr_transparency
-        font      \fontid\font
-        dynamic   \font_dynamic_value % it's a bit over the top to support this here
+        location   {\initialparameter\c!location}%
+        enabled    true\space
+        n          \scratchcounter
+        m          \numexpr\initialparameter\c!m\relax
+        method     {\initialparameter\c!method}%
+        distance   \dimexpr\initialparameter\c!distance\relax
+        hoffset    \dimexpr\initialparameter\c!hoffset\relax
+        voffset    \scratchvoffset
+        ma         \c_attr_colormodel
+        ca         \c_attr_color
+        ta         \c_attr_transparency
+        font       \fontid\font
+        glyphscale \glyphscale
+        dynamic    \font_dynamic_value % it's a bit over the top to support this here
    \relax
    \c_attr_initial\plusone
    \initialparameter\c!text
-   \endgroup
-   \glet\typo_initial_handle\relax}
+   \normalexpanded{\endgroup\c_initial_lines\the\scratchcounter}%
+   \enforced\glettonothing\typo_initial_handle
+   \ifconditional\c_initial_synchronize
+     \appendtoks \forgetinitial \to \everybeforepar
+   \fi}
 
-\let\typo_initial_handle\relax
+\lettonothing\typo_initial_handle % hook into everypar
+
+\permanent\protected\def\forgetinitial
+  {\ifcase\c_initial_lines\else
+     \begingroup
+     \advanceby\c_initial_lines-\prevgraf\relax
+     \ifcase\c_initial_lines\else
+       \obeydepth
+       \forgetall
+       \testpage[\the\c_initial_lines]%
+       \dorecurse\c_initial_lines{\nointerlineskip\hpack to \hsize{\strut}\par}%
+     \fi
+     \endgroup
+     \c_initial_lines\zerocount
+     \ifconditional\c_initial_synchronize
+       \removetoks \forgetinitial \from \everybeforepar
+     \fi
+  \fi}
+
+%D \starttyping
+%D \setupinitial[n=2,style=\tfd,location=text]
+%D \setuphead[chapter][after=\placeinitial]
+%D \enableexperiments[autoforgetinitials]
+%D
+%D \starttext
+%D   \chapter{Test me} Hello world!
+%D  %\forgetinitial \input tufte
+%D   \input tufte
+%D \stoptext
+%D \stoptyping
+
+% \enableexperiments[autoforgetinitials]
+
+\installtexexperiment
+   {autoforgetinitials}
+   {\settrue \c_initial_synchronize}
+   {\setfalse\c_initial_synchronize}
 
 % \setupbodyfont[dejavu,9pt]
 %

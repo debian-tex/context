@@ -6,6 +6,8 @@ if not modules then modules = { } end modules ['node-ser'] = {
     license   = "see context related readme files"
 }
 
+-- needs to be updated (mayeb fetch field types)
+
 local type, tostring = type, tostring
 local concat, tohash, sortedkeys, sortedhash, printtable, serialize = table.concat, table.tohash, table.sortedkeys, table.sortedhash, table.print, table.serialize
 local formatters, format, rep = string.formatters, string.format, string.rep
@@ -14,15 +16,11 @@ local allocate = utilities.storage.allocate
 
 local context     = context
 local nodes       = nodes
-local node        = node
 
-local getfields   = node.fields
-
-local is_node     = nodes.is_node
-
+local getfields   = nodes.fields
+local isnode      = nodes.isnode
 local nodecodes   = nodes.nodecodes
 local subtypes    = nodes.subtypes
-
 local tonode      = nodes.tonode
 local tonut       = nodes.tonut
 
@@ -43,12 +41,11 @@ local canbezero = {
 }
 
 local canbelist = {
-    attribute      = "<attribute>",
-    node           = "<node>",
-    token          = "<token>",
-    attribute_list = "<attributes>",
-    node_list      = "<nodes>",
-    token_list     = "<tokens>",
+    attribute  = "<attribute>",
+    node       = "<node>",
+    token      = "<token>",
+    node_list  = "<nodes>",
+    token_list = "<tokens>",
 }
 
 local canbeignored = {
@@ -56,9 +53,9 @@ local canbeignored = {
 }
 
 local canbechar = {
-    char       = true,
-    small_char = true,
-    large_char = true,
+    char      = true,
+    smallchar = true,
+    largechar = true,
 }
 
 local fieldtypes = table.setmetatableindex(function(t,k)
@@ -69,16 +66,22 @@ end)
 
 nodes.fieldtypes = fieldtypes
 
+-- todo: subtype zero too
+
 local function astable(n)
     n = tonode(n)
     if n then
-        local fields = fieldtypes[n.id]
+        local id     = n.id
+        local fields = fieldtypes[id]
         if fields then
-            local result = { }
-            for field, fieldtype in sortedhash(fields) do
+            local subtype = n.subtype
+            local result  = { }
+            for field, fieldtype in sortedhash(fields) do -- no need to sort
                 local value = n[field]
                 if value then
-                    if canbeignored[field] then
+                    if field == "subtype" then
+                        -- we always show them now
+                    elseif canbeignored[field] then
                         value = nil
                     elseif canbezero[fieldtype] and value == 0 then
                         value = nil
@@ -90,16 +93,12 @@ local function astable(n)
                     end
                 end
             end
-            local id = n.id
-            if id then
-                id = nodecodes[id]
-                result.id = id
-                local subtype = n.subtype
-                if subtype then
-                    local subtypes = subtypes[id]
-                    if subtypes then
-                        result.subtype = subtypes[subtype]
-                    end
+            id = nodecodes[id]
+            result.id = id
+            if subtype then
+                local subtypes = subtypes[id]
+                if subtypes then
+                    result.subtype = subtypes[subtype]
                 end
             end
             return result
@@ -109,7 +108,7 @@ end
 
 nodes.astable = astable
 
-setinspector("node",function(v) if is_node(v) then printtable(astable(v),tostring(v)) return true end end)
+setinspector("node",function(v) if isnode(v) then printtable(astable(v),tostring(v)) return true end end)
 
 local function to_table(n,flat,verbose,noattributes,done)
     local d = tonut(n)
@@ -123,7 +122,7 @@ local function to_table(n,flat,verbose,noattributes,done)
             for field, fieldtype in sortedhash(fields) do
                 local value = n[field]
                 if value then
-                    if fieldtype == "attribute_list" or fieldtype == "attribute" then
+                    if fieldtype == "attribute" then
                         if noattributes then
                             result[value] = canbeignored[value]
                         else

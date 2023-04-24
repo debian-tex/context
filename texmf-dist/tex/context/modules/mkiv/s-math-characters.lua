@@ -15,6 +15,8 @@ local concat = table.concat
 local lower = string.lower
 local utfchar = utf.char
 local round = math.round
+local setmetatableindex = table.setmetatableindex
+local sortedhash = table.sortedhash
 
 local context        = context
 
@@ -110,6 +112,40 @@ function moduledata.math.characters.showlist(specification)
             end
         end
     else
+
+        local function collectalllookups(tfmdata,script,language)
+            local all     = setmetatableindex(function(t,k) local v = setmetatableindex("table") t[k] = v return v end)
+            local shared  = tfmdata.shared
+            local rawdata = shared and shared.rawdata
+            if rawdata then
+                local features = rawdata.resources.features
+                if features.gsub then
+                    for kind, feature in next, features.gsub do
+                        local validlookups, lookuplist = fonts.handlers.otf.collectlookups(rawdata,kind,script,language)
+                        if validlookups then
+                            for i=1,#lookuplist do
+                                local lookup = lookuplist[i]
+                                local steps  = lookup.steps
+                                for i=1,lookup.nofsteps do
+                                    local coverage = steps[i].coverage
+                                    if coverage then
+                                        for k, v in next, coverage do
+                                            all[k][lookup.type][kind] = v
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            return all
+        end
+
+        local alllookups = collectalllookups(tfmdata,"math","dflt")
+
+        local luametatex = LUATEXENGINE == "luametatex"
+
         context.showmathcharactersstart()
         for _, unicode in next, sorted do
             if not limited or unicode < upperlimit then
@@ -123,18 +159,35 @@ function moduledata.math.characters.showlist(specification)
                         -- skip
                     else
                         local next_sizes  = char.next
-                        local v_variants  = char.vert_variants
-                        local h_variants  = char.horiz_variants
-                        local slookups    = desc and desc.slookups
-                        local mlookups    = desc and desc.mlookups
+                        local vparts      = char.vparts or char.vert_variants
+                        local hparts      = char.hparts or char.horiz_variants
                         local mathclass   = info.mathclass
                         local mathspec    = info.mathspec
                         local mathsymbol  = info.mathsymbol
                         local description = info.description or no_description
-                        context.showmathcharactersstartentry()
-                        context.showmathcharactersreference(f_unicode(unicode))
-                        context.showmathcharactersentryhexdectit(f_unicode(code),code,lower(description))
-                        context.showmathcharactersentrywdhtdpic(round(char.width or 0),round(char.height or 0),round(char.depth or 0),round(char.italic or 0))
+                        context.showmathcharactersstartentry(
+                        )
+                        context.showmathcharactersreference(
+                            f_unicode(unicode)
+                        )
+                        context.showmathcharactersentryhexdectit(
+                            f_unicode(code),
+                            code,
+                            lower(description)
+                        )
+                        if luametatex then
+                            context.showmathcharactersentrywdhtdpicta(
+                                code
+                            )
+                        else
+                            context.showmathcharactersentrywdhtdpicta(
+                                round(char.width     or 0),
+                                round(char.height    or 0),
+                                round(char.depth     or 0),
+                                round(char.italic    or 0),
+                                round(char.topanchor or char.topaccent or 0)
+                            )
+                        end
                         if virtual and commands then
                             local t = { }
                             for i=1,#commands do
@@ -176,66 +229,54 @@ function moduledata.math.characters.showlist(specification)
                                     done[next_sizes] = true
                                     context.showmathcharactersnextentry(n,f_unicode(next_sizes),next_sizes)
                                     next_sizes = characters[next_sizes]
-                                    v_variants = next_sizes.vert_variants  or v_variants
-                                    h_variants = next_sizes.horiz_variants or h_variants
+                                    vparts = next_sizes.vparts or next_sizes.vert_variants  or vparts
+                                    hparts = next_sizes.hparts or next_sizes.horiz_variants or hparts
                                     if next_sizes then
                                         next_sizes = next_sizes.next
                                     end
                                 end
                             end
                             context.showmathcharactersstopnext()
-                            if h_variants or v_variants then
+                            if vparts or hparts then
                                 context.showmathcharactersbetweennextandvariants()
                             end
                         end
-                        if h_variants then
-                            context.showmathcharactersstarthvariants()
-                            for i=1,#h_variants do -- we might go top-down in the original
-                                local vi = h_variants[i]
-                                context.showmathcharactershvariantsentry(i,f_unicode(vi.glyph),vi.glyph)
+                        if vparts then
+                            context.showmathcharactersstartvparts()
+                            for i=1,#vparts do -- we might go top-down in the original
+                                local vi = vparts[i]
+                                context.showmathcharactersvpartsentry(i,f_unicode(vi.glyph),vi.glyph)
                             end
-                            context.showmathcharactersstophvariants()
-                        elseif v_variants then
-                            context.showmathcharactersstartvvariants()
-                            for i=1,#v_variants do
-                                local vi = v_variants[#v_variants-i+1]
-                                context.showmathcharactersvvariantsentry(i,f_unicode(vi.glyph),vi.glyph)
-                            end
-                            context.showmathcharactersstopvvariants()
+                            context.showmathcharactersstopvparts()
                         end
-                        if slookups or mlookups then
-                            local variants = { }
-                            if slookups then
-                                for lookupname, lookupdata in next, slookups do
-                                    local lookuptype = lookuptypes[lookupname]
-                                    if lookuptype == "substitution" then
-                                        variants[lookupdata] = "sub"
-                                    elseif lookuptype == "alternate" then
-                                        for i=1,#lookupdata do
-                                            variants[lookupdata[i]] = "alt"
-                                        end
-                                    end
+                        if hparts then
+                            context.showmathcharactersstarthparts()
+                            for i=1,#hparts do
+                                local hi = hparts[#hparts-i+1]
+                                context.showmathcharactershpartsentry(i,f_unicode(hi.glyph),hi.glyph)
+                            end
+                            context.showmathcharactersstophparts()
+                        end
+                        local lookups = alllookups[unicode]
+                        if lookups then
+                            local variants   = { }
+                            local singles    = lookups.gsub_single
+                            local alternates = lookups.gsub_alternate
+                            if singles then
+                                for lookupname, code in next, singles do
+                                    variants[code] = lookupname
                                 end
                             end
-                            if mlookups then
-                                for lookupname, lookuplist in next, mlookups do
-                                    local lookuptype = lookuptypes[lookupname]
-                                    for i=1,#lookuplist do
-                                        local lookupdata = lookuplist[i]
-                                        local lookuptype = lookuptypes[lookupname]
-                                        if lookuptype == "substitution" then
-                                            variants[lookupdata] = "sub"
-                                        elseif lookuptype == "alternate" then
-                                            for i=1,#lookupdata do
-                                                variants[lookupdata[i]] = "alt"
-                                            end
-                                        end
+                            if singles then
+                                for lookupname, codes in next, alternates do
+                                    for i=1,#codes do
+                                        variants[codes[i]] = lookupname .. " : " .. i
                                     end
                                 end
                             end
                             context.showmathcharactersstartlookupvariants()
                             local i = 0
-                            for variant, lookuptype in table.sortedpairs(variants) do
+                            for variant, lookuptype in sortedhash(variants) do
                                 i = i + 1
                                 context.showmathcharacterslookupvariant(i,f_unicode(variant),variant,lookuptype)
                             end

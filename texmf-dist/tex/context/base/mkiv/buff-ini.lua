@@ -8,7 +8,7 @@ if not modules then modules = { } end modules ['buff-ini'] = {
 
 local concat = table.concat
 local type, next, load = type, next, load
-local sub, format = string.sub, string.format
+local sub, format, find = string.sub, string.format, string.find
 local splitlines, validstring, replacenewlines = string.splitlines, string.valid, string.replacenewlines
 local P, Cs, patterns, lpegmatch = lpeg.P, lpeg.Cs, lpeg.patterns, lpeg.match
 local utfchar  = utf.char
@@ -55,6 +55,7 @@ local replacesuffix     = file.replacesuffix
 local registertempfile  = luatex.registertempfile
 
 local v_yes             = variables.yes
+local v_append          = variables.append
 
 local eol               = patterns.eol
 local space             = patterns.space
@@ -123,6 +124,14 @@ end
 local function getcontent(name)
     local buffer = name and cache[name]
     return buffer and buffer.data or ""
+end
+
+local function empty(name)
+    if find(getcontent(name),"%S") then
+        return false
+    else
+        return true
+    end
 end
 
 local function getlines(name)
@@ -201,6 +210,7 @@ buffers.assign         = assign
 buffers.prepend        = prepend
 buffers.append         = append
 buffers.exists         = exists
+buffers.empty          = empty
 buffers.getcontent     = getcontent
 buffers.getlines       = getlines
 buffers.collectcontent = collectcontent
@@ -642,7 +652,7 @@ implement {
     end
 }
 
-local function savebuffer(list,name,prefix) -- name is optional
+local function savebuffer(list,name,prefix,option,directory) -- name is optional
     if not list or list == "" then
         list = name
     end
@@ -656,13 +666,16 @@ local function savebuffer(list,name,prefix) -- name is optional
     if prefix == v_yes then
         name = addsuffix(tex.jobname .. "-" .. name,"tmp")
     end
-    io.savedata(name,replacenewlines(content))
+    if directory ~= "" and dir.makedirs(directory) then
+        name = file.join(directory,name)
+    end
+    io.savedata(name,replacenewlines(content),"\n",option == v_append)
 end
 
 implement {
     name      = "savebuffer",
     actions   = savebuffer,
-    arguments = "3 strings",
+    arguments = "5 strings",
 }
 
 -- we can consider adding a size to avoid unlikely clashes
@@ -675,7 +688,7 @@ local runner = sandbox.registerrunner {
     name     = "run buffer",
     program  = "context",
     method   = "execute",
-    template = jit and "--purgeall --jit %filename%" or "--purgeall %filename%",
+    template = (jit and "--jit --engine=luajittex" or "--engine=luatex") .. " --purgeall %?path: --path=%path% ?% %filename%",
     reporter = report_typeset,
     checkers = {
         filename = "readable",
@@ -769,7 +782,10 @@ local function runbuffer(name,encapsulate,runnername,suffixes)
         end
         savedata(filename,content)
         report_typeset("processing saved buffer %a\n",filename)
-        runner { filename = filename }
+        runner {
+            filename = filename,
+            path     = environment.arguments.path, -- maybe take all set paths
+        }
     end
     new[tag] = (new[tag] or 0) + 1
     report_typeset("no changes in %a, processing skipped",name)
@@ -800,7 +816,7 @@ local function getbuffermkvi(name) -- rather direct !
     ctx_viafile(resolvers.macros.preprocessed(getcontent(name)),formatters["buffer.%s.mkiv"](validstring(name,"noname")))
 end
 
-local function gettexbuffer(name)
+local function getbuffertex(name)
     local buffer = name and cache[name]
     if buffer and buffer.data ~= "" then
         ctx_pushcatcodetable()
@@ -815,15 +831,15 @@ local function gettexbuffer(name)
     end
 end
 
-buffers.get          = getbuffer
-buffers.getmkiv      = getbuffermkiv
-buffers.gettexbuffer = gettexbuffer
-buffers.run          = runbuffer
+buffers.get     = getbuffer
+buffers.getmkvi = getbuffermkvi
+buffers.gettex  = getbuffertex
+buffers.run     = runbuffer
 
 implement { name = "getbufferctxlua", actions = loadcontent,   arguments = "string" }
 implement { name = "getbuffer",       actions = getbuffer,     arguments = "string" }
 implement { name = "getbuffermkvi",   actions = getbuffermkvi, arguments = "string" }
-implement { name = "gettexbuffer",    actions = gettexbuffer,  arguments = "string" }
+implement { name = "getbuffertex",    actions = getbuffertex,  arguments = "string" }
 
 interfaces.implement {
     name      = "getbuffercontent",
@@ -846,6 +862,12 @@ implement {
 implement {
     name      = "doifelsebuffer",
     actions   = { exists, commands.doifelse },
+    arguments = "string"
+}
+
+implement {
+    name      = "doifelsebufferempty",
+    actions   = { empty, commands.doifelse },
     arguments = "string"
 }
 
@@ -885,10 +907,10 @@ end
 -- moved here:
 
 function buffers.samplefile(name)
-    if not buffers.exists(name) then
-        buffers.assign(name,io.loaddata(resolvers.findfile(name)))
+    if not exists(name) then
+        assign(name,io.loaddata(resolvers.findfile(name)))
     end
-    buffers.get(name)
+    getbuffer(name)
 end
 
 implement {

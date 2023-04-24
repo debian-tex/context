@@ -64,33 +64,33 @@
    \c!maxwidth=\makeupwidth]
 
 \appendtoks % could become an option
-    \frozen\instance\setuevalue{\e!start\currentpagegrid}{\startpagegrid[\currentpagegrid]}%
-    \frozen\instance\setuevalue{\e!stop \currentpagegrid}{\stoppagegrid}%
+    \frozen\instance\protected\edefcsname\e!start\currentpagegrid\endcsname{\startpagegrid[\currentpagegrid]}%
+    \frozen\instance\protected\edefcsname\e!stop \currentpagegrid\endcsname{\stoppagegrid}%
     \clf_definecolumnset {
         name {\currentpagegrid}%
     }%
 \to \everydefinepagegrid
 
-\newdimen\d_page_grd_column_width
-\newdimen\d_page_grd_max_height
-\newdimen\d_page_grd_max_width
-\newdimen\d_page_grd_distance
+\newdimension\d_page_grd_column_width
+\newdimension\d_page_grd_max_height
+\newdimension\d_page_grd_max_width
+\newdimension\d_page_grd_distance
 
-\newdimen\d_page_grd_reserved_height
-\newdimen\d_page_grd_reserved_width
-\newcount\c_page_grd_reserved_state
+\newdimension\d_page_grd_reserved_height
+\newdimension\d_page_grd_reserved_width
+\newinteger  \c_page_grd_reserved_state
 
-\newdimen\d_page_grd_gap_height
+\newdimension\d_page_grd_gap_height
 
-\newcount\c_page_grd_n_of_left
-\newcount\c_page_grd_n_of_right
-\newcount\c_page_grd_n_of_rows
-\newcount\c_page_grd_first_column
-\newcount\c_page_grd_last_column
+\newinteger  \c_page_grd_n_of_left
+\newinteger  \c_page_grd_n_of_right
+\newinteger  \c_page_grd_n_of_rows
+\newinteger  \c_page_grd_first_column
+\newinteger  \c_page_grd_last_column
 
-\newbox  \b_page_grd_collected
-\newbox  \b_page_grd_column_rest
-\newbox  \b_page_grd_column
+\newbox      \b_page_grd_collected
+\newbox      \b_page_grd_column_rest
+\newbox      \b_page_grd_column
 
 %D All the parameters are mandate!
 
@@ -128,10 +128,10 @@
   {\bgroup
    \enforced\let\startpagegrid\page_grd_start_dummy
    \ifarguments
-     \let\currentpagegrid\empty
+     \lettonothing\currentpagegrid
    \or
      \ifhastok={#1}%
-       \let\currentpagegrid\empty
+       \lettonothing\currentpagegrid
        \setupcurrentpagegrid[#1]%
      \else
        \def\currentpagegrid{#1}%
@@ -147,6 +147,8 @@
    \d_page_grd_max_width \pagegridparameter\c!maxwidth\relax
    \d_page_grd_max_height\pagegridparameter\c!maxheight\relax
    \d_page_grd_distance  \pagegridparameter\c!distance\relax
+   %
+   \automigrationmode\zerocount % for now
    %
    \ifcase\c_page_grd_n_of_rows
       \getrawnoflines{\dimexpr\d_page_grd_max_height-\strutheight+\topskip\relax}%
@@ -253,7 +255,6 @@
    \fi
    \endgroup}
 
-
 \protected\def\page_grd_command_set_vsize
   {\clf_setvsizecolumnset{\currentpagegrid}%
    \ifdim\d_page_grd_gap_height<\lineheight
@@ -302,7 +303,7 @@
    \anch_mark_column_box\b_page_grd_column\privatescratchcounter
    \page_marks_synchronize_column\c_page_grd_first_column\c_page_grd_last_column\privatescratchcounter\b_page_grd_column
    \ifnum\privatescratchcounter>\c_page_grd_n_of_left
-     \advance\privatescratchcounter-\c_page_grd_n_of_left
+     \advanceby\privatescratchcounter-\c_page_grd_n_of_left
      \page_lines_add_numbers_to_box\b_page_grd_column\privatescratchcounter\c_page_grd_n_of_right\plustwo
    \else
      \page_lines_add_numbers_to_box\b_page_grd_column\privatescratchcounter\c_page_grd_n_of_left\plustwo
@@ -631,7 +632,7 @@
    \c!default=\v!here,
    \c!alternative=\v!a]
 
-\newdimen\d_page_grd_span_width
+\newdimension\d_page_grd_span_width
 
 \let\page_grd_span_stop\relax
 

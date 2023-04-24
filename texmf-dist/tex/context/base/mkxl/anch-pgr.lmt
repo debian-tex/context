@@ -33,9 +33,15 @@ local context           = context
 
 local implement         = interfaces.implement
 
+local texgetcount       = tex.getcount
+local texiscount        = tex.iscount
+
 local getmacro          = tokens.getters.macro
+local expandasvalue     = tex.expandasvalue
 local scanmpstring      = mp.scan.string
-local mpgnamespace      = getmacro("??graphicvariable")
+----- mpgnamespace      = getmacro("??graphicvariable")
+
+local string_value      = tokens.values.string
 
 local report_graphics   = logs.reporter("backgrounds")
 local report_shapes     = logs.reporter("backgrounds","shapes")
@@ -55,6 +61,8 @@ local f_point           = formatters["%p"]
 local f_pair            = formatters["(%p,%p)"]
 local f_path            = formatters["%--t--cycle"]
 local f_pair_i          = formatters["(%r,%r)"] -- rounded
+
+local c_realpageno      = texiscount("realpageno")
 
 graphics                = graphics or { }
 local backgrounds       = { }
@@ -89,9 +97,9 @@ local getdepth          = nuts.getdepth
 local nodecodes         = nodes.nodecodes
 local par_code          = nodecodes.par
 
-local start_of_par      = nuts.start_of_par
-local insert_before     = nuts.insert_before
-local insert_after      = nuts.insert_after
+local startofpar        = nuts.startofpar
+local insertbefore      = nuts.insertbefore
+local insertafter       = nuts.insertafter
 
 local processranges     = nuts.processranges
 
@@ -101,15 +109,17 @@ local jobpositions      = job.positions
 local getpos            = jobpositions.getpos
 local getfree           = jobpositions.getfree
 
-local data              = { }
+----- data              = { }
 local realpage          = 1
-local recycle           = 1000 -- only tables can overflow this
+----- recycle           = 1000 -- only tables can overflow this
 local enabled           = false
 
--- Freeing the data is somewhat tricky as we can have backgrounds spanning
--- many pages but for an arbitrary background shape that is not so common.
+-- Freeing the data is somewhat tricky as we can have backgrounds spanning many
+-- pages but for an arbitrary background shape that is not so common but we use
+-- a different trick anyway in lmtx.
 
 local function check(specification)
+    --
     local a     = specification.attribute
     local index = specification.index
     local depth = specification.depth
@@ -159,13 +169,17 @@ local function check(specification)
             wn[3] = dp
         end
     end
- -- inspect(w)
+--   inspect(w)
 end
 
 local index = 0
 
+local registervalue = attributes.registervalue
+local getvalue      = attributes.getvalue
+
 local function flush(head,f,l,a,parent,depth)
-    local d = data[a]
+ -- local d = data[a]
+    local d = getvalue(a_textbackground,a)
     if d then
         local ix = index
         local ht = getheight(parent)
@@ -176,29 +190,53 @@ local function flush(head,f,l,a,parent,depth)
             ln = new_hlist(setlink(new_rule(65536,65536*4,0),new_kern(-65536),ln))
             rn = new_hlist(setlink(new_rule(65536,0,65536*4),new_kern(-65536),rn))
         end
-        if getid(f) == par_code and start_of_par(f) then -- we need to clean this mess
-            insert_after(head,f,ln)
+        if getid(f) == par_code and startofpar(f) then -- we need to clean this mess
+            insertafter(head,f,ln)
         else
-            head, f = insert_before(head,f,ln)
+            head, f = insertbefore(head,f,ln)
         end
-        insert_after(head,l,rn)
+        insertafter(head,l,rn)
     end
     return head, true
 end
 
+-- local function registerbackground(name)
+--     local n = #data + 1
+--     if n > recycle then
+--         -- we could also free all e: that are beyond a page but we don't always
+--         -- know the page so a recycle is nicer and the s lists are kept anyway
+--         -- so the amount of kept data is not that large
+--         n = 1
+--     end
+--     local b = jobpositions.tobesaved["b:"..name]
+--     if b then
+--         local s = setmetatableindex("table")
+--         b.s = s
+--         data[n] = {
+--             bpos   = b,
+--             name   = name,
+--             n      = n,
+--             shapes = s,
+--             count  = 0,
+--             sindex = 0,
+--         }
+--         texsetattribute(a_textbackground,n)
+--         if not enabled then
+--             enableaction("contributers", "nodes.handlers.textbackgrounds")
+--             enabled = true
+--         end
+--     else
+--         texsetattribute(a_textbackground,unsetvalue)
+--     end
+-- end
+
 local function registerbackground(name)
-    local n = #data + 1
-    if n > recycle then
-        -- we could also free all e: that are beyond a page but we don't always
-        -- know the page so a recycle is nicer and the s lists are kept anyway
-        -- so the amount of kept data is not that large
-        n = 1
-    end
     local b = jobpositions.tobesaved["b:"..name]
     if b then
+        local n = registervalue(a_textbackground,t)
         local s = setmetatableindex("table")
         b.s = s
-        data[n] = {
+        local t = {
             bpos   = b,
             name   = name,
             n      = n,
@@ -216,24 +254,10 @@ local function registerbackground(name)
     end
 end
 
--- local function collectbackgrounds(r,n)
---     if enabled then
---         local parent = getbox(n)
---         local head   = getlist(parent)
---         realpage     = r
---         processranges(a_textbackground,flush,head) -- ,parent)
---     end
--- end
---
--- interfaces.implement {
---     name      = "collectbackgrounds",
---     actions   = collectbackgrounds,
---     arguments = { "integer", "integer" }
--- }
-
 nodes.handlers.textbackgrounds = function(head,where,parent) -- we have hlistdir and local dir
     -- todo enable action in register
-    index = index + 1
+    index    = index + 1
+    realpage = texgetcount(c_realpageno)
     return processranges(a_textbackground,flush,head,parent)
 end
 
@@ -245,8 +269,6 @@ interfaces.implement {
 
 -- optimized already but we can assume a cycle i.e. prune the last point and then
 -- even less code .. we could merge some loops but his is more robust
-
--- use idiv here
 
 local function topairs(t,n)
     local r = { }
@@ -794,9 +816,7 @@ local function calculatemultipar(tag)
         for i=bindex+1,eindex-1 do
             br = f_tag_two(btag,i)
             local r = collected[br]
-            if not r then
-               report_graphics("invalid middle for %a",br)
-            else
+            if r then
                 local rp = r.p -- page
                 local pp = list[rp]
                 local mp = middlepart(b,e,p,rp,r,left,right)
@@ -805,6 +825,8 @@ local function calculatemultipar(tag)
                 else
                     list[rp] = { mp }
                 end
+            else
+                report_graphics("invalid middle for %a",br)
             end
         end
         local ep = e.p -- page
@@ -1195,13 +1217,13 @@ backgrounds.fetchmultipar = fetchmultipar
 local function getwhatever(action)
      local tags   = scanmpstring()
      local anchor = scanmpstring()
-     local page   = nil
+     local page   = texgetcount(c_realpageno)
      if tags == "self" then
-        tags = getmacro(mpgnamespace .. getmacro("currentmpvariableclass") .. ":self",true) -- Isn't it already edef'd?
+        tags = expandasvalue(string_value,"mpcategoryparameter",true,"self")
      elseif type(tags) == "string" then
         tags = settings_to_array(tags)
         for i=1,#tags do
-            tags[i] = getmacro(mpgnamespace .. getmacro("currentmpvariableclass") .. ":" .. tags[i],true) -- Isn't it already edef'd?
+            tags[i] = expandasvalue(string_value,"mpcategoryparameter",true,tags[i])
         end
      end
      if anchor == "anchor" then
@@ -1211,6 +1233,8 @@ local function getwhatever(action)
         return action(tags,anchor,page)
      end
 end
+
+-- backgrounds.getwhatever = getwhatever -- public for tracing
 
 metapost.registerscript("getmultipars", function()
     return getwhatever(fetchmultipar)

@@ -75,7 +75,8 @@
 \to \everysimplifycommands
 
 \appendtoks
-    \everypar\emptytoks % pretty important
+    \everypar      \emptytoks % pretty important
+    \everybeforepar\emptytoks % pretty important
 \to \everyforgetall
 
 %D Page building:
@@ -175,8 +176,8 @@
 \newconstant\pageduplexmode % 0 single 1 double 2 mix
 \newconstant\pagebodymode   % 0 not 1 normal pagebody 2 spread
 
-\newcount\nofcolumns      \nofcolumns     \plusone
-\newcount\nofmulticolumns \nofmulticolumns\plusone
+\newinteger\nofcolumns      \nofcolumns     \plusone
+\newinteger\nofmulticolumns \nofmulticolumns\plusone
 
 %D \macros
 %D   {ifproductionrun}
@@ -219,6 +220,7 @@
 
 \let\setlayoutcomponentattribute  \gobbleoneargument
 \let\resetlayoutcomponentattribute\relax
-\let\layoutcomponentboxattribute  \empty
+
+\lettonothing\layoutcomponentboxattribute
 
 \protect \endinput

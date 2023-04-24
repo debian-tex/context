@@ -24,12 +24,12 @@
 \defineinsertion[\s!bottomfloat]
 \defineinsertion[\s!pagefloat]
 
-\newdimen   \d_page_floats_inserted_bottom
-\newdimen   \d_page_floats_inserted_top
-\newdimen   \d_page_floats_inserted_page
-\newcount   \c_page_floats_n_of_top         \c_page_floats_n_of_top   \plustwo
-\newcount   \c_page_floats_n_of_bottom      \c_page_floats_n_of_bottom\zerocount
-\newcount   \c_page_floats_n_of_page        \c_page_floats_n_of_page  \plustwo
+\newdimension\d_page_floats_inserted_bottom
+\newdimension\d_page_floats_inserted_top
+\newdimension\d_page_floats_inserted_page
+\newinteger  \c_page_floats_n_of_top           \c_page_floats_n_of_top   \plustwo
+\newinteger  \c_page_floats_n_of_bottom        \c_page_floats_n_of_bottom\zerocount
+\newinteger  \c_page_floats_n_of_page          \c_page_floats_n_of_page  \plustwo
 
 \newconstant\c_page_floats_insertions_topskip_mode  % 1 = no topskip
 
@@ -55,26 +55,25 @@
 \newconditional\c_page_floats_center_box          \settrue\c_page_floats_center_box
 \newconditional\c_page_floats_center_box_local
 \newconditional\c_page_floats_center_box_global
-\newconditional\c_page_floats_compress_flushed       \settrue\c_page_floats_compress_flushed
+\newconditional\c_page_floats_compress_flushed    \settrue\c_page_floats_compress_flushed
 
-\newdimen      \d_page_floats_compress_distance
+\newdimension  \d_page_floats_compress_distance
 
 %D For the moment we keep this but they will become private too.
 
-\newcount\totalnoffloats           % these will be redone ... handled at the lua end anyway
-\newcount\savednoffloats           % these will be redone ... handled at the lua end anyway
-\newcount\nofcollectedfloats       % communication channel
-\newdimen\maxcollectedfloatstotal  % communication channel
+\newinteger  \totalnoffloats           % these will be redone ... handled at the lua end anyway
+\newinteger  \savednoffloats           % these will be redone ... handled at the lua end anyway
+\newinteger  \nofcollectedfloats       % communication channel
+\newdimension\maxcollectedfloatstotal  % communication channel
+\newinteger  \noffloatinserts          % these will be redone ... handled at the lua end anyway
 
-\newcount\noffloatinserts          % these will be redone ... handled at the lua end anyway
+\newbox      \floattext
 
-\newbox  \floattext
-
-\newdimen\floatwidth
-\newdimen\floatheight
-\newdimen\floatdepth
-\newdimen\floattextwidth
-\newdimen\floattextheight
+\newdimension\floatwidth
+\newdimension\floatheight
+\newdimension\floatdepth
+\newdimension\floattextwidth
+\newdimension\floattextheight
 
 \newbox  \floatbox
 \newbox  \savedfloatbox
@@ -168,6 +167,36 @@
         \blank[\rootfloatparameter\c!spaceafter]%
       \fi}}
 
+%D Not the best name for a command:
+%D
+%D \starttyping
+%D \samplefile{tufte}
+%D \placefigure[somewhere:a]{}{\externalfigure[dummy-001]}
+%D \samplefile{tufte}
+%D \placefigure{}{\externalfigure[dummy-002]}
+%D \samplefile{tufte}
+%D \startplacefigure[location={somewhere:b,tight}]
+%D     \externalfigure[dummy-003]
+%D \stopplacefigure
+%D \samplefile{tufte}
+%D \placefigure{}{\externalfigure[dummy-004]}
+%D \page
+%D \placesavedfloat[figure][b][location={none,left}] \samplefile{tufte}
+%D \placesavedfloat[figure][a]
+%D % \placenamedfloat[figure][*]
+%D % \placenamedfloat[figure][b]
+%D \stoptyping
+
+\newbox\b_strc_float_saved
+
+\permanent\tolerant\protected\def\placesavedfloat[#1]#*[#2]#*[#3]% experiment for Alan B
+  {\clf_flushlabeledfloat\s!somewhere{#2}\relax
+  %\def\currentfloat{#1}%
+   \setbox\b_strc_float_saved\vpack{\box\floatbox}%
+   \startplacefloat[#1][\c!location=\v!none,#3]%
+     \box\b_strc_float_saved
+   \stopplacefloat}
+
 % \setupcaption [figure]   [align=flushleft]
 % \setupcaption [figure-1] [align=flushleft,leftmargin=10mm]
 % \setupcaption [figure-2] [align=flushleft,leftmargin=10mm,rightmargin=-10mm,width=\textwidth]
@@ -182,10 +211,10 @@
 %
 % \placefloatwithsetups[somefigure]{}{\externalfigure[dummy][width=5cm,height=2cm]}
 
-\mutable\let\floatsetupcaption\empty
-\mutable\let\floatsetupcontent\empty
-\mutable\let\floatsetupwidth  \empty
-\mutable\let\floatsetupheight \empty
+\mutable\lettonothing\floatsetupcaption
+\mutable\lettonothing\floatsetupcontent
+\mutable\lettonothing\floatsetupwidth
+\mutable\lettonothing\floatsetupheight
 
 \aliased\let\placesetupfloat\gobbleoneoptional
 

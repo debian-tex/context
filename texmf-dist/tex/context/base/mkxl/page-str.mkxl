@@ -27,11 +27,11 @@
 %D
 %D Remark: marknotes are gone, at least for a while.
 
-\registerctxluafile{page-str}{}
+\registerctxluafile{page-str}{autosuffix}
 
 \unprotect
 
-\mutable\let\currentoutputstream\empty
+\mutable\lettonothing\currentoutputstream
 
 \newif   \ifinoutputstream        % will become a conditional or mode
 \newtoks \everyenableoutputstream

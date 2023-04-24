@@ -9,6 +9,8 @@ if not modules then modules = { } end modules ['s-fonts-tables'] = {
 moduledata.fonts          = moduledata.fonts        or { }
 moduledata.fonts.tables   = moduledata.fonts.tables or { }
 
+require("font-cft")
+
 local rawget, type = rawget, type
 
 local setmetatableindex   = table.setmetatableindex
@@ -676,18 +678,28 @@ end
 
 local function collectligatures(steps)
 
+    -- Mostly the same as s-fonts-features so we should make a helper.
+
     local series = { }
     local stack  = { }
     local max    = 0
 
+    local function add(v)
+        local n = #stack
+        if n > max then
+            max = n
+        end
+        series[#series+1] = { v, unpack(stack) }
+    end
+
     local function make(tree)
         for k, v in sortedhash(tree) do
             if k == "ligature" then
-                local n = #stack
-                if n > max then
-                    max = n
-                end
-                series[#series+1] = { v, unpack(stack) }
+                add(v)
+            elseif tonumber(v) then
+                insert(stack,k)
+                add(v)
+                remove(stack)
             else
                 insert(stack,k)
                 make(v)

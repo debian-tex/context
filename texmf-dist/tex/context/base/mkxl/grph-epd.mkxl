@@ -15,11 +15,11 @@
 
 \unprotect
 
-\registerctxluafile{grph-epd}{}
+\registerctxluafile{grph-epd}{autosuffix}
 
 % hm, this one is globally overloaded
 
-\mutable\let\mergedfigurereference\empty
+\mutable\lettonothing\mergedfigurereference
 
 \defineoverlay[system:graphics:epdf][\directsetup{system:graphics:epdf}]
 

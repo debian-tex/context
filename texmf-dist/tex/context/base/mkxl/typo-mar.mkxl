@@ -142,10 +142,10 @@
 \newconditional\inhibitmargindata      % This one is used at the Lua end!
 \newtoks       \everymargindatacontent % Later on we will set this one.
 
-\mutable\let\currentmargindatastrut  \empty
-\mutable\let\currentmargindatawidth  \empty
-\mutable\let\currentmarginfirstheight\empty
-\mutable\let\currentmarginreference  \empty
+\mutable\lettonothing\currentmargindatastrut
+\mutable\lettonothing\currentmargindatawidth
+\mutable\lettonothing\currentmarginfirstheight
+\mutable\lettonothing\currentmarginreference
 
 \appendtoks
     \settrue\inhibitmargindata
@@ -161,8 +161,8 @@
 % trialtypesetting: no need for margin stuff while trialing as
 % is has no dimensions
 
-\newcount\nofmargintexts
-\newcount\c_typo_margins_n
+\newinteger\nofmargintexts
+\newinteger\c_typo_margins_n
 
 \ifdefined\dotagmarginanchor \else \aliased\let\dotagmarginanchor\gobbleoneargument \fi
 \ifdefined\dotagmargintext   \else \aliased\let\dotagmargintext  \gobbleoneargument \fi
@@ -174,7 +174,7 @@
    \docheckpagestate\s!margintext\nofmargintexts
   %\doifelserightpagestate\s!margintext\nofmargintexts\relax\relax
    \realpageno\realpagestateno
-   \page_layouts_swap_margins}
+   \page_layouts_swap_margins\v!margin}
 
 \permanent\protected\def\margindata
   {\iftrialtypesetting
@@ -198,7 +198,7 @@
  % \doifelsenothing{#content}\donefalse\donetrue
  % \doifelsetext{#content}\donetrue\donefalse
    \ifparameter#content\donefalse\or\donetrue\else\donefalse\fi
-   \global\advance\c_typo_margins_n\plusone
+   \global\advanceby\c_typo_margins_n\plusone
    \ifdone
      \edef\currentmarginreference{\margindataparameter\c!reference}%
      \ifempty\currentmarginreference \else
@@ -239,7 +239,7 @@
            \margindataparameter\c!command{#content}%
            \endstrut
          \egroup
-         \let\currentmarginfirstheight\empty
+         \lettonothing\currentmarginfirstheight
        \else
          \setbox\nextbox\naturalhbox \currentmarginreference \bgroup
            \typo_margins_data_synchronize
@@ -328,11 +328,11 @@
 
 % \installcorenamespace{oppositemargin}
 %
-% \letvalue{\??oppositemargin\v!left  }\v!right
-% \letvalue{\??oppositemargin\v!right }\v!left
-% \letvalue{\??oppositemargin\v!inner }\v!outer
-% \letvalue{\??oppositemargin\v!outer }\v!inner
-% \letvalue{\??oppositemargin\v!normal}\v!normal
+% \letcsname\??oppositemargin\v!left  \endcsname\v!right
+% \letcsname\??oppositemargin\v!right \endcsname\v!left
+% \letcsname\??oppositemargin\v!inner \endcsname\v!outer
+% \letcsname\??oppositemargin\v!outer \endcsname\v!inner
+% \letcsname\??oppositemargin\v!normal\endcsname\v!normal
 %
 % \def\oppositemargin#1%
 %   {\csname\??oppositemargin\ifcsname\??oppositemargin#1\endcsname#1\else\v!normal\fi\endcsname}

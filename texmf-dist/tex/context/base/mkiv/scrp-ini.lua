@@ -23,68 +23,65 @@ local report_preprocessing = logs.reporter("scripts","preprocessing")
 local report_splitting     = logs.reporter("scripts","splitting")
 
 
-local attributes         = attributes
-local nodes              = nodes
-local context            = context
+local attributes       = attributes
+local nodes            = nodes
+local context          = context
 
-local nodecodes          = nodes.nodecodes
+local nodecodes        = nodes.nodecodes
 
-local implement          = interfaces.implement
+local implement        = interfaces.implement
 
-local glyph_code         = nodecodes.glyph
-local glue_code          = nodecodes.glue
+local glyph_code       = nodecodes.glyph
+local glue_code        = nodecodes.glue
 
-local emwidths           = fonts.hashes.emwidths
-local exheights          = fonts.hashes.exheights
+local emwidths         = fonts.hashes.emwidths
+local exheights        = fonts.hashes.exheights
 
-local a_script           = attributes.private('script')
+local a_script         = attributes.private('script')
 
-local fontdata           = fonts.hashes.identifiers
-local allocate           = utilities.storage.allocate
-local setnodecolor       = nodes.tracers.colors.set
+local fontdata         = fonts.hashes.identifiers
+local allocate         = utilities.storage.allocate
+local setnodecolor     = nodes.tracers.colors.set
 
-local enableaction       = nodes.tasks.enableaction
-local disableaction      = nodes.tasks.disableaction
+local enableaction     = nodes.tasks.enableaction
+local disableaction    = nodes.tasks.disableaction
 
-local nuts               = nodes.nuts
+local nuts             = nodes.nuts
 
-local getnext            = nuts.getnext
-local getchar            = nuts.getchar
-local getfont            = nuts.getfont
-local getid              = nuts.getid
-local getglyphdata       = nuts.getglyphdata
-local setglyphdata       = nuts.setglyphdata
+local getnext          = nuts.getnext
+local getchar          = nuts.getchar
+local getfont          = nuts.getfont
+local getid            = nuts.getid
+local getglyphdata     = nuts.getglyphdata
+local setglyphdata     = nuts.setglyphdata
 
-local isglyph            = nuts.isglyph
+local isglyph          = nuts.isglyph
 
-local insert_node_after  = nuts.insert_after
-local insert_node_before = nuts.insert_before
+local firstglyph       = nuts.firstglyph
 
-local first_glyph        = nuts.first_glyph
+local nextglyph        = nuts.traversers.glyph
+local nextchar         = nuts.traversers.char
 
-local nextglyph          = nuts.traversers.glyph
-local nextchar           = nuts.traversers.char
+local nodepool         = nuts.pool
 
-local nodepool           = nuts.pool
+local new_glue         = nodepool.glue
+local new_rule         = nodepool.rule
+local new_penalty      = nodepool.penalty
 
-local new_glue           = nodepool.glue
-local new_rule           = nodepool.rule
-local new_penalty        = nodepool.penalty
+scripts                = scripts or { }
+local scripts          = scripts
 
-scripts                  = scripts or { }
-local scripts            = scripts
+local handlers         = allocate()
+scripts.handlers       = handlers
 
-scripts.hash             = scripts.hash or { }
-local hash               = scripts.hash
+local injectors        = allocate()
+scripts.injectors      = handlers
 
-local handlers           = allocate()
-scripts.handlers         = handlers
+local splitters        = allocate()
+scripts.splitters      = splitters
 
-local injectors          = allocate()
-scripts.injectors        = handlers
-
-local splitters          = allocate()
-scripts.splitters        = splitters
+local helpers          = allocate()
+scripts.helpers        = helpers
 
 -- we need to fake it in luatex
 
@@ -116,164 +113,33 @@ if not getscript then
 
 end
 
-local hash = { -- we could put these presets in char-def.lua
-    --
-    -- half width opening parenthesis
-    --
-    [0x0028] = "half_width_open",
-    [0x005B] = "half_width_open",
-    [0x007B] = "half_width_open",
-    [0x2018] = "half_width_open", -- ‘
-    [0x201C] = "half_width_open", -- “
-    --
-    -- full width opening parenthesis
-    --
-    [0x3008] = "full_width_open", -- 〈   Left book quote
-    [0x300A] = "full_width_open", -- 《   Left double book quote
-    [0x300C] = "full_width_open", -- 「   left quote
-    [0x300E] = "full_width_open", -- 『   left double quote
-    [0x3010] = "full_width_open", -- 【   left double book quote
-    [0x3014] = "full_width_open", -- 〔   left book quote
-    [0x3016] = "full_width_open", --〖   left double book quote
-    [0x3018] = "full_width_open", --     left tortoise bracket
-    [0x301A] = "full_width_open", --     left square bracket
-    [0x301D] = "full_width_open", --     reverse double prime qm
-    [0xFF08] = "full_width_open", -- （   left parenthesis
-    [0xFF3B] = "full_width_open", -- ［   left square brackets
-    [0xFF5B] = "full_width_open", -- ｛   left curve bracket
-    --
-    -- half width closing parenthesis
-    --
-    [0x0029] = "half_width_close",
-    [0x005D] = "half_width_close",
-    [0x007D] = "half_width_close",
-    [0x2019] = "half_width_close", -- ’   right quote, right
-    [0x201D] = "half_width_close", -- ”   right double quote
-    --
-    -- full width closing parenthesis
-    --
-    [0x3009] = "full_width_close", -- 〉   book quote
-    [0x300B] = "full_width_close", -- 》   double book quote
-    [0x300D] = "full_width_close", -- 」   right quote, right
-    [0x300F] = "full_width_close", -- 』   right double quote
-    [0x3011] = "full_width_close", -- 】   right double book quote
-    [0x3015] = "full_width_close", -- 〕   right book quote
-    [0x3017] = "full_width_close", -- 〗  right double book quote
-    [0x3019] = "full_width_close", --     right tortoise bracket
-    [0x301B] = "full_width_close", --     right square bracket
-    [0x301E] = "full_width_close", --     double prime qm
-    [0x301F] = "full_width_close", --     low double prime qm
-    [0xFF09] = "full_width_close", -- ）   right parenthesis
-    [0xFF3D] = "full_width_close", -- ］   right square brackets
-    [0xFF5D] = "full_width_close", -- ｝   right curve brackets
-    --
-    [0xFF62] = "half_width_open", --     left corner bracket
-    [0xFF63] = "half_width_close", --     right corner bracket
-    --
-    -- vertical opening vertical
-    --
-    -- 0xFE35, 0xFE37, 0xFE39,  0xFE3B,  0xFE3D,  0xFE3F,  0xFE41,  0xFE43,  0xFE47,
-    --
-    -- vertical closing
-    --
-    -- 0xFE36, 0xFE38, 0xFE3A,  0xFE3C,  0xFE3E,  0xFE40,  0xFE42,  0xFE44,  0xFE48,
-    --
-    -- half width opening punctuation
-    --
-    -- <empty>
-    --
-    -- full width opening punctuation
-    --
-    --  0x2236, -- ∶
-    --  0xFF0C, -- ，
-    --
-    -- half width closing punctuation_hw
-    --
-    [0x0021] = "half_width_close", -- !
-    [0x002C] = "half_width_close", -- ,
-    [0x002E] = "half_width_close", -- .
-    [0x003A] = "half_width_close", -- :
-    [0x003B] = "half_width_close", -- ;
-    [0x003F] = "half_width_close", -- ?
-    [0xFF61] = "half_width_close", -- hw full stop
-    --
-    -- full width closing punctuation
-    --
-    [0x3001] = "full_width_close", -- 、
-    [0x3002] = "full_width_close", -- 。
-    [0xFF0C] = "full_width_close", -- ，
-    [0xFF0E] = "full_width_close", --
-    --
-    -- depends on font
-    --
-    [0xFF01] = "full_width_close", -- ！
-    [0xFF1F] = "full_width_close", -- ？
-    --
-    [0xFF1A] = "full_width_punct", -- ：
-    [0xFF1B] = "full_width_punct", -- ；
-    --
-    -- non starter
-    --
-    [0x3005] = "non_starter", [0x3041] = "non_starter", [0x3043] = "non_starter", [0x3045] = "non_starter", [0x3047] = "non_starter",
-    [0x3049] = "non_starter", [0x3063] = "non_starter", [0x3083] = "non_starter", [0x3085] = "non_starter", [0x3087] = "non_starter",
-    [0x308E] = "non_starter", [0x3095] = "non_starter", [0x3096] = "non_starter", [0x309B] = "non_starter", [0x309C] = "non_starter",
-    [0x309D] = "non_starter", [0x309E] = "non_starter", [0x30A0] = "non_starter", [0x30A1] = "non_starter", [0x30A3] = "non_starter",
-    [0x30A5] = "non_starter", [0x30A7] = "non_starter", [0x30A9] = "non_starter", [0x30C3] = "non_starter", [0x30E3] = "non_starter",
-    [0x30E5] = "non_starter", [0x30E7] = "non_starter", [0x30EE] = "non_starter", [0x30F5] = "non_starter", [0x30F6] = "non_starter",
-    [0x30FC] = "non_starter", [0x30FD] = "non_starter", [0x30FE] = "non_starter", [0x31F0] = "non_starter", [0x31F1] = "non_starter",
-    [0x31F2] = "non_starter", [0x31F3] = "non_starter", [0x31F4] = "non_starter", [0x31F5] = "non_starter", [0x31F6] = "non_starter",
-    [0x31F7] = "non_starter", [0x31F8] = "non_starter", [0x31F9] = "non_starter", [0x31FA] = "non_starter", [0x31FB] = "non_starter",
-    [0x31FC] = "non_starter", [0x31FD] = "non_starter", [0x31FE] = "non_starter", [0x31FF] = "non_starter",
-    --
-    [0x301C] = "non_starter", [0x303B] = "non_starter", [0x303C] = "non_starter", [0x309B] = "non_starter", [0x30FB] = "non_starter",
-    [0x30FE] = "non_starter",
-    -- hyphenation
-    --
-    [0x2026] = "hyphen", -- …   ellipsis
-    [0x2014] = "hyphen", -- —   hyphen
-    --
-    [0x1361] = "ethiopic_word",
-    [0x1362] = "ethiopic_sentence",
-    --
-    -- tibetan:
-    --
-    [0x0F0B] = "breaking_tsheg",
-    [0x0F0C] = "nonbreaking_tsheg",
+local insertnodebefore, insertnodeafter  do
 
-}
+    local insertafter      = nuts.insertafter
+    local insertbefore     = nuts.insertbefore
+    local setattributelist = nuts.setattributelist
 
-local function provide(t,k)
-    local v
-    if not tonumber(k)                     then v = false
-    elseif (k >= 0x03040 and k <= 0x030FF)
-        or (k >= 0x031F0 and k <= 0x031FF)
-        or (k >= 0x032D0 and k <= 0x032FE)
-        or (k >= 0x0FF00 and k <= 0x0FFEF) then v = "katakana"
-    elseif (k >= 0x03400 and k <= 0x04DFF)
-        or (k >= 0x04E00 and k <= 0x09FFF)
-        or (k >= 0x0F900 and k <= 0x0FAFF)
-        or (k >= 0x20000 and k <= 0x2A6DF)
-        or (k >= 0x2F800 and k <= 0x2FA1F) then v = "chinese"
-    elseif (k >= 0x0AC00 and k <= 0x0D7A3) then v = "korean"
-    elseif (k >= 0x01100 and k <= 0x0115F) then v = "jamo_initial"
-    elseif (k >= 0x01160 and k <= 0x011A7) then v = "jamo_medial"
-    elseif (k >= 0x011A8 and k <= 0x011FF) then v = "jamo_final"
-    elseif (k >= 0x01200 and k <= 0x0139F) then v = "ethiopic_syllable"
-    elseif (k >= 0x00F00 and k <= 0x00FFF) then v = "tibetan"
-                                           else v = false
+    insertnodebefore = function (head,current,what)
+        head, current = insertbefore(head,current,what)
+        setattributelist(what,current)
+        return head, current
     end
-    t[k] = v
-    return v
+
+    insertnodeafter = function(head,current,what)
+        head, current = insertafter(head,current,what)
+        setattributelist(what,current)
+        return head, current
+    end
+
+    helpers.insertnodebefore = insertnodebefore
+    helpers.insertnodeafter  = insertnodeafter
+
 end
 
-setmetatableindex(hash,provide) -- should come from char-def
-
-scripts.hash = hash
+local hash = characters.scripthash
 
 local numbertodataset = allocate()
 local numbertohandler = allocate()
-
---~ storage.register("scripts/hash", hash, "scripts.hash")
 
 scripts.numbertodataset = numbertodataset
 scripts.numbertohandler = numbertohandler
@@ -511,7 +377,7 @@ local function traced_process(head,first,last,process,a)
 end
 
 function scripts.injectors.handler(head)
-    local start = first_glyph(head) -- we already have glyphs here (subtype 1)
+    local start = firstglyph(head) -- we already have glyphs here (subtype 1)
     if not start then
         return head
     else
@@ -791,7 +657,7 @@ end
 
 local tree, attr, proc
 
-function splitters.handler(head) -- todo: also first_glyph test
+function splitters.handler(head) -- todo: also firstglyph test
     local current = head
     while current do
         if getid(current) == glyph_code then
@@ -848,9 +714,9 @@ end
 local function marker(head,current,font,color) -- could become: nodes.tracers.marker
     local ex = exheights[font]
     local em = emwidths [font]
-    head, current = insert_node_after(head,current,new_penalty(10000))
-    head, current = insert_node_after(head,current,new_glue(-0.05*em))
-    head, current = insert_node_after(head,current,new_rule(0.05*em,1.5*ex,0.5*ex))
+    head, current = insertnodeafter(head,current,new_penalty(10000))
+    head, current = insertnodeafter(head,current,new_glue(-0.05*em))
+    head, current = insertnodeafter(head,current,new_rule(0.05*em,1.5*ex,0.5*ex))
     setnodecolor(current,color)
     return head, current
 end
@@ -871,7 +737,7 @@ function splitters.insertafter(handler,head,first,last,detail)
     if ignore then
         return head, last
     else
-        return insert_node_after(head,last,new_glue(0,last_s))
+        return insertnodeafter(head,last,new_glue(0,last_s))
     end
 end
 
@@ -1046,30 +912,30 @@ do
     scripts.inserters = {
 
         space_before = function(head,current)
-            return insert_node_before(head,current,space_glue(current))
+            return insertnodebefore(head,current,space_glue(current))
         end,
         space_after = function(head,current)
-            return insert_node_after(head,current,space_glue(current))
+            return insertnodeafter(head,current,space_glue(current))
         end,
 
         zerowidthspace_before = function(head,current)
-            return insert_node_before(head,current,new_glue(0))
+            return insertnodebefore(head,current,new_glue(0))
         end,
         zerowidthspace_after = function(head,current)
-            return insert_node_after(head,current,new_glue(0))
+            return insertnodeafter(head,current,new_glue(0))
         end,
 
         nobreakspace_before = function(head,current)
             local g = space_glue(current)
             local p = new_penalty(10000)
-            head, current = insert_node_before(head,current,p)
-            return insert_node_before(head,current,g)
+            head, current = insertnodebefore(head,current,p)
+            return insertnodebefore(head,current,g)
         end,
         nobreakspace_after = function(head,current)
             local g = space_glue(current)
             local p = new_penalty(10000)
-            head, current = insert_node_after(head,current,g)
-            return insert_node_after(head,current,p)
+            head, current = insertnodeafter(head,current,g)
+            return insertnodeafter(head,current,p)
         end,
 
     }

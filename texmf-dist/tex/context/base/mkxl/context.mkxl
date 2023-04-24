@@ -29,7 +29,7 @@
 %D {YYYY.MM.DD HH:MM} format.
 
 \immutable\edef\contextformat {\jobname}
-\immutable\edef\contextversion{2021.03.05 19:11}
+\immutable\edef\contextversion{2023.03.10 12:15}
 
 %overloadmode 1 % check frozen / warning
 %overloadmode 2 % check frozen / error
@@ -39,6 +39,8 @@
 %D Kind of special:
 
 \immutable\chardef\contextlmtxmode\directlua{tex.print(CONTEXTLMTXMODE or 0)}\relax
+
+\directlua{io.output():setvbuf("line")}
 
 %D For those who want to use this:
 
@@ -121,7 +123,7 @@
 %D This needs more checking for clashes:
 %D
 %D \starttyping
-%D \doifelsefileexists{l-macro-imp-codes-luametatex.lua}{\registerctxluafile{l-macro-imp-codes-luametatex}{}}{}
+% \doifelsefileexists{l-macro-imp-codes-luametatex.lua}{\registerctxluafile{l-macro-imp-codes-luametatex}{}}{}
 %D \stoptyping
 
 \loadmkxlfile{supp-dir}
@@ -133,6 +135,7 @@
 \loadmkxlfile{mult-ini}
 \loadmkxlfile{mult-sys}
 \loadmkxlfile{mult-aux}
+% \doiffileelse{mult-aux-new.mkxl}{\loadmkxlfile{mult-aux-new}}{\loadmkxlfile{mult-aux}}
 \loadmkxlfile{mult-def}
 %loadmarkfile{mult-chk}
 \loadmklxfile{mult-dim}
@@ -144,6 +147,7 @@
 \loadmkxlfile{toks-aux}
 
 \loadmkxlfile{attr-ini}
+\loadmkxlfile{bndr-ini}
 
 \loadmkxlfile{core-ini}
 \loadmkxlfile{core-env}
@@ -151,6 +155,8 @@
 \loadmkxlfile{layo-ini}
 
 \loadmkxlfile{node-ini}
+\loadmkxlfile{node-ext}
+\loadmkxlfile{node-syn}
 
 % \loadmkxlfile{cldf-bas} % basics / depends on nodes
 
@@ -158,11 +164,10 @@
 \loadmkxlfile{node-mig}
 %loadmkxlfile{node-pag}
 
-\loadmkxlfile{driv-ini}
+\loadmkxlfile{driv-ini} % after node-ini (ext)
 
 \loadmkxlfile{back-ini}
 \loadmkxlfile{back-res}
-\loadmkxlfile{back-ext}
 
 \loadmkxlfile{cldf-bas} % basics / depends on nodes
 
@@ -218,7 +223,7 @@
 \loadmkxlfile{colo-grp} % optional
 \loadmkxlfile{colo-ext}
 
-\loadmkxlfile{node-bck} % overloads anch-pgr (experimental and undocumented)
+% \loadmkxlfile{node-bck} % overloads anch-pgr (experimental and undocumented)
 
 \loadmkxlfile{pack-cut}
 
@@ -304,6 +309,8 @@
 \loadmkxlfile{page-lay}
 \loadmklxfile{page-box}
 \loadmklxfile{page-txt}
+
+\loadmkxlfile{typo-lbx}
 \loadmkxlfile{page-sid}
 
 \loadmklxfile{strc-flt}
@@ -386,6 +393,9 @@
 
 \loadmkxlfile{typo-tal}
 \loadmkxlfile{typo-par} % par builders (uses fonts)
+%loadmkxlfile{typo-lbx}
+\loadmkxlfile{typo-adj}
+\loadmkxlfile{typo-ada}
 
 \loadmkxlfile{tabl-com}
 %loadmarkfile{tabl-pln}
@@ -416,6 +426,7 @@
 \loadmkxlfile{typo-wrp}
 \loadmkxlfile{typo-spa}
 \loadmkxlfile{typo-krn}
+\loadmkxlfile{typo-hid}
 \loadmklxfile{typo-itc}
 \loadmkxlfile{typo-dir}
 \loadmkxlfile{typo-brk}
@@ -466,7 +477,7 @@
 \loadmklxfile{anch-bck}
 \loadmkxlfile{anch-tab} % overloads tabl-tbl
 \loadmkxlfile{anch-bar}
-%loadmkxlfile{anch-snc} % when needed this one will be redone
+\loadmkxlfile{anch-snc}
 
 \loadmkxlfile{math-ini} % way after font-pre !
 \loadmkxlfile{math-pln}
@@ -478,14 +489,18 @@
 \loadmkxlfile{math-mis}
 \loadmkxlfile{math-scr}
 \loadmkxlfile{math-int}
+\loadmkxlfile{math-dif}
 \loadmkxlfile{math-del}
 \loadmkxlfile{math-fen}
+\loadmkxlfile{math-lop}
 \loadmklxfile{math-acc}
 \loadmklxfile{math-rad}
+\loadmklxfile{math-dld}
 \loadmkxlfile{math-inl}
 \loadmkxlfile{math-dis}
 %loadmkxlfile{math-lan}
 \loadmkxlfile{math-toy}
+\loadmkxlfile{math-twk}
 
 \loadmkxlfile{strc-mat}
 
@@ -496,6 +511,8 @@
 \loadmkxlfile{phys-dim}
 
 \loadmkxlfile{node-rul} % beware, defined \underbar so after math
+\loadmkxlfile{node-bck} % overloads anch-pgr (experimental and undocumented)
+
 \loadmklxfile{font-sol} % font solutions
 
 \loadmklxfile{strc-not}
@@ -504,6 +521,8 @@
 \loadmkxlfile{strc-usr}
 
 \loadmkxlfile{pack-com}
+\loadmkxlfile{math-com}
+
 \loadmkxlfile{typo-del}
 
 \loadmkxlfile{grph-trf}
@@ -514,15 +533,20 @@
 \loadmkxlfile{grph-pat}
 
 \loadmkxlfile{pack-box}
+\loadmkxlfile{pack-mat}
 \loadmkxlfile{pack-bar}
 \loadmkxlfile{page-app}
 \loadmkxlfile{meta-fig}
 
 \loadmkxlfile{page-ffl}
+\loadmkxlfile{page-blk}
 
 \loadmkxlfile{lang-spa} % will become obsolete
 
+\loadmkxlfile{lang-hup}
+
 \loadmkxlfile{typo-ovl} % fuzzy project (tracing) code
+\loadmkxlfile{typo-syn} % experiment
 
 % old bibtex support: (will be m-oldbibtex.mkiv)
 
@@ -557,16 +581,21 @@
 
 \loadmkxlfile{driv-shp}
 
+\loadmkxlfile{anch-loc} % for now here (after driver)
+
 \loadmkxlfile{back-exp}
-\loadmkxlfile{back-pdf}
-\loadmkxlfile{back-mps}
-\loadmkxlfile{back-lua}
+
+\loadmkxlfile{back-imp-pdf}
+\loadmkxlfile{back-imp-mps}
+\loadmkxlfile{back-imp-lua}
 
 \loadmkxlfile{mlib-pdf}
 \loadmkxlfile{mlib-pps}
 \loadmkxlfile{meta-pdf}
 \loadmkxlfile{meta-blb}
 \loadmkxlfile{grph-epd}
+
+\loadmkxlfile{anch-box}
 
 \loadmkxlfile{typo-shp}
 
@@ -603,12 +632,210 @@
     \ctxlua{statistics.savefmtstatus("\jobname","\contextversion","context.mkxl","\contextbanner")}% can become automatic
 \to \everydump
 
-% some day:
+% maybe some day (but also inhibits):
 %
 % \prependtoks
 %     \overloadmode 255
 % \to \everyjob
 
-\overloadmode   0  % for now
+\overloadmode\zerocount % for now
 
 \errorstopmode \dump \endinput
+
+% Some lua files are (still) shared with mkiv amd some are large and rather
+% generic. However there are some that can be improved in lmtx. At some point
+% we will definitely freeze mkiv and then use lmt files for futher development
+% of lmtx. We also no longer use the macro feature to replace 5.3 compatible
+% function calls by native 5.4 features as lmt files assume 5.4 anyway. This
+% makes format generation a little faster (not that it's that slow). It might \
+% take a while before we dealt with all of them because I'll also clean them
+% up a bit when doing.
+%
+% % luat-bas.mkxl l-macro-imp-optimize % this will go away
+
+% c:/data/develop/context/sources/attr-eff.lua
+% c:/data/develop/context/sources/attr-mkr.lua
+% c:/data/develop/context/sources/attr-neg.lua
+
+% c:/data/develop/context/sources/buff-imp-default.lua
+% c:/data/develop/context/sources/buff-imp-escaped.lua
+% c:/data/develop/context/sources/buff-imp-lua.lua
+% c:/data/develop/context/sources/buff-imp-mp.lua
+% c:/data/develop/context/sources/buff-imp-nested.lua
+% c:/data/develop/context/sources/buff-imp-parsed-xml.lua
+% c:/data/develop/context/sources/buff-imp-tex.lua
+% c:/data/develop/context/sources/buff-imp-xml.lua
+
+% c:/data/develop/context/sources/buff-par.lua
+% c:/data/develop/context/sources/buff-ver.lua
+
+% c:/data/develop/context/sources/char-cjk.lua
+% c:/data/develop/context/sources/char-def.lua
+% c:/data/develop/context/sources/char-enc.lua
+% c:/data/develop/context/sources/char-ent.lua
+% c:/data/develop/context/sources/char-fio.lua
+% c:/data/develop/context/sources/char-ini.lua
+% c:/data/develop/context/sources/char-map.lua
+% c:/data/develop/context/sources/char-scr.lua
+% c:/data/develop/context/sources/char-utf.lua
+
+% c:/data/develop/context/sources/chem-ini.lua
+% c:/data/develop/context/sources/chem-str.lua
+
+% c:/data/develop/context/sources/cldf-com.lua
+% c:/data/develop/context/sources/cldf-ini.lua
+% c:/data/develop/context/sources/cldf-prs.lua % use in chemistry
+% c:/data/develop/context/sources/cldf-scn.lua
+% c:/data/develop/context/sources/cldf-stp.lua
+% c:/data/develop/context/sources/cldf-ver.lua
+
+% c:/data/develop/context/sources/colo-icc.lua
+% c:/data/develop/context/sources/colo-ini.lua
+
+% c:/data/develop/context/sources/core-con.lua
+% c:/data/develop/context/sources/core-ctx.lua
+% c:/data/develop/context/sources/core-dat.lua
+% c:/data/develop/context/sources/core-two.lua
+
+% data...
+
+% c:/data/develop/context/sources/file-ini.lua
+% c:/data/develop/context/sources/file-lib.lua
+% c:/data/develop/context/sources/file-res.lua
+
+% c:/data/develop/context/sources/font-afk.lua
+% c:/data/develop/context/sources/font-agl.lua
+% c:/data/develop/context/sources/font-aux.lua
+% c:/data/develop/context/sources/font-cid.lua
+% c:/data/develop/context/sources/font-enc.lua
+% c:/data/develop/context/sources/font-log.lua
+% c:/data/develop/context/sources/font-lua.lua % not realy used, more a demo
+% c:/data/develop/context/sources/font-nod.lua % some trace helpers
+% c:/data/develop/context/sources/font-osd.lua
+% c:/data/develop/context/sources/font-otc.lua
+% c:/data/develop/context/sources/font-oth.lua
+% c:/data/develop/context/sources/font-oti.lua
+% c:/data/develop/context/sources/font-oto.lua
+% c:/data/develop/context/sources/font-otr.lua
+% c:/data/develop/context/sources/font-ott.lua % just some tables
+% c:/data/develop/context/sources/font-oup.lua % packing and unpacking
+% c:/data/develop/context/sources/font-pat.lua
+% c:/data/develop/context/sources/font-prv.lua
+% c:/data/develop/context/sources/font-sel.lua
+% c:/data/develop/context/sources/font-shp.lua % shapes, for now shared
+% c:/data/develop/context/sources/font-sol.lua
+% c:/data/develop/context/sources/font-syn.lua % identification code
+% c:/data/develop/context/sources/font-trt.lua
+% c:/data/develop/context/sources/font-web.lua % proof of concept, never used
+
+% c:/data/develop/context/sources/font-imp-combining.lua  % shared, like typescript
+% c:/data/develop/context/sources/font-imp-dimensions.lua % idem
+% c:/data/develop/context/sources/font-imp-italics.lua    % idem
+% c:/data/develop/context/sources/font-imp-notused.lua    % idem
+% c:/data/develop/context/sources/font-imp-properties.lua % idem
+% c:/data/develop/context/sources/font-imp-reorder.lua    % idem
+% c:/data/develop/context/sources/font-imp-spacekerns.lua % idem
+% c:/data/develop/context/sources/font-imp-tex.lua        % idem
+% c:/data/develop/context/sources/font-imp-tweaks.lua     % idem
+% c:/data/develop/context/sources/font-imp-unicode.lua    % idem
+
+% c:/data/develop/context/sources/good-ctx.lua
+% c:/data/develop/context/sources/good-ini.lua
+
+% c:/data/develop/context/sources/grph-bmp.lua
+% c:/data/develop/context/sources/grph-chk.lua
+% c:/data/develop/context/sources/grph-con.lua
+% c:/data/develop/context/sources/grph-fil.lua
+% c:/data/develop/context/sources/grph-img.lua
+% c:/data/develop/context/sources/grph-pat.lua
+% c:/data/develop/context/sources/grph-raw.lua
+% c:/data/develop/context/sources/grph-u3d.lua
+
+% c:/data/develop/context/sources/java-ini.lua
+
+% c:/data/develop/context/sources/lang-cnt.lua
+% c:/data/develop/context/sources/lang-def.lua % these are data files
+% c:/data/develop/context/sources/lang-txt.lua % these are data files
+% c:/data/develop/context/sources/lang-wrd.lua
+
+% c:/data/develop/context/sources/luat-exe.lua
+% c:/data/develop/context/sources/luat-iop.lua
+% c:/data/develop/context/sources/luat-mac.lua % will become lmt
+
+% c:/data/develop/context/sources/lxml-aux.lua
+% c:/data/develop/context/sources/lxml-css.lua
+% c:/data/develop/context/sources/lxml-dir.lua
+% c:/data/develop/context/sources/lxml-ent.lua
+% c:/data/develop/context/sources/lxml-ini.lua
+% c:/data/develop/context/sources/lxml-lpt.lua
+% c:/data/develop/context/sources/lxml-mis.lua
+% c:/data/develop/context/sources/lxml-sor.lua
+% c:/data/develop/context/sources/lxml-tab.lua
+% c:/data/develop/context/sources/lxml-tex.lua
+% c:/data/develop/context/sources/lxml-xml.lua
+
+% c:/data/develop/context/sources/meta-blb.lua
+% c:/data/develop/context/sources/meta-fun.lua
+% c:/data/develop/context/sources/meta-lua.lua
+% c:/data/develop/context/sources/meta-nod.lua
+% c:/data/develop/context/sources/meta-pdf.lua
+% c:/data/develop/context/sources/meta-tex.lua
+
+% c:/data/develop/context/sources/mult-aux.lua % move some to s-system-*
+% c:/data/develop/context/sources/mult-fmt.lua
+
+% c:/data/develop/context/sources/page-cst.lua
+% c:/data/develop/context/sources/page-flt.lua
+% c:/data/develop/context/sources/page-inj.lua
+% c:/data/develop/context/sources/page-ins.lua
+% c:/data/develop/context/sources/page-mix.lua
+% c:/data/develop/context/sources/page-pst.lua
+
+% c:/data/develop/context/sources/phys-dim.lua
+
+% c:/data/develop/context/sources/publ-aut.lua % shared
+% c:/data/develop/context/sources/publ-dat.lua
+% c:/data/develop/context/sources/publ-fnd.lua
+% c:/data/develop/context/sources/publ-inc.lua
+% c:/data/develop/context/sources/publ-ini.lua
+% c:/data/develop/context/sources/publ-jrn.lua
+% c:/data/develop/context/sources/publ-oth.lua
+% c:/data/develop/context/sources/publ-reg.lua
+% c:/data/develop/context/sources/publ-sor.lua
+% c:/data/develop/context/sources/publ-tra.lua
+% c:/data/develop/context/sources/publ-usr.lua
+
+% c:/data/develop/context/sources/scrn-but.lua
+% c:/data/develop/context/sources/scrn-fld.lua
+% c:/data/develop/context/sources/scrn-hlp.lua
+
+% c:/data/develop/context/sources/scrp-cjk.lua
+% c:/data/develop/context/sources/scrp-eth.lua
+% c:/data/develop/context/sources/scrp-tha.lua
+% c:/data/develop/context/sources/scrp-tib.lua
+
+% c:/data/develop/context/sources/sort-ini.lua
+% c:/data/develop/context/sources/sort-lan.lua
+
+% c:/data/develop/context/sources/strc-bkm.lua
+% c:/data/develop/context/sources/strc-blk.lua
+% c:/data/develop/context/sources/strc-con.lua
+% c:/data/develop/context/sources/strc-doc.lua
+% c:/data/develop/context/sources/strc-ini.lua
+% c:/data/develop/context/sources/strc-lev.lua
+% c:/data/develop/context/sources/strc-num.lua
+% c:/data/develop/context/sources/strc-pag.lua
+% c:/data/develop/context/sources/strc-usr.lua
+
+% c:/data/develop/context/sources/syst-cmp.lua -- nothing
+% c:/data/develop/context/sources/syst-con.lua
+
+% c:/data/develop/context/sources/trac-ctx.lua
+% c:/data/develop/context/sources/trac-lmx.lua
+% c:/data/develop/context/sources/trac-par.lua
+% c:/data/develop/context/sources/trac-tex.lua
+
+% c:/data/develop/context/sources/typo-cln.lua -- wrong name for what it does 
+% c:/data/develop/context/sources/typo-dha.lua
+
+% c:/data/develop/context/sources/unic-ini.lua

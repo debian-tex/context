@@ -401,10 +401,11 @@
  % liga=yes, % makes no sense
  % tlig=yes, % makes no sense
  % trep=yes, % makes no sense
-   mathnolimitsmode={0,800}, % this looks okay on the average font
+ % mathnolimitsmode={0,800}, % this looks okay on the average font
    mathalternates=yes,
-   mathitalics=yes, % we pass them
-   mathdimensions=all,
+   emulatelmtx=yes,
+ % mathitalics=yes, % we pass them
+ % mathdimensions=all,
  % mathkerns=yes,
  % mathgaps=yes,
    language=dflt,
@@ -416,9 +417,13 @@
 %   [oldmath]
 %   [oldmath=yes]
 
-\ifdefined\mathnolimitsmode
-    \mathnolimitsmode\plusone % font driven (only opentype)
+\ifdefined\variablefam
+    \variablefam\pluscclv
 \fi
+
+% \ifdefined\mathnolimitsmode
+%     \mathnolimitsmode\plusone % font driven (only opentype)
+% \fi
 
 \ifdefined\mathitalicsmode
      \mathitalicsmode\plusone   % simple noads become zero

@@ -28,13 +28,57 @@ local getbox       = nuts.getbox
 
 local implement    = interfaces.implement
 
+local v_yes        = interfaces.variables.yes
+
 local actions = tasks.actions("shipouts")
+
+handlers.finalizelist = actions
 
 function handlers.finalizebox(box)
     actions(getbox(box)) -- nut
 end
 
-handlers.cleanuppage = nuts.flatten_discretionaries
+function handlers.finalizelist(list) -- beware of export: block it if needed
+    actions(list) -- nut
+end
+
+do
+
+    local flattendiscretionaries = nuts.flattendiscretionaries
+    local softenhyphens          = nuts.softenhyphens
+
+    local report  = logs.reporter("shipout")
+
+    local trace   = false  trackers.register("backend.cleanup", function(v) trace = v end)
+
+    local flatten = true -- also done as line option
+    local soften  = true -- true by default
+
+    nodes.handlers.cleanuppage = function(head)
+     -- local count    = 0
+        local found    = 0
+        local replaced = 0
+        if flatten then
+            head, count = flattendiscretionaries(head,true) -- nested
+        end
+        if soften then
+            head, found, replaced = softenhyphens(head) -- could have been a lua loop
+        end
+        if trace then
+            report("%i discretionaries flattened, %i of %i discretionary hyphens softened",count,replaced,found)
+        end
+        return head
+    end
+
+    implement {
+        name      = "setsofthyphens",
+        arguments = "string",
+        actions   = function(v)
+            soften = v == v_yes
+        end
+    }
+
+end
 
 -- interface
 
@@ -113,3 +157,53 @@ statistics.register("node frequencies", function()
         return format("saved in %q",filename)
     end
 end)
+
+do -- for the moment:
+
+    local whatsitcodes = nodes.whatsitcodes
+    local whatsit_code = nodecodes.whatsit
+
+    local removables   = {
+        [whatsitcodes.open]    = true,
+        [whatsitcodes.close]   = true,
+        [whatsitcodes.write]   = true,
+        [whatsitcodes.savepos] = true,
+        [whatsitcodes.latelua] = true,
+    }
+
+    local setlist = nuts.setlist
+    local getlist = nuts.getlist
+    local remove  = nuts.remove
+
+    local function cleanup(head)
+        for current, id, subtype in nextnode, head do
+            if id == whatsit_code then
+                if removables[subtype] then
+                    head = remove(head,current,true)
+                end
+            elseif id == hlist_code or id == vlist_code then
+                local sl = getlist(current)
+                if sl then
+                    local rl = cleanup(sl)
+                    if rl ~= sl then
+                        setlist(current,rl)
+                    end
+                end
+            end
+        end
+        return head
+    end
+
+    function handlers.cleanupbox(box)
+        cleanup(getbox(box))
+    end
+
+    implement {
+        name      = "cleanupbox",
+        public    = true,
+        protected = true,
+        actions   = handlers.cleanupbox,
+        arguments = "integerargument"
+    }
+
+end

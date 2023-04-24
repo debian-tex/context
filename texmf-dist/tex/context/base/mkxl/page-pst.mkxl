@@ -49,17 +49,17 @@
 %D and we also can erase buffers easier when we keep a local cache, especially as we
 %D can flush per page.
 
-\newcount      \c_page_postponed_blocks_next_page % set at the lua end
+\newinteger    \c_page_postponed_blocks_next_page % set at the lua end
 \newconditional\c_page_postponed_busy
 
-\mutable\let\currentpostponedpage\empty
+\mutable\lettonothing\currentpostponedpage
 
-\permanent\protected\setvalue{\e!start\v!postponing}%
+\permanent\protected\defcsname\e!start\v!postponing\endcsname
   {\bgroup
    \obeylines
    \doifelsenextoptional{\egroup\page_postponed_blocks_start}{\egroup\page_postponed_blocks_start[0]}}
 
-\permanent\protected\setvalue{\e!stop\v!postponing}%
+\permanent\protected\defcsname\e!stop\v!postponing\endcsname
   {\clf_registerpostponedblock{\currentpostponedpage}\relax}
 
 \def\page_postponed_blocks_start[#1]%

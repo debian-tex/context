@@ -105,63 +105,61 @@
 
 %aliased\let\currentconstructionhash           \??construction
 
-\mutable\let\currentconstructionmain           \empty
-\mutable\let\currentconstructionlevel          \empty
-\mutable\let\currentconstructionhandler        \empty
-
-\mutable\let\currentconstructionattribute      \empty
-\mutable\let\currentconstructionbookmark       \empty
-\mutable\let\currentconstructioncatcodes       \empty
-\mutable\let\currentconstructioncoding         \empty
-\mutable\let\currentconstructionexpansion      \empty
-\mutable\let\currentconstructionincrementnumber\empty
-\mutable\let\currentconstructionlabel          \empty
-\mutable\let\currentconstructionlist           \empty
-\mutable\let\currentconstructionlistentry      \empty
-\mutable\let\currentconstructionlistnumber     \empty
-\mutable\let\currentconstructionmarking        \empty
-\mutable\let\currentconstructionnumber         \empty
-\mutable\let\currentconstructionreference      \empty
-\mutable\let\currentconstructionreferencetext  \empty
-\mutable\let\currentconstructionreferenceprefix\empty
-\mutable\let\currentconstructionsynchronize    \empty
-\mutable\let\currentconstructiontitle          \empty
-\mutable\let\currentconstructionxmlsetup       \empty
+\mutable\lettonothing\currentconstructionmain
+\mutable\lettonothing\currentconstructionlevel
+\mutable\lettonothing\currentconstructionhandler
+\mutable\lettonothing\currentconstructionattribute
+\mutable\lettonothing\currentconstructionbookmark
+\mutable\lettonothing\currentconstructioncatcodes
+\mutable\lettonothing\currentconstructioncoding
+\mutable\lettonothing\currentconstructionexpansion
+\mutable\lettonothing\currentconstructionincrementnumber
+\mutable\lettonothing\currentconstructionlabel
+\mutable\lettonothing\currentconstructionlist
+\mutable\lettonothing\currentconstructionlistentry
+\mutable\lettonothing\currentconstructionlistnumber
+\mutable\lettonothing\currentconstructionmarking
+\mutable\lettonothing\currentconstructionnumber
+\mutable\lettonothing\currentconstructionreference
+\mutable\lettonothing\currentconstructionreferencetext
+\mutable\lettonothing\currentconstructionreferenceprefix
+\mutable\lettonothing\currentconstructionsynchronize
+\mutable\lettonothing\currentconstructiontitle
+\mutable\lettonothing\currentconstructionxmlsetup
 
 \settrue\c_strc_constructions_define_commands % use with care, might become a proper key
 
 \appendtoks
     \ifempty\currentconstructionparent
-        \letvalue{\??constructionmain\currentconstruction}\currentconstruction
+        \letcsname\??constructionmain\currentconstruction\endcsname\currentconstruction
         \definelist[\currentconstruction]% goodie
     \else
-        \letvalue{\??constructionmain\currentconstruction}\currentconstructionparent
+        \letcsname\??constructionmain\currentconstruction\endcsname\currentconstructionparent
         \definelist[\currentconstruction][\currentconstructionparent]% goodie
     \fi
-    \setevalue{\??constructionlevel\currentconstruction}{\number\constructionparameter\c!level}%
-    \setevalue{\??constructionclass\currentconstruction}{\constructionparameter\s!handler}%
+    \edefcsname\??constructionlevel\currentconstruction\endcsname{\number\constructionparameter\c!level}%
+    \edefcsname\??constructionclass\currentconstruction\endcsname{\constructionparameter\s!handler}%
 \to \everydefineconstruction
 
 % todo: inhibit this when we have a different handle .. current we cannot do \frozen
 
 \appendtoks
     \ifconditional\c_strc_constructions_define_commands
-     %% \instance\setuevalue{\e!start\currentconstruction}{\strc_constructions_start{\currentconstruction}}%
-        \instance\setuevalue{\e!start\currentconstruction}{\strc_constructions_start[\currentconstruction]}%
-        \instance\setuevalue{\e!stop \currentconstruction}{\strc_constructions_stop}%
+        \protected\instance\edefcsname\e!start\currentconstruction\endcsname{\startnamedconstruction[\currentconstruction]}%
+        \protected\instance \defcsname\e!stop \currentconstruction\endcsname{\stopnamedconstruction}%
     \fi
 \to \everydefineconstruction
 
 %D Just a basic environment (mostly for testing). We will provide a 'setup' based
 %D plugin once the rest is sorted out.
 
-\tolerant\protected\def\strc_constructions_start[#1]#*[#2]#*[#3]%
+\tolerant\permanent\protected\def\startnamedconstruction[#1]#*[#2]#*[#3]%
   {\begingroup
    \strc_constructions_initialize{#1}%
    \strc_constructions_register[#3][\c!label={\constructionparameter\c!text},\c!reference=,\c!title=,\c!bookmark=,\c!list=,\c!referencetext=,#2]%
    \csname\??constructionstarthandler\currentconstructionhandler\endcsname}
 
-\protected\def\strc_constructions_stop
+\permanent\protected\def\stopnamedconstruction
   {\csname\??constructionstophandler\currentconstructionhandler\endcsname
    \endgroup}
 
@@ -196,11 +194,11 @@
 \newconditional\c_strc_constructions_number_state
 \newconditional\c_strc_constructions_title_state
 
-\protected\setvalue{\??constructioninitializer\v!construction}%
+\protected\defcsname\??constructioninitializer\v!construction\endcsname
   {\setfalse\c_strc_constructions_number_state
    \setfalse\c_strc_constructions_title_state}
 
-\protected\setvalue{\??constructionfinalizer\v!construction}%
+\protected\defcsname\??constructionfinalizer\v!construction\endcsname
   {}
 
 %D We keep the command variant around but rather would move to the start-stop one.
@@ -261,7 +259,7 @@
      \currentconstructiontext
    \endgroup}
 
-\protected\setvalue{\??constructionmainhandler\v!construction}#1%
+\protected\defcsname\??constructionmainhandler\v!construction\endcsname#1%
   {\iftrialtypesetting \else
      \begingroup
      \currentconstructionsynchronize % reinstated
@@ -270,7 +268,7 @@
      \endgroup
    \fi#1}
 
-\protected\setvalue{\??constructiontexthandler\v!construction}%
+\protected\defcsname\??constructiontexthandler\v!construction\endcsname
   {\begingroup
    \useconstructionstyleandcolor\c!headstyle\c!headcolor % move to \currentconstructiontext
    \the\everyconstruction
@@ -294,20 +292,20 @@
 % \def\resetconstructions % to be used in e.g. footnotes
 %   {\c_strc_constructions_nested_state\zerocount}
 
-\protected\setvalue{\??constructioncommandhandler\v!construction}%
+\protected\defcsname\??constructioncommandhandler\v!construction\endcsname
   {\endgroup}
 
-\let\p_strc_constructions_sample        \empty
-\let\p_strc_constructions_align         \empty
-\let\p_strc_constructions_indenting     \empty
-\let\p_strc_constructions_width         \empty
-\let\p_strc_constructions_aligntitle    \empty
-\let\p_strc_constructions_renderingsetup\empty
-\let\p_strc_constructions_headalign     \empty
-\let\p_strc_constructions_hang          \empty
-\let\p_strc_constructions_inbetween     \empty
-\let\p_strc_constructions_closesymbol   \empty
-\let\p_strc_constructions_distance      \empty
+\lettonothing\p_strc_constructions_sample
+\lettonothing\p_strc_constructions_align
+\lettonothing\p_strc_constructions_indenting
+\lettonothing\p_strc_constructions_width
+\lettonothing\p_strc_constructions_aligntitle
+\lettonothing\p_strc_constructions_renderingsetup
+\lettonothing\p_strc_constructions_headalign
+\lettonothing\p_strc_constructions_hang
+\lettonothing\p_strc_constructions_inbetween
+\lettonothing\p_strc_constructions_closesymbol
+\lettonothing\p_strc_constructions_distance
 
 \newconditional\c_strc_constructions_distance_none
 
@@ -331,7 +329,7 @@
    % we also need to make sure that no stretch creeps in (new per 2015-02-02, for Alan)
    \settrue\c_strc_constructions_distance_none}
 
-\protected\setvalue{\??constructionstarthandler\v!construction}% this will be redone (reorganized) .. too much boxing
+\protected\defcsname\??constructionstarthandler\v!construction\endcsname % this will be redone (reorganized) .. too much boxing
   {\dostarttaggedchained\t!construction\currentconstruction\currentconstructionhash
 %    \dotagsetconstruction
    \constructionparameter\c!before
@@ -400,8 +398,12 @@
    %
    \dostarttagged\t!constructiontag\empty % todo
    \setbox\constructionheadbox\hbox
-     {\forgetall
+     {\scratchskip\parindent
+      \forgetall
       \dontcomplain
+      % new and under testing
+      \doif{\constructionparameter\c!headindenting}\v!yes{\hskip\scratchskip}%
+      %
       \ifx\currentconstructionalternative\v!serried % brrr, hack, will change
         \csname\??constructionmainhandler\currentconstructionhandler\endcsname\currentconstructiontext
       \else
@@ -411,11 +413,9 @@
    \ifx\p_strc_constructions_aligntitle\v!no
      \leftconstructionskip \leftskip
      \rightconstructionskip\rightskip
-   \else
-     \ifcase\c_strc_constructions_nested_state
-       \leftconstructionskip \leftskip
-       \rightconstructionskip\rightskip
-     \fi
+   \orelse\ifcase\c_strc_constructions_nested_state
+     \leftconstructionskip \leftskip
+     \rightconstructionskip\rightskip
    \fi
    \edef\p_strc_constructions_align{\constructionparameter\c!align}%
    \ifempty\p_strc_constructions_align \else
@@ -443,7 +443,7 @@
    \updateparagraphshapes
    \ignorespaces} % args not needed
 
-\protected\setvalue{\??constructionstophandler\v!construction}%
+\protected\defcsname\??constructionstophandler\v!construction\endcsname
   {\strc_constructions_close_symbol_place
    \doifnot{\constructionparameter\c!display}\v!no\par
    \dostoptagged % content
@@ -552,11 +552,11 @@
   [\c!renderingsetup=\??constructionrenderings:\v!label,
    \c!width=]
 
-\newbox   \constructionheadbox
-\newskip  \leftconstructionskip
-\newskip  \rightconstructionskip
-\newdimen \constructionsheadwidth
-\newdimen \constructionsheaddistance
+\newbox      \constructionheadbox
+\newgluespec \leftconstructionskip
+\newgluespec \rightconstructionskip
+\newdimension\constructionsheadwidth
+\newdimension\constructionsheaddistance
 
 \def\strc_constructions_set_hang_box#1% messy left/rightskip
   {\setbox\constructionheadbox\vtop   % \vbox gaat fout in hang
@@ -569,7 +569,7 @@
         \setupalign[\p_strc_constructions_headalign]% use fast one
       \fi
       \ifconditional\c_strc_constructions_distance_none \else
-        \advance\ifx#1\v!flushleft\rightskip\else\leftskip\fi\constructionsheaddistance % only difference and wrong anyway
+        \advanceby\ifx#1\v!flushleft\rightskip\else\leftskip\fi\constructionsheaddistance % only difference and wrong anyway
       \fi
       \flushconstructionheadbox}%
    \setbox\constructionheadbox\hpack{\box\constructionheadbox}% needed in case of e.g. a real big head font, see descriptions-006.tex
@@ -676,7 +676,7 @@
         \hskip\rightconstructionskip
     }
     \nobreak
-    \advance\rightskip \constructionsheaddistance
+    \advanceby\rightskip \constructionsheaddistance
     \useconstructionstyleandcolor\c!style\c!color
     \ignorespaces
 \stopsetups
@@ -722,7 +722,7 @@
 \startsetups[\??constructionrenderings:\v!left:\v!hanging]%
     \enforced\let\\\crlf
     \dontcomplain
-    \advance\constructionsheadwidth \constructionsheaddistance
+    \advanceby\constructionsheadwidth \constructionsheaddistance
     \strc_constructions_set_hang_box\v!flushleft
     \strc_constructions_set_hang\v!left
     \noindent
@@ -739,7 +739,7 @@
 \startsetups[\??constructionrenderings:\v!right:\v!hanging]%
     \enforced\let\\\crlf
     \dontcomplain
-    \advance\constructionsheadwidth \constructionsheaddistance
+    \advanceby\constructionsheadwidth \constructionsheaddistance
     \strc_constructions_set_hang_box\v!flushright
     \strc_constructions_set_hang\v!right
     \noindent
@@ -883,7 +883,7 @@
     % tricky: leftskipadaption is somewhat unpredictable
     \enforced\let\\\crlf
     \noindent
-    \advance\leftskip-\leftskipadaption\relax
+    \advanceby\leftskip-\leftskipadaption\relax
     \ifdim\leftskipadaption=\zeropoint
         \leftskipadaption1.5\emwidth\relax % just some default
         \ifnum\c_strc_constructions_nested_state=\plusone
@@ -893,7 +893,7 @@
         \fi
     \fi
     \ifnum\c_strc_constructions_nested_state>\zerocount % was \ifnum\c_strc_constructions_nested_state=\plusone
-        \advance\leftskip\leftskipadaption % but we're already further on
+        \advanceby\leftskip\leftskipadaption % but we're already further on
     \fi
     \hskip-\leftskipadaption\relax
     \ifhbox\constructionheadbox \unhbox\else\box\fi\constructionheadbox
@@ -938,10 +938,6 @@
     \constructionparameter\c!headcommand{\flushconstructionheadbox}
     \endgroup
 \stopsetups
-
-\ifcase\contextlmtxmode \else
-    % just an empty check so that we can grep for contextlmtxmode in mkiv files
-\fi
 
 % \definedescription[whatever][alternative=right:bottom]
 %

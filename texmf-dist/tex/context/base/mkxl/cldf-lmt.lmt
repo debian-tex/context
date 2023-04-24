@@ -6,7 +6,7 @@ if not modules then modules = { } end modules ['cldf-lmt'] = {
     license   = "see context related readme files"
 }
 
-local next, load = next, load
+local next, load, tonumber = next, load, tonumber
 local gmatch, gsub, byte = string.gmatch, string.gsub, string.byte
 
 local setmetatableindex    = table.setmetatableindex
@@ -41,7 +41,7 @@ local scankeyword       = scanners.keyword
 local peekchar          = scanners.peekchar
 local skipnext          = scanners.skip
 
-local getindex          = token.get_index
+local getindex          = tokens.accessors.index
 
 local texsetdimen       = tex.setdimen
 local texsetcount       = tex.setcount
@@ -187,6 +187,7 @@ implement {
     name      = "newarray",
     public    = true,
     protected = true,
+    untraced  = true,
     arguments = { {
         { "name", "string"  },
         { "nx",   "integer" },
@@ -335,6 +336,7 @@ implement {
     name      = "showarray",
     public    = true,
     protected = true,
+    untraced  = true,
     actions   = function()
         local name = scanstring()
         if name then
@@ -358,9 +360,10 @@ end)
 table.makeweak(cache)
 
 implement {
-    name    = "luaexpression",
-    public  = true,
-    actions = function()
+    name     = "luaexpression",
+    public   = true,
+    untraced = true,
+    actions  = function()
         local how  = scanword()
         local code = cache[scanargument()]
         if code then
@@ -544,6 +547,7 @@ end
 implement {
     name      = "newluatable",
     protected = true,
+    untraced  = true,
     arguments = "csname",
     actions   = newluatable,
 }
@@ -551,6 +555,7 @@ implement {
 implement {
     name      = "useluatable",
     protected = true,
+    untraced  = true,
     arguments = { "csname", true },
     actions   = newluatable,
 }
@@ -558,6 +563,7 @@ implement {
 implement {
     name      = "disposeluatable",
     protected = true,
+    untraced  = true,
     public    = true,
     arguments = "csname",
     actions   = disposeluatable,
@@ -566,6 +572,7 @@ implement {
 implement {
     name      = "inspectluatable",
     protected = true,
+    untraced  = true,
     public    = true,
     arguments = "csname",
     actions   = inspectluatable,
@@ -574,6 +581,7 @@ implement {
 implement {
     name      = "showluatables",
     protected = true,
+    untraced  = true,
     public    = true,
     actions   = showluatables,
 }
@@ -581,6 +589,7 @@ implement {
 implement {
     name      = "setluatable",
     protected = true,
+    untraced  = true,
     public    = true,
     arguments = { "csname", "argument" },
     actions   = function(name,data)
@@ -597,6 +606,7 @@ implement {
 implement {
     name      = "getfromluatable",
     protected = false,
+    untraced  = true,
     public    = true,
     arguments = { "csname", "argument" },
     actions   = getfromluatable,
@@ -605,6 +615,7 @@ implement {
 implement {
     name      = "idxfromluatable",
     protected = false,
+    untraced  = true,
     public    = true,
     arguments = { "csname", "integer" },
     actions   = idxfromluatable,
@@ -627,10 +638,11 @@ context.luatables = {
 local tables = { }
 local stack  = setmetatableindex("table")
 
-interfaces.implement {
-    name      = "droptablegroup",
-    public    = true,
-    actions   = function()
+implement {
+    name     = "droptablegroup",
+    public   = true,
+    untraced = true,
+    actions  = function()
         local g = texget("currentgrouplevel") -- todo: tex.getgrouplevel()
         local s = stack[g]
         if s then
@@ -699,7 +711,7 @@ local function newtable(array)
     if not tables[name] then
         local t = { }
         tables[name] = t
-        interfaces.implement {
+        implement {
             name    = name,
             public  = true,
             usage   = "value",
@@ -715,6 +727,7 @@ end
 implement {
     name      = "newhashedtable",
     protected = true,
+    untraced  = true,
     public    = true,
     actions   = newtable,
 }
@@ -722,6 +735,7 @@ implement {
 implement {
     name      = "newindexedtable",
     protected = true,
+    untraced  = true,
     public    = true,
     actions   = function() newtable(true) end,
 }
@@ -886,7 +900,7 @@ implement {
     end
 }
 
-interfaces.implement {
+implement {
     name      = "bitwise",
     public    = true,
     usage     = "value",
@@ -933,7 +947,7 @@ interfaces.implement {
 
 local escape = function(s) return "\\" .. byte(s) end
 
-interfaces.implement {
+implement {
     name    = "ctxluamatch",
     public  = true,
     usage   = "value",
@@ -947,3 +961,84 @@ interfaces.implement {
         return none_code
     end,
 }
+
+-- yes or no ...
+
+do
+
+    local codes         = { }
+    tex.codes           = codes
+
+    local global_code   = tex.flagcodes.global
+
+    local savelua       = token.savelua
+    local isdefined     = token.isdefined
+
+    local newsparse     = sparse.new
+    local setsparse     = sparse.set
+    local wipesparse    = sparse.wipe
+    local restoresparse = sparse.restore
+
+    -- local function isglobal(n) -- maybe a general helper
+    --     return n and (tonumber(n) & global_code)
+    -- end
+
+    local registerfunction = context.functions.register
+
+    implement {
+        name      = "codedef",
+        public    = true,
+        untraced  = true,
+        protected = true,
+        actions   = function(what)
+            local name = scancsname(true)
+         -- if isdefined(name) then
+         --     wipesparse(codes[name]) -- better make a wipe helper if ever needed
+         -- else
+                local code    = newsparse()
+                local restore = registerfunction(function() restoresparse(code) end)
+                implement {
+                    name      = name,
+                    public    = true,
+                    protected = true,
+                    usage     = "value",
+                    actions   = function(what)
+                        local n = scaninteger()
+                        if what == "value" then
+                            return integer_code, code[n]
+                        else
+                            local v = scaninteger(true)
+                         -- if isglobal(what) then
+                            if what and (tonumber(what) & global_code) then
+                                setsparse(code,"global",n,v)
+                            else
+                                savelua(restore,true) -- only once
+                                setsparse(code,n,v)
+                            end
+                        end
+                    end,
+                }
+                codes[name] = code
+         -- end
+        end,
+    }
+
+end
+
+-- for now here:
+
+do
+
+    local runstring   = tex.runstring
+    local ctxcatcodes = tex.ctxcatcodes
+    local formatters  = string.formatters
+
+    function context.runstring(fmt,str,...)
+        if str then
+            runstring(ctxcatcodes,formatters[fmt](str,...))
+        elseif fmt then
+            runstring(ctxcatcodes,fmt)
+        end
+    end
+
+end

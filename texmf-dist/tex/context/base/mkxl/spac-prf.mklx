@@ -52,21 +52,52 @@
    \c!distance=\zeropoint,
    \c!factor=\plusone]
 
-\defineprofile[halffixed]   [\v!fixed][\c!factor=\plustwo]
-\defineprofile[quarterfixed][\v!fixed][\c!factor=\plusfour]
-\defineprofile[eightsfixed] [\v!fixed][\c!factor=\pluseight]
+\appendtoks
+    \ifcstok{\profileparameter\c!define}\v!yes
+        \frozen\protected\edefcsname\e!start\currentprofile\endcsname{\spac_profile_start{\currentprofile}}%
+        \frozen\protected\defcsname \e!stop \currentprofile\endcsname{\spac_profile_stop}%
+    \fi
+\to \everydefineprofile
+
+\def\spac_profile_set
+  {\clf_setprofile
+      name      {\currentprofile}%
+      height    \dimexpr\profileparameter\c!height\relax
+      depth     \dimexpr\profileparameter\c!depth\relax
+      distance  \dimexpr\profileparameter\c!distance\relax
+      factor    \numexpr\profileparameter\c!factor\relax
+      lines     \numexpr\profileparameter\c!lines\relax
+      method    {\profileparameter\c!method}%
+   \relax}
+
+\tolerant\protected\def\spac_profile_start#profile#spacer[#settings]%
+  {\begingroup
+   \ifparameter#settings\or
+     \edef\currentprofile{#profile}%
+     \setupcurrentprofile[#settings]%
+   \orelse\ifhastok={#profile}%
+      \let\currentprofile\v!none
+      \setupcurrentprofile[#profile]%
+   \else
+      \edef\currentprofile{#profile}%
+   \fi
+   \spac_profile_set
+   \profileparameter\c!before}
+
+\protected\def\spac_profile_stop
+  {\par % otherwise not applied
+   \profileparameter\c!after
+   \endgroup}
+
+\permanent\protected\def\startprofile[#profile]%
+  {\spac_profile_start{#profile}}
+
+\permanent\protected\def\stopprofile
+  {\spac_profile_stop}
 
 \permanent\protected\def\setprofile[#profile]%
   {\edef\currentprofile{#profile}%
-   \clf_setprofile
-      name     {\currentprofile}%
-      height   \dimexpr\profileparameter\c!height\relax
-      depth    \dimexpr\profileparameter\c!depth\relax
-      distance \dimexpr\profileparameter\c!distance\relax
-      factor   \numexpr\profileparameter\c!factor\relax
-      lines    \numexpr\profileparameter\c!lines\relax
-      method   {\profileparameter\c!method}%
-   \relax}
+   \spac_profile_set}
 
 \permanent\protected\def\resetprofile
   {\c_attr_profilemethod\attributeunsetvalue}
@@ -109,5 +140,47 @@
       method   {\profileparameter\c!method}%
     \relax
     \endgroup}
+
+\defineprofile[halffixed]   [\v!fixed][\c!factor=\plustwo]
+\defineprofile[quarterfixed][\v!fixed][\c!factor=\plusfour]
+\defineprofile[eightsfixed] [\v!fixed][\c!factor=\pluseight]
+
+% Finally some follow up on this experiment:
+
+\definesystemattribute[lineprofile]  [public]
+
+\installcorenamespace {lineprofile}
+
+\installcommandhandler \??lineprofile {lineprofile} \??lineprofile
+
+\setuplineprofile
+  [\c!method=\v!a,
+   \c!step=.5\emwidth, % maybe 2pt
+   \c!paragraph=\v!no,
+   \c!factor=.125]     % maybe 0.250
+
+\def\spac_line_profile_set
+  {\clf_setlineprofile
+      name      {\currentlineprofile}%
+      step      \dimexpr\lineprofileparameter\c!step\relax
+      factor    {\lineprofileparameter\c!factor}%
+      method    {\lineprofileparameter\c!method}%
+      paragraph {\lineprofileparameter\c!paragraph}%
+   \relax}
+
+\permanent\tolerant\protected\def\setlineprofile[#profile]%
+  {\edef\currentlineprofile{#profile}%
+   \spac_line_profile_set}
+
+\permanent\protected\def\resetlineprofile
+  {\c_attr_lineprofile\attributeunsetvalue}
+
+\permanent\protected\def\setmainlineprofile
+  {\lettonothing\currentlineprofile
+   \spac_line_profile_set}
+
+\appendtoks
+    \c_attr_lineprofile\attributeunsetvalue % or in general resetter
+\to \everyforgetall
 
 \protect \endinput

@@ -1,4 +1,4 @@
-% language=us
+% language=us runpath=texruns:manuals/lowlevel
 
 % Extending the macro argument parser happened stepwise and at each step a bit of
 % \CONTEXT\ code was adapted for testing. At the beginning of October the 20201010
@@ -14,7 +14,6 @@
 
 % \permanent\tolerant\protected\def\xx[#1]#*#;[#2]#:#3% loops .. todo
 
-
 \usemodule[system-tokens]
 
 \environment lowlevel-style
@@ -23,7 +22,7 @@
   [title=macros,
    color=middleorange]
 
-\startsection[title=Preamble]
+\startsectionlevel[title=Preamble]
 
 This chapter overlaps with other chapters but brings together some extensions to
 the macro definition and expansion parts. As these mechanisms were stepwise
@@ -34,9 +33,9 @@ have \TEX\ act like before. We keep the charm of the macro language but these
 additions make for easier definitions, but (at least initially) none that could
 not be done before using more code.
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Definitions]
+\startsectionlevel[title=Definitions]
 
 A macro definition normally looks like like this: \footnote {The \type
 {\dontleavehmode} command make the examples stay on one line.}
@@ -540,12 +539,33 @@ a use for \type {#<} and \type {#>}. A summary of all this is given here:
 \NC *   \NC ignore spaces \NC \NR
 \NC :   \NC pick up scanning here  \NC \NR
 \NC ;   \NC quit scanning \NC \NR
+\ML
+\NC .   \NC ignore pars and spaces \NC \NR
+\NC ,   \NC push back space when quit \NC \NR
 \LL
 \stoptabulate
 
-\stopsection
+The last two have not been discussed and were added later. The period
+directive gobbles space and par tokens and discards them in the
+process. The comma directive is like \type {*} but it pushes back a space
+when the matching quits.
 
-\startsection[title=Runaway arguments]
+\startbuffer
+\tolerant\def\FooA[#1]#*[#2]{(#1/#2)} % remove spaces
+\tolerant\def\FooB[#1]#,[#2]{(#1/#2)} % push back space
+
+/\FooA/ /\FooA / /\FooA[1]/ /\FooA[!] / /\FooA[1] [2]/ /\FooA[1] [2] /\par
+/\FooB/ /\FooB / /\FooB[1]/ /\FooB[!] / /\FooB[1] [2]/ /\FooB[1] [2] /\par
+\stopbuffer
+
+\typebuffer[example][option=TEX] \startpacked \getbuffer[example] \stoppacked
+
+Gobbling spaces versus pushing back is an interface design decision because it
+has to do with consistency.
+
+\stopsectionlevel
+
+\startsectionlevel[title=Runaway arguments]
 
 There is a particular troublesome case left: a runaway argument. The solution is
 not pretty but it's the only way: we need to tell the parser that it can quit.
@@ -591,9 +611,9 @@ offset by some inefficient styling. Of course another gain of loosing some
 indirectness is that error messages point to the macro that the user called for
 and not to some follow up.
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Introspection]
+\startsectionlevel[title=Introspection]
 
 A macro has a meaning. You can serialize that meaning as follows:
 
@@ -639,7 +659,9 @@ macro is a special version of the online variant:
 That one is always available and shows a similar list on the console. Again, users
 normally don't want to know such details.
 
-\startsection[title=nesting]
+\stopsectionlevel
+
+\startsectionlevel[title=nesting]
 
 You can nest macros, as in:
 
@@ -738,9 +760,9 @@ sure I do know why I dislike some languages for it). The \TEX\ system is not the
 only one where dollars, percent signs, ampersands and hashes have special
 meaning.
 
-\stopsection
+\stopsectionlevel
 
-\startsection[title=Prefixes]
+\startsectionlevel[title=Prefixes]
 
 Traditional \TEX\ has three prefixes that can be used with macros: \type {\global},
 \type {\outer} and \type {\long}. The last two are no|-|op's in \LUAMETATEX\ and
@@ -812,10 +834,10 @@ these can easily be fixed. So, it will be used but it will take a while to adapt
 the code base.
 
 One problem with frozen macros is that they don't play nice with for instance
-\type {\futurelet}. Also, there are places in \CONTEXT\ where we actually do
+\typ {\futurelet}. Also, there are places in \CONTEXT\ where we actually do
 redefine some core macro that we also want to protect from redefinition by a
-user. One can of course \type {\unletfrozen} such a command first but as a bonus
-we have a prefix \type {\overloaded} that can be used as prefix. So, one can easily
+user. One can of course \typ {\unletfrozen} such a command first but as a bonus
+we have a prefix \typ {\overloaded} that can be used as prefix. So, one can easily
 redefine a frozen macro but it takes a little effort. After all, this feature is
 mainly meant to protect a user for side effects of definitions, and not as final
 blocker. \footnote {As usual adding features like this takes some experimenting
@@ -824,7 +846,7 @@ The fact that we can apply such features in large macro package like \CONTEXT\
 helps figuring out the needs and best approaches.}
 
 A frozen macro can still be overloaded, so what if we want to prevent that? For
-this we have the \type {\permanent} prefix. Internally we also create primitives
+this we have the \typ {\permanent} prefix. Internally we also create primitives
 but we don't have a prefix for that. But we do have one for a very special case
 which we demonstrate with an example:
 
@@ -881,24 +903,110 @@ The level of checking is controlled with the \type {\overloadmode} but I'm still
 not sure about how many levels we need there. A zero value disables checking,
 the values 1 and 3 give warnings and the values 2 and 4 trigger an error.
 
-\stopsection
+\stopsectionlevel
+
+\startsectionlevel[title=Arguments]
+
+The number of arguments that a macro takes is traditionally limited to nine (or
+ten if one takes the trailing \type {#} into account). That this is enough for
+most cases is demonstrated by the fact that \CONTEXT\ has only a handful of
+macros that use \type {#9}. The reason for this limitation is in part a side
+effect of the way the macro preamble and arguments are parsed. However, because
+in \LUAMETATEX\ we use a different implementation, it was not that hard to permit
+a few more arguments, which is why we support upto 15 arguments, as in:
+
+\starttyping[option=TEX]
+\def\foo#1#2#3#4#5#6#7#8#9#A#B#C#D#E#F{...}
+\stoptyping
+
+We can support the whole alphabet without much trouble but somehow sticking to
+the hexadecimal numbers makes sense. It is unlikely that the core of \CONTEXT\
+will use this option but sometimes at the user level it can be handy. The penalty
+in terms of performance can be neglected.
+
+\starttyping[option=TEX]
+\tolerant\def\foo#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=%
+  {(#1)(#2)(#3)(#4)(#5)(#6)(#7)(#8)(#9)(#A)(#B)(#C)(#D)(#E)(#F)}
+
+\foo{1}{2}
+\stoptyping
+
+In the previous example we have 15 optional arguments where braces are mandate
+(otherwise we the scanner happily scoops up what follows which for sure gives some
+error).
+
+\stopsectionlevel
+
+\startsectionlevel[title=Constants]
+
+The \LUAMETATEX\ engine has lots of efficiency tricks in the macro parsing and
+expansion code that makes it not only fast but also let is use less memory.
+However, every time that the body of a macro is to be injected the expansion
+machinery kicks in. This often means that a copy is made (pushed in the input and
+used afterwards). There are however cases where the body is just a list of
+character tokens (with category letter or other) and no expansion run over the
+list is needed.
+
+It is tempting to introduce a string data type that just stores strings and
+although that might happen at some point it has the disadvantage that one need to
+tokenize that string in order to be able to use it, which then defeats the gain.
+An alternative has been found in constant macros, that is: a macro without
+parameters and a body that is considered to be expanded and never freed by
+redefinition. There are two variants:
+
+\starttyping[option=TEX]
+\cdef      \foo          {whatever}
+\cdefcsname foo\endcsname{whatever}
+\stoptyping
+
+These are actually just equivalents to
+
+\starttyping[option=TEX]
+\edef      \foo          {whatever}
+\edefcsname foo\endcsname{whatever}
+\stoptyping
+
+just to make sure that the body gets expanded at definition time but they are
+also marked as being constant which in some cases might give some gain, for
+instance when used in csname construction. The gain is less then one expects
+although there are a few cases in \CONTEXT\ where extreme usage of parameters
+benefits from it. Users are unlikely to use these two primitives.
+
+Another example of a constant usage is this:
+
+\starttyping[option=TEX]
+\lettonothing\foo
+\stoptyping
+
+which gives \type {\foo} an empty body. That one is used in the core, if only because
+it gives a bit smaller code. Performance is no that different from
+
+\starttyping[option=TEX]
+\let\foo\empty
+\stoptyping
+
+but it saves one token (8 bytes) when used in a macro. The assignment itself is
+not that different because \type {\foo} is made an alias to \type {\empty} which
+in turn only needs incrementing a reference counter.
+
+\stopsectionlevel
 
 \stopdocument
 
-freezing pitfalls:
-
-- \futurelet  : \overloaded needed
-- \let        : \overloaded sometimes needed
-
-primitive protection:
-
-\newif\iffoo \footrue \foofalse : problem when we make iftrue and iffalse
-permanent ... they inherit, so we can't let them, we need a not permanent
-alias which is again tricky ... something native?
-
-immutable : still \count000 but we can consider blocking that, for instance
-by \def\count{some error}
-
-\defcsname
-\edefcsname
-\letcsname
+% freezing pitfalls:
+%
+% - \futurelet  : \overloaded needed
+% - \let        : \overloaded sometimes needed
+%
+% primitive protection:
+%
+% \newif\iffoo \footrue \foofalse : problem when we make iftrue and iffalse
+% permanent ... they inherit, so we can't let them, we need a not permanent
+% alias which is again tricky ... something native?
+%
+% immutable : still \count000 but we can consider blocking that, for instance
+% by \def\count{some error}
+%
+% \defcsname
+% \edefcsname
+% \letcsname
