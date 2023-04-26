@@ -1,17 +1,11 @@
-Description: Small fixes for manual pages.
-Origin: Hilmar Preusse <hille42@web.de>
-Forwarded: Not done, could be done.
-Author: Hilmar Preusse <hille42@web.de>
-Last-Update: 20220212
-
 --- context.orig/texmf-dist/doc/man/man1/context.1
 +++ context/texmf-dist/doc/man/man1/context.1
 @@ -129,7 +129,7 @@
  never initializes synctex (for production runs)
  .TP
  .B --synctex
--run with synctex enabled (better use \setupsynctex[state=start]
-+run with synctex enabled (better use \\setupsynctex[state=start]
+-run with synctex enabled (better use \setupsynctex[state=start])
++run with synctex enabled (better use \\setupsynctex[state=start])
  .TP
  .B --nodates
  omit runtime dates in pdf file (optional value: a number (this 1970 offset time) or string "YYYY-MM-DD HH:MM")
@@ -21,8 +15,8 @@ Last-Update: 20220212
  never initializes synctex (for production runs)
  .TP
  .B --synctex
--run with synctex enabled (better use \setupsynctex[state=start]
-+run with synctex enabled (better use \\setupsynctex[state=start]
+-run with synctex enabled (better use \setupsynctex[state=start])
++run with synctex enabled (better use \\setupsynctex[state=start])
  .TP
  .B --nodates
  omit runtime dates in pdf file (optional value: a number (this 1970 offset time) or string "YYYY-MM-DD HH:MM")
@@ -39,17 +33,6 @@ Last-Update: 20220212
  fetch temperature data every hour
 --- context.orig/texmf-dist/doc/man/man1/mtxrun.1
 +++ context/texmf-dist/doc/man/man1/mtxrun.1
-@@ -12,7 +12,7 @@
- .SH OPTIONS
- .TP
- .B --script
--run an mtx script (lua prefered method) (--noquotes), no script gives list
-+run an mtx script (lua preferred method) (--noquotes), no script gives list
- .TP
- .B --evaluate
- run code passed on the commandline (between quotes) (=loop) (exit|quit aborts)
---- context.orig/texmf-dist/doc/man/man1/texmfstart.1
-+++ context/texmf-dist/doc/man/man1/texmfstart.1
 @@ -12,7 +12,7 @@
  .SH OPTIONS
  .TP
