@@ -1,3 +1,9 @@
+Description: Replace path in ConTeXt files.
+Origin: Dr. Werner Fink <werner@suse.de>
+Forwarded: No. Patch is specific to Linux Distribution.
+Author: Dr. Werner Fink <werner@suse.de>
+Last-Update: 20230330
+
 --- context.orig/texmf-dist/scripts/context/lua/mtxrun.lua
 +++ context/texmf-dist/scripts/context/lua/mtxrun.lua
 @@ -22308,10 +22308,8 @@
