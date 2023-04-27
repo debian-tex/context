@@ -87,14 +87,28 @@ case "$1" in
         exit 1
       fi
       tempfile=$(mktemp -p /tmp luatools.XXXXXXXX)
-      printf "Pregenerating ConTeXt MarkIV format. This may take some time... "
-      if luatools --make cont-en > $tempfile 2>&1 ; then
+    #  printf "Pregenerating ConTeXt MarkIV format. This may take some time... "
+    #  if luatools --make cont-en > $tempfile 2>&1 ; then
+    #    rm -f $tempfile
+    #    echo "done."
+    #  else
+    #    exec >&2
+    #    echo
+    #    echo "luatools --make cont-en failed. Output has been stored in"
+    #    echo "$tempfile"
+    #    echo "Please include this file if you report a bug."
+    #    echo
+    #    exit 1
+    #  fi
+      tempfile=$(mktemp -p /tmp luametatex.XXXXXXXX)
+      printf "Pregenerating LuaMetaTeX format files. This may take some time... "
+      if mtxrun --make cont-en > $tempfile 2>&1 ; then
         rm -f $tempfile
         echo "done."
       else
         exec >&2
         echo
-        echo "luatools --make cont-en failed. Output has been stored in"
+        echo "Generating LuaMetaTeX format files failed."
         echo "$tempfile"
         echo "Please include this file if you report a bug."
         echo
@@ -105,4 +119,3 @@ case "$1" in
 esac
 
 #DEBHELPER#
-
