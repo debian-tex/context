@@ -1,3 +1,11 @@
+context (2023.04.09.20230420+dfsg-1) UNRELEASED; urgency=medium
+
+  * New upstream release, suitable for TL 2023.
+    - Refresh patches.
+    - Start using luametatex for processing ConTeXt files.
+
+ -- Hilmar Preusse <hille42@web.de>  Thu, 20 Apr 2023 22:05:52 +0200
+
 context (2021.03.05.20230120+dfsg-1) unstable; urgency=medium
 
   * Remove some TeX files not meeting the DFSG from orig.tar.gz
