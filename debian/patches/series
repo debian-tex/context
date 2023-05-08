@@ -1,3 +1,4 @@
 texfont_fontforge
 fix_for_manual_pages
 remove_selfautoparent
+enable_socket
