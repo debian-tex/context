@@ -73,19 +73,19 @@ case "$1" in
     #
     if dhit_libkpathsea_configured; then
       tempfile=$(mktemp -p /tmp mtxrun.XXXXXXXX)
-      printf "Running mtxrun --generate. This may take some time... "
-      if mtxrun --generate > $tempfile 2>&1 ; then
-        rm -f $tempfile
-        echo "done."
-      else
-        exec >&2
-        echo
-        echo "mtxrun --generate failed. Output has been stored in"
-        echo "$tempfile"
-        echo "Please include this file if you report a bug."
-        echo
-        exit 1
-      fi
+    #  printf "Running mtxrun --generate. This may take some time... "
+    #  if mtxrun --generate > $tempfile 2>&1 ; then
+    #    rm -f $tempfile
+    #    echo "done."
+    #  else
+    #    exec >&2
+    #    echo
+    #    echo "mtxrun --generate failed. Output has been stored in"
+    #    echo "$tempfile"
+    #    echo "Please include this file if you report a bug."
+    #    echo
+    #    exit 1
+    #  fi
       tempfile=$(mktemp -p /tmp luatools.XXXXXXXX)
     #  printf "Pregenerating ConTeXt MarkIV format. This may take some time... "
     #  if luatools --make cont-en > $tempfile 2>&1 ; then
@@ -101,19 +101,19 @@ case "$1" in
     #    exit 1
     #  fi
       tempfile=$(mktemp -p /tmp luametatex.XXXXXXXX)
-      printf "Pregenerating LuaMetaTeX format files. This may take some time... "
-      if mtxrun --make cont-en > $tempfile 2>&1 ; then
-        rm -f $tempfile
-        echo "done."
-      else
-        exec >&2
-        echo
-        echo "Generating LuaMetaTeX format files failed."
-        echo "$tempfile"
-        echo "Please include this file if you report a bug."
-        echo
-        exit 1
-      fi
+    #  printf "Pregenerating LuaMetaTeX format files. This may take some time... "
+    #  if mtxrun --make cont-en > $tempfile 2>&1 ; then
+    #    rm -f $tempfile
+    #    echo "done."
+    #  else
+    #    exec >&2
+    #    echo
+    #    echo "Generating LuaMetaTeX format files failed."
+    #    echo "$tempfile"
+    #    echo "Please include this file if you report a bug."
+    #    echo
+    #    exit 1
+    #  fi
     fi
   ;;
 esac
