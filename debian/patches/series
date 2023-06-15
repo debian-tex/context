@@ -1,2 +1,3 @@
 texfont_fontforge
 fix_for_manual_pages
+enable_socket_in_mtxrun
