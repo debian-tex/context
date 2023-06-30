@@ -1,4 +1,4 @@
-context (2021.03.05.20230120+dfsg-1+deb12u1) bookworm-proposed-updates; urgency=medium
+context (2021.03.05.20230120+dfsg-1+deb12u1) bookworm; urgency=medium
 
   * Explicitely enable socket in ConTeXt mtxrun (see #1036470).
 
