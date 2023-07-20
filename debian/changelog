@@ -3,6 +3,9 @@ context (2023.04.09.20230420+dfsg-1) UNRELEASED; urgency=medium
   * New upstream release, suitable for TL 2023.
     - Refresh patches.
   * Start using luametatex for processing ConTeXt files.
+  * Do not generate ConTeXt MarkIV formats (and LuaMetaTeX) formats
+    in postinst (will be generated during run time).
+  * Remove ICC color profiles from package, as they are non-free.
   * Enable "--socket" as run time option in mtxrun (needed after
     upgrade to luatex 1.17.0).
 
