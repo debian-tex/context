@@ -1,4 +1,4 @@
-context (2023.05.05.20230730+dfsg-1) UNRELEASED; urgency=medium
+context (2023.05.05.20230730+dfsg-1) experimental; urgency=medium
 
   * New upstream release, suitable for TL 2023.
     - Refresh patches.
@@ -9,7 +9,7 @@ context (2023.05.05.20230730+dfsg-1) UNRELEASED; urgency=medium
   * Enable "--socket" as run time option in mtxrun (needed after
     upgrade to luatex 1.17.0).
 
- -- Hilmar Preusse <hille42@web.de>  Thu, 20 Apr 2023 22:05:52 +0200
+ -- Hilmar Preusse <hille42@web.de>  Sun, 30 Jul 2023 22:06:57 +0200
 
 context (2021.03.05.20230120+dfsg-1) unstable; urgency=medium
 
