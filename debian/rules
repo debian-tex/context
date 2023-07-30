@@ -26,7 +26,7 @@ override_dh_auto_install:
 	#rm bin/i386-linux/context bin/i386-linux/mtxrun
 	cp bin/i386-linux/* $(instbase)/usr/bin
 	#rm -r $(instbase)/usr/share/texmf/scripts/context/stubs
-	rm -r $(instbase)/usr/share/texmf/tex/context/colors/icc/profiles/
+	#rm -r $(instbase)/usr/share/texmf/tex/context/colors/icc/profiles/
 	#
 	##cp texmf-dist/scripts/context/stubs/unix/* $(instbase)/usr/bin
 	(echo "#!/bin/sh"; echo 'mtxrun --script pdftrimwhite "$$@"' ) > $(instbase)/usr/bin/pdftrimwhite
