@@ -146,7 +146,7 @@ return {
         "startallmodes", "stopallmodes", "startnotallmodes", "stopnotallmodes",
         "doifallmodes", "doifelseallmodes", "doifallmodeselse", "doifnotallmodes",
         "startenvironment", "stopenvironment", "environment",
-        "startcomponent", "stopcomponent", "component",
+        "startcomponent", "stopcomponent", "component", "startlocalcomponent", "stoplocalcomponent",
         "startproduct", "stopproduct", "product",
         "startproject", "stopproject", "project",
         "starttext", "stoptext", "startnotext", "stopnotext",
@@ -259,11 +259,11 @@ return {
         "globalsetmode", "globalresetmode", "globalsetsystemmode", "globalresetsystemmode",
         "booleanmodevalue",
         --
-        "newcount", "newdimen", "newskip", "newmuskip", "newbox", "newtoks", "newread", "newwrite", "newmarks", "newinsert", "newattribute", "newif",
+        "newcount", "newdimen", "newskip", "newmuskip", "newbox", "newtoks", "newread", "newwrite", "newmarks", "newinsert", "newattribute", "newif", "newfloat",
         "newlanguage", "newfamily", "newfam", "newhelp", -- not used
         --
-        "newinteger", "newdimension", "newgluespec", "newmugluespec",
-        "aliasinteger", "aliasdimension",
+        "newinteger", "newdimension", "newgluespec", "newmugluespec", "newposit",
+        "aliasinteger", "aliasdimension", "aliasposit",
         --
         "then",
         "begcsname",

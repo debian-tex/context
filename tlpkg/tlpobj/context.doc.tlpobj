@@ -1,8 +1,9 @@
 name context.doc
 category Package
-revision 66802
+revision 67039
 shortdesc doc files of context
-docfiles size=26800
+docfiles size=26897
+ texmf-dist/doc/context/README.adoc
  texmf-dist/doc/context/documents/general/leaflets/leaflet-context.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-luametatex.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-mixing.pdf
@@ -38,11 +39,13 @@ docfiles size=26800
  texmf-dist/doc/context/documents/general/manuals/libraries-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-alignments.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-boxes.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-buffers.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-characters.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-conditionals.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-expansion.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-grouping.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-inserts.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-localboxes.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-loops.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-macros.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-marks.pdf
@@ -50,6 +53,7 @@ docfiles size=26800
  texmf-dist/doc/context/documents/general/manuals/lowlevel-registers.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-scope.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-security.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-tokens.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel.pdf
  texmf-dist/doc/context/documents/general/manuals/lua-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/luametafun.pdf
@@ -286,8 +290,6 @@ docfiles size=26800
  texmf-dist/doc/context/presentations/tug/2001/tug-2001-ideas.tex
  texmf-dist/doc/context/presentations/tug/2007/tug-2007-fonts.pdf
  texmf-dist/doc/context/presentations/tug/2007/tug-2007-fonts.tex
- texmf-dist/doc/context/scripts/mkii/mptopdf.1
- texmf-dist/doc/context/scripts/mkii/mptopdf.man1.pdf
  texmf-dist/doc/context/scripts/mkiv/context.html
  texmf-dist/doc/context/scripts/mkiv/context.man
  texmf-dist/doc/context/scripts/mkiv/context.xml
@@ -743,6 +745,7 @@ docfiles size=26800
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-scope.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-security.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-style.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-tokens.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel.tex
  texmf-dist/doc/context/sources/general/manuals/lua/lua-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-arrow.tex
@@ -1004,6 +1007,7 @@ docfiles size=26800
  texmf-dist/doc/context/sources/general/manuals/mk/mk.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-children.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-hownotto.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-introduction.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-names.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-perception.tex
@@ -1013,8 +1017,10 @@ docfiles size=26800
  texmf-dist/doc/context/sources/general/manuals/musings/musings-stability.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-staygo.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-style.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-texlive.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-titlepage.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-toocomplex.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-unicode.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-whytex.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings.tex
  texmf-dist/doc/context/sources/general/manuals/nodes/nodes-sun-pia-03149.jpg
@@ -1060,6 +1066,7 @@ docfiles size=26800
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-contents.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-dk.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-eventually.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-fairphone.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-gettingridof.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-introduction.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-makesnosense.tex
@@ -1297,8 +1304,6 @@ docfiles size=26800
  texmf-dist/doc/context/sources/general/manuals/xtables/xtables-mkiv.tex
  texmf-dist/doc/man/man1/context.1
  texmf-dist/doc/man/man1/context.man1.pdf
- texmf-dist/doc/man/man1/luatools.1
- texmf-dist/doc/man/man1/luatools.man1.pdf
  texmf-dist/doc/man/man1/mtx-babel.1
  texmf-dist/doc/man/man1/mtx-babel.man1.pdf
  texmf-dist/doc/man/man1/mtx-base.1

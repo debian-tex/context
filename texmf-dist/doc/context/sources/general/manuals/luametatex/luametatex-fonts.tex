@@ -130,7 +130,13 @@ optical paragraph optimization:
 \NC \type {leftprotruding}  \NC number  \NC left protruding factor (\prm {lpcode}) \NC\NR
 \NC \type {rightprotruding} \NC number  \NC right protruding factor (\prm {rpcode}) \NC\NR
 \NC \type {expansion}       \NC number  \NC expansion factor (\prm {efcode}) \NC\NR
+\NC \type {compression}     \NC number  \NC compression factor (\prm {cfcode}) \NC\NR
 \stoptabulate
+
+The \prm {lpcode}, \prm {rpcode} and \prm {efcode} are comparable to the ones
+introduced by \PDFTEX, while \prm {cfcode} complements \prm {efcode}: a
+compression alongside expansion code per character. In \LUAMETATEX\ the expansion
+mechanism is also available in math.
 
 From \TEX\ we inherit the following tables. Ligatures are only used in so call
 base mode, when the engine does the font magic. Kerns are used in text and
@@ -850,15 +856,15 @@ instance content moved into the margin:
 
 \stopsubsection
 
-\startsubsection[title={\prm{fontcharta}}]
+\startsubsection[title={\prm{fontcharta} and \prm{fontcharba}}]
 
 \topicindex {glyphs + properties}
 
 The \prm {fontcharwd}, \prm {fontcharht}, \prm {fontchardp} and \prm {fontcharic}
 give access to character properties. To this repertoire \LUAMETATEX\ adds the top
-accent accessor \prm {fontcharta} which came in handy for tracing. You pass a
-font reference and character code. Normally only \OPENTYPE\ math fonts have this
-property.
+and bottom accent accessors \prm {fontcharta} and \prm {fontcharba} that came in
+handy for tracing. You pass a font reference and character code. Normally only
+\OPENTYPE\ math fonts have this property.
 
 \stopsubsection
 

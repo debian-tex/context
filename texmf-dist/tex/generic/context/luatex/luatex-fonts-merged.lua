@@ -1,6 +1,6 @@
 -- merged file : c:/data/develop/context/sources/luatex-fonts-merged.lua
 -- parent file : c:/data/develop/context/sources/luatex-fonts.lua
--- merge date  : 2023-03-10 12:15
+-- merge date  : 2023-05-05 18:36
 
 do -- begin closure to overcome local limits and interference
 
@@ -21334,7 +21334,7 @@ local trace_defining=false  registertracker("fonts.defining",function(v) trace_d
 local report_otf=logs.reporter("fonts","otf loading")
 local fonts=fonts
 local otf=fonts.handlers.otf
-otf.version=3.132 
+otf.version=3.133 
 otf.cache=containers.define("fonts","otl",otf.version,true)
 otf.svgcache=containers.define("fonts","svg",otf.version,true)
 otf.pngcache=containers.define("fonts","png",otf.version,true)
@@ -31740,7 +31740,11 @@ local function addfeature(data,feature,specifications,prepareonly)
      local list=askedsteps[i]
      local coverage=nil
      local format=nil
-     if featuretype=="substitution" then
+if type(list)=="function" then
+ list=list(data,specification,list,i)
+end
+     if not list then
+     elseif featuretype=="substitution" then
       category="gsub"
       coverage=(mapping and list) or prepare_substitution(list,featuretype,nocheck)
      elseif featuretype=="ligature" then
@@ -37807,7 +37811,7 @@ local fonts=fonts
 local otf=fonts.handlers.otf
 local registerotffeature=otf.features.register
 local addotffeature=otf.addfeature
-local specification={
+local tlig={
  type="ligature",
  order={ "tlig" },
  prepend=true,
@@ -37816,12 +37820,17 @@ local specification={
   [0x2014]={ 0x002D,0x002D,0x002D },
  },
 }
-addotffeature("tlig",specification)
-registerotffeature {
- name="tlig",
- description="tex ligatures",
+local tquo={
+ type="ligature",
+ order={ "tquo" },
+ prepend=true,
+ data={
+  [0x201C]={ 0x0060,0x0060 },
+  [0x201D]={ 0x0027,0x0027 },
+  [0x201E]={ 0x002C,0x002C },
+ },
 }
-local specification={
+local trep={
  type="substitution",
  order={ "trep" },
  prepend=true,
@@ -37829,11 +37838,12 @@ local specification={
   [0x0027]=0x2019,
  },
 }
-addotffeature("trep",specification)
-registerotffeature {
- name="trep",
- description="tex replacements",
-}
+addotffeature("trep",trep) 
+addotffeature("tlig",tlig)
+addotffeature("tquo",tquo) 
+registerotffeature { name="tlig",description="tex ligatures" }
+registerotffeature { name="tquo",description="tex quotes" }
+registerotffeature { name="trep",description="tex replacements" }
 local anum_arabic={
  [0x0030]=0x0660,
  [0x0031]=0x0661,

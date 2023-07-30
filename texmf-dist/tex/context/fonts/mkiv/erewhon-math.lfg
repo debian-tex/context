@@ -53,6 +53,9 @@ return {
                 presets.moveintegrals        { factor = 1.5 },
                 presets.wipeitalics          { },
                 {
+                    tweak = "checkaccents",
+                },
+                {
                     tweak = "kerns",
                     list  = {
                         [0x002F]                = { topleft  = -0.15, bottomright = -0.15 },
@@ -73,6 +76,9 @@ return {
                     },
                 },
                 {
+                    tweak = "flattenaccents",
+                },
+                {
                     tweak   = "radicaldegreeanchors",
                     list = {
                         ["0x221A.parts.bottom"] = { location = "left", hfactor  = .1, vfactor  = 1.025 },
@@ -90,6 +96,29 @@ return {
                 {
                     tweak = "addrules",
                 },
+{
+    tweak    = "replacerules",
+    -- minus = {
+    --     height      = 0.188,
+    --     yoffset     = 0.812,
+    --     leftoffset  = 0.2,
+    --     rightoffset = 0.2,
+    -- },
+    fraction = {
+        height  = .188,
+        yoffset = .812,
+    },
+    radical = {
+        height      = .188,
+        yoffset     = .812,
+        leftoffset  = 0.12,
+        rightoffset = 0.12,
+    },
+    stacker = {
+        height  = .188,
+        yoffset = .812,
+    },
+},
                 {
                     tweak = "addactuarian",
                 },

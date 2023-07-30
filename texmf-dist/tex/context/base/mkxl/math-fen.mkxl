@@ -15,7 +15,7 @@
 
 \unprotect
 
-% \definemathfence [fancybracket] [bracket] [command=yes,color=blue]
+% \definemathfence [fancybracket] [bracket] [define=yes,color=blue]
 %
 % test $|x|$ test \par
 % test $||x||$ test (okay) \par
@@ -42,7 +42,7 @@
    \c!middle=,
    \c!mathstyle=,
    \c!color=,
-   \c!command=,
+   \c!define=, % was \c!command
    \c!mathclass=,
    \c!leftclass=\mathopencode,
    \c!rightclass=\mathclosecode,
@@ -59,9 +59,7 @@
    \c!factor=\v!auto]
 
 \appendtoks
-    \edef\p_command{\mathfenceparameter\c!command}%
-    \ifx\p_command\v!yes
-        % \instance
+    \ifcstok{\mathfenceparameter\c!define}\v!yes
         \protected\edefcsname\currentmathfence\endcsname{\math_fenced_fenced{\currentmathfence}}%
     \fi
 \to \everydefinemathfence
@@ -307,6 +305,9 @@
     \directsetup{math:fence:set:bar}
 \stopsetups
 
+\mutable\lettonothing\suchthat
+% \fastsetup{math:fence:set}
+
 \protected\def\math_fenced_middle_common
   {\math_fenced_middle} % redefined inside atom
 
@@ -337,6 +338,19 @@
 %D Musical timestamp: I am The Moon by Tedeschi Trucks Band
 
 % \definemathfence [tupdownarrows] [text] [\c!left="2191,\c!right="2193]
+
+\def\math_fenced_check#1%
+  {\iftok{\mathfenceparameter#1}\emptytoks\letmathfenceparameter#1\v!none\fi}
+
+\appendtoks
+    \math_fenced_check\c!left
+    \math_fenced_check\c!right
+\to \everysetupmathfence
+
+\appendtoks
+    \math_fenced_check\c!left
+    \math_fenced_check\c!right
+\to \everydefinemathfence
 
 \protected\def\math_fenced_horizontal_common#1#2#3#4% \Uwhatever class symbol source
   {\c_math_fenced_class\math_class_by_parameter\mathfenceparameter#2\relax
@@ -387,7 +401,7 @@
 \setupmathfence
   [\v!text]
   [\c!text=\v!yes,
-   \c!command=\v!yes,
+   \c!define=\v!yes,
    \c!distance=.125\emwidth]
 
 \tolerant\protected\def\math_fenced_vertical#1#*[#2]%
@@ -653,10 +667,23 @@
 \immutable\protected\def\Lopenbracketmirrored {\math_fenced_fenced_stop {mirroredopenbracket}}  \immutable\protected\def\Ropenbracketmirrored {\math_fenced_fenced_start{mirroredopenbracket}}
 \immutable\protected\def\Lnothingmirrored     {\math_fenced_fenced_stop {mirrorednothing}}      \immutable\protected\def\Rnothingmirrored     {\math_fenced_fenced_start{mirrorednothing}}
 
-\definemathfence [interval]                     [\c!left="2997,\c!right="2998]
-\definemathfence [openinterval]      [interval] [\c!left="2998,\c!right="2998]
-\definemathfence [leftopeninterval]  [interval] [\c!left="2997,\c!right="2997]
-\definemathfence [rightopeninterval] [interval] [\c!left="2998,\c!right="2998]
+% These tortoise chars almost only exist in stix (and ar not commonly used)
+
+% \definemathfence [interval]                     [\c!left="2997,\c!right="2998]
+% \definemathfence [openinterval]      [interval] [\c!left="2998,\c!right="2998]
+% \definemathfence [leftopeninterval]  [interval] [\c!left="2997,\c!right="2997]
+% \definemathfence [rightopeninterval] [interval] [\c!left="2998,\c!right="2998]
+
+% Different intervals. The variants are the ones suggested by Bourbaki.
+
+\definemathfence [interval]                        [\c!left="005B,\c!right="005D]
+\definemathfence [openinterval]         [interval] [\c!left="0028,\c!right="0029]
+\definemathfence [closedinterval]       [interval] [\c!left="005B,\c!right="005D]
+\definemathfence [leftopeninterval]     [interval] [\c!left="0028,\c!right="005D]
+\definemathfence [rightopeninterval]    [interval] [\c!left="005B,\c!right="0029]
+\definemathfence [varopeninterval]      [interval] [\c!left="005D,\c!right="005B]
+\definemathfence [varleftopeninterval]  [interval] [\c!left="005D,\c!right="005D]
+\definemathfence [varrightopeninterval] [interval] [\c!left="005B,\c!right="005B]
 
 \immutable\protected\def\Linterval   {\math_fenced_fenced_start{interval}}
 \immutable\protected\def\Lointerval  {\math_fenced_fenced_start{openinterval}}
@@ -692,6 +719,10 @@
 % \im { \left\bgroup \frac{1}{2} \right\egroup }
 % \im { \left\{      \frac{1}{2} \right\}      }
 % \im { \left\lbrace \frac{1}{2} \right\rbrace }
+
+\lettonothing\math_fenced_x_p_left
+\lettonothing\math_fenced_x_p_right
+\lettonothing\math_fenced_x_p_middle
 
 \def\math_fenced_x_left
   {\advanceby\c_math_fence_nesting\plusone
@@ -957,7 +988,11 @@
 
 \protected\def\math_choosemathbig_math#1#2% so we accept \big{||} as well
   {\math_fenced_force_size\bigmathdelimitervariant{#1}\relax
-   \Uvextensible#2\relax
+   \Uvextensible
+     \s!axis
+     \s!exact
+     #2%
+   \relax
    \c_attr_mathsize\attributeunsetvalue}
 
 \protected\def\math_choosemathbig_text#1#2% so we accept \big{||} as well
@@ -972,7 +1007,11 @@
 \permanent\protected\def\mathdelimiterstep#1#2% not used, only in example
   {\begingroup
    \math_fenced_force_size\plusone{#1}%
-   \Uvextensible#2\relax
+   \Uvextensible
+     \s!axis
+     \s!exact
+     #2%
+   \relax
    \endgroup}
 
 \definemathcommand [big]  {\choosemathbig1}
@@ -1004,7 +1043,7 @@
 %     \vrule height 3cm depth 3cm
 % \right\rintegral
 
-%definemathfence [fancybracket] [bracket] [command=yes,color=red]
+%definemathfence [fancybracket] [bracket] [define=yes,color=red]
 
 %D The nested fences recovery code is needed for mathml and the original
 %D code can still be found in the mkiv file.
@@ -1014,7 +1053,7 @@
 \let\math_fences_normal_left  \left
 \let\math_fences_normal_right \right
 \let\math_fences_normal_middle\middle
-\let\math_fences_normal_both  \leftorright
+\let\math_fences_normal_both  \relax  % undefined
 
 \protected\def\math_fences_auto_left  #1{\c_attr_mathautofence\plusone  #1\c_attr_mathautofence\attributeunsetvalue}
 \protected\def\math_fences_auto_right #1{\c_attr_mathautofence\plustwo  #1\c_attr_mathautofence\attributeunsetvalue}
@@ -1187,6 +1226,8 @@
    {\let\math_fenced_trace\math_fenced_trace_indeed}
    {\let\math_fenced_trace\donothing}
 
+\mutable\integerdef\c_math_fence_level\minusone
+
 \appendtoks
     \integerdef\c_math_fence_level\minusone
     \c_math_fence_nesting\zerocount
@@ -1211,10 +1252,10 @@
 % $x + \tdownuparrows{left}{right} + x$
 % $x + \tupanddownarrows[color=red,leftcolor=green,rightcolor=blue]{left}{right} + x$
 
-\definemathfence [tupanddownarrows] [\v!text] [\c!left="2191,\c!right="2193]
-\definemathfence [tupdownarrows]    [\v!text] [\c!left="21C5,\c!right=0]
-\definemathfence [tdownuparrows]    [\v!text] [\c!middle="21F5]
-\definemathfence [tuparrow]         [\v!text] [\c!middle="2191]
-\definemathfence [tdownarrow]       [\v!text] [\c!middle="2193]
+\definemathfence [tupanddownarrows][\v!text][\c!left="2191,\c!right="2193]
+\definemathfence [tupdownarrows]   [\v!text][\c!left="21C5,\c!right=0]
+\definemathfence [tdownuparrows]   [\v!text][\c!middle="21F5]
+\definemathfence [tuparrow]        [\v!text][\c!middle="2191]
+\definemathfence [tdownarrow]      [\v!text][\c!middle="2193]
 
 \protect

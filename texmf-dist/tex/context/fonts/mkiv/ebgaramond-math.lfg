@@ -12,8 +12,9 @@ return {
             FractionRuleThickness             =  60,
             OverbarRuleThickness              =  60,
             UnderbarRuleThickness             =  60,
-            AccentTopShiftUp                  = -75,
-            FlattenedAccentTopShiftUp         = -75,
+            AccentTopShiftUp                  = -25, -- was 075
+            FlattenedAccentBaseHeight         = 620, -- 420 in font (maybe some misunderstanding in the font regarding accents and heights)
+            FlattenedAccentTopShiftUp         = -25, -- was 075
             AccentBaseDepth                   =  75,
             DelimiterPercent                  =  90,
             DelimiterShortfall                = 400,
@@ -50,6 +51,9 @@ return {
                 presets.moveintegrals        { factor  = 1.5  },
                 presets.wipeitalics          { },
                 {
+                    tweak = "checkaccents",
+                },
+                {
                     tweak = "simplifykerns",
                 },
                 {
@@ -82,9 +86,9 @@ return {
                         [0x27EB]                = { topright = -0.1,  bottomright = -0.1  },
                         ["0x27EB.variants.*"]   = { topright = -0.2,  bottomright = -0.2  },
 
-                        [0x51]                  = { bottomright = 0.25 }, -- Upright Q
-                        [0x211A]                = { bottomright = 0.2 }, -- Blackboard bold Q
-                        [0x1D410]               = { bottomright = 0.2 }, -- Bold Q
+                        [0x00051]               = { bottomright = 0.25 }, -- Upright Q
+                        [0x0211A]               = { bottomright = 0.2  }, -- Blackboard bold Q
+                        [0x1D410]               = { bottomright = 0.2  }, -- Bold Q
                         [0x1D478]               = { bottomright = 0.05 }, -- Bold Q
                         [0x1D5B0]               = { bottomright = 0.05 }, -- Sans Q
                     },
@@ -146,8 +150,11 @@ return {
                     tweak = "extendaccents",
                 },
                 {
-                    tweak   = "radicaldegreeanchors",
-                    list = {
+                    tweak = "flattenaccents",
+                },
+                {
+                    tweak = "radicaldegreeanchors",
+                    list  = {
                         ["0x221A.parts.bottom"] = { location = "left", hfactor  = .0, vfactor  = 1.0 },
                     }
                 },
@@ -171,6 +178,29 @@ return {
                 },
                 {
                     tweak = "addrules",
+                },
+                {
+                    tweak    = "replacerules",
+                    minus = {
+                        leftoffset  = .075,
+                        rightoffset = .075,
+                    },
+                    fraction = {
+                        height  = .2,
+                        yoffset = .8,
+                    },
+                    radical = {
+                        height      = .2,
+                        yoffset     = .66,
+                        leftoverlap = .020,
+                        leftoffset  = .075, -- todo
+                        rightoffset = .075, -- todo
+                        yscale      = .84,
+                    },
+                    stacker = {
+                        height  = .2,
+                        yoffset = .8,
+                    },
                 },
                 {
                     tweak   = "addbars",

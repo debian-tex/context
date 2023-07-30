@@ -531,9 +531,9 @@
 
 \def\strc_floats_apply_caption_command
   {\setbox\b_strc_floats_caption\hbox\bgroup
-    %\unless\ifcstok{\floatcaptionparameter\c!command}\emptytoks
+    %\unless\iftok{\floatcaptionparameter\c!command}\emptytoks
        \floatcaptionparameter\c!command{\box\b_strc_floats_caption}%
-    %\orunless\ifcstok{\floatcaptionparameter\c!deeptextcommand}\emptytoks
+    %\orunless\iftok{\floatcaptionparameter\c!deeptextcommand}\emptytoks
     %  \floatcaptionparameter\c!deeptextcommand{\unvbox\b_strc_floats_caption}%
     %\else
     %  \box\b_strc_floats_caption
@@ -742,7 +742,7 @@
    \edef\p_location    {\floatcaptionparameter\c!location}%
    \edef\p_topoffset   {\floatcaptionparameter\c!topoffset}%
    \edef\p_bottomoffset{\floatcaptionparameter\c!bottomoffset}%
-   \edef\P_freeregion  {\floatcaptionparameter\c!freeregion}%
+   \edef\p_freeregion  {\floatcaptionparameter\c!freeregion}%
    % preset
    \resetfloatcaptionparameter      \c!location
    \setexpandedfloatcaptionparameter\c!topoffset   {\floatparameter\c!topoffset}%
@@ -778,7 +778,7 @@
    \letfloatcaptionparameter\c!location    \p_location
    \letfloatcaptionparameter\c!topoffset   \p_topoffset
    \letfloatcaptionparameter\c!bottomoffset\p_bottomoffset
-   \letfloatcaptionparameter\c!freeregion  \P_freeregion
+   \letfloatcaptionparameter\c!freeregion  \p_freeregion
    %
    \strc_floats_analyze_location
    \doifelseinset\v!split\floatlocation\strc_floats_place_next_box_split\strc_floats_place_next_box_normal

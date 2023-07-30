@@ -195,8 +195,8 @@
      \zerocount
    \fi
    \Urooted
-     \s!height\dimexpr\mathradicalparameter\c!height\relax
-     \s!depth \dimexpr\mathradicalparameter\c!depth\relax
+     \s!height\dimexpr\ifcstok{\mathradicalparameter\c!height}\v!none\scaledpoint\else\mathradicalparameter\c!height\fi\relax
+     \s!depth \dimexpr\ifcstok{\mathradicalparameter\c!depth }\v!none\scaledpoint\else\mathradicalparameter\c!depth \fi\relax
      \s!source\numexpr\namedboxanchor{\mathradicalparameter\c!source}\relax
      \s!style \normalmathstyle
      \ifzeronum\scratchcounter\else
@@ -377,6 +377,12 @@
 \integerdef\delimitedleftanutityuc  \privatecharactercode{delimited left annuity}
 \integerdef\delimitedrightanutityuc \privatecharactercode{delimited right annuity}
 \integerdef\radicalbarextenderuc    \privatecharactercode{radical bar extender}
+
+%D We now default to nice bars:
+
+\setupmathradical
+  [\c!rule=\v!symbol,
+   \c!top=\radicalbarextenderuc]
 
 \definemathradical
   [rannuity]

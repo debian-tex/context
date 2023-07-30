@@ -104,6 +104,11 @@
   {\letcsname\??fontfile\fontclass\m_font_name\endcsname\m_font_file
    \normalexpanded{\font_basics_define_font_synonym_yes_opt[#spec]}}
 
+\let\p_features  \undefined
+\let\p_fallbacks \undefined
+\let\p_goodies   \undefined
+\let\p_designsize\undefined
+
 \protected\def\font_basics_define_font_synonym_nop_opt[#specification]%
   {\let\p_features  \undefined
    \let\p_fallbacks \undefined
@@ -294,7 +299,7 @@
 % pre-expansion.
 
 \def\font_helpers_update_font_class_parameters
-  {\edef\m_font_class_direction {\begincsname\??fontclass\fontclass\fontstyle\s!direction \endcsname}%
+  {%edef\m_font_class_direction {\begincsname\??fontclass\fontclass\fontstyle\s!direction \endcsname}%
    \edef\m_font_class_features  {\begincsname\??fontclass\fontclass\fontstyle\s!features  \endcsname}%
    \edef\m_font_class_fallbacks {\begincsname\??fontclass\fontclass\fontstyle\s!fallbacks \endcsname}%
    \edef\m_font_class_goodies   {\begincsname\??fontclass\fontclass\fontstyle\s!goodies   \endcsname}%
