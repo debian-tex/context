@@ -26,6 +26,9 @@ return {
                     expected = "Version 0.40",
                 },
                 {
+                    tweak = "checkaccents",
+                },
+                {
                     tweak = "dimensions",
                     list  = {
                         [0x2A3F] = { factor = 0.84625 }
@@ -102,7 +105,9 @@ return {
                         ["0x221A.parts.bottom"] = { location = "left", hfactor  = .0, vfactor  = 0.65 },
                     }
                 },
-
+                {
+                    tweak = "flattenaccents",
+                },
                 {
                     tweak = "addscripts",
                 },
@@ -112,6 +117,29 @@ return {
                 {
                     tweak = "addrules",
                 },
+{
+    tweak    = "replacerules",
+    -- minus = {
+    --     height      = 0.1818,
+    --     yoffset     = 0.818,
+    --     leftoffset  = 0.2,
+    --     rightoffset = 0.2,
+    -- },
+    fraction = {
+        height  = .1818,
+        yoffset = .818,
+    },
+    radical = {
+        height      = .1818,
+        yoffset     = .818,
+        leftoffset  = 0.08,
+        rightoffset = 0.08,
+    },
+    stacker = {
+        height  = .1818,
+        yoffset = .818,
+    },
+},
                 {
                     -- This will be fixed. Check if new version comes out!
                     tweak   = "addbars",

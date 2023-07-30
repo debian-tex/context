@@ -1399,6 +1399,10 @@
     % \im{1\unit{hour} 20 \unit{minute} 56 \unit{second}}
     %
     \inherited\setmathspacing \mathdimensioncode       \mathdigitcode           \allmathstyles    \thickmuskip
+    \inherited\setmathspacing \mathdimensioncode       \mathbinarycode          \allsplitstyles   \medmuskip
+    \inherited\setmathspacing \mathdimensioncode       \mathbinarycode          \allunsplitstyles \pettymuskip
+    \inherited\setmathspacing \mathdimensioncode       \mathrelationcode        \allsplitstyles   \thickmuskip
+    \inherited\setmathspacing \mathdimensioncode       \mathrelationcode        \allunsplitstyles \pettymuskip
     %
     \inherited\setmathspacing \mathfakecode            \mathallcode             \allmathstyles    \tinymuskip
     \inherited\setmathspacing \mathallcode             \mathfakecode            \allmathstyles    \tinymuskip
@@ -1418,20 +1422,20 @@
     \inherited\setmathspacing \mathtextpunctuationcode \mathdifferentialcode    \allmathstyles    \mathinterwordmuskip
     \inherited\setmathspacing \mathtextpunctuationcode \mathpunctuationcode     \allmathstyles    \mathinterwordmuskip
     %
-    \inherited\setmathspacing \mathordinarycode        \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathoperatorcode        \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathbinarycode          \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathrelationcode        \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathopencode            \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathmiddlecode          \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathclosecode           \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathpunctuationcode     \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathconstructcode       \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathellipsiscode        \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathfractioncode        \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathradicalcode         \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathdifferentialcode    \mathtextpunctuationcode \allmathstyles    \tinymuskip
-    \inherited\setmathspacing \mathpunctuationcode     \mathtextpunctuationcode \allmathstyles    \tinymuskip
+    \inherited\setmathspacing \mathordinarycode        \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathoperatorcode        \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathbinarycode          \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathrelationcode        \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathopencode            \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathmiddlecode          \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathclosecode           \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathpunctuationcode     \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathconstructcode       \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathellipsiscode        \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathfractioncode        \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathradicalcode         \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathdifferentialcode    \mathtextpunctuationcode \allmathstyles    \pettymuskip
+    \inherited\setmathspacing \mathpunctuationcode     \mathtextpunctuationcode \allmathstyles    \pettymuskip
 \stopsetups
 
 \directsetup{math:spacing:default}
@@ -1732,6 +1736,9 @@
 \permanent\protected\def\mathcodecommand#1%
   {\mathatom \s!class \mathcodechecked{#1}}
 
+\permanent\protected\def\mathcodeallcommand#1#2%
+  {\mathatom \s!class \mathcodechecked{#1} \s!all \mathcodechecked{#2}}
+
 \def\math_class_by_parameter    #1#2{\normalexpanded{\noexpand\mathcodechecked{#1#2}}}
 \def\math_atom_by_parameter       #1{\normalexpanded{\noexpand\math_atom_by_parameter_indeed{#1\c!mathclass}}}
 \def\math_atom_by_parameter_indeed#1{\mathatom \s!class \mathcodechecked{#1}}
@@ -1750,15 +1757,14 @@
 
 \installcorenamespace{mathcommand}
 
-% todo: define these commands as frozen!
-
 \permanent\tolerant\protected\def\definemathcommand[#1]#*[#2]#*[#3]#:#*#4% command class args meaning
   {\ifparameter#3\or
-     \edef\scratchstringone{#3}% make this one m_arguments
-     \ifx\scratchstringone\v!one
+     \ifcstok{#3}\v!one
        \frozen\protected\defcsname\??mathcommand#1\endcsname##1{\mathcodecommand{#2}{#4{##1}}}%
-     \orelse\ifx\scratchstringone\v!two
+     \orelse\ifcstok{#3}\v!two
        \frozen\protected\defcsname\??mathcommand#1\endcsname##1##2{\mathcodecommand{#2}{#4{##1}{##2}}}%
+     \orelse\ifchknum\mathcodechecked{#3}\or
+       \frozen\protected\defcsname\??mathcommand#1\endcsname{\mathcodeallcommand{#2}{#3}{#4}}%
      \else
        \frozen\protected\defcsname\??mathcommand#1\endcsname{\mathcodecommand{#2}{#4}}%
      \fi
@@ -2812,50 +2818,83 @@
 
 \installcorenamespace {mathautopunctuation}
 
-\bgroup
+% \bgroup
+%
+%     \catcode\commaasciicode    \activecatcode
+%     \catcode\periodasciicode   \activecatcode
+%     \catcode\semicolonasciicode\activecatcode
+%
+%     \gdefcsname\??mathautopunctuation\v!no\endcsname
+%       {\let,\math_punctuation_nop_comma
+%        \let.\math_punctuation_nop_period
+%        \let;\math_punctuation_nop_semicolon}
+%
+%     \gdefcsname\??mathautopunctuation\v!yes\endcsname
+%       {\let,\math_punctuation_yes_comma
+%        \let.\math_punctuation_yes_period
+%        \let;\math_punctuation_nop_semicolon}
+%
+%     \gdefcsname\??mathautopunctuation\v!all\endcsname
+%       {\let,\math_punctuation_all_comma
+%        \let.\math_punctuation_all_period
+%        \let;\math_punctuation_nop_semicolon}
+%
+%     \gdefcsname\??mathautopunctuation comma\endcsname
+%       {\let,\math_punctuation_yes_comma
+%        \let.\math_punctuation_yes_period
+%        \let;\math_punctuation_nop_semicolon}
+%
+%     \gdefcsname\??mathautopunctuation\v!yes\string,semicolon\endcsname
+%       {\let,\math_punctuation_yes_comma
+%        \let.\math_punctuation_yes_period
+%        \let;\math_punctuation_yes_semicolon}
+%
+%     \gdefcsname\??mathautopunctuation comma\string,semicolon\endcsname
+%       {\let,\math_punctuation_yes_comma
+%        \let.\math_punctuation_yes_period
+%        \let;\math_punctuation_yes_semicolon}
+%
+%     \gdefcsname\??mathautopunctuation\v!all\string,semicolon\endcsname
+%       {\let,\math_punctuation_all_comma
+%        \let.\math_punctuation_all_period
+%        \let;\math_punctuation_all_semicolon}
+%
+% \egroup
 
-    % This can and will be replaced by classes:
+\defcsname\??mathautopunctuation\v!no\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_nop_comma
+   \letcharcode\periodasciicode   \math_punctuation_nop_period
+   \letcharcode\semicolonasciicode\math_punctuation_nop_semicolon}
 
-    \catcode\commaasciicode    \activecatcode
-    \catcode\periodasciicode   \activecatcode
-    \catcode\semicolonasciicode\activecatcode
+\defcsname\??mathautopunctuation\v!yes\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_yes_comma
+   \letcharcode\periodasciicode   \math_punctuation_yes_period
+   \letcharcode\semicolonasciicode\math_punctuation_nop_semicolon}
 
-    \gdefcsname\??mathautopunctuation\v!no\endcsname
-      {\let,\math_punctuation_nop_comma
-       \let.\math_punctuation_nop_period
-       \let;\math_punctuation_nop_semicolon}
+\defcsname\??mathautopunctuation\v!all\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_all_comma
+   \letcharcode\periodasciicode   \math_punctuation_all_period
+   \letcharcode\semicolonasciicode\math_punctuation_nop_semicolon}
 
-    \gdefcsname\??mathautopunctuation\v!yes\endcsname
-      {\let,\math_punctuation_yes_comma
-       \let.\math_punctuation_yes_period
-       \let;\math_punctuation_nop_semicolon}
+\defcsname\??mathautopunctuation comma\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_yes_comma
+   \letcharcode\periodasciicode   \math_punctuation_yes_period
+   \letcharcode\semicolonasciicode\math_punctuation_nop_semicolon}
 
-    \gdefcsname\??mathautopunctuation\v!all\endcsname
-      {\let,\math_punctuation_all_comma
-       \let.\math_punctuation_all_period
-       \let;\math_punctuation_nop_semicolon}
+\defcsname\??mathautopunctuation\v!yes\string,semicolon\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_yes_comma
+   \letcharcode\periodasciicode   \math_punctuation_yes_period
+   \letcharcode\semicolonasciicode\math_punctuation_yes_semicolon}
 
-    \gdefcsname\??mathautopunctuation comma\endcsname
-      {\let,\math_punctuation_yes_comma
-       \let.\math_punctuation_yes_period
-       \let;\math_punctuation_nop_semicolon}
+\defcsname\??mathautopunctuation comma\string,semicolon\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_yes_comma
+   \letcharcode\periodasciicode   \math_punctuation_yes_period
+   \letcharcode\semicolonasciicode\math_punctuation_yes_semicolon}
 
-    \gdefcsname\??mathautopunctuation\v!yes\string,semicolon\endcsname
-      {\let,\math_punctuation_yes_comma
-       \let.\math_punctuation_yes_period
-       \let;\math_punctuation_yes_semicolon}
-
-    \gdefcsname\??mathautopunctuation comma\string,semicolon\endcsname
-      {\let,\math_punctuation_yes_comma
-       \let.\math_punctuation_yes_period
-       \let;\math_punctuation_yes_semicolon}
-
-    \gdefcsname\??mathautopunctuation\v!all\string,semicolon\endcsname
-      {\let,\math_punctuation_all_comma
-       \let.\math_punctuation_all_period
-       \let;\math_punctuation_all_semicolon}
-
-\egroup
+\defcsname\??mathautopunctuation\v!all\string,semicolon\endcsname
+  {\letcharcode\commaasciicode    \math_punctuation_all_comma
+   \letcharcode\periodasciicode   \math_punctuation_all_period
+   \letcharcode\semicolonasciicode\math_punctuation_all_semicolon}
 
 % \appendtoks
 %     \global\mathcode\commaasciicode    \c_math_special
@@ -4548,8 +4587,8 @@
 
 \def\math_axis_inject_indeed#1%
   {\srule
-     \s!height \dimexpr\scratchdimentwo+\scratchdimenone\relax
-     \s!depth -\dimexpr\scratchdimentwo-\scratchdimenone\relax
+     \s!height \dimexpr(\scratchdimentwo+\scratchdimenone)*\c_math_m_scaled/\plusthousand\relax
+     \s!depth -\dimexpr(\scratchdimentwo-\scratchdimenone)*\c_math_m_scaled/\plusthousand\relax
      \s!attr \mathaxisattribute#1%
    \relax}
 

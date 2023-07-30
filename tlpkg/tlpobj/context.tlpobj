@@ -1,6 +1,6 @@
 name context
 category Package
-revision 66802
+revision 67039
 shortdesc The ConTeXt macro package
 longdesc A full featured, parameter driven macro package, which fully
 longdesc supports advanced interactive documents. See the ConTeXt garden
@@ -13,8 +13,7 @@ depend luatex
 depend manfnt-font
 depend mflogo-font
 depend stmaryrd
-execute addMap original-context-symbol.map
-runfiles size=14738
+runfiles size=13919
  texmf-dist/bibtex/bst/context/mkii/cont-ab.bst
  texmf-dist/bibtex/bst/context/mkii/cont-au.bst
  texmf-dist/bibtex/bst/context/mkii/cont-no.bst
@@ -73,6 +72,10 @@ runfiles size=14738
  texmf-dist/context/data/scite/context/scite-metapost.properties
  texmf-dist/context/data/scite/context/scite-pragma.properties
  texmf-dist/context/data/scite/context/scite-tex.properties
+ texmf-dist/context/data/texfont/type-buy.dat
+ texmf-dist/context/data/texfont/type-fsf.dat
+ texmf-dist/context/data/texfont/type-ghz.dat
+ texmf-dist/context/data/texfont/type-tmf.dat
  texmf-dist/context/data/texworks/TUG/TeXworks.ini
  texmf-dist/context/data/texworks/completion/tw-context.txt
  texmf-dist/context/data/texworks/configuration/auto-indent-patterns.txt
@@ -123,9 +126,6 @@ runfiles size=14738
  texmf-dist/fonts/cid/fontforge/Adobe-Japan1-6.cidmap
  texmf-dist/fonts/cid/fontforge/Adobe-Japan2-0.cidmap
  texmf-dist/fonts/cid/fontforge/Adobe-Korea1-2.cidmap
- texmf-dist/fonts/map/dvips/context/contnav.map
- texmf-dist/fonts/map/luatex/context/demo-font.lum
- texmf-dist/fonts/map/pdftex/context/original-context-symbol.map
  texmf-dist/fonts/misc/xetex/fontmapping/context/tlig.map
  texmf-dist/fonts/misc/xetex/fontmapping/context/tlig.tec
  texmf-dist/fonts/tfm/hoekwater/context/contnav.tfm
@@ -224,6 +224,7 @@ runfiles size=14738
  texmf-dist/scripts/context/lua/mtx-flac.lua
  texmf-dist/scripts/context/lua/mtx-fonts.lua
  texmf-dist/scripts/context/lua/mtx-grep.lua
+ texmf-dist/scripts/context/lua/mtx-install-tikz.lua
  texmf-dist/scripts/context/lua/mtx-install.lua
  texmf-dist/scripts/context/lua/mtx-interface.lua
  texmf-dist/scripts/context/lua/mtx-kpse.lua
@@ -253,6 +254,7 @@ runfiles size=14738
  texmf-dist/scripts/context/lua/mtx-youless.lua
  texmf-dist/scripts/context/lua/mtxlibs.lua
  texmf-dist/scripts/context/lua/mtxrun.lua
+ texmf-dist/scripts/context/lua/texlua.lua
  texmf-dist/scripts/context/perl/makempy.pl
  texmf-dist/scripts/context/perl/path_tre.pm
  texmf-dist/scripts/context/perl/pdftrimwhite.pl
@@ -1326,12 +1328,15 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/attr-alt.mkxl
  texmf-dist/tex/context/base/mkxl/attr-col.lmt
  texmf-dist/tex/context/base/mkxl/attr-col.mkxl
+ texmf-dist/tex/context/base/mkxl/attr-eff.lmt
  texmf-dist/tex/context/base/mkxl/attr-eff.mkxl
  texmf-dist/tex/context/base/mkxl/attr-ini.lmt
  texmf-dist/tex/context/base/mkxl/attr-ini.mkxl
  texmf-dist/tex/context/base/mkxl/attr-lay.lmt
  texmf-dist/tex/context/base/mkxl/attr-lay.mkxl
+ texmf-dist/tex/context/base/mkxl/attr-mkr.lmt
  texmf-dist/tex/context/base/mkxl/attr-mkr.mkxl
+ texmf-dist/tex/context/base/mkxl/attr-neg.lmt
  texmf-dist/tex/context/base/mkxl/attr-neg.mkxl
  texmf-dist/tex/context/base/mkxl/back-exp-imp-mth.lmt
  texmf-dist/tex/context/base/mkxl/back-exp-imp-ref.lmt
@@ -1381,6 +1386,8 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/cldf-int.lmt
  texmf-dist/tex/context/base/mkxl/cldf-int.mkxl
  texmf-dist/tex/context/base/mkxl/cldf-lmt.lmt
+ texmf-dist/tex/context/base/mkxl/cldf-pos.lmt
+ texmf-dist/tex/context/base/mkxl/cldf-pos.mkxl
  texmf-dist/tex/context/base/mkxl/cldf-ver.mkxl
  texmf-dist/tex/context/base/mkxl/colo-ext.mkxl
  texmf-dist/tex/context/base/mkxl/colo-grp.mkxl
@@ -1404,6 +1411,7 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/context.mkxl
  texmf-dist/tex/context/base/mkxl/core-con.mkxl
  texmf-dist/tex/context/base/mkxl/core-ctx.mkxl
+ texmf-dist/tex/context/base/mkxl/core-dat.lmt
  texmf-dist/tex/context/base/mkxl/core-dat.mkxl
  texmf-dist/tex/context/base/mkxl/core-def.mkxl
  texmf-dist/tex/context/base/mkxl/core-env.lmt
@@ -1411,13 +1419,17 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/core-ini.mkxl
  texmf-dist/tex/context/base/mkxl/core-lmt.lmt
  texmf-dist/tex/context/base/mkxl/core-lmt.mkxl
+ texmf-dist/tex/context/base/mkxl/core-pag.lmt
+ texmf-dist/tex/context/base/mkxl/core-pag.mkxl
  texmf-dist/tex/context/base/mkxl/core-sys.lmt
  texmf-dist/tex/context/base/mkxl/core-sys.mkxl
+ texmf-dist/tex/context/base/mkxl/core-two.lmt
  texmf-dist/tex/context/base/mkxl/core-two.mkxl
  texmf-dist/tex/context/base/mkxl/core-uti.lmt
  texmf-dist/tex/context/base/mkxl/core-uti.mkxl
  texmf-dist/tex/context/base/mkxl/data-fil.lmt
  texmf-dist/tex/context/base/mkxl/data-hsh.lmt
+ texmf-dist/tex/context/base/mkxl/data-sch.lmt
  texmf-dist/tex/context/base/mkxl/data-vir.lmt
  texmf-dist/tex/context/base/mkxl/driv-ini.lmt
  texmf-dist/tex/context/base/mkxl/driv-ini.mkxl
@@ -1478,6 +1490,7 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/font-otd.lmt
  texmf-dist/tex/context/base/mkxl/font-otj.lmt
  texmf-dist/tex/context/base/mkxl/font-otl.lmt
+ texmf-dist/tex/context/base/mkxl/font-oto.lmt
  texmf-dist/tex/context/base/mkxl/font-ots.lmt
  texmf-dist/tex/context/base/mkxl/font-phb-imp-binary.lmt
  texmf-dist/tex/context/base/mkxl/font-phb-imp-internal.lmt
@@ -1657,8 +1670,10 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/meta-imp-functions.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-gamesymbols.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-glyphs.mkxl
+ texmf-dist/tex/context/base/mkxl/meta-imp-kaktovik.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-kindergarten.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-magick.mkxl
+ texmf-dist/tex/context/base/mkxl/meta-imp-newmath.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-placeholders.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-punk.mkxl
  texmf-dist/tex/context/base/mkxl/meta-imp-symbols.mkxl
@@ -1723,6 +1738,8 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/node-mig.lmt
  texmf-dist/tex/context/base/mkxl/node-mig.mkxl
  texmf-dist/tex/context/base/mkxl/node-nut.lmt
+ texmf-dist/tex/context/base/mkxl/node-pag.lmt
+ texmf-dist/tex/context/base/mkxl/node-pag.mkxl
  texmf-dist/tex/context/base/mkxl/node-par.lmt
  texmf-dist/tex/context/base/mkxl/node-pro.lmt
  texmf-dist/tex/context/base/mkxl/node-ref.lmt
@@ -1802,6 +1819,7 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/page-str.mkxl
  texmf-dist/tex/context/base/mkxl/page-txt.mklx
  texmf-dist/tex/context/base/mkxl/page-var.mkxl
+ texmf-dist/tex/context/base/mkxl/phys-dim.lmt
  texmf-dist/tex/context/base/mkxl/phys-dim.mkxl
  texmf-dist/tex/context/base/mkxl/publ-inc.mkxl
  texmf-dist/tex/context/base/mkxl/publ-ini.mkxl
@@ -1939,16 +1957,6 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/trac-vis.mkxl
  texmf-dist/tex/context/base/mkxl/type-def.mkxl
  texmf-dist/tex/context/base/mkxl/type-fbk.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-bengali.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-braille.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-devanagari.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-euler.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-gujarati.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-indic.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-kannada.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-malayalam.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-tamil.mkxl
- texmf-dist/tex/context/base/mkxl/type-imp-telugu.mkxl
  texmf-dist/tex/context/base/mkxl/type-ini.lmt
  texmf-dist/tex/context/base/mkxl/type-ini.mklx
  texmf-dist/tex/context/base/mkxl/type-lua.mkxl
@@ -1966,8 +1974,10 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/typo-cap.mkxl
  texmf-dist/tex/context/base/mkxl/typo-chr.lmt
  texmf-dist/tex/context/base/mkxl/typo-chr.mkxl
+ texmf-dist/tex/context/base/mkxl/typo-cln.lmt
  texmf-dist/tex/context/base/mkxl/typo-cln.mkxl
  texmf-dist/tex/context/base/mkxl/typo-del.mkxl
+ texmf-dist/tex/context/base/mkxl/typo-dha.lmt
  texmf-dist/tex/context/base/mkxl/typo-dig.lmt
  texmf-dist/tex/context/base/mkxl/typo-dig.mkxl
  texmf-dist/tex/context/base/mkxl/typo-dir.lmt
@@ -2029,20 +2039,16 @@ runfiles size=14738
  texmf-dist/tex/context/base/mkxl/typo-txt.mklx
  texmf-dist/tex/context/base/mkxl/typo-wrp.lmt
  texmf-dist/tex/context/base/mkxl/typo-wrp.mkxl
+ texmf-dist/tex/context/base/mkxl/unic-ini.lmt
  texmf-dist/tex/context/base/mkxl/unic-ini.mkxl
  texmf-dist/tex/context/base/mkxl/util-deb.lmt
  texmf-dist/tex/context/base/mkxl/util-fil.lmt
  texmf-dist/tex/context/base/mkxl/util-pck.lmt
  texmf-dist/tex/context/base/mkxl/util-sac.lmt
+ texmf-dist/tex/context/base/mkxl/util-sbx.lmt
  texmf-dist/tex/context/bib/common/sample.bib
  texmf-dist/tex/context/colors/icc/context/colorprofiles.lua
  texmf-dist/tex/context/colors/icc/context/colorprofiles.xml
- texmf-dist/tex/context/colors/icc/profiles/default_gray.icc
- texmf-dist/tex/context/colors/icc/profiles/ecirgb_v2.icc
- texmf-dist/tex/context/colors/icc/profiles/ecirgb_v2_iccv4.icc
- texmf-dist/tex/context/colors/icc/profiles/isocoated_v2_300_eci.icc
- texmf-dist/tex/context/colors/icc/profiles/isocoated_v2_eci.icc
- texmf-dist/tex/context/colors/icc/profiles/srgb_v4_icc_preference.icc
  texmf-dist/tex/context/filenames.pdf
  texmf-dist/tex/context/filenames.tex
  texmf-dist/tex/context/fonts/mkiv/antykwa-math.lfg
@@ -2057,10 +2063,13 @@ runfiles size=14738
  texmf-dist/tex/context/fonts/mkiv/common-math.lfg
  texmf-dist/tex/context/fonts/mkiv/concrete-math.lfg
  texmf-dist/tex/context/fonts/mkiv/dejavu-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/dejavu-text.lfg
  texmf-dist/tex/context/fonts/mkiv/demo.lfg
  texmf-dist/tex/context/fonts/mkiv/dingbats.lfg
  texmf-dist/tex/context/fonts/mkiv/ebgaramond-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/ebgaramond-text.lfg
  texmf-dist/tex/context/fonts/mkiv/erewhon-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/erewhon-text.lfg
  texmf-dist/tex/context/fonts/mkiv/euler-math.lfg
  texmf-dist/tex/context/fonts/mkiv/generic-math.lfg
  texmf-dist/tex/context/fonts/mkiv/hanbatanglvt.lfg
@@ -2068,14 +2077,13 @@ runfiles size=14738
  texmf-dist/tex/context/fonts/mkiv/hvmath-math.lfg
  texmf-dist/tex/context/fonts/mkiv/informal-math.lfg
  texmf-dist/tex/context/fonts/mkiv/iwona-math.lfg
- texmf-dist/tex/context/fonts/mkiv/koeielettersot.lfg
  texmf-dist/tex/context/fonts/mkiv/kpfonts-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/kpfonts-text.lfg
  texmf-dist/tex/context/fonts/mkiv/kurier-math.lfg
  texmf-dist/tex/context/fonts/mkiv/libertinus-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/libertinus-text.lfg
  texmf-dist/tex/context/fonts/mkiv/lm-math.lfg
  texmf-dist/tex/context/fonts/mkiv/lm.lfg
- texmf-dist/tex/context/fonts/mkiv/lucida-math.lfg
- texmf-dist/tex/context/fonts/mkiv/lucida-typeone-math.lfg
  texmf-dist/tex/context/fonts/mkiv/mathtimes-math.lfg
  texmf-dist/tex/context/fonts/mkiv/mdbch-math.lfg
  texmf-dist/tex/context/fonts/mkiv/mdici-math.lfg
@@ -2086,13 +2094,17 @@ runfiles size=14738
  texmf-dist/tex/context/fonts/mkiv/minion-math.lfg
  texmf-dist/tex/context/fonts/mkiv/minion.lfg
  texmf-dist/tex/context/fonts/mkiv/modern-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/modern-text.lfg
  texmf-dist/tex/context/fonts/mkiv/newcomputermodern-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/newcomputermodern-text.lfg
  texmf-dist/tex/context/fonts/mkiv/pagella-math.lfg
  texmf-dist/tex/context/fonts/mkiv/px-math.lfg
  texmf-dist/tex/context/fonts/mkiv/schola-math.lfg
  texmf-dist/tex/context/fonts/mkiv/stixtwo-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/stixtwo-text.lfg
  texmf-dist/tex/context/fonts/mkiv/symbol-math.lfg
  texmf-dist/tex/context/fonts/mkiv/termes-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/texgyre-text.lfg
  texmf-dist/tex/context/fonts/mkiv/texgyre.lfg
  texmf-dist/tex/context/fonts/mkiv/treatments.lfg
  texmf-dist/tex/context/fonts/mkiv/tx-math.lfg
@@ -2125,7 +2137,6 @@ runfiles size=14738
  texmf-dist/tex/context/fonts/mkiv/type-imp-informal.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-ipaex.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-iwona.mkiv
- texmf-dist/tex/context/fonts/mkiv/type-imp-koeielettersot.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-kpfonts.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-kurier.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-latinmodern.mkiv
@@ -2134,8 +2145,6 @@ runfiles size=14738
  texmf-dist/tex/context/fonts/mkiv/type-imp-libertine.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-libertinus.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-lmnames.mkiv
- texmf-dist/tex/context/fonts/mkiv/type-imp-lucida-typeone.mkiv
- texmf-dist/tex/context/fonts/mkiv/type-imp-lucida.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-mathdesign.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-mathdigits.mkiv
  texmf-dist/tex/context/fonts/mkiv/type-imp-mathtimes.mkiv
@@ -2158,9 +2167,20 @@ runfiles size=14738
  texmf-dist/tex/context/fonts/mkiv/type-imp-xitsbidi.mkiv
  texmf-dist/tex/context/fonts/mkiv/unifraktur.lfg
  texmf-dist/tex/context/fonts/mkiv/xcharter-math.lfg
+ texmf-dist/tex/context/fonts/mkiv/xcharter-text.lfg
  texmf-dist/tex/context/fonts/mkiv/xits-math.lfg
  texmf-dist/tex/context/fonts/mkxl/bhai.lfg
  texmf-dist/tex/context/fonts/mkxl/shobhika.lfg
+ texmf-dist/tex/context/fonts/mkxl/type-imp-bengali.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-braille.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-devanagari.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-euler.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-gujarati.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-indic.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-kannada.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-malayalam.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-tamil.mkxl
+ texmf-dist/tex/context/fonts/mkxl/type-imp-telugu.mkxl
  texmf-dist/tex/context/interface/mkiv/context-en.xml
  texmf-dist/tex/context/interface/mkiv/i-accent.xml
  texmf-dist/tex/context/interface/mkiv/i-align.xml
@@ -2688,12 +2708,14 @@ runfiles size=14738
  texmf-dist/tex/context/modules/mkxl/s-layout-show.mkxl
  texmf-dist/tex/context/modules/mkxl/s-math-atoms.mkxl
  texmf-dist/tex/context/modules/mkxl/s-math-definitions.mkxl
+ texmf-dist/tex/context/modules/mkxl/s-math-tests.mkxl
  texmf-dist/tex/context/modules/mkxl/s-math-tweaks.mkxl
  texmf-dist/tex/context/modules/mkxl/s-publications-show.mkxl
  texmf-dist/tex/context/modules/mkxl/s-symbols-show.mkxl
  texmf-dist/tex/context/modules/mkxl/s-system-macros.mkxl
  texmf-dist/tex/context/modules/mkxl/s-system-tokens.lmt
  texmf-dist/tex/context/modules/mkxl/s-system-tokens.mkxl
+ texmf-dist/tex/context/modules/mkxl/s-text-tests.mkxl
  texmf-dist/tex/context/modules/mkxl/x-mathml.lmt
  texmf-dist/tex/context/modules/mkxl/x-mathml.mkxl
  texmf-dist/tex/context/patterns/common/lang-af.rme
@@ -2941,6 +2963,10 @@ runfiles size=14738
  texmf-dist/tex/generic/context/luatex/luatex-swiglib.lua
  texmf-dist/tex/generic/context/luatex/luatex-swiglib.tex
  texmf-dist/tex/generic/context/luatex/luatex-test.tex
+ texmf-dist/tex/generic/context/ppchtex/m-ch-de.tex
+ texmf-dist/tex/generic/context/ppchtex/m-ch-en.tex
+ texmf-dist/tex/generic/context/ppchtex/m-ch-nl.tex
+ texmf-dist/tex/generic/context/ppchtex/ppchtex.noc
 catalogue-contact-home http://www.pragma-ade.com/
 catalogue-ctan /macros/context/latest
 catalogue-license other-free
