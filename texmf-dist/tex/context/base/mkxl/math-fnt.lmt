@@ -6,6 +6,9 @@ if not modules then modules = { } end modules ['math-fnt'] = {
     license   = "see context related readme files"
 }
 
+-- It is a pitty that we don't have a unicode character that can be used but that never
+-- gets copied when we cut and paste. Not all pdf viewers ignore 0xFFFD for instance.
+
 local round = math.round
 local setmetatableindex = table.setmetatableindex
 
@@ -14,7 +17,7 @@ local tonut         = nodes.tonut
 local tonode        = nodes.tonode
 local nodepool      = nuts.pool
 
-local vlist_code    = nodes.nodecodes.vlist
+local vlist_code    <const> = nodes.nodecodes.vlist
 
 local new_hlist     = nodepool.hlist
 local new_vlist     = nodepool.vlist
@@ -56,53 +59,61 @@ end)
 
 local enabled = "vertical"  directives.register("math.extensibles", function(v) enabled = v end) -- default per 2022-08-25
 
-local function register_extensible(font,char,style,box)
+local function register_extensible(font,char,style,att,box)
     if enabled then
         -- We don't share (yet)!
         local fontdata = chardata[font]
         local oldchar  = fontdata[char]
         if oldchar and not oldchar.keepvirtual then
-if enabled == true or enabled == "both" or oldchar.partsorientation == enabled then
-    -- we're okay
-else
-    return
+            if enabled == true or enabled == "both" or oldchar.partsorientation == enabled then
+                -- we're okay
+            else
+                return
+            end
+if not box then -- pending build bot
+    box = att
 end
             local bx = tonut(box)
             -- actually we don't want colors and such so if we do finalize we
-            -- should be more selctive:
+            -- should be more selective:
     --         updaters.apply("tagging.state.disable")
     --         nodes.handlers.finalizelist(bx)
     --         updaters.apply("tagging.state.enable")
+-- updaters.apply("tagging.state.disable")
             local id = getid(bx)
-            local al = getattrlst(bx)
+if not att then -- pending build bot
+    att = getattrlst(box)
+end
+            local al = tonut(att)
             local wd, ht, dp = getwhd(bx)
-            local unicode  = oldchar.unicode or char
-            -- we cannot have self referencing t3 fonts
+            local unicode = oldchar.unicode or char
+            -- we cannot have self referencing t3 fonts .. see devirtualize code
             local oldcommands = oldchar.oldcommands
             local newcommands = oldchar.commands
             if oldcommands then
                 oldchar.commands = oldcommands
             end
-            --
+            -- these need to be applied here
             local p  = fonts.hashes.parameters[font]
-            local sx = round(1000/p.extendfactor)
-            local sy = round(1000/p.squeezefactor)
-            -- we saved a scaled glyph stream so we now use an unscaled one ... horrible hack:
-            if sx ~= 1000 then
-                wd = wd * 7200/7227
-            end
-            if sy ~= 1000 then
-                ht = ht * 7200/7227
-                dp = dp * 7200/7227
-            end
+            local sx = round(1000/(p.extendfactor  or 1)) or 1000
+            local sy = round(1000/(p.squeezefactor or 1)) or 1000
+--             -- we saved a scaled glyph stream so we now use an unscaled one ... horrible hack:
+--             if sx ~= 1000 then
+--                 wd = wd * 7200/7227
+--             end
+--             if sy ~= 1000 then
+--                 ht = ht * 7200/7227
+--                 dp = dp * 7200/7227
+--             end
             --
-        --  local private = fonts.helpers.setboxdirectly(font,unicode,box)
+        --  local private = fonts.helpers.setboxdirectly(font,unicode,box) -- maybe cache in setboxdirectly
             local private = cache[wd][ht][dp][font][unicode]
             if not private then
-                private = fonts.helpers.setboxdirectly(font,unicode,box)
+                private = fonts.helpers.setboxdirectly(font,unicode,box,true) -- expose=true so we get color
                 cache[wd][ht][dp][font][unicode] = private
             end
             local glyph = new_glyph(font,private,al)
+            setattrlst(glyph,al)
             nuts.setscales(glyph,1000,sx,sy)
             --
          -- if fonts.hashes.properties[font].compactmath then
@@ -123,7 +134,7 @@ end
          --     height  = ht,
          --     depth  =  dp,
          -- }
-         -- local p = oldchar.vparts
+         -- local p = oldchar.parts
          -- if p then
          --     local first = fontdata[p[#p].glyph]
          --     local last  = fontdata[p[ 1].glyph]

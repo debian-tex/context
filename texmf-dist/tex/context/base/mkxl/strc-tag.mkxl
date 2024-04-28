@@ -102,10 +102,22 @@
 \definetagconstant{mtr}                    % TR
 \definetagconstant{mtd}                    % TD
 \definetagconstant{maction}                %
+
 \definetagconstant{mstacker}
 \definetagconstant{mstackertop}
 \definetagconstant{mstackermid}
 \definetagconstant{mstackerbot}
+
+\definetagconstant{mextensible}
+
+\definetagconstant{mfunction}
+\definetagconstant{mfunctionstack}
+
+\definetagconstant{mfraction}
+\definetagconstant{mfractionstack}
+
+\definetagconstant{munit}
+\definetagconstant{mdigits}
 
 \aliastagconstant{mtablerow} {mtr}
 \aliastagconstant{mtablecell}{mtd}
@@ -295,7 +307,7 @@
 
 \protected\def\strc_tags_enable
   {% once enable one is toast
-   \global\settrue\c_strc_tags_enabled
+   \global\c_strc_tags_enabled\conditionaltrue
    % and gets:
    \strc_tags_enable_indeed}
 
@@ -345,7 +357,11 @@
 \appendtoks
     \strc_tags_enable_elements
     \strc_tags_enable_properties
-    \doifelse{\taggingparameter\c!method}\v!auto\strc_tags_enable\strc_tags_disable
+    \ifcstok{\taggingparameter\c!method}\v!auto
+      \strc_tags_enable
+    \else
+      \strc_tags_disable
+    \fi
 \to \everyenableelements
 
 \appendtoks
@@ -355,7 +371,11 @@
 \to \everydisableelements
 
 \appendtoks
-   \doifelse{\taggingparameter\c!state}\v!start{\the\everyenableelements}{\the\everydisableelements}%
+   \ifcstok{\taggingparameter\c!state}\v!start
+     \expand\everyenableelements
+   \else
+     \expand\everydisableelements
+   \fi
 \to \everysetuptagging
 
 \permanent\protected\def\forgettagging
@@ -384,7 +404,7 @@
 
 \ifdefined\dotagparagraph \else \aliased\let\dotagparagraph\gobbleoneargument \fi
 
-\permanent\tolerant\protected\def\startparagraph[#1]#*[#2]%
+\permanent\tolerant\protected\def\startparagraph[#S#1]#*[#S#2]%
   {\endgraf % we end before the group
    \begingroup
    \ifarguments
@@ -394,10 +414,10 @@
        \lettonothing\currentparagraph
        \setupcurrentparagraph[#1]
      \else
-       \edef\currentparagraph{#1}%
+       \cdef\currentparagraph{#1}%
      \fi
    \or
-     \edef\currentparagraph{#1}%
+     \cdef\currentparagraph{#1}%
      \setupcurrentparagraph[#2]%
    \fi
    \useparagraphstyleandcolor\c!style\c!color
@@ -511,6 +531,12 @@
 \enforced\permanent\protected\def\epar{\strc_tagged_saved_epar\dostoptagged}
 
 \popoverloadmode
+
+%D For now:
+
+\appendtoks
+    \clf_settagginglevel{\taggingparameter\c!level}%
+\to \everysetuptagging
 
 % \permanent\def\untagged{attr \taggedattribute\attributeunsetvalue}
 

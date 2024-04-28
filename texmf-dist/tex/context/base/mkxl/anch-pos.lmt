@@ -61,6 +61,9 @@ local context           = context
 
 local ctx_latelua       = context.latelua
 
+local ctx_doif          = commands.doif
+local ctx_doifelse      = commands.doifelse
+
 local tex               = tex
 local texgetdimen       = tex.getdimen
 local texgetcount       = tex.getcount
@@ -87,20 +90,19 @@ local setprop           = nuts.setprop
 
 local getparstate       = nuts.getparstate
 
-local hlist_code        = nodes.nodecodes.hlist
-local par_code          = nodes.nodecodes.par
+local hlist_code        <const> = nodes.nodecodes.hlist
+local par_code          <const> = nodes.nodecodes.par
 
 local find_tail         = nuts.tail
 ----- hpack             = nuts.hpack
 
 local new_latelua       = nuts.pool.latelua
 
-local variables         = interfaces.variables
-local v_text            = variables.text
-local v_column          = variables.column
+local v_text            <const> = interfaces.variables.text
+local v_column          <const> = interfaces.variables.column
 
-local pt                = number.dimenfactors.pt
-local pts               = number.pts
+local pt                <const> = number.dimenfactors.pt
+
 local formatters        = string.formatters
 
 local collected         = allocate()
@@ -145,9 +147,9 @@ local f_region     = formatters["region:%s"]
 local f_tag_three  = formatters["%s:%s:%s"]
 local f_tag_two    = formatters["%s:%s"]
 
-local c_realpageno = texiscount("realpageno")
-local d_strutht    = texisdimen("strutht")
-local d_strutdp    = texisdimen("strutdp")
+local c_realpageno <const> = texiscount("realpageno")
+local d_strutht    <const> = texisdimen("strutht")
+local d_strutdp    <const> = texisdimen("strutdp")
 
 -- Because positions are set with a delay we cannot yet make the tree -- so that
 -- is a finalizer step. But, we already have a dual split.
@@ -1197,7 +1199,7 @@ end
 
 do
 
-    local c_anch_positions_paragraph = texiscount("c_anch_positions_paragraph")
+    local c_anch_positions_paragraph <const> = texiscount("c_anch_positions_paragraph")
 
     local nofparagraphs = 0
 
@@ -2205,16 +2207,13 @@ implement {
     end
 }
 
-local doif     = commands.doif
-local doifelse = commands.doifelse
-
 implement {
     name      = "doifelseposition",
     arguments = "argument",
     public    = true,
     protected = true,
     actions   = function(name)
-        doifelse(collected[name])
+        ctx_doifelse(collected[name])
     end
 }
 
@@ -2224,7 +2223,7 @@ implement {
     public    = true,
     protected = true,
     actions   = function(name)
-        doif(collected[name])
+        ctx_doif(collected[name])
     end
 }
 
@@ -2235,7 +2234,7 @@ implement {
     protected = true,
     actions   = function(name,p)
         local c = collected[name]
-        doifelse(c and c.p == p)
+        ctx_doifelse(c and c.p == p)
     end
 }
 
@@ -2245,7 +2244,7 @@ implement {
     public    = true,
     protected = true,
     actions   = function(one,two)
-        doifelse(overlapping(one,two))
+        ctx_doifelse(overlapping(one,two))
     end
 }
 
@@ -2255,7 +2254,7 @@ implement {
     public    = true,
     protected = true,
     actions   = function(list)
-        doifelse(onsamepage(list))
+        ctx_doifelse(onsamepage(list))
     end
 }
 
@@ -2265,7 +2264,7 @@ implement {
     public    = true,
     protected = true,
     actions   = function(list)
-        doifelse(onsamepage(list,tostring(texgetcount(c_realpageno))))
+        ctx_doifelse(onsamepage(list,tostring(texgetcount(c_realpageno))))
     end
 }
 
@@ -2274,7 +2273,7 @@ implement {
     public    = true,
     protected = true,
     actions   = function()
-        doifelse(jobpositions.used())
+        ctx_doifelse(jobpositions.used())
     end
 }
 

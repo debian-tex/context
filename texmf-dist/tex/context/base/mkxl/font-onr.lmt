@@ -25,7 +25,8 @@ local match, lower, gsub, strip, find = string.match, string.lower, string.gsub,
 local char, byte, sub = string.char, string.byte, string.sub
 local abs = math.abs
 ----- bxor, rshift = bit32.bxor, bit32.rshift
-local P, S, R, V, Cmt, C, Ct, Cs, Carg, Cf, Cg, Cc = lpeg.P, lpeg.S, lpeg.R, lpeg.V, lpeg.Cmt, lpeg.C, lpeg.Ct, lpeg.Cs, lpeg.Carg, lpeg.Cf, lpeg.Cg, lpeg.Cc
+local P, S, R, V, Cmt, C, Ct, Cs, Carg, Cc = lpeg.P, lpeg.S, lpeg.R, lpeg.V, lpeg.Cmt, lpeg.C, lpeg.Ct, lpeg.Cs, lpeg.Carg, lpeg.Cc
+----- Cf, Cg = lpeg.Cf, lpeg.Cg
 local lpegmatch, patterns = lpeg.match, lpeg.patterns
 
 local trace_indexing     = false  trackers.register("afm.indexing",   function(v) trace_indexing = v end)
@@ -38,7 +39,7 @@ local handlers           = fonts.handlers
 
 local afm                = handlers.afm or { }
 handlers.afm             = afm
-afm.version              = 1.513 -- incrementing this number one up will force a re-cache
+afm.version              = 1.514 -- incrementing this number one up will force a re-cache
 
 local pfb                = handlers.pfb or { }
 handlers.pfb             = pfb
@@ -179,11 +180,15 @@ do
     -- 0 1 255 {1 index exch /.notdef put} for
     -- dup 0 /Foo put
 
+ -- local p_filterencoding =
+ --     (1-encoding)^0 * encoding * spaces * digits * spaces * array * (1-dup)^0
+ --   * Cf(
+ --         Ct("") * Cg(spacing * dup * spaces * cardinal * spaces * name * spaces * put)^1
+ --     ,rawset)
+
     local p_filterencoding =
         (1-encoding)^0 * encoding * spaces * digits * spaces * array * (1-dup)^0
-      * Cf(
-            Ct("") * Cg(spacing * dup * spaces * cardinal * spaces * name * spaces * put)^1
-        ,rawset)
+      * Ct("") * ((spacing * dup * spaces * cardinal * spaces * name * spaces * put) % rawset)^1
 
     -- if one of first 4 not 0-9A-F then binary else hex
 
@@ -275,7 +280,6 @@ do
         end
 
         binary = decrypt(binary,55665,4)
-
         if not encoding then
             encoding = lpegmatch(p_filterencoding,ascii)
         end
@@ -303,7 +307,7 @@ do
             }
             local version = metadata.FontType or 1
             -- only cff 1 in type 1 fonts
-            fonts.handlers.otf.readers.parsecharstrings(false,data,glyphs,true,"cff",streams,true,true)
+            fonts.handlers.otf.readers.parsecharstrings(false,data,glyphs,true,"cff0",streams,true,true)
         elseif not names then
             lpegmatch(p_filternames,binary,1,filename)
         end
@@ -326,6 +330,14 @@ do
 
         return names, encoding, glyphs, metadata
 
+    end
+
+    function pfb.filtermetadata(str)
+        return lpegmatch(p_filtermetadata,str,1,{})
+    end
+
+    function pfb.filterencoding(str)
+        return lpegmatch(p_filterencoding,str)
     end
 
     pfb.loadvector = loadpfbvector
@@ -529,10 +541,10 @@ local function read(filename,parser)
     local afmblob = io.loaddata(filename)
     if afmblob then
         local data = {
+            creator = "context mkiv",
             resources = {
                 filename = resolvers.unresolve(filename),
                 version  = afm.version,
-                creator  = "context mkiv",
             },
             properties = {
                 hasitalics = false,

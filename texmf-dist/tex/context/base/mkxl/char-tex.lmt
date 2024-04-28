@@ -68,12 +68,14 @@ local private = {
 
 utffilters.private = private
 
-for ch in gmatch(special,".") do
-    local cb
-    if type(ch) == "number" then
-        cb, ch = ch, utfchar(ch)
+for chr in gmatch(special,".") do
+    local cb, ch
+    if type(chr) == "number" then
+        ch = utfchar(chr)
+        cb = chr
     else
-        cb = utfbyte(ch)
+        ch = chr
+        cb = utfbyte(chr)
     end
     if cb < 256 then
         escapes[ch] = "\\" .. ch
@@ -525,10 +527,11 @@ local texsetsfcode  = tex.setsfcode
 local texsetcatcode = tex.setcatcode
 
 local contextsprint = context.sprint
-local ctxcatcodes   = catcodes.numbers.ctxcatcodes
 
 local texsetmacro   = tokens.setters.macro
 local texsetchar    = tokens.setters.char
+
+local ctxcatcodes   <const> = catcodes.numbers.ctxcatcodes
 
 -- function texcharacters.defineaccents()
 --     local ctx_dodefineaccentcommand  = context.dodefineaccent
@@ -773,8 +776,39 @@ if not csletters then
         storage.register("characters/csletters", csletters, "characters.csletters")
     end
 
+ -- These can go now:
+ --
+ -- .acute .apostrophe .bar .breve .breveacute .brevedotbelow .brevegrave .brevehook
+ -- .brevetilde .caron .cedilla .circumflex .circumflexacute .circumflexdotbelow
+ -- .circumflexgrave .circumflexhook .circumflextilde .commaaccent .curl .diaeresis
+ -- .diaeresisacute .diaeresiscaron .diaeresisgrave .diaeresismacron .dotaccent
+ -- .dotaccentmacron .dotbelow .dotmiddle .doublegrave .grave .horn .hornacute
+ -- .horndotbelow .horngrave .hornhook .horntilde .hungarumlaut .invertedbreve
+ -- .macron .ogonek .ogonekmacron .ring .ringacute .sharp .stroke .strokeacute .tail
+ -- .tilde .tildemacron
+
+    local pattern = P("greek") + P("arabic") + P("hebrew") + P("cyrillic") + P("roman")
+
+ -- Only keep these:
+ --
+ -- copyright dotlessI dotlessi dotlessJ dotlessj emdash endash exclamdown figuredash
+ -- guilsingleleft guilsingleright periodcentered perthousand questiondown quotedbl
+ -- quotedblbase quotedblleft quotedblright quoteleft quoteright quotesingle
+ -- quotesinglebase registered rightguillemot sectionmark textacute textampersand
+ -- textAngstrom textasciicircum textasciitilde textat textbackslash textbar
+ -- textbottomcomma textbottomdot textbraceleft textbraceright textbreve
+ -- textbrokenbar textbullet textcaron textcedilla textcelsius textcent textcircledP
+ -- textcircumflex textcomma textcontrolspace textcurrency textdag textddag
+ -- textdegree textdiaeresis textdiv textdollar textdong textdotaccent textellipsis
+ -- texteuro textfraction textgrave texthash texthorizontalbar texthungarumlaut
+ -- texthyphen textkelvin textlognot textmacron textmho textminus textmp textmu
+ -- textmultiply textnumero textogonek textohm textounce textpercent textperiod
+ -- textpm textring textslash textsterling texttilde textunderscore textyen
+
     local function setname(category,chr,u,contextname)
-        if is_character[category] then
+        if lpegmatch(pattern,contextname) then
+         -- print("ignored",contextname)
+        elseif is_character[category] then
             if chr.unicodeslot < 128 then
                 if is_letter[category] then
                     texsetmacro(contextname,utfchar(u),"immutable")
@@ -789,7 +823,7 @@ if not csletters then
         end
     end
 
-    function characters.setcharacternames(ctt)
+    function characters.setcharacternames()
         for u, chr in next, data do -- will move up
             local contextname = chr.contextname
             local contextspec = chr.contextspec
@@ -809,7 +843,24 @@ if not csletters then
     end
 
 else
+
     mark(csletters)
+
+    local pattern = P("greek") + P("arabic") + P("hebrew") + P("cyrillic") + P("roman")
+
+    function characters.addcharacternames() -- we could be granular e.g. 'greek'
+        for u, chr in next, data do -- will move up
+            local contextname = chr.contextname
+            if contextname and lpegmatch(pattern,contextname) then
+                local category = chr.category
+                if is_character[category] or is_command[category] then
+                    texsetmacro(contextname,utfchar(u),"immutable")
+                end
+            end
+        end
+        function characters.addcharacternames() end
+    end
+
 end
 
 lpegpatterns.csletter = utfchartabletopattern(csletters)

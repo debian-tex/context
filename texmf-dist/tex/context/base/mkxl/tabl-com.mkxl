@@ -19,12 +19,17 @@
 
 \registerctxluafile{node-ali}{autosuffix}
 
+%setnewconstant\align_callback_showpreamble  \plusone
+\setnewconstant\align_callback_aligncharacter\plusone
+\setnewconstant\align_callback_mathalign     \plustwo
+\setnewconstant\align_callback_mathmatrix    \plusthree
+
 \definesystemattribute[aligncharacter][public]
 
 \permanent\protected\def\setalignmentcharacter#1%
   {\enablealignmentcharacter
-   \global\settrue\c_tabl_use_size
-   \global\settrue\c_tabl_sparse_skips
+   \global\c_tabl_use_size\conditionaltrue
+   \global\c_tabl_sparse_skips\conditionaltrue
    \enforced\permanent\protected\gdef\setalignmentcharacter##1%
      {\attribute\aligncharacterattribute`##1\relax}%
    \attribute\aligncharacterattribute`#1\relax}
@@ -33,7 +38,10 @@
   {\attribute\aligncharacterattribute\attributeunsetvalue}
 
 \permanent\def\alignmentcharactertrigger
-  {\s!callback\space\s!attr\aligncharacterattribute\plusone}
+  {\s!callback
+     \align_callback_aligncharacter
+   \s!attr % not needed, we can trigger on the callback id
+     \aligncharacterattribute\plusone}
 
 \noaligned\permanent\protected\def\aligncontentleft  {\ignorespaces\aligncontent\unskip\hss}
 \noaligned\permanent\protected\def\aligncontentmiddle{\hss\ignorespaces\aligncontent\unskip\hss}

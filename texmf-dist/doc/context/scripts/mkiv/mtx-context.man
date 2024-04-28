@@ -1,4 +1,4 @@
-.TH "mtx-context" "1" "01-01-2023" "version 1.04" "ConTeXt Process Management"
+.TH "mtx-context" "1" "01-01-2024" "version 1.05" "ConTeXt Process Management"
 .SH NAME
  mtx-context - ConTeXt Process Management
 .SH SYNOPSIS
@@ -63,7 +63,7 @@ set tracker variables (show list with --showtrackers)
 set directive variables (show list with --showdirectives)
 .TP
 .B --silent=list
-disable logcatgories (show list with --showlogcategories)
+disable logcategories (show list with --showlogcategories)
 .TP
 .B --strip
 strip Lua code (only meant for production where no errors are expected)
@@ -82,6 +82,9 @@ don't create a dummy file (can confuse pdf viewers that keep file in view)
 .TP
 .B --purgeresult
 purge result file before run
+.TP
+.B --find=string
+search for the given pattern in the documentation sources
 .TP
 .B --forcexml
 force xml stub
@@ -154,6 +157,12 @@ assume given file present elsewhere
 .TP
 .B --nofile
 use dummy file as jobname
+.TP
+.B --forceinput
+use this file as input file instead of the given one
+.TP
+.B --expert
+show some more options
 .SH OPTIONS: EXPERT
 .TP
 .B --touch
@@ -176,6 +185,9 @@ keep previous pdf files (jobname-pdf-keep.tmp)
 .TP
 .B --keeplog
 keep previous log files (jobname-log-[run].tmp)
+.TP
+.B --notuc
+don't write a tuc file
 .TP
 .B --lmtx
 force lmtx mode (when available)
@@ -210,6 +222,12 @@ process file with texexec
 .TP
 .B --pipe
 do not check for file and enter scroll mode (--dummyfile=whatever.tmp)
+.TP
+.B --parallel
+process multiple files at the same time (you can specify a number of processes, default: 8)
+.TP
+.B --parallellist
+process commands in this file (lines that start with 'context')
 .TP
 .B --sandbox
 process file in a limited environment

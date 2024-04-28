@@ -59,23 +59,24 @@ local jobresolvers      = resolvers.jobs
 
 local registerextrapath = resolvers.registerextrapath
 local resetextrapaths   = resolvers.resetextrapaths
-local getextrapaths     = resolvers.getextrapath
+local getextrapaths     = resolvers.getextrapaths
 local pushextrapath     = resolvers.pushextrapath
 local popextrapath      = resolvers.popextrapath
 
------ v_outer           = variables.outer
-local v_text            = variables.text
-local v_project         = variables.project
-local v_environment     = variables.environment
-local v_product         = variables.product
-local v_component       = variables.component
-local v_yes             = variables.yes
+----- v_outer           <const> = variables.outer
+local v_text            <const> = variables.text
+local v_project         <const> = variables.project
+local v_environment     <const> = variables.environment
+local v_product         <const> = variables.product
+local v_component       <const> = variables.component
+local v_yes             <const> = variables.yes
 
-local v_local           = variables["local"]
-local v_global          = variables["global"]
+local v_local           <const> = variables["local"]
+local v_global          <const> = variables["global"]
 
 local e_start           = elements.start
 local e_stop            = elements.stop
+
 
 -- main code .. there is some overlap .. here we have loc://
 
@@ -405,7 +406,7 @@ end
 
 local textlevel = 0 -- inaccessible for user, we need to define counter textlevel at the tex end
 
-local c_textlevel = tex.iscount("textlevel")
+local c_textlevel <const> = tex.iscount("textlevel")
 
 local function dummyfunction() end
 
@@ -887,7 +888,7 @@ end
 local scan_delimited = tokens.scanners.delimited
 
 local function getname()
-    return scan_delimited(91,93) or scan_delimited(0,32) -- [name] or name<space>
+    return scan_delimited(91,93) or scan_delimited(0,32) -- [name] or name<space> - use optional
 end
 
 implement { name = "project",        public = true, protected = true, actions = function() process(v_project,    getname()) end }
@@ -899,6 +900,18 @@ implement { name = "useproject",     public = true, protected = true, actions = 
 implement { name = "useenvironment", public = true, protected = true, actions = function(name) process(v_environment,name) end, arguments = "optional" }
 implement { name = "useproduct",     public = true, protected = true, actions = function(name) process(v_product,    name) end, arguments = "optional" } -- will be overloaded
 implement { name = "usecomponent",   public = true, protected = true, actions = function(name) process(v_component,  name) end, arguments = "optional" }
+
+implement {
+    name      = "ignorefile",
+    public    = true,
+    protected = true,
+    arguments = "array",
+    actions = function(s)
+        for i=1,#s do
+            resolvers.ignorelibrary(s[i])
+        end
+    end
+}
 
 -- todo: setsystemmode to currenttype
 -- todo: make start/stop commands at the tex end
@@ -1125,9 +1138,9 @@ function document.setcommandline() -- has to happen at the tex end in order to e
     local options   = document.options
 
     for k, v in next, environment.arguments do
-        k = gsub(k,"^c:","") -- already done, but better be safe than sorry
-        if arguments[k] == nil then
-            arguments[k] = v
+        local a = gsub(k,"^c:","") -- already done, but better be safe than sorry
+        if arguments[a] == nil then
+            arguments[a] = v
         end
     end
 
@@ -1153,6 +1166,10 @@ function document.setcommandline() -- has to happen at the tex end in order to e
 
     if arguments.nostatistics then
         directives.enable("system.nostatistics")
+    end
+
+    if arguments.notuc then
+        directives.disable("job.save")
     end
 
     if arguments.paranoid then
@@ -1314,7 +1331,7 @@ do
         logs.startfilelogging(report,"commandline options")
         if arguments and next(arguments) then
             for argument, value in sortedhash(arguments) do
-                report("%s=%A",argument,value)
+                report("  %s=%A",argument,value)
             end
         else
             report("no arguments")
@@ -1444,4 +1461,34 @@ implement {
                     )
                 end,
     arguments = "array",
+}
+
+-- don't we have this already?
+
+implement {
+    name      = "filebasename",
+    public    = true,
+    arguments = "argument",
+    actions  = { basename, context },
+}
+
+implement {
+    name      = "filenameonly",
+    public    = true,
+    arguments = "argument",
+    actions  = { nameonly, context },
+}
+
+implement {
+    name      = "filedirname",
+    public    = true,
+    arguments = "argument",
+    actions  = { dirname, context },
+}
+
+implement {
+    name      = "filesuffix",
+    public    = true,
+    arguments = "argument",
+    actions  = { dirname, context },
 }

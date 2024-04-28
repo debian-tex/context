@@ -84,20 +84,24 @@
 
 \permanent\protected\def\dostarttext
   {\enforced\glet\dostarttext\relax
-   \the\everystarttext
+   \expand\everystarttext
    \global\everystarttext\emptytoks}
 
 \permanent\protected\def\dostoptext
   {\enforced\glet\dostoptext\relax
    \strc_pagenumbers_flush_final_page
    \page % hm, bonus
-   \the\everystoptext
+   \expand\everystoptext
    \global\everystoptext\emptytoks
-   \the\everybye
+   \expand\everybye
    \global\everybye\emptytoks
-   \the\everygoodbye
+   \expand\everygoodbye
    \global\everygoodbye\emptytoks
-   \doifelsesometoks\everynotabene{\writeline\the\everynotabene\writeline}\donothing
+   \ifempty\everynotabene\else
+     \writeline
+     \expand\everynotabene
+     \writeline
+   \fi
    % tex's \end:
    \normalend}
 
@@ -116,8 +120,8 @@
 \newtoks\everystartnotext
 \newtoks\everystopnotext
 
-\permanent\protected\def\startnotext{\the\everystartnotext}
-\permanent\protected\def\stopnotext {\the\everystopnotext\normalend}
+\permanent\protected\def\startnotext{\expand\everystartnotext}
+\permanent\protected\def\stopnotext {\expand\everystopnotext\normalend}
 
 % protect structure
 
@@ -296,7 +300,7 @@
 
 % todo: dostarttagged\t!document
 
-\permanent\tolerant\protected\def\startdocument[#namespace]#spacer[#settings]%
+\permanent\tolerant\protected\def\startdocument[#S#namespace]#spacer[#S#settings]%
   {\pushmacro\currentdocument
    \ifparameters
    \or
@@ -304,20 +308,20 @@
        \lettonothing\currentdocument
        \setupcurrentdocument[#namespace]%
      \else
-       \edef\currentdocument{#namespace}%
+       \cdef\currentdocument{#namespace}%
      \fi
    \or
-     \edef\currentdocument{#namespace}%
+     \cdef\currentdocument{#namespace}%
      \setupcurrentdocument[#settings]%
    \fi
    \ifempty\currentdocument\else\setmode\currentdocument\fi
    \starttext
-   \the\everystartdocument
+   \expand\everystartdocument
    \documentvariable\c!before}
 
 \permanent\protected\def\stopdocument % todo: dostoptagged\t!document
   {\documentvariable\c!after
-   \the\everystopdocument
+   \expand\everystopdocument
    \stoptext
    \ifempty\currentdocument\else\resetmode\currentdocument\fi
    \popmacro\currentdocument}
@@ -331,7 +335,7 @@
 
 \aliased\let\doifdocumentvariableelse\doifelsedocumentvariable
 
-\permanent\tolerant\protected\def\presetdocument[#namespace]#spacer[#settings]%
+\permanent\tolerant\protected\def\presetdocument[#S#namespace]#spacer[#S#settings]%
   {\pushmacro\currentdocument
    \ifparameters
    \or
@@ -340,7 +344,7 @@
        \setupcurrentdocument[#namespace]%
      \fi
    \or
-     \edef\currentdocument{#namespace}%
+     \cdef\currentdocument{#namespace}%
      \setupcurrentdocument[#settings]%
    \fi
    \popmacro\currentdocument}
@@ -355,7 +359,7 @@
 %    \fi
 %    \lastnamedcs}
 
-\permanent\protected\def\samplefile#1{\clf_samplefile{#1}}
+% \permanent\protected\def\samplefile#1{\clf_samplefile{#1}} % defined at the lua end
 
 % \adddefaultsuffix[foo,{},crap]
 % \adddefaultsuffix[{}]

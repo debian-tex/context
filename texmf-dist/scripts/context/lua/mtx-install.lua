@@ -40,14 +40,15 @@ local gsub, find, escapedpattern = string.gsub, string.find, string.escapedpatte
 local round = math.round
 local savetable, loadtable, sortedhash = table.save, table.load, table.sortedhash
 local copyfile, joinfile, filesize, dirname, addsuffix, basename = file.copy, file.join, file.size, file.dirname, file.addsuffix, file.basename
-local isdir, isfile, walkdir, pushdir, popdir, currentdir = lfs.isdir, lfs.isfile, lfs.dir, lfs.chdir, dir.push, dir.pop, currentdir
+local isdir, isfile, walkdir, pushdir, popdir, currentdir = lfs.isdir, lfs.isfile, lfs.dir, dir.push, dir.pop, dir.current
 local mkdirs, globdir = dir.mkdirs, dir.glob
 local osremove, osexecute, ostype, resultof = os.remove, os.execute, os.type, os.resultof
-local savedata = io.savedata
+local savedata, loaddata = io.savedata, io.loaddata
 local formatters = string.formatters
 local httprequest = socket.http.request
 
-local usecurl = false
+local usecurl  = false
+local protocol = "http"
 
 local function checkcurl()
     local s = resultof("curl --version")
@@ -63,7 +64,11 @@ local function fetch(url)
         data, detail = httprequest(url)
     end
     if type(data) ~= "string" then
-        data = false
+        data   = false
+        detail = "download failed"
+    elseif #data == 0 then
+        data   = false
+        detail = "download failed, zero length"
     elseif #data < 2048 then
         local n, t = find(data,"<head>%s*<title>%s*(%d+)%s(.-)</title>")
         if tonumber(n) then
@@ -100,36 +105,33 @@ local texformats = {
 
 local platforms = {
     ["mswin"]          = "mswin",
-    ["windows"]        = "mswin",
+ -- ["windows"]        = "mswin",
     ["win32"]          = "mswin",
     ["win"]            = "mswin",
-    ["arm32"]          = "windows-arm32",
-    ["windows-arm32"]  = "windows-arm32",
     --
-    ["mswin-64"]       = "win64",
+    ["windows"]        = "win64",
     ["windows-64"]     = "win64",
     ["win64"]          = "win64",
-    ["arm64"]          = "windows-arm64",
-    ["windows-arm64"]  = "windows-arm64",
     --
     ["linux"]          = "linux",
     ["linux-32"]       = "linux",
     ["linux32"]        = "linux",
     --
+ -- ["linux"]          = "linux-64",
     ["linux-64"]       = "linux-64",
     ["linux64"]        = "linux-64",
     --
-    ["linuxmusl-64"]   = "linuxmusl",
     ["linuxmusl"]      = "linuxmusl",
+    ["linuxmusl-64"]   = "linuxmusl-64",
     --
-    ["linux-armhf"]    = "linux-armhf",
+ -- ["linux-armhf"]    = "linux-armhf",
     --
-    ["openbsd"]        = "openbsd7.3",
-    ["openbsd-i386"]   = "openbsd7.3",
-    ["openbsd-amd64"]  = "openbsd7.3-amd64",
+    ["openbsd"]        = "openbsd-amd64",
+ -- ["openbsd-i386"]   = "openbsd7.3",
+    ["openbsd-amd64"]  = "openbsd-amd64",
     --
-    ["freebsd"]        = "freebsd",
-    ["freebsd-i386"]   = "freebsd",
+    ["freebsd"]        = "freebsd-amd64",
+ -- ["freebsd-i386"]   = "freebsd",
     ["freebsd-amd64"]  = "freebsd-amd64",
     --
  -- ["kfreebsd"]       = "kfreebsd-i386",
@@ -151,6 +153,7 @@ local platforms = {
     --
     ["macosx"]         = "osx-64",
     ["osx"]            = "osx-64",
+    ["osx-intel"]      = "osx-64",
     ["osx-64"]         = "osx-64",
     ["osx-arm"]        = "osx-arm64",
     ["osx-arm64"]      = "osx-arm64",
@@ -187,7 +190,7 @@ function install.identify()
                 local name  = files[i]
                 local size  = filesize(name)
                 local base  = gsub(name,pattern,"")
-                local data  = io.loaddata(name)
+                local data  = loaddata(name)
                 if data and #data > 0 then
                     local stamp = hashdata(data)
                     details[i]  = { base, size, stamp }
@@ -218,6 +221,8 @@ function install.identify()
         date    = os.date("%Y-%m-%d"),
     })
 
+    os.exit()
+
 end
 
 local function disclaimer()
@@ -245,15 +250,15 @@ function install.update()
         return ok
     end
 
-    local function download(what,url,target,total,done,oldhash)
+    local function download(what,url,target,total,done,hash)
         local data = fetch(url .. "/" .. target)
-        if data then
+        if type(data) == "string" and #data > 0  then
             if total and done then
                 report("%-8s : %3i %% : %8i : %s",what,round(100*done/total),#data,target)
             else
                 report("%-8s : %8i : %s",what,#data,target)
             end
-            if oldhash and oldhash ~= hashdata(data) then
+            if hash and hash ~= hashdata(data) then
                 return "different hash value"
             elseif not validdir(dirname(target)) then
                 return "wrong target directory"
@@ -336,8 +341,9 @@ function install.update()
                 report("fetching %a",zipurl)
                 local zipdata = fetch(zipurl)
                 if zipdata then
-                    io.savedata(zipfile,zipdata)
+                    savedata(zipfile,zipdata)
                 else
+                    osremove(zipfile)
                     zipfile = false
                 end
             end
@@ -353,6 +359,7 @@ function install.update()
                     path    = ".",
                  -- verbose = true,
                     verbose = "steps",
+                    collect = true, -- sort of a check
                 }
 
                 if utilities.zipfiles.unzipdir(specification) then
@@ -361,7 +368,6 @@ function install.update()
                 else
                     osremove(zipfile)
                 end
-
             end
 
             count = #new
@@ -379,7 +385,10 @@ function install.update()
                 local target = joinfile(tree,name)
                 done = done + size
                 if not skiplist or not skiplist[basename(name)] then
-                    download("new",url,target,total,done)
+                    local message = download("new",url,target,total,done)
+                    if message then
+                        report("%s",message)
+                    end
                 else
                     report("skipping %s",target)
                 end
@@ -490,7 +499,7 @@ function install.update()
 
     for i=1,#list do
         local host = list[i]
-        local data, status, detail = fetch("http://" .. host .. "/" .. instance .. "/tex/status.tma")
+        local data, status, detail = fetch(protocol .. "://" .. host .. "/" .. instance .. "/tex/status.tma")
         if status == 200 and type(data) == "string" then
             local t = loadstring(data)
             if type(t) == "function" then
@@ -508,7 +517,7 @@ function install.update()
         return
     end
 
-    local url = "http://" .. server .. "/" .. instance .. "/"
+    local url = protocol .. "://" .. server .. "/" .. instance .. "/"
 
     local texmfplatform = "texmf-" .. platform
 
@@ -557,8 +566,8 @@ function install.update()
     local cdir = currentdir()
     local pdir = pushdir(binpath)
 
-    report("current  : %S",cdir)
-    report("target   : %S",pdir)
+    report("current  : %S",cdir or "<unable to check the curent path>")
+    report("target   : %S",pdir or "<unable to change to the binary path>")
 
     if pdir ~= cdir then
 
@@ -634,15 +643,32 @@ function install.update()
     report("")
 
     report("update, done")
+
+end
+
+function install.modules()
+    report("--modules in not yet implemented")
+end
+
+function install.fonts()
+    report("--fonts in not yet implemented")
+end
+
+function install.goodies()
+    report("--goodies in not yet implemented")
 end
 
 if environment.argument("secure") then
     usecurl = checkcurl()
-    if not usecurl then
+    if usecurl then
+        protocol = "https"
+    else
         report("no curl installed, quitting")
         os.exit()
     end
 end
+
+io.output():setvbuf("no")
 
 if environment.argument("identify") then
     install.identify()
@@ -650,6 +676,12 @@ elseif environment.argument("install") then
     install.update()
 elseif environment.argument("update") then
     install.update()
+elseif environment.argument("modules") then
+    install.modules()
+elseif environment.argument("fonts") then
+    install.fonts()
+elseif environment.argument("goodies") then
+    install.goodies()
 elseif environment.argument("exporthelp") then
     application.export(environment.argument("exporthelp"),environment.files[1])
 else
@@ -657,3 +689,4 @@ else
     report("")
     disclaimer()
 end
+

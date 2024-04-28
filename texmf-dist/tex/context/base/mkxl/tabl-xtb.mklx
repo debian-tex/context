@@ -160,12 +160,12 @@
     \c!rightmargindistance=\zeropoint,% whole table
 ]
 
-\def         \tabl_x_default_buffer{x_table_\number\c_tabl_x_nesting}
+\def         \tabl_x_default_buffer{x_table_\the\c_tabl_x_nesting}
 \lettonothing\tabl_x_current_buffer
 
 \permanent\protected\def\startxtable{\tabl_x_start_table}
 
-\protected\tolerant\def\tabl_x_start_table[#settings]% maybe two arguments: [tag][settings] | [tag] | [settings]
+\protected\tolerant\def\tabl_x_start_table[#S#settings]% maybe two arguments: [tag][settings] | [tag] | [settings]
   {\bgroup
    \tabl_x_prepare{#settings}%
    \edef\tabl_x_current_buffer{\tabl_x_default_buffer}%
@@ -189,18 +189,18 @@
    \tabl_x_get_buffer % settings
    \tabl_x_process}
 
-\protected\tolerant\def\tabl_x_start_ignore[#settings]%
+\protected\tolerant\def\tabl_x_start_ignore[#S#settings]%
   {}
 
-\protected\tolerant\def\tabl_x_process_buffer[#settings]%
+\protected\tolerant\def\tabl_x_process_buffer[#S#settings]%
   {\tabl_x_prepare{#settings}%
    \let\tabl_x_start_table\tabl_x_start_ignore
-   \gobbleuntil\stopxtable} % nested xtables are not supported,
+   \ignoreupto\stopxtable} % nested xtables are not supported,
 
 %D A bonus: you have to use the following construct inside a macro or
 %D direct buffer.
 
-\permanent\tolerant\protected\def\startembeddedxtable[#settings]#:#content\stopembeddedxtable
+\permanent\tolerant\protected\def\startembeddedxtable[#S#settings]#:#content\stopembeddedxtable
   {\tabl_x_prepare{#settings}%
    \clf_assignbuffer{embedded_x_table}{\detokenize{#content}}\catcodetable\relax
    \bgroup
@@ -217,9 +217,9 @@
     \permanent\protected\edefcsname\e!stop \currentxtable\endcsname{\tabl_x_stop_named}%
 \to \everydefinextable
 
-\protected\def\tabl_x_start_named[#tag]#spacer[#settings]%
+\protected\def\tabl_x_start_named[#tag]#spacer[#S#settings]%
   {\bgroup
-   \edef\currentxtable{#tag}%
+   \cdef\currentxtable{#tag}%
    \advanceby\c_tabl_x_nesting\plusone
    \dostarttaggedchained\t!table\empty\??xtable
    \setupcurrentxtable[#settings]%
@@ -248,7 +248,7 @@
    \dostarttaggedchained\t!table\empty\??xtable
    \tabl_x_set_checked{#settings}%
    \tabl_x_check_textwidth
-   \the\everypreparextable
+   \expand\everypreparextable
    }% else whitespace mess
 
 \def\tabl_x_get_buffer
@@ -268,8 +268,11 @@
    \forgetall % moved here
    \dontcomplain % for the moment here till we figure out where we get the overflow
    \usebodyfontparameter\xtableparameter
-   \setbox\scratchbox\vbox
-     {\doifsomething{\xtableparameter\c!spaceinbetween}{\blank[\xtableparameter\c!spaceinbetween]}}%
+   \setbox\scratchbox\vbox\bgroup
+      \ifempty{\xtableparameter\c!spaceinbetween}\else
+        \blank[\xtableparameter\c!spaceinbetween]%
+      \fi
+   \egroup
    \clf_x_table_create
         option              {\xtableparameter\c!option}%
         textwidth           \d_tabl_x_textwidth
@@ -345,7 +348,7 @@
    \dostoptagged
    \resetbuffer[\tabl_x_current_buffer]%
    \resetcharacteralign
-   \the\t_table_x_cleanup
+   \expand\t_table_x_cleanup
    \egroup}
 
 % text flow split modes
@@ -450,9 +453,9 @@
         height \dimexpr#height\relax
       \relax}%
    \ifcase\c_tabl_x_state
-     \global\setfalse\somenextsplitofffloat
+     \global\somenextsplitofffloat\conditionalfalse
    \else
-     \global\settrue \somenextsplitofffloat
+     \global\somenextsplitofffloat\conditionaltrue
    \fi}
 
 % \permanent\protected\def\startxrow
@@ -463,7 +466,7 @@
 %   {\tabl_x_stop_row
 %    \endgroup}
 
-\protected\def\tabl_x_start_row_reflow_width_yes[#settings]%
+\protected\def\tabl_x_start_row_reflow_width_yes[#S#settings]%
   {\setupcurrentxtable[#settings]%
    \clf_x_table_next_row}
 
@@ -477,7 +480,7 @@
 \let\tabl_x_start_row_reflow_height_nop\tabl_x_start_row_reflow_width_nop
 \let\tabl_x_stop_row_reflow_height     \tabl_x_stop_row_reflow_width
 
-\protected\def\tabl_x_start_row_construct_yes[#settings]%
+\protected\def\tabl_x_start_row_construct_yes[#S#settings]%
   {\setupcurrentxtable[#settings]%
    \dostarttagged\t!tablerow\empty
    \clf_x_table_next_row_option{\xtableparameter\c!samepage}}
@@ -526,8 +529,7 @@
 % \to \t_tabl_x_every_cell
 
 \appendtoks
-    \edef\p_characteralign{\directxtableparameter\c!aligncharacter}%
-    \ifx\p_characteralign\v!yes
+    \ifcstok{\directxtableparameter\c!aligncharacter}\v!yes
         \ifcase\clf_x_table_r\or
             \tabl_x_setup_character_align
         \fi
@@ -536,7 +538,7 @@
 \to \t_tabl_x_every_cell
 
 \protected\def\tabl_x_begin_of_cell
-  {\the\t_tabl_x_every_cell
+  {\expand\t_tabl_x_every_cell
    \everypar{\delayedbegstrut}}
 
 \protected\def\tabl_x_end_of_cell
@@ -573,7 +575,7 @@
 
 \let\tabl_x_set_hsize\relax
 
-\protected\def\tabl_x_start_cell_reflow_width_yes[#settings]%
+\protected\def\tabl_x_start_cell_reflow_width_yes[#S#settings]%
   {\setbox\b_tabl_x\hpack\bgroup
    \ifnum\c_tabl_x_nesting>\plusone
      \letxtableparameter\c!width \v!fit  % overloads given width
@@ -622,7 +624,7 @@
    \egroup
    \clf_x_table_set_reflow_width}
 
-\protected\def\tabl_x_start_cell_reflow_height_yes[#settings]%
+\protected\def\tabl_x_start_cell_reflow_height_yes[#S#settings]%
   {\setbox\b_tabl_x\hpack\bgroup
    \clf_x_table_init_reflow_height
    \ifcase\c_tabl_x_skip_mode % can be sped up
@@ -657,7 +659,7 @@
    \egroup
    \clf_x_table_set_reflow_height}
 
-\protected\def\tabl_x_start_cell_construct_yes[#settings]%
+\protected\def\tabl_x_start_cell_construct_yes[#S#settings]%
   {\dostarttagged\t!tablecell\empty % can't we just tag the box
    \setbox\b_tabl_x\hpack\bgroup
    \setupcurrentxtable[#settings]%
@@ -686,7 +688,7 @@
    \clf_x_table_set_construct
    \dostoptagged}
 
-% \permanent\tolerant\protected\def\startxcellgroup[#settings]%
+% \permanent\tolerant\protected\def\startxcellgroup[#S#settings]%
 %   {\begingroup
 %    \ifarguments\or
 %      \tabl_x_set_checked{#settings}%
@@ -695,7 +697,7 @@
 % \permanent\protected\def\stopxcellgroup
 %   {\endgroup}
 %
-% \permanent\tolerant\protected\def\startxrowgroup[#settings]%
+% \permanent\tolerant\protected\def\startxrowgroup[#S#settings]%
 %   {\begingroup
 %    \ifarguments\or
 %      \tabl_x_set_checked{#settings}%
@@ -707,7 +709,7 @@
 
 \protected\def\tabl_x_set_checked#settings%
   {\ifcsname\namedxtablehash{#settings}\s!parent\endcsname
-     \edef\currentxtable{#settings}%
+     \cdef\currentxtable{#settings}%
    \else
      \setupcurrentxtable[#settings]%
    \fi}
@@ -717,7 +719,7 @@
 \permanent\protected\def\startxtablenext{\begingroup\c_tabl_x_mode\plusthree\tabl_x_start_partition}
 \permanent\protected\def\startxtablebody{\begingroup\c_tabl_x_mode\plusfour \tabl_x_start_partition}
 
-\permanent\tolerant\protected\def\tabl_x_start_partition[#settings]#spacer%
+\permanent\tolerant\protected\def\tabl_x_start_partition[#S#settings]#spacer%
   {\ifarguments\or
      \tabl_x_set_checked{#settings}%
    \fi}
@@ -796,7 +798,7 @@
   {\ifempty\currentxtable \else
      \chaintocurrentxtable{#tag}%
    \fi
-   \edef\currentxtable{#tag}%
+   \cdef\currentxtable{#tag}%
    \doifelsenextoptionalcs\setupcurrentxtable\relax}
 
 \aliased\let\startxrowgroup \startxgroup
@@ -821,7 +823,7 @@
   {\ifempty\currentxtable \else
      \chaintocurrentxtable{#tag}%
    \fi
-   \edef\currentxtable{#tag}%
+   \cdef\currentxtable{#tag}%
    \doifelsenextoptionalcs\tabl_x_start_cell_yes\tabl_x_start_cell_nop}
 
 \permanent\protected\def\stopxcell
@@ -845,7 +847,7 @@
   {\ifempty\currentxtable \else
      \chaintocurrentxtable{#tag}%
    \fi
-   \edef\currentxtable{#tag}%
+   \cdef\currentxtable{#tag}%
    \doifelsenextoptionalcs\tabl_x_start_row_yes\tabl_x_start_row_nop}
 
 \permanent\protected\def\stopxrow
@@ -899,15 +901,15 @@
       \stopxrow}}
 
 \def\tabl_x_collect_allocate
-  {\expandafter\newtoks\csname\??xtableswap\number\c_tabl_x_swapped\endcsname
-   \expandafter\let\expandafter\t_tabl_x_swapped\csname\??xtableswap\number\c_tabl_x_swapped\endcsname}
+  {\expandafter\newtoks\csname\??xtableswap\the\c_tabl_x_swapped\endcsname
+   \expandafter\let\expandafter\t_tabl_x_swapped\csname\??xtableswap\the\c_tabl_x_swapped\endcsname}
 
 \def\tabl_x_collect_advance
   {\global\advanceby\c_tabl_x_swapped\plusone
    \ifnum\c_tabl_x_swapped>\c_tabl_x_swapped_max
      \global\c_tabl_x_swapped_max\c_tabl_x_swapped
    \fi
-   \mutable\expandafter\let\expandafter\t_tabl_x_swapped\csname\??xtableswap\number\c_tabl_x_swapped\endcsname
+   \mutable\expandafter\let\expandafter\t_tabl_x_swapped\csname\??xtableswap\the\c_tabl_x_swapped\endcsname
    \ifrelax\t_tabl_x_swapped
      \tabl_x_collect_allocate
    \fi}
@@ -925,7 +927,7 @@
      \gtoksapp\t_tabl_x_swapped\expandafter{\expandafter\tabl_x_c_cell_start\expandafter{\m_tabl_x_swapped_settings}#content\tabl_x_c_cell_stop}%
    \fi}
 
-\def\tabl_x_collect_cell_start_yes[#settings]#content\stopxcell
+\def\tabl_x_collect_cell_start_yes[#S#settings]#content\stopxcell
   {\tabl_x_collect_advance
    \ifempty\m_tabl_x_swapped_settings
      \gtoksapp\t_tabl_x_swapped{\tabl_x_c_cell_start{}[#settings]#content\tabl_x_c_cell_stop}%
@@ -938,7 +940,7 @@
      \dorecurse\scratchcounter\tabl_x_collect_advance
    \fi}
 
-\permanent\tolerant\protected\def\startxcolumn[#settings]#spacer%
+\permanent\tolerant\protected\def\startxcolumn[#S#settings]#spacer%
   {\begingroup
    \global\c_tabl_x_swapped\zerocount
    \enforced\let\startxcell\tabl_x_collect_cell_start

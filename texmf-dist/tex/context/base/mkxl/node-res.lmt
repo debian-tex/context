@@ -26,11 +26,11 @@ local usercodes      = nodes.usercodes
 
 local nodeproperties = nodes.properties.data
 
-local glyph_code     = nodecodes.glyph
-local rule_code      = nodecodes.rule
-local kern_code      = nodecodes.kern
-local glue_code      = nodecodes.glue
-local gluespec_code  = nodecodes.gluespec
+local glyph_code     <const> = nodecodes.glyph
+local rule_code      <const> = nodecodes.rule
+local kern_code      <const> = nodecodes.kern
+local glue_code      <const> = nodecodes.glue
+local gluespec_code  <const> = nodecodes.gluespec
 
 local currentfont    = font.current
 local texgetcount    = tex.getcount
@@ -70,10 +70,11 @@ local setwidth     = nuts.setwidth
 local setsubtype   = nuts.setsubtype
 local setleader    = nuts.setleader
 local setclass     = nuts.setclass
-
 local setdata      = nuts.setdata
 local setoffsets   = nuts.setoffsets
 local setvalue     = nuts.setvalue
+
+local setruledimensions = nuts.setruledimensions
 
 local copy_nut     = nuts.copyonly
 local new_nut      = nuts.new
@@ -134,6 +135,7 @@ local disc              = register_nut(new_nut(nodecodes.disc))
 local kern              = register_nut(new_nut(kern_code,kerncodes.userkern))
 local fontkern          = register_nut(new_nut(kern_code,kerncodes.fontkern))
 local italickern        = register_nut(new_nut(kern_code,kerncodes.italiccorrection))
+local spacefontkern     = register_nut(new_nut(kern_code,kerncodes.spacefontkern))
 local penalty           = register_nut(new_nut(nodecodes.penalty))
 local glue              = register_nut(new_nut(glue_code))
 local gluespec          = register_nut(new_nut(gluespec_code))
@@ -174,7 +176,7 @@ local cleader           = register_nut(copy_nut(glue)) setsubtype(cleader,glueco
 
 -- the dir field needs to be set otherwise crash:
 
-local lefttoright_code  = tex.directioncodes.lefttoright
+local lefttoright_code  <const> = tex.directioncodes.lefttoright
 
 local rule              = register_nut(new_nut(rule_code))                   -- setdirection(rule, lefttoright_code)
 local emptyrule         = register_nut(new_nut(rule_code,rulecodes.empty))   -- setdirection(rule, lefttoright_code)
@@ -239,6 +241,14 @@ end
 
 function nutpool.italickern(k)
     local n = copy_nut(italickern)
+    if k and k ~= 0 then
+        setkern(n,k)
+    end
+    return n
+end
+
+function nutpool.spacefontkern(k)
+    local n = copy_nut(spacefontkern)
     if k and k ~= 0 then
         setkern(n,k)
     end
@@ -356,6 +366,8 @@ function nutpool.emptyrule(width,height,depth) -- w/h/d == nil will let them ada
     return n
 end
 
+-- data left right
+
 function nutpool.strutrule(width,height,depth) -- w/h/d == nil will let them adapt
     local n = copy_nut(strutrule)
     if width or height or depth then
@@ -399,11 +411,10 @@ function nutpool.boxrule(width,height,depth) -- w/h/d == nil will let them adapt
     return n
 end
 
-function nutpool.virtualrule(width,height,depth) -- w/h/d == nil will let them adapt
+function nutpool.virtualrule(width,height,depth,data)
     local n = copy_nut(virtualrule)
-    if width or height or depth then
-        setdata(n,width)
-        setoffsets(n,nil,nil,height,depth)
+    if width or height or depth or data then
+        setruledimensions(n,width,height,depth,data)
     end
     return n
 end

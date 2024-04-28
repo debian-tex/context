@@ -403,7 +403,7 @@ local registerscanner if CONTEXTLMTXMODE > 0 then
     -- todo: make bitset instead of keys (nil is skipped anyway)
 
     local function toflags(specification)
-        local protected = specification.protected and "protected"
+        local protected = (specification.protected and "protected") or (specification.semiprotected and "semiprotected")
         local untraced  = specification.untraced  and "untraced"
         local usage     = specification.usage
         if usage == "value" then
@@ -413,7 +413,7 @@ local registerscanner if CONTEXTLMTXMODE > 0 then
         elseif specification.frozen then
             return "global", "frozen", untraced, protected
         elseif specification.permanent == false or specification.onlyonce then -- for now onlyonce here
-            return "global", untraced, protected
+            return "global", untraced, protected, semiprotected
         else
             return "global", "permanent", untraced, protected
         end
@@ -492,11 +492,14 @@ end
 
 local function dummy() end
 
+local texsetmacro = token.setmacro or token.set_macro
+
 function commands.ctxresetter(name) -- to be checked
     return function()
         if storedscanners[name] then
             rawset(interfacescanners,name,dummy)
-            context.resetctxscanner(privatenamespace .. name)
+         -- context.resetctxscanner(privatenamespace .. name)
+            texsetmacro(privatenamespace .. name,"","global")
         end
     end
 end
@@ -1664,22 +1667,13 @@ do
     end
 
     local p_texescape = patterns.texescape
+    local p_ctxescape = patterns.ctxescape
 
-    function context.escaped(s)
-        if s then
-            context(lpegmatch(p_texescape,s) or s)
-        else
-         -- context("")
-        end
-    end
+    function context.escaped   (s) if s then context(lpegmatch(p_texescape,s) or s) end end
+    function context.ctxescaped(s) if s then context(lpegmatch(p_ctxescape,s) or s) end end
 
-    function context.escape(s)
-        if s then
-            return lpegmatch(p_texescape,s) or s
-        else
-            return ""
-        end
-    end
+    function context.escape   (s) return (s and lpegmatch(p_texescape,s)) or s or "" end
+    function context.ctxescape(s) return (s and lpegmatch(p_ctxescape,s)) or s or "" end
 
 end
 

@@ -19,7 +19,7 @@
 \registerctxluafile{util-sac}{autosuffix}
 \registerctxluafile{util-sto}{} % could also be done in trac-deb.mkiv
 \registerctxluafile{util-pck}{autosuffix}
-\registerctxluafile{util-prs}{}
+\registerctxluafile{util-prs}{autosuffix}
 \registerctxluafile{util-fmt}{}
 \registerctxluafile{util-dim}{}
 
@@ -78,7 +78,6 @@
 \registerctxluafile{luat-run}{autosuffix}
 \registerctxluafile{luat-fio}{autosuffix}
 \registerctxluafile{luat-cnf}{autosuffix,initexonly}
-\registerctxluafile{luat-lua}{}
 \registerctxluafile{luat-sto}{}
 \registerctxluafile{luat-ini}{autosuffix}
 \registerctxluafile{util-env}{}

@@ -62,6 +62,7 @@
    \c!file           =,
    \c!display        =,
    \c!mask           =,
+   \c!range          =,
    \c!preset         =\v!yes,
    \c!split          =,
    \c!color          =,
@@ -113,6 +114,7 @@
    \c!userpassword   =,
    \c!ownerpassword  =,
    \c!compact        =,
+   \c!metadata       =\v!page, % page | document | yes | no
    \c!cmyk           =,
    \c!crop           =\v!yes,
   ]
@@ -176,8 +178,8 @@
 
 \installtextracker
   {graphics.inheritance}
-  {\settrue \c_grph_include_trace_inheritance}
-  {\setfalse\c_grph_include_trace_inheritance}
+  {\c_grph_include_trace_inheritance\conditionaltrue}
+  {\c_grph_include_trace_inheritance\conditionalfalse}
 
 \installcorenamespace{externalfiguredefinition}
 
@@ -187,16 +189,16 @@
 % label file settings
 % label file parent
 
-\permanent\tolerant\protected\def\useexternalfigure[#1]#*[#2]#*[#3]#*[#4]%
-  {\iftok{#1}\emptytoks
-     \iftok{#2}\emptytoks\else
+\permanent\tolerant\protected\def\useexternalfigure[#1]#*[#2]#*[#S#3]#*[#S#4]%
+  {\ifempty{#1}%
+     \ifempty{#2}\else
        \ifhastok={#3}%
          \grph_include_use_indeed{#2}{#2}{#3}{#4}%
        \else
          \grph_include_use_indeed{#2}{#2}\empty{#4}%
        \fi
      \fi
-   \orelse\iftok{#2}\emptytoks
+   \orelse\ifempty{#2}%
      \ifhastok={#3}%
        \grph_include_use_indeed{#1}{#1}\empty{#3}%
      \else
@@ -211,12 +213,12 @@
    \fi}
 
 \def\grph_include_use_indeed#1#2#3#4%
-  {\dodoglobal\defcsname\??externalfigureinstance#1\endcsname{\grph_include_setup{#2}{#3}{#4}}%
+  {\gdefcsname\??externalfigureinstance#1\endcsname{\grph_include_setup{#2}{#3}{#4}}%
    \grph_include_analyze_collection[#2][#4]}
 
 % inclusion
 
-\permanent\tolerant\protected\def\externalfigure[#1]#,[#2]#,[#3]%
+\permanent\tolerant\protected\def\externalfigure[#1]#,[#2]#,[#S#3]%
   {\ifhastok={#2}%
      \grph_include_place[#1][][#2]%
    \else
@@ -226,8 +228,8 @@
 % todo: chain them
 
 \def\grph_include_setup#1#2#3% name parent settings
-  {\edef\m_grph_include_name  {#1}%
-   \edef\m_grph_include_parent{#2}%
+  {\cdef\m_grph_include_name  {#1}%
+   \cdef\m_grph_include_parent{#2}%
    \ifempty\m_grph_include_name \else
      \let\p_grph_include_name\m_grph_include_name
    \fi
@@ -272,13 +274,13 @@
      \grph_include_inherit_from_parent\p_grph_include_label
    \fi}
 
-\def\grph_include_place[#1][#2][#3]% [label][file][settings] | [file][settings] | [file][parent][settings]
+\def\grph_include_place[#1][#S#2][#S#3]% [label][file][settings] | [file][settings] | [file][parent][settings]
   {\bgroup
    \advanceby\c_grph_include_nesting\plusone
-   \edef\currentexternalfigure{\the\c_grph_include_nesting}%
+   \cdef\currentexternalfigure{\the\c_grph_include_nesting}%
    \checkexternalfigureparent % each inherits from the root
    %
-   \the\everyexternalfigureresets
+   \expand\everyexternalfigureresets
    %
    \edef\p_grph_include_label{#1}%
    \let\p_grph_include_name\p_grph_include_label
@@ -297,9 +299,9 @@
      \setupcurrentexternalfigure[#3]%
    \fi
    %
-   \the\everyexternalfigurechecks
+   \expand\everyexternalfigurechecks
    %
-   \the\t_grph_include_local_settings
+   \expand\t_grph_include_local_settings
    %
    \edef\p_width    {\externalfigureparameter\c!width}%
    \edef\p_height   {\externalfigureparameter\c!height}%
@@ -323,6 +325,7 @@
         preview      {\externalfigureparameter\c!preview}%
         display      {\externalfigureparameter\c!display}%
         mask         {\externalfigureparameter\c!mask}%
+        range        {\externalfigureparameter\c!range}%
         conversion   {\externalfigureparameter\c!conversion}%
         resolution   {\externalfigureparameter\c!resolution}%
         color        {\externalfigureparameter\c!color}% unprocessed raw key
@@ -331,6 +334,7 @@
         repeat       {\externalfigureparameter\c!repeat}%
         transform    {\externalfigureparameter\c!transform}%
         compact      {\externalfigureparameter\c!compact}% experiment, share fonts
+        metadata     {\externalfigureparameter\c!metadata}%
         userpassword {\externalfigureparameter\c!userpassword}%
         ownerpassword{\externalfigureparameter\c!ownerpassword}%
         crop         {\externalfigureparameter\c!crop}%
@@ -561,8 +565,8 @@
 
 \newconditional\c_grph_include_skip
 \newconditional\c_grph_include_test_only
-\newconditional\c_grph_include_level      \setfalse\c_grph_include_level  % true=background false=normal
-\newconditional\c_grph_include_flush      \settrue \c_grph_include_flush  % true=place      false=ignore
+\newconditional\c_grph_include_level      \c_grph_include_level\conditionalfalse  % true=background false=normal
+\newconditional\c_grph_include_flush      \c_grph_include_flush\conditionaltrue  % true=place      false=ignore
 
 \newsystemmode\v!figure
 
@@ -587,13 +591,13 @@
 \appendtoks
     \edef\p_option{\externalfigureparameter\c!option}%
     \ifx\p_option\v!frame
-      \setfalse\c_grph_include_skip
+      \c_grph_include_skip\conditionalfalse
       \letexternalfigureparameter\c!frame\v!on
     \orelse\ifx\p_option\v!empty
-      \settrue\c_grph_include_skip
+      \c_grph_include_skip\conditionaltrue
       \letexternalfigureparameter\c!frame\v!off
     \else
-      \setfalse\c_grph_include_skip
+      \c_grph_include_skip\conditionalfalse
     \fi
     % fake color in gray bitmaps, assumes that
     % a transparent color is used
@@ -667,8 +671,8 @@
    \stopfoundexternalfigure}
 
 % \doifmodeelse{*\v!last}
-%   {\settrue \c_grph_include_flush}
-%   {\setfalse\c_grph_include_flush}%
+%   {\c_grph_include_flush\conditionaltrue}
+%   {\c_grph_include_flush\conditionalfalse}%
 
 \def\grph_include_finalize
   {\global\setbox\foundexternalfigure\vbox
@@ -683,12 +687,12 @@
           \orelse\ifcase\figurestatus
             % nothing
           \else
-            \the\externalfigurepostprocessors
+            \expand\externalfigurepostprocessors
             \box\foundexternalfigure
           \fi
         \else
           \iftrialtypesetting \else \feedbackexternalfigure \fi
-          \settrue\c_grph_include_level
+          \c_grph_include_level\conditionaltrue
           \ifconditional\c_grph_include_skip
             \ifcase\figurestatus
               \grph_include_replacement\figurelabel\figurefileoriginal{unknown}%
@@ -698,7 +702,7 @@
           \orelse\ifcase\figurestatus
             \grph_include_replacement\figurelabel\figurefileoriginal{unknown}%
           \else
-            \the\externalfigurepostprocessors
+            \expand\externalfigurepostprocessors
             \edef\p_reset{\externalfigureparameter\c!reset}%
             \ifx\p_reset\v!yes
               \wd\foundexternalfigure\figurewidth
@@ -714,15 +718,15 @@
           \fi
         \fi
       \else
-        % maybe also \the\externalfigurepostprocessors
+        % maybe also \expand\externalfigurepostprocessors
         \iftrialtypesetting \else \feedbackexternalfigure \fi
       \fi}}
 
 \mutable\let\feedbackexternalfigure\relax % hook
 
-\permanent\tolerant\protected\def\getfiguredimensions[#1]#*[#2]%
+\permanent\tolerant\protected\def\getfiguredimensions[#1]#*[#S#2]%
   {\startnointerference % we can use \nospaces\plusone
-     \settrue\c_grph_include_test_only
+     \c_grph_include_test_only\conditionaltrue
      \externalfigure[#1][#2,\c!display=,\c!mask=,\c!object=\v!no]%
    \stopnointerference}
 
@@ -738,10 +742,10 @@
 
 % No placement, handy for preprocessing:
 
-\permanent\tolerant\protected\def\registerexternalfigure[#1]#*[#2]#*[#3]%
+\permanent\tolerant\protected\def\registerexternalfigure[#1]#*[#S#2]#*[#S#3]%
   {\startnointerference
      \c_grph_include_test_only
-     \setfalse\c_grph_include_flush % == test ?
+     \c_grph_include_flush\conditionalfalse % == test ?
      \externalfigure[#1][#2][#3]% or
      \externalfigure[#1][#2,\c!display=,\c!mask=,\c!object=\v!no]%
    \stopnointerference}
@@ -778,10 +782,13 @@
    \setexternalfigureparameter\c!backgroundcolor{missingfigurecolor}%
    \setexternalfigureparameter\c!align{\v!middle,\v!lohi}% we default to \v!none
    \inheritedexternalfigureframed
-     {\tt\tfxx \nohyphens
-      name:  \expanded{\verbatimstring{#1}}\\%
-      file:  \expanded{\verbatimstring{#2}}\\%
-      state: \expanded{\verbatimstring{#3}}}%
+     {\ttxx \nohyphens
+%       name: \detokenize\expandafter{\normalexpanded{#1}}\crlf
+%       file: \detokenize\expandafter{\normalexpanded{#2}}\crlf
+      name: \expandeddetokenize{#1}\crlf
+      file: \expandeddetokenize{#2}\crlf
+      state: #3
+      }%
    \egroup}
 
 % maybe setuphandler
@@ -793,11 +800,11 @@
 \newdimension  \d_grph_include_collection_minheight
 \newdimension  \d_grph_include_collection_maxheight
 
-\def\grph_include_analyze_collection[#1][#2]%
+\def\grph_include_analyze_collection[#1][#S#2]%
   {\ifconditional\c_grph_include_in_collection
-      \setfalse\c_grph_include_in_collection
+      \c_grph_include_in_collection\conditionalfalse
       \getfiguredimensions[#1][#2]%
-      \settrue\c_grph_include_in_collection
+      \c_grph_include_in_collection\conditionaltrue
       \scratchdimen\naturalfigurewidth
       \ifdim\scratchdimen>\d_grph_include_collection_maxwidth  \d_grph_include_collection_maxwidth \scratchdimen \fi
       \ifdim\scratchdimen<\d_grph_include_collection_minwidth  \d_grph_include_collection_minwidth \scratchdimen \fi
@@ -810,8 +817,8 @@
 
 \permanent\protected\def\startexternalfigurecollection[#1]%
   {\begingroup
-   \def\currentexternalfigurecollection{#1}%
-   \settrue\c_grph_include_in_collection
+   \cdef\currentexternalfigurecollection{#1}%
+   \c_grph_include_in_collection\conditionaltrue
    \d_grph_include_collection_minwidth \maxdimen
    \d_grph_include_collection_maxwidth \zeropoint
    \d_grph_include_collection_minheight\maxdimen
@@ -862,13 +869,13 @@
 
 % Experimental (will become cleaner):
 
-\permanent\tolerant\protected\def\includesvgfile[#1]#*[#2]%
+\permanent\tolerant\protected\def\includesvgfile[#1]#*[#S#2]%
   {\hbox\bgroup % no \dontleavehmode
    \getdummyparameters[\c!offset=\zeropoint,#2]%
    \clf_includesvgfile{#1}\dimexpr\dummyparameter\c!offset\relax
    \egroup}
 
-\permanent\tolerant\protected\def\includesvgbuffer[#1]#*[#2]%
+\permanent\tolerant\protected\def\includesvgbuffer[#1]#*[#S#2]%
   {\hbox\bgroup % no \dontleavehmode
    \getdummyparameters[\c!offset=\zeropoint,#2]%
    \clf_includesvgbuffer{#1}\dimexpr\dummyparameter\c!offset\relax
@@ -887,17 +894,26 @@
   [\v!inline]
   [\c!height=\lineheight]
 
+\permanent\protected\def\combinationwidth
+  {\dimexpr
+     (\textwidth
+     -\effectiveleftskip
+     -\effectiverightskip
+     -\numexpr\combinationparameter\c!nx-\plusone\relax\dimexpr\combinationparameter\c!distance\relax
+     )/\combinationparameter\c!nx
+   \relax}
+
+\pushoverloadmode
+    \newuserunit \combinationwidth cx % combination width
+\popoverloadmode
+
 \definemeasure
   [\v!combination]
-  [(\textwidth
-    -\effectiveleftskip
-    -\effectiverightskip
-    -\numexpr\combinationparameter\c!nx-\plusone\relax\dimexpr\combinationparameter\c!distance\relax
-   )/\combinationparameter\c!nx]
+  [\combinationwidth]
 
 \defineexternalfigure
   [\v!combination]
-  [\c!width=\measure{\v!combination}]
+  [\c!width=\combinationwidth]
 
 % \startcombination[nx=2,ny=1]
 %     {\externalfigure[dummy][combination]} {}
@@ -936,6 +952,25 @@
 %D Needs to be done global:
 
 \definelayer[epdfcontent]
+
+%D Experiment:
+%D
+%D \starttyping
+%D \registerfiguremask[mymask] {
+%D     {
+%D         {   0, 100, 0x00 },
+%D         { 101, 200, 0x7F },
+%D         { 201, 255, 0xFF },
+%D     }
+%D }
+%D
+%D \dontleavehmode \externalfigure
+%D     [proofs.png]
+%D     [background=color,
+%D      backgroundcolor=yellow,
+%D      mask=mymask,
+%D      width=5cm]
+%D \stOPtyping
 
 \protect \endinput
 

@@ -11,7 +11,7 @@ if not modules then modules = { } end modules['mtx-context'] = {
 
 local type, next, tostring, tonumber = type, next, tostring, tonumber
 local format, gmatch, match, gsub, find = string.format, string.gmatch, string.match, string.gsub, string.find
-local quote, validstring, splitstring = string.quote, string.valid, string.split
+local quote, validstring, splitstring, splitlines = string.quote, string.valid, string.split, string.splitlines
 local sort, concat, insert, sortedhash, tohash = table.sort, table.concat, table.insert, table.sortedhash, table.tohash
 local settings_to_array = utilities.parsers.settings_to_array
 local appendtable = table.append
@@ -33,9 +33,13 @@ local removefile    = os.remove
 local renamefile    = os.rename
 local formatters    = string.formatters
 
+local starttiming   = statistics.starttiming
+local stoptiming    = statistics.stoptiming
+local elapsedtime   = statistics.elapsedtime
+
 local application = logs.application {
     name     = "mtx-context",
-    banner   = "ConTeXt Process Management 1.04",
+    banner   = "ConTeXt Process Management 1.06",
  -- helpinfo = helpinfo, -- table with { category_a = text_1, category_b = text_2 } or helpstring or xml_blob
     helpinfo = "mtx-context.xml",
 }
@@ -114,7 +118,7 @@ local function restart(engine_old,engine_new)
     local generate  = environment.arguments.generate and (engine_new == "luatex" or engine_new == "luajittex")
     local arguments = generate and  "--generate" or environment.reconstructcommandline()
     local ownname   = filejoinname(filepathpart(environment.ownname),"mtxrun.lua")
-    local command   = format("%s --luaonly %q %s --redirected",engine_new,ownname,arguments)
+    local command   = format("%s --luaonly --socket %q %s --redirected",engine_new,ownname,arguments)
     report(format("redirect %s -> %s: %s",engine_old,engine_new,command))
     local result = os.execute(command)
     os.exit(result == 0 and 0 or 1)
@@ -470,7 +474,7 @@ end
 local pdfview -- delayed
 
 local function pdf_open(name,method)
-    statistics.starttiming("pdfview")
+    starttiming("pdfview")
     pdfview = pdfview or dofile(resolvers.findfile("l-pdfview.lua","tex"))
     pdfview.setmethod(method)
     report(pdfview.status())
@@ -479,12 +483,12 @@ local function pdf_open(name,method)
         pdfname = name .. ".pdf" -- agressive
     end
     pdfview.open(pdfname)
-    statistics.stoptiming("pdfview")
-    report("pdfview overhead: %s seconds",statistics.elapsedtime("pdfview"))
+    stoptiming("pdfview")
+    report("pdfview overhead: %s seconds",elapsedtime("pdfview"))
 end
 
 local function pdf_close(name,method)
-    statistics.starttiming("pdfview")
+    starttiming("pdfview")
     pdfview = pdfview or dofile(resolvers.findfile("l-pdfview.lua","tex"))
     pdfview.setmethod(method)
     local pdfname = filenewsuffix(name,"pdf")
@@ -493,7 +497,7 @@ local function pdf_close(name,method)
     end
     pdfname = name .. ".pdf" -- agressive
     pdfview.close(pdfname)
-    statistics.stoptiming("pdfview")
+    stoptiming("pdfview")
 end
 
 -- result file handling
@@ -611,17 +615,20 @@ local function flags_to_string(flags,prefix)
     -- context flags get prepended by c: ... this will move to the sbx module
     local t = { }
     for k, v in table.sortedhash(flags) do
+        local p
         if prefix then
-            k = format("c:%s",k)
+            p = format("c:%s",k)
+        else
+            p = k
         end
         if not v or v == "" or v == '""' then
             -- no need to flag false
         elseif v == true then
-            t[#t+1] = format('--%s',k)
+            t[#t+1] = format('--%s',p)
         elseif type(v) == "string" then
-            t[#t+1] = format('--%s=%s',k,quote(v))
+            t[#t+1] = format('--%s=%s',p,quote(v))
         else
-            t[#t+1] = format('--%s=%s',k,tostring(v))
+            t[#t+1] = format('--%s=%s',p,tostring(v))
         end
     end
     return concat(t," ")
@@ -694,6 +701,7 @@ function scripts.context.run(ctxdata,filename)
     local a_jithash       = getargument("jithash")
     local a_permitloadlib = getargument("permitloadlib")
     local a_texformat     = getargument("texformat")
+    local a_notuc         = getargument("notuc")
     local a_keeptuc       = getargument("keeptuc")
     local a_keeplog       = getargument("keeplog")
     local a_keeppdf       = getargument("keeppdf")
@@ -908,6 +916,8 @@ function scripts.context.run(ctxdata,filename)
                 --
                 local directives = { }
                 --
+                -- todo: handle these at the tex end
+                --
                 if a_nodates then
                     directives[#directives+1] = format("backend.date=%s",type(a_nodates) == "string" and a_nodates or "no")
                 end
@@ -919,6 +929,11 @@ function scripts.context.run(ctxdata,filename)
                 if a_profile then
                     directives[#directives+1] = format("system.profile=%s",tonumber(a_profile) or 0)
                 end
+                --
+             -- if a_notuc then
+             --     removefile(fileaddsuffix(jobname,"tuc"))
+             --     directives[#directives+1] = "job.save=no" -- handled at tex end
+             -- end
                 --
                 for i=1,#synctex_runfiles do
                     removefile(fileaddsuffix(jobname,synctex_runfiles[i]))
@@ -1205,10 +1220,10 @@ do -- more or less copied from mtx-plain.lua:
     local function engine(texengine,texformat)
         local command = string.format('%s --ini --etex --8bit %s \\dump',texengine,fileaddsuffix(texformat,"mkii"))
         if environment.arguments.silent then
-            statistics.starttiming()
+            starttiming()
             local command = format("%s > temp.log",command)
             local result  = os.execute(command)
-            local runtime = statistics.stoptiming()
+            local runtime = stoptiming()
             if result ~= 0 then
                 print(format("%s silent make > fatal error when making format %q",texengine,texformat)) -- we use a basic print
             else
@@ -1247,7 +1262,7 @@ do -- more or less copied from mtx-plain.lua:
                 fmtpathspec = "."
             end
         end
-        fmtpathspec = string.splitlines(fmtpathspec)[1] or fmtpathspec
+        fmtpathspec = splitlines(fmtpathspec)[1] or fmtpathspec
         fmtpathspec = fmtpathspec and file.splitpath(fmtpathspec)
         local fmtpath = nil
         if fmtpathspec then
@@ -1726,6 +1741,189 @@ function scripts.context.extra()
     end
 end
 
+-- experiment
+
+do
+
+    local popen   = io.popen
+    local close   = io.close
+    ----- read    = io.read
+    local gobble  = io.gobble or function(f) f:read("l") end
+    ----- clock   = os.clock
+    local ticks   = lua.getpreciseticks
+    local seconds = lua.getpreciseseconds
+
+    local f_runner  = formatters['context %s "%s"']
+    local f_command = formatters['%s %s']
+
+    function scripts.context.parallel()
+        if getargument("pattern") then
+            environment.files = dir.glob(getargument("pattern"))
+        end
+        local files = environment.files
+        local total = files and #files or 0
+        local list  = nil
+        if getargument("parallellist") then
+            list = { }
+            for i=1,#files do
+                -- could be an lpeg
+                local name = files[i]
+                local data = splitlines(io.loaddata(name) or "")
+                if data then
+                    for i=1,#data do
+                        local line = data[i]
+                        if string.find(line,"^context ") then
+                            list[#list+1] = line
+                        end
+                    end
+                end
+            end
+            files = list
+            total = #list
+        end
+        if not list and total == 1 then
+            -- Beware: "--parallel" and "--terminal" are passed to the single run but this
+            -- is normally harmless.
+            scripts.context.autoctx()
+        elseif total > 0 then
+            local results  = { }
+            local start    = starttiming("parallel")
+            local terminal = environment.argument("terminal")
+            local runners  = tonumber(environment.argument("parallel")) or 8
+            local process  = { }
+            local count    = 0
+            -- a hack
+            local passthese = environment.arguments_after
+            for i=1,#passthese do
+                local a = passthese[i]
+                if string.find(a,"^%-%-parallel") or string.find(a,"^%-%-terminal") or not find(a,"^%-%-") then
+                    passthese[i] = ""
+                end
+            end
+            passthese = table.unique(passthese)
+            -- end of hack
+            local arguments = environment.reconstructcommandline(passthese)
+            local whattodo  = list and "command" or "filename"
+            while true do
+                local done = false
+                for i=1,runners do
+                    local pi = process[i]
+                    if pi then
+                        local s
+                        if terminal then
+                            s = pi.handle:read("l")
+                            if s then
+                                done = true
+                                report("%02i : %s",i,s)
+                                goto done
+                            end
+                        else
+                            s = gobble(pi.handle)
+                            if s then
+                                done = true
+                                goto done
+                            end
+                        end
+                        if not s then
+                            local r, detail, n = close(pi.handle)
+                            stoptiming(pi.timer)
+                            pi.result = (not r or n > 0) and "error" or "done"
+                            pi.time   = elapsedtime(pi.timer)
+                            pi.handle = nil
+                            pi.timer  = nil
+                            if terminal then
+                                report()
+                            end
+                            report("process %02i, index %02i, %s %a, status %a, runtime %0.3f",i,pi.count,whattodo,pi.filename,pi.result,pi.time)
+                            if terminal then
+                                report()
+                            end
+                            process[i] = false
+                            results[pi.count] = pi
+                        end
+                    end
+                    count = count + 1
+                    if count > total then
+                        -- we're done
+                    else
+                        local timer    = "parallel:" .. i
+                        local filename = files[count]
+                        local dirname  = file.dirname(filename)
+                        local basename = file.basename(filename)
+                        if dirname ~= "." and dirname ~= "./" then
+                            dir.push(dirname)
+                        end
+                        local command  = list and f_command(basename,arguments) or f_runner(arguments,basename)
+                        starttiming(timer)
+                        local result  = popen(command)
+                        if dirname ~= "." then
+                            dir.pop()
+                        end
+                        local status  = nil
+                        if result then
+                            process[i] = {
+                                handle   = result,
+                                result   = "start",
+                                filename = filename,
+                                count    = count,
+                                time     = 0,
+                                timer    = timer,
+                            }
+                            status = process[i]
+                        else
+                            status = {
+                                result   = "error",
+                                count    = count,
+                                filename = filename,
+                                time     = 0,
+                            }
+                            stoptiming(timer)
+                        end
+                        results[count] = status
+                        if terminal then
+                            report()
+                        end
+                        report("process %02i, index %02i, %s %a, status %a",i,status.count,whattodo,status.filename,status.result)
+                        if terminal then
+                            report()
+                        end
+                        done = true
+                    end
+                  ::done::
+                end
+                if not done then
+                    break
+                end
+            end
+            stoptiming("parallel")
+            results.runtime = elapsedtime("parallel")
+            report()
+            report("files: %i, runtime: %s",total,results.runtime)
+            report()
+            local errors = { }
+            for i=1,total do
+                local ri = results[i]
+                local result   = ri.result
+                local filename = ri.filename
+                if result == "error" then
+                    errors[#errors+1] = filename
+                end
+                report("index %02i, %s %a, status %a, runtime %0.3f ",ri.count,whattodo,filename,result,ri.time)
+            end
+            if #errors > 0 then
+                report()
+                report("errors in:")
+                report()
+                for i=1,#errors do
+                    report("  %s",errors[i])
+                end
+            end
+            report()
+        end
+    end
+
+end
+
 -- todo: we need to do a dummy run
 
 local function showsetter()
@@ -1744,6 +1942,35 @@ function scripts.context.logcategories()
     multipass_nofruns = 1
     setargument("purgeall",true)
     scripts.context.run()
+end
+
+function scripts.context.find(pattern)
+    if pattern ~= "" then
+        local found = resolvers.findfile("luametatex.tex")
+        if found and found ~= "" then
+            for i=1,6 do
+                found = file.pathpart(found)
+            end
+        end
+        local files = dir.glob(found.."**.tex")
+        for i=1,#files do
+            local f = files[i]
+            local d = io.loaddata(f)
+            if find(d,pattern) then
+                local l = splitlines(d)
+                report(f)
+                report("")
+                for i=1,#l do
+                    if find(l[i],pattern) then
+                        report("%5i  %s",i,l[i])
+                    end
+                end
+                report("")
+            end
+        end
+    else
+        report("there is nothing to search for")
+    end
 end
 
 function scripts.context.timed(action)
@@ -1815,7 +2042,9 @@ else
     multipass_forcedruns = tonumber(getargument("forcedruns")) or nil
 end
 
-if getargument("run") then
+if getargument("parallel") or getargument("parallellist") then
+    scripts.context.timed(scripts.context.parallel)
+elseif getargument("run") then
     scripts.context.timed(scripts.context.autoctx)
 elseif getargument("make") then
     scripts.context.timed(function() scripts.context.make() end)
@@ -1830,7 +2059,7 @@ elseif getargument("touch") then
     scripts.context.touch()
 elseif getargument("pages") then
     scripts.context.pages()
-elseif getargument("expert") then
+elseif getargument("expert") then -- or getargument("special") then
     application.help("expert", "special")
 elseif getargument("showmodules") or getargument("modules") then
     scripts.context.modules()
@@ -1854,6 +2083,15 @@ elseif getargument("showdirectives") or getargument("directives") == true then
 elseif getargument("showlogcategories") then
     scripts.context.logcategories()
 elseif environment.filenames[1] or getargument("nofile") then
+ -- --
+ -- -- How compatible is this ... we might want to resolve the wildcard at the TeX, so
+ -- -- we just keep this as unsuported feature (but at least we know of this case):
+ --
+ -- if not getargument("pattern") and find(environment.filenames[1],"%*") then
+ --     environment.filenames = dir.glob(environment.filenames[1])
+ --  -- setargument("pattern",dir.glob(environment.filenames[1]))
+ -- end
+ --
     scripts.context.timed(scripts.context.autoctx)
 elseif getargument("pipe") then
     scripts.context.timed(scripts.context.pipe)
@@ -1863,6 +2101,9 @@ elseif getargument("purge") then
 elseif getargument("purgeall") then
     -- only when no filename given, supports --pattern
     scripts.context.purge(true,nil,true)
+elseif getargument("find") then
+    -- context --find="%\framed"
+    scripts.context.find(getargument("find"))
 elseif getargument("pattern") then
     environment.filenames = dir.glob(getargument("pattern"))
     scripts.context.timed(scripts.context.autoctx)

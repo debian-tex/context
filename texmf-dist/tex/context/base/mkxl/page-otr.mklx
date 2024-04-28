@@ -45,9 +45,11 @@
 
 \appendtoks
     \let\page_otr_commands_process\page_otr_specifics_preset
-    \the\t_page_otr_commands
+    \expand\t_page_otr_commands
     \let\page_otr_commands_process\gobbleoneargument
 \to \everyswitchoutputroutine
+
+% use \csstring
 
 \protected\def\page_otr_specifics_preset#name%
   {\edef\page_otr_specifics_command{\directoutputroutineparameter{#name}}% no inheritance of commands
@@ -80,7 +82,7 @@
 \let\page_otr_specifics_preset\page_otr_specifics_preset_normal
 
 \permanent\protected\def\traceoutputroutines
-  {\the\t_page_otr_tracers}
+  {\expand\t_page_otr_tracers}
 
 \appendtoks
     \let\page_otr_specifics_preset\page_otr_specifics_preset_traced
@@ -114,14 +116,15 @@
 \protected\def\page_otr_message_s#sign#what%
   {\writestatus
     \currentoutputroutine
-    {#sign\space          \space
-     #what\space          \space
-     p:\the\outputpenalty,\space
-     r:\the\realpageno   ,\space
-     c:\number\mofcolumns,\space
-     v:\the\vsize        ,\space
-     g:\the\pagegoal     ,\space
-     t:\the\pagetotal    ,\space
+    {#sign\space           \space
+     #what\space           \space
+     p:\the\outputpenalty ,\space
+     r:\the\realpageno    ,\space
+     c:\number\mofcolumns ,\space
+     v:\the\vsize         ,\space
+     g:\the\pagegoal      ,\space
+     t:\the\pagetotal     ,\space
+     h:\the\pagelastheight,\space
      i:\the\insertheights
      \ifdim\pagetotal>\pagegoal
        ,\space
@@ -136,8 +139,8 @@
 
 \permanent\protected\def\installoutputroutine#invoke#action% \invoke \action
   {\global\advanceby\c_page_otr_trigger_penalty\minusone
-   \frozen\protected\edef#invoke{\page_otr_trigger{\number\c_page_otr_trigger_penalty}}%
-   \setvalue{\??otrtriggers\number\c_page_otr_trigger_penalty}{#action}}
+   \frozen\protected\edef#invoke{\page_otr_trigger{\the\c_page_otr_trigger_penalty}}%
+   \defcsname\??otrtriggers\the\c_page_otr_trigger_penalty\endcsname{#action}}
 
 \protected\def\page_otr_triggered_output_routine_traced
   {\ifcsname\??otrtriggers\the\outputpenalty\endcsname
@@ -171,9 +174,9 @@
 \def\page_otr_set_engine_output_routine#content%
   {\global\output
      {\inotrtrue
-      \the\everybeforeoutput
+      \expand\everybeforeoutput
       #content\relax
-      \the\everyafteroutput}}
+      \expand\everyafteroutput}}
 
 \page_otr_set_engine_output_routine\page_otr_triggered_output_routine
 
@@ -203,11 +206,49 @@
    \fi
    \resetpagebreak}
 
+% In case \pagetotal is ahead of \pagegoal (\pagelastheight is the real one) we
+% need to make sure that we flush but we don't do that in a ragged situation where
+% we have safeguards.
+
+% \setuplayout[limitstretch=yes] % border case 1
+% \setupalign[depth]
+%
+% \starttext
+%     \startitemize
+%         \dorecurse{24}{\startitem test \stopitem}
+%         \dorecurse{3}{\startitem test \stopitem}
+%         \startitem test \stopitem % border case 2
+%     \stopitemize
+% \stoptext
+
+% \def\page_otr_fill_page_unchecked
+%   {\ifdim\pagetotal>\pagegoal \else
+%      \normalvfil
+%    \fi}
+
+\def\page_otr_fill_page_unchecked
+  {% \writestatus{!!!!!}{h=\the\pagelastheight,t=\the\pagetotal,g=\the\pagegoal}%
+   \ifdim\pagetotal>\pagegoal
+     % we're probably okay and are not too flexible
+   \orelse\ifnum\bottomraggednessmode>\plusone
+     % we actualy want to be flexible
+   \else
+     % we have to make sure that we don't stretch
+     \normalvfil
+   \fi}
+
+\def\page_otr_fill_page_checked
+  {\ifdim\dimexpr\pagelastheight+\c_page_scale_lines\lineheight+\pageexcess\relax>\pagegoal\else
+     \normalvfil
+   \fi}
+
 \def\page_otr_eject_page
   {\par
    \ifvmode
-     \ifdim\pagetotal>\pagegoal \else
-       \normalvfil
+     \ifcase\c_page_scale_lines
+       \page_otr_fill_page_unchecked
+     \else
+       \page_otr_fill_page_checked
      \fi
      \penalty\c_page_otr_eject_penalty
    \fi
@@ -216,20 +257,23 @@
 \def\page_otr_eject_page_and_flush_inserts % can be an installed one
   {\par
    \ifvmode
-     \ifdim\pagetotal>\pagegoal \else
-       \normalvfil
+     \ifcase\c_page_scale_lines
+       \page_otr_fill_page_unchecked
+     \else
+       \page_otr_fill_page_checked
      \fi
      \penalty\c_page_otr_super_penalty
    \fi
    \resetpagebreak}
 
 \def\page_otr_check_for_pending_inserts
-  {\ifnum\outputpenalty>\c_page_otr_super_penalty \else
-     \ifnum\insertpenalties>\zerocount
-       % something is being held over so we force a new page
-       \page_otr_force_another_page
-     \fi
+  {\ifnum\outputpenalty>\c_page_otr_super_penalty
+   \orelse\ifnum\insertpenalties>\zerocount
+     % something is being held over so we force a new page
+     \page_otr_force_another_page
    \fi}
+
+%D So far.
 
 \def\page_otr_force_another_page
   {% we should actually remove the dummy line in the otr

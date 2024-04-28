@@ -42,15 +42,15 @@
 \installcommandhandler \??makeup {makeup} \??makeup
 
 \appendtoks
-   \frozen\instance\setuevalue{\e!start\currentmakeup\e!makeup}{\startmakeup[\currentmakeup]}%
-   \frozen\instance\setuevalue{\e!stop \currentmakeup\e!makeup}{\stopmakeup}%
+   \frozen\protected\instance\edefcsname\e!start\currentmakeup\e!makeup\endcsname{\startmakeup[\currentmakeup]}%
+   \frozen\protected\instance\edefcsname\e!stop \currentmakeup\e!makeup\endcsname{\stopmakeup}%
    \doifelselayoutdefined\currentmakeup\donothing{\definelayout[\currentmakeup]}% new
 \to \everydefinemakeup
 
 %D The \type {\start}||\type {\stop} macros are used for both the direct and
 %D indirect way. The parameterless call will build a simple box.
 
-\permanent\tolerant\protected\def\startmakeup[#1]#*[#2]%
+\permanent\tolerant\protected\def\startmakeup[#1]#*[#S#2]%
   {\ifparameters
       \expandafter\page_makeup_start_nop
    \else
@@ -61,7 +61,7 @@
 
 %D The simple case: just a box with text dimensions.
 
-\protected\def\page_makeup_start_nop[#name][#settings]% dummies
+\protected\def\page_makeup_start_nop[#name][#S#settings]% dummies
   {\page
    \setupheader[\c!state=\v!empty]%
    \setupfooter[\c!state=\v!empty]%
@@ -104,11 +104,11 @@
 % \definelayout[whatever][height=2cm]
 % \setuplayout[whatever]
 
-\def\page_makeup_start_indeed[#name][#settings]%
+\def\page_makeup_start_indeed[#name][#S#settings]%
   {% the next grouping hack is somewhat messy:
    \begingroup
    % we need to figure out the current layout
-   \xdef\m_page_makeup_name{#name}%
+   \global\cdef\m_page_makeup_name{#name}%
    \let\currentmakeup\m_page_makeup_name
    \let\currentlayout\m_page_makeup_name
    \xdef\m_page_makeup_layout_parent{\layoutparameter\s!parent}%
@@ -117,6 +117,7 @@
    \ifempty\p_page
      \endgroup
      \page % new, so best not have dangling mess here like references (we could capture then and flush embedded)
+     \relax
    \orelse\ifx\p_page\v!no
      % nothing
      \endgroup
@@ -141,7 +142,7 @@
    \let\currentmakeup\m_page_makeup_name
    \setupcurrentmakeup[#settings]%
    \setsystemmode\v!makeup
-   \the\t_page_makeup_every_setup
+   \expand\t_page_makeup_every_setup
    \makeupparameter\c!commands % hm, what is this one doing here ?
    \forgetall % else indented flush
    \dontcomplain
@@ -164,12 +165,14 @@
        \ht\b_page_makeup\vsize % is already set to \textheight (maybe set dp to 0)
      \fi
      \setuppagenumber[\c!state=\makeupparameter\c!pagestate]%
-     \doif{\makeupparameter\c!location}\v!top{\topskip\zeropoint}%
+     \ifcstok{\makeupparameter\c!location}\v!top
+       \topskip\zeroskip
+     \fi
      \edef\p_reference{\makeupparameter\c!reference}%
      \dontleavehmode
      \usereferenceparameter\makeupparameter
      \box\b_page_makeup % could be whole box being destination
-     \the\t_page_makeup_every_setup
+     \expand\t_page_makeup_every_setup
      \page
    \endgroup
    \makeupparameter\c!after\relax
@@ -181,7 +184,8 @@
    \stoplayout % includes \page
    \ifx\m_page_makeup_name\currentlayout
    \orelse\ifx\m_page_makeup_layout_parent\??layout
-     \normalexpanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout]}% is remembered but checked later anyway
+%      \normalexpanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout]}% is remembered but checked later anyway
+     \normalexpanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout\currentlayout]}% is remembered but checked later anyway
    \fi}
 
 \defcsname\??makeupdoublesided\v!yes\endcsname
@@ -189,7 +193,7 @@
    \page}
 
 \defcsname\??makeupdoublesided\v!empty\endcsname
-  {\the\t_page_makeup_every_setup
+  {\expand\t_page_makeup_every_setup
   % == \page[\v!dummy]
    \page[\v!blank]%
    \emptyhbox

@@ -123,6 +123,9 @@
 
 \pushoverloadmode
 
+    % don't set [1] because it interferes with initializing the text and one can just
+    % start explicitly with \setuplayout[xxx] or so
+
     \let\page_layouts_define\definelayout % ugly hack for MS
 
     \permanent\protected\def\definelayout[#1]% intercept relative pages
@@ -131,7 +134,9 @@
 \popoverloadmode
 
 \appendtoks
-    \doifnothing{\directlayoutparameter\c!state}{\letlayoutparameter\c!state\v!start}%
+    \ifempty{\directlayoutparameter\c!state}%
+      \letlayoutparameter\c!state\v!start
+    \fi
 \to \everydefinelayout
 
 \newinteger\c_page_layouts_changed
@@ -235,7 +240,7 @@
 \newtoks\extralayoutcalculations
 
 \def\page_layouts_calculate_extras
-  {\the\extralayoutcalculations}
+  {\expand\extralayoutcalculations}
 
 \newtoks\everyswapmargins % watch the order !
 
@@ -243,9 +248,9 @@
 
 \appendtoks
     \ifconditional\marginsareswapped
-       \setfalse\marginsareswapped
+       \marginsareswapped\conditionalfalse
     \else
-       \settrue\marginsareswapped
+       \marginsareswapped\conditionaltrue
     \fi
     %
     \enforced\swapcsvalues\leftmargindistance\rightmargindistance
@@ -386,8 +391,8 @@
 % \definepapersize[name][A4][A3]
 % \definepapersize[name][settings]
 
-\permanent\tolerant\protected\def\definepapersize[#1]#*[#2]#*[#3]%
-  {\edef\currentlayouttarget{#1}%
+\permanent\tolerant\protected\def\definepapersize[#1]#*[#S#2]#*[#S#3]%
+  {\cdef\currentlayouttarget{#1}%
    \ifempty\currentlayouttarget
      % invalid target
    \orelse\ifhastok={#2}%
@@ -418,7 +423,7 @@
 \let\page_paper_reinstate\relax
 \let\page_paper_restore  \relax
 
-\permanent\tolerant\protected\def\setuppapersize[#1]#*[#2]%
+\permanent\tolerant\protected\def\setuppapersize[#S#1]#*[#S#2]%
   {\ifarguments
      \page_paper_restore
    \orelse\ifhastok={#1}%
@@ -429,7 +434,7 @@
      \page_paper_setup_size_change_size[#1][#2]%
    \fi}
 
-\protected\def\page_paper_setup_size_settings[#1]% sometimes used to set paper/print size
+\protected\def\page_paper_setup_size_settings[#S#1]% sometimes used to set paper/print size
   {\lettonothing\currentlayouttarget
    \edef\m_layouttarget_paper_saved{\page_paper_the_paper_size{\layouttargetparameter\c!page }}%
    \edef\m_layouttarget_print_saved{\page_paper_the_print_size{\layouttargetparameter\c!paper}}%
@@ -458,14 +463,16 @@
    \letlayouttargetparameter\c!page \papersize
    \letlayouttargetparameter\c!paper\printpapersize}
 
-\protected\def\page_paper_setup_size_settings_by_name[#1][#2]%
-  {\def\currentlayouttarget{\page_paper_the_paper_size{#1}}%
+\protected\def\page_paper_setup_size_settings_by_name[#1][#S#2]%
+  {\cdef\currentlayouttarget{\page_paper_the_paper_size{#1}}%
    \setuplayouttarget[#2]}
 
 \protected\def\page_paper_setup_size_change_size[#1][#2]%
-  {\doifelsenothing{#2}
-     {\page_paper_set_current[#1][#1]}
-     {\page_paper_set_current[#1][#2]}}
+  {\ifempty{#2}%
+     \page_paper_set_current[#1][#1]%
+   \else
+     \page_paper_set_current[#1][#2]%
+   \fi}
 
 \permanent\let\setuppaper\page_paper_setup_size_settings
 
@@ -487,16 +494,16 @@
      [\page_paper_the_print_size{#2}]}}
 
 \protected\def\page_paper_reset_paper
-  {\global\setfalse\c_page_target_paper_landscape
-   \global\setfalse\c_page_target_paper_mirror
-   \global\setfalse\c_page_target_paper_negate
+  {\global\c_page_target_paper_landscape\conditionalfalse
+   \global\c_page_target_paper_mirror\conditionalfalse
+   \global\c_page_target_paper_negate\conditionalfalse
    \global\c_page_target_paper_orientation\uprotationangle
    \global\c_page_target_paper_reverse    \uprotationangle}
 
 \protected\def\page_paper_reset_print
-  {\global\setfalse\c_page_target_print_landscape
-   \global\setfalse\c_page_target_print_mirror
-   \global\setfalse\c_page_target_print_negate
+  {\global\c_page_target_print_landscape\conditionalfalse
+   \global\c_page_target_print_mirror\conditionalfalse
+   \global\c_page_target_print_negate\conditionalfalse
    \global\c_page_target_print_orientation\uprotationangle
    \global\c_page_target_print_reverse    \uprotationangle}
 
@@ -504,52 +511,52 @@
 \letcsname\??layoutprint\v!reset\endcsname\page_paper_reset_print
 
 \defcsname\??layoutpaper\v!landscape\endcsname
-  {\global\settrue\c_page_target_paper_landscape}
+  {\global\c_page_target_paper_landscape\conditionaltrue}
 
 \defcsname\??layoutpaper\v!mirrored\endcsname
-  {\global\settrue\c_page_target_paper_mirror}
+  {\global\c_page_target_paper_mirror\conditionaltrue}
 
 \defcsname\??layoutpaper\v!negative\endcsname
-  {\global\settrue\c_page_target_paper_negate}
+  {\global\c_page_target_paper_negate\conditionaltrue}
 
 \defcsname\??layoutpaper\v!rotated\endcsname
   {\global\c_page_target_paper_orientation\rightrotationangle
    \global\c_page_target_paper_reverse    \leftrotationangle}
 
-\defcsname\??layoutpaper\number\rightrotationangle\endcsname
+\defcsname\??layoutpaper\the\rightrotationangle\endcsname
   {\global\c_page_target_paper_orientation\rightrotationangle
    \global\c_page_target_paper_reverse    \leftrotationangle}
 
-\defcsname\??layoutpaper\number\downrotationangle\endcsname
+\defcsname\??layoutpaper\the\downrotationangle\endcsname
   {\global\c_page_target_paper_orientation\downrotationangle
    \global\c_page_target_paper_reverse    \zerocount}
 
-\defcsname\??layoutpaper\number\leftrotationangle\endcsname
+\defcsname\??layoutpaper\the\leftrotationangle\endcsname
   {\global\c_page_target_paper_orientation\leftrotationangle
    \global\c_page_target_paper_reverse    \rightrotationangle}
 
 \defcsname\??layoutprint\v!landscape\endcsname
-  {\global\settrue\c_page_target_print_landscape}
+  {\global\c_page_target_print_landscape\conditionaltrue}
 
 \defcsname\??layoutprint\v!mirrored\endcsname
-  {\global\settrue\c_page_target_print_mirror}
+  {\global\c_page_target_print_mirror\conditionaltrue}
 
 \defcsname\??layoutprint\v!negative\endcsname
-  {\global\settrue\c_page_target_print_negate}
+  {\global\c_page_target_print_negate\conditionaltrue}
 
 \defcsname\??layoutprint\v!rotated\endcsname
   {\global\c_page_target_print_orientation\rightrotationangle
    \global\c_page_target_print_reverse    \leftrotationangle}
 
-\defcsname\??layoutprint\number\rightrotationangle\endcsname
+\defcsname\??layoutprint\the\rightrotationangle\endcsname
   {\global\c_page_target_print_orientation\rightrotationangle
    \global\c_page_target_print_reverse    \leftrotationangle}
 
-\defcsname\??layoutprint\number\downrotationangle \endcsname
+\defcsname\??layoutprint\the\downrotationangle \endcsname
   {\global\c_page_target_print_orientation\downrotationangle
    \global\c_page_target_print_reverse    \zerocount}
 
-\defcsname\??layoutprint\number\leftrotationangle \endcsname
+\defcsname\??layoutprint\the\leftrotationangle \endcsname
   {\global\c_page_target_print_orientation\leftrotationangle
    \global\c_page_target_print_reverse    \rightrotationangle}
 
@@ -558,7 +565,7 @@
 
 \protected\def\page_paper_identify_target#1%
   {\ifcsname\??layoutcurrent#1\endcsname
-     \edef\currentlayouttarget{#1}%
+     \cdef\currentlayouttarget{#1}%
    \fi}
 
 \newdimension\d_page_minimum_paper_size \d_page_minimum_paper_size\luaexpr{math.pi}\onebasepoint
@@ -752,6 +759,7 @@
      % a global lineheight is tricky: should we take the bodyfont interlinespace or the one set
      % independent of the bodyfont (before or after a layout spec); way too fuzzy, so we
      % stick to the current method (after a night of experimenting ...2003/10/13)
+% \layoutlines
      \global\makeupheight\dimexpr
         \layoutparameter\c!lines\lineheight-\strutheight+\topskip+
         \headerdistance+\headerheight+\footerdistance+\footerheight\relax
@@ -782,8 +790,7 @@
    \page_backgrounds_recalculate}
 
 \def\page_layouts_check_direction
-  {\edef\p_direction{\layoutparameter\c!direction}%
-   \ifx\p_direction\v!reverse
+  {\ifcstok{\layoutparameter\c!direction}\v!reverse
      \enforced\global\swapcsvalues\naturalleftedgedistance  \naturalrightedgedistance
      \enforced\global\swapcsvalues\naturalleftmargindistance\naturalrightmargindistance
      \enforced\global\swapcsvalues\leftmargindistance       \rightmargindistance
@@ -987,62 +994,62 @@
 \newconditional\c_page_layouts_location_is_middle
 
 \def\page_layouts_location_reset % we start in the left top and mirror right pages
-  {\setfalse\c_page_layouts_location_is_set
-   \setfalse\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionalfalse
+   \c_page_layouts_location_is_middle\conditionalfalse
    \let\v_page_target_left_fill  \relax
    \let\v_page_target_right_fill \hss  % ? \relax
    \let\v_page_target_top_fill   \relax
    \let\v_page_target_bottom_fill\vss} % \relax}
 
 \defcsname\??layoutlocation\v!right\endcsname
-  {\settrue\c_page_layouts_location_is_set
-   \setfalse\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionaltrue
+   \c_page_layouts_location_is_middle\conditionalfalse
    \let\v_page_target_left_fill \hss
    \let\v_page_target_right_fill\relax}
 
 \defcsname\??layoutlocation\v!left\endcsname
-  {\settrue\c_page_layouts_location_is_set
-   \setfalse\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionaltrue
+   \c_page_layouts_location_is_middle\conditionalfalse
    \let\v_page_target_left_fill \relax
    \let\v_page_target_right_fill\hss}
 
 \defcsname\??layoutlocation\v!bottom\endcsname
-  {\settrue\c_page_layouts_location_is_set
-   \setfalse\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionaltrue
+   \c_page_layouts_location_is_middle\conditionalfalse
    \let\v_page_target_top_fill   \vss
    \let\v_page_target_bottom_fill\relax}
 
 \defcsname\??layoutlocation\v!top\endcsname
-  {\settrue\c_page_layouts_location_is_set
-   \setfalse\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionaltrue
+   \c_page_layouts_location_is_middle\conditionalfalse
    \let\v_page_target_top_fill    \relax
    \let\v_page_target_bottom_fill\vss}
 
 \defcsname\??layoutlocation\v!middle\endcsname
-  {\settrue\c_page_layouts_location_is_set
-   \settrue\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionaltrue
+   \c_page_layouts_location_is_middle\conditionaltrue
    \let\v_page_target_left_fill  \hss
    \let\v_page_target_right_fill \hss
    \let\v_page_target_top_fill   \vss
    \let\v_page_target_bottom_fill\vss}
 
 \defcsname\??layoutlocation\empty\endcsname
-  {\setfalse\c_page_layouts_location_is_set % default also signal to scrn_
-   \setfalse\c_page_layouts_location_is_middle
+  {\c_page_layouts_location_is_set\conditionalfalse % default also signal to scrn_
+   \c_page_layouts_location_is_middle\conditionalfalse
    \let\v_page_target_right_fill \hss
    \let\v_page_target_bottom_fill\hss}
 
 \defcsname\??layoutlocation\v!doublesided\endcsname
-  {\settrue\c_page_target_print_doublesided}
+  {\c_page_target_print_doublesided\conditionaltrue}
 
 \defcsname\??layoutlocation\v!singlesided\endcsname
-  {\setfalse\c_page_target_print_doublesided}
+  {\c_page_target_print_doublesided\conditionalfalse}
 
 \def\page_target_check_centering_indeed#1%
   {\begincsname\??layoutlocation#1\endcsname}
 
 \protected\def\page_target_check_centering
-  {\setfalse\c_page_target_print_doublesided
+  {\c_page_target_print_doublesided\conditionalfalse
    \page_layouts_location_reset
    \processcommacommand[\layoutparameter\c!location]\page_target_check_centering_indeed}
 
@@ -1088,7 +1095,7 @@
 
 \appendtoks \global\d_page_adapts_delta\zeropoint \to \everyshipout
 
-\permanent\protected\tolerant\def\adaptlayout[#1]#*[#2]%
+\permanent\protected\tolerant\def\adaptlayout[#1]#*[#S#2]%
   {\ifparameter#2\or
      \processcommalist[#1]{\page_adapts_layout_register{#2}}%
      \page_adapts_check
@@ -1172,7 +1179,7 @@
 %D \macros
 %D   {startlayout,stoplayout}
 
-\permanent\protected\def\startlayout[#1]%
+\permanent\protected\def\startlayout[#S#1]%
   {\page
    \globalpushmacro\currentlayout
    \doifelselayoutdefined{#1}{\setuplayout[#1]}\donothing} % {\setuplayout[\currentlayout]}}
@@ -1231,7 +1238,7 @@
 \newdimension\innermakeupwidth  % special purpose
 \newdimension\innermakeupmargin % special purpose
 
-\newconditional\innermakeupcompensation \settrue\innermakeupcompensation
+\newconditional\innermakeupcompensation \innermakeupcompensation\conditionaltrue
 
 \permanent\def\compensatedinnermakeupmargin
   {\dimexpr\ifconditional\innermakeupcompensation+\innermakeupmargin\else\zeropoint\fi\relax}
@@ -1328,7 +1335,7 @@
 \protected\def\page_layouts_swap_margins_indeed#1%
   {\let\page_layouts_swap_margins\gobbleoneargument % to prevent local swapping
   %\writestatus\m!layouts{swapping margins for #1}%
-   \the\everyswapmargins}
+   \expand\everyswapmargins}
 
 \permanent\protected\def\swapmargindimensions
   {\page_layouts_swap_margins\v!page}
@@ -1497,8 +1504,22 @@
                    \c!paper=,
                     \c!page=,
                 \c!adaptive=\zeropoint, % new: experiment
+            \c!limitstretch=\v!auto, % catches \setupalign[depth] without setting (2 lineheight)
                  \c!columns=\plusone,
           \c!columndistance=\zeropoint]
+
+\pushoverloadmode
+    \newuserunit \textwidth  tw
+    \newuserunit \textheight th
+    \newuserunit \paperwidth  pw
+    \newuserunit \paperheight ph
+    \newuserunit \hsize      hs % just for fun
+    \newuserunit \vsize      vs % just for fun
+\popoverloadmode
+
+% \appendtoks
+%     \layoutunit\dimexpr\textwidth/100\relax
+% \to \everysetuplayout
 
 %D First we define a whole range of (DIN) papersizes, of which the A-series makes
 %D most sense. We enable checking.

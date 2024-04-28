@@ -45,6 +45,8 @@ local getshift           = nuts.getshift
 local getreplace         = nuts.getreplace
 local setreplace         = nuts.setreplace
 local getfont            = nuts.getfont
+local getxscale          = nuts.getxscale
+local getboth            = nuts.getboth
 
 local getglyphdimensions = nuts.getglyphdimensions
 local getkerndimension   = nuts.getkerndimension
@@ -71,29 +73,29 @@ local whatsitcodes       = nodes.whatsitcodes
 local gluecodes          = nodes.gluecodes
 local subtypes           = nodes.subtypes
 
-local directioncodes     = tex.directioncodes
-local lefttoright_code   = directioncodes.lefttoright
-local righttoleft_code   = directioncodes.righttoleft
+local lefttoright_code   <const> = tex.directioncodes.lefttoright
+local righttoleft_code   <const> = tex.directioncodes.righttoleft
 
-local glyph_code         = nodecodes.glyph
-local kern_code          = nodecodes.kern
-local glue_code          = nodecodes.glue
-local hlist_code         = nodecodes.hlist
-local vlist_code         = nodecodes.vlist
-local dir_code           = nodecodes.dir
-local disc_code          = nodecodes.disc
-local math_code          = nodecodes.math
-local rule_code          = nodecodes.rule
-local whatsit_code       = nodecodes.whatsit
+local glyph_code         <const> = nodecodes.glyph
+local kern_code          <const> = nodecodes.kern
+local glue_code          <const> = nodecodes.glue
+local hlist_code         <const> = nodecodes.hlist
+local vlist_code         <const> = nodecodes.vlist
+local dir_code           <const> = nodecodes.dir
+local disc_code          <const> = nodecodes.disc
+local math_code          <const> = nodecodes.math
+local rule_code          <const> = nodecodes.rule
+local whatsit_code       <const> = nodecodes.whatsit
 
-local virtualrule_code   = nodes.rulecodes.virtual
+local virtualrule_code   <const> = nodes.rulecodes.virtual
 
-local leaders_code       = gluecodes.leaders
-local cleaders_code      = gluecodes.cleaders
-local xleaders_code      = gluecodes.xleaders
-local gleaders_code      = gluecodes.gleaders
+local leaders_code       <const> = gluecodes.leaders
+local cleaders_code      <const> = gluecodes.cleaders
+local xleaders_code      <const> = gluecodes.xleaders
+local gleaders_code      <const> = gluecodes.gleaders
 
-local spaceskip_code     = gluecodes.spaceskip
+local spaceskip_code     <const> = gluecodes.spaceskip
+local xspaceskip_code    <const> = gluecodes.xspaceskip
 
 local getpagedimensions  = layouts.getpagedimensions
 
@@ -109,9 +111,8 @@ local report             = logs.reporter("drivers")
 local lastfont       = nil
 local fontcharacters = nil
 
-local magicconstants = tex.magicconstants
-local maxdimen       = magicconstants.maxdimen
-local runningrule    = magicconstants.runningrule
+local maxdimen       <const> = tex.magicconstants.maxdimen
+local runningrule    <const> = tex.magicconstants.runningrule
 
 local pos_h          = 0
 local pos_v          = 0
@@ -133,6 +134,7 @@ local flushfontchar
 local flushrule
 local flushliteral
 local flushwhatsit
+local flushspace
 
 -- make local
 
@@ -147,7 +149,7 @@ function drivers.getvpos() return round(pos_v) end
 
 local tospace = false  directives.register("backends.spaces", function(v) tospace = v end)
 
-local flush_character do
+local flush_character, flush_space  do
 
     local stack   = setmetatableindex("table")
     local level   = 0
@@ -165,7 +167,7 @@ local flush_character do
 
  -- local alternative = false -- more local, can be an option: vf.commands.local
 
-    local function flush_vf_packet(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,vfcommands)
+    local function flush_vf_packet(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slant,weight,vfcommands)
         if nesting > 100 then
             return
         elseif nesting == 0 then
@@ -282,12 +284,14 @@ local flush_character do
                     csy = sy
                 end
                 -- here no current!
-             -- return flushcharacter(false,pos_h,pos_v,pos_r,fnt,chr,nil,csx,csy,factor,sx,sy)
-                return flush_character(false,fnt,chr,factor,nest,pos_h,pos_v,pos_r,csx,csy)
+             -- return flushcharacter(false,pos_h,pos_v,pos_r,fnt,chr,nil,csx,csy,factor,sx,sy,slant,weight)
+                return flush_character(false,fnt,chr,factor,nest,pos_h,pos_v,pos_r,csx,csy,slant,weight)
             else
                 return 0
             end
         end
+
+        -- virtual t3 fonts have negative font index
 
         for i=1,#vfcommands do
             local packet = vfcommands[i]
@@ -297,16 +301,14 @@ local flush_character do
                     local chr = packet[2]
                     local csx = packet[3]
                     local csy = packet[4] or csx
-                    pos_h = pos_h + flushchar(fnt,chr,csx,csy)
-* sx
+                    pos_h = pos_h + flushchar(fnt,chr,csx,csy) * sx
                 elseif command == "slot" then
                     local index = packet[2]
                     local chr   = packet[3]
                     local csx   = packet[4]
                     local csy   = packet[5] or csx
                     if index == 0 then
-                        pos_h = pos_h + flushchar(font,chr,csx,csy)
-* sx
+                        pos_h = pos_h + flushchar(font,chr,csx,csy) * sx
                     else
                         local okay = fonts and fonts[index]
                         if okay then
@@ -315,13 +317,11 @@ local flush_character do
                                 if fnt == 0 then
                                     fnt = font
                                 end
-                                pos_h = pos_h + flushchar(fnt,chr,csx,csy)
-* sx
+                                pos_h = pos_h + flushchar(fnt,chr,csx,csy) * sx
                             end
                         else
                             -- safeguard, we assume the font itself (often index 1)
-                            pos_h = pos_h + flushchar(font,chr,csx,csy)
-* sx
+                            pos_h = pos_h + flushchar(font,chr,csx,csy) * sx
                         end
                     end
                 elseif command == "use" then
@@ -433,21 +433,23 @@ local flush_character do
                     local height = packet[3]
                     local depth  = packet[4]
                     local wd, ht, dp
-                    if width == true or height == true or depth == true then
+                    if not current then
+                        -- can be a space injected instead of glue
+                    elseif width == true or height == true or depth == true then
                         wd, ht, dp = getwhd(current,true)
                     end
                     if width == true then
-                        width = wd
+                        width = wd or 0
                     elseif not width then
                         width = 0
                     end
                     if height == true then
-                        height = ht
+                        height = ht or 0
                     elseif not height then
                         height = 0
                     end
                     if depth == true then
-                        depth = dp
+                        depth = dp or 0
                     elseif not depth then
                         depth = 0
                     end
@@ -603,21 +605,9 @@ local flush_character do
         if vfcommands then
             vfcommands = data.commands
         end
-        local width, height, depth, naturalwidth, sx, sy
+        local width, height, depth, naturalwidth, sx, sy, slant, weight
         if current then
-         -- if true then
-                width, height, depth, factor, sx, sy = getglyphdimensions(current)
-         -- else
-         --     naturalwidth, height, depth, factor = getwhd(current,true) -- also get corrected width
-         --     sx, sy = getxyscales(current)
-         --     if factor == 0 then
-         --         width = naturalwidth
-         --     else
-         --      -- width = (1.0 + factor/1000000.0) * naturalwidth
-         --         width = naturalwidth + naturalwidth * factor/1000000.0
-         --      -- width = naturalwidth + naturalwidth * 0.000001 * factor
-         --     end
-         -- end
+            width, height, depth, factor, sx, sy, slant, weight = getglyphdimensions(current)
         else
             width  = data.width or 0
             height = data.height or 0
@@ -626,26 +616,43 @@ local flush_character do
             if not factor then
                 factor = 0
             end
-            sx = 1
-            sy = 1
+            sx     = 1
+            sy     = 1
+            slant  = 0
+            weight = 0
         end
         if pos_r == righttoleft_code then
             pos_h = pos_h - width -- here ?
         end
         if vfcommands then
-            flush_vf_packet(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,vfcommands)
+            flush_vf_packet(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slant,weight,vfcommands)
         else
             local orientation = data.orientation -- 0 (none), 1, 2, 3 or 4 (none)
             if orientation and (orientation == 1 or orientation == 3) then
                 -- we can get weird charactersbox tracing here
                 pushorientation(orientation,pos_h,pos_v)
-                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy)
+                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slant,weight)
                 poporientation(orientation,pos_h,pos_v)
             else
-                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy)
+                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slant,weight)
             end
         end
         return width, height, depth
+    end
+
+    flush_space = function(current,pos_h,pos_v,pos_r)
+        local font = getfont(current)
+        if font == lastfont then
+         -- local char = 32
+         -- local data = fontcharacters[32]
+         -- if not data then
+         --     return
+         -- end
+         -- -- if pos_r == righttoleft_code then
+         -- --     pos_h = pos_h - (data.width or 0) -- here ?
+         -- -- end
+            flushspace(font)
+        end
     end
 
 end
@@ -889,19 +896,41 @@ local hlist_out, vlist_out  do
                             if id == rule_code then
                                 if gluewidth > 0 then
                                     local width, height, depth = getwhd(leader)
-                                    if height == runningrule then
+                                    local runningheight = height == runningrule
+                                    local runningdepth  = depth  == runningrule
+                                    if runningheight then
                                         height = boxheight
                                     end
-                                    if depth == runningrule then
+                                    if runningdepth then
                                         depth = boxdepth
                                     end
                                     local total = height + depth
                                     if total > 0 then
+                                        local xoffset, yoffset, top, bottom, on, off = getoffsets(leader)
+                                     -- -- only when we have a use case:
+                                     --
+                                     -- if pos_r == righttoleft_code then
+                                     --     pos_h   = pos_h - gluewidth
+                                     --     xoffset = - xoffset
+                                     -- end
+                                     -- if not virtual then
+                                     --     if top ~= 0 then
+                                     --      -- height = height - top
+                                     --         total  = total - top
+                                     --     end
+                                     --     if bottom ~= 0 then
+                                     --         depth = depth - bottom
+                                     --         total = total - bottom
+                                     --     end
+                                     -- end
+                                     -- pos_v = pos_v - depth
+                                     -- flushrule(leader,pos_h + xoffset,pos_v + yoffset,pos_r,gluewidth,total,getsubtype(leader))
+                                     --
                                         if pos_r == righttoleft_code then
                                             pos_h = pos_h - gluewidth
                                         end
                                         pos_v = pos_v - depth
-                                        flushrule(leader,pos_h,pos_v,pos_r,gluewidth,total,getsubtype(leader))
+                                        flushrule(leader,pos_h,pos_v,pos_r,gluewidth,total,getsubtype(leader),on,off,runningheight and runningdepth)
                                     end
                                     cur_h = cur_h + gluewidth
                                 end
@@ -1018,9 +1047,12 @@ local hlist_out, vlist_out  do
                             cur_h = cur_h + gluewidth
                         end
                     else
-                        if tospace and subtype == spaceskip_code then
+                        if tospace and (subtype == spaceskip_code or subtype == xspaceskip_code) then
                          -- kind of tricky because because we can have a different sx sy
-                            flush_character(false,getfont(current),32,false,true,pos_h,pos_v,pos_r) -- we need to pass current for scale?
+--                             local xscale = getxscale(current) or 1
+--                             flush_character(false,getfont(current),32,false,true,pos_h,pos_v,pos_r,xscale,1)
+--                             local xscale = 1
+flush_space(current)
                         end
                         cur_h = cur_h + gluewidth
                     end
@@ -1193,15 +1225,17 @@ local hlist_out, vlist_out  do
             elseif id == rule_code then
                 local width, height, depth, virtual = getruledimensions(current)
                 if width > 0 then
-                    if height == runningrule then
+                    local runningheight = height == runningrule
+                    local runningdepth  = depth  == runningrule
+                    if runningheight then
                         height = boxheight
                     end
-                    if depth == runningrule then
+                    if runningdepth then
                         depth = boxdepth
                     end
                     local total = height + depth
                     if total > 0 then
-                        local xoffset, yoffset, top, bottom = getoffsets(current)
+                        local xoffset, yoffset, top, bottom, on, off = getoffsets(current)
                         if pos_r == righttoleft_code then
                             pos_h   = pos_h - width
                             xoffset = - xoffset
@@ -1217,7 +1251,7 @@ local hlist_out, vlist_out  do
                             end
                         end
                         pos_v = pos_v - depth
-                        flushrule(current,pos_h + xoffset,pos_v + yoffset,pos_r,width,total,subtype)
+                        flushrule(current,pos_h + xoffset,pos_v + yoffset,pos_r,width,total,subtype,on,off,runningheight and runningdepth)
                     end
                     if not virtual then
                         cur_h = cur_h + width
@@ -1252,6 +1286,7 @@ local hlist_out, vlist_out  do
                     if dir ~= pos_r then
                         cur_h = new_h
                     end
+                    -- kind of weird but indeed we don't adapt here:  pos_r = dir
                     if enddir ~= current then
                         dirstack[enddir] = {
                             cur_h = new_h,
@@ -1259,6 +1294,7 @@ local hlist_out, vlist_out  do
                             ref_h = ref_h,
                             ref_v = ref_v,
                         }
+                        -- kind of weird but indeed cheat here, so we basically have a bad one now
                         setdirection(enddir,pos_r)
                     end
                     if pos_r == righttoleft_code then
@@ -1305,7 +1341,7 @@ local hlist_out, vlist_out  do
             end
          -- pos_v = ref_v - cur_v
             pos_v = ref_v
-            ::synced::
+          ::synced::
         end
         pos_h = ref_h
         pos_v = ref_v
@@ -1354,14 +1390,32 @@ local hlist_out, vlist_out  do
                                 depth = 0 -- hm
                                 total = glueheight -- forgotten ... needs testing
                                 if total > 0 then
-                                    if width == runningrule then
+                                    local runningwidth = width == runningrule
+                                    if runningwidth then
                                         width = boxwidth
                                     end
                                     if width > 0 then
+                                        local xoffset, yoffset, left, right, on, off = getoffsets(leader)
+                                     -- -- only when i have a use case:
+                                     --
+                                     -- if not virtual then
+                                     --     if left ~= 0 then
+                                     --         width = width - left
+                                     --         xoffset = left
+                                     --     end
+                                     --     if right ~= 0 then
+                                     --         width = width - right
+                                     --     end
+                                     -- end
+                                     -- if pos_r == righttoleft_code then
+                                     --     xoffset = - xoffset - width
+                                     -- end
+                                     -- flushrule(leader,pos_h + xoffset,pos_v - total - yoffset,pos_r,width,total,getsubtype(leader))
+                                     --
                                         if pos_r == righttoleft_code then
                                             cur_h = cur_h - width
                                         end
-                                        flushrule(leader,pos_h,pos_v - total,pos_r,width,total,getsubtype(leader))
+                                        flushrule(leader,pos_h,pos_v - total,pos_r,width,total,getsubtype(leader),on,off,runningwidth)
                                     end
                                     cur_v = cur_v + total
                                 end
@@ -1584,11 +1638,12 @@ local hlist_out, vlist_out  do
                 local width, height, depth, virtual = getruledimensions(current)
                 local total = height + depth
                 if total > 0 then
-                    if width == runningrule then
+                    local runningwidth = width == runningrule
+                    if runningwidth then
                         width = boxwidth
                     end
                     if width > 0 then
-                        local xoffset, yoffset, left, right = getoffsets(current)
+                        local xoffset, yoffset, left, right, on, off = getoffsets(current)
                         if not virtual then
                             if left ~= 0 then
                                 width = width - left
@@ -1601,7 +1656,7 @@ local hlist_out, vlist_out  do
                         if pos_r == righttoleft_code then
                             xoffset = - xoffset - width
                         end
-                        flushrule(current,pos_h + xoffset,pos_v - total - yoffset,pos_r,width,total,subtype)
+                        flushrule(current,pos_h + xoffset,pos_v - total - yoffset,pos_r,width,total,subtype,on,off,runningwidth)
                     end
                     if not virtual then
                         cur_v = cur_v + total
@@ -1619,7 +1674,7 @@ local hlist_out, vlist_out  do
                 pos_h = ref_h + cur_h
             end
             pos_v = ref_v - cur_v
-            ::synced::
+          ::synced::
         end
         pos_h = ref_h
         pos_v = ref_v
@@ -1663,6 +1718,7 @@ function drivers.converters.lmtx(driver,box,smode,objnum,specification)
     flushspecialrule  = flushers.specialrule
     flushliteral      = flushers.literal
     flushwhatsit      = flushers.whatsit
+    flushspace        = flushers.space
 
     reset_directions()
     reset_anchors()
@@ -1817,8 +1873,26 @@ do
         end
     end,"provide whatsit details")
 
-    local names = attributes.names  -- we show the name and number
+    local names    = attributes.names  -- we show the name and number
+    local taglist  = structures.tags.taglist
+    local details  = false
 
-    callbacks.register("get_attribute",function(k,v) return attributes.names[k], nil end,"provide verbose attrbute name")
+    local a_tagged <const> = attributes.private('tagged')
+
+    trackers.register("attributes.tags",function(v) details = v end)
+
+    callbacks.register("get_attribute",function(k,v)
+        local detail = nil
+        if details and k == a_tagged then
+            detail = taglist[v]
+            if detail then
+                detail = detail.taglist
+                if detail then
+                    detail = detail[#detail]
+                end
+            end
+        end
+        return names[k], detail
+    end,"provide verbose attribute name")
 
 end

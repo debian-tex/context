@@ -183,7 +183,10 @@ local nolong         = 1 - longleft - longright
 
 local utf8character  = P(1) * R("\128\191")^1 -- unchecked but fast
 
-local name           = (R("AZ","az") + utf8character)^1
+-- so no #[AZ] permitted
+
+local name           = ((R("az")      + utf8character) * (R("AZ","az") + utf8character)^0)
+                     + ((R("AZ","az") + utf8character) * (R("AZ","az") + utf8character)^1)
 local csname         = (R("AZ","az") + S("@?!_:-*") + utf8character)^1
 local longname       = (longleft/"") * (nolong^1) * (longright/"")
 local variable       = P("#") * Cs(name + longname)
@@ -225,6 +228,7 @@ local argument       = P { leftbrace * ((identifier + V(1) + (1 - leftbrace - ri
 
 local function matcherror(str,pos)
     report_macros("runaway definition at: %s",sub(str,pos-30,pos))
+    os.exit()
 end
 
 local csname_endcsname = P("\\csname") * (identifier + (1 - P("\\endcsname")))^1
@@ -303,10 +307,12 @@ function macros.preprocessed(str,strip)
 end
 
 function macros.convertfile(oldname,newname) -- beware, no testing on oldname == newname
-    local data = loadtexfile(oldname)
+    local data = (loadtexfile or io.loaddata)(oldname)
     data = macros.preprocessed(data) or "" -- interfaces not yet defined
     savedata(newname,data)
 end
+
+-- macros.convertfile("c:/data/develop/context/sources/publ-imp-definitions.mkvi","e:/tmp/temp-macros.mkiv")
 
 function macros.version(data)
     return lpegmatch(checker,data)

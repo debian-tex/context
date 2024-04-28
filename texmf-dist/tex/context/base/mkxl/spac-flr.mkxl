@@ -40,7 +40,7 @@
 \permanent\tolerant\protected\def\filler[#1]%
   {\removeunwantedspaces
    \begingroup
-   \edef\currentfiller{#1}%
+   \cdef\currentfiller{#1}%
    \usefillerstyleandcolor\c!style\c!color
    \scratchdimen\fillerparameter\c!leftmargin\relax
    \ifzeropt\scratchdimen\else
@@ -71,13 +71,15 @@
 \permanent\tolerant\protected\def\fillupto[#1]#:#2%
   {\removeunwantedspaces
    \begingroup
-   \edef\currentfiller{#1}%
+   \cdef\currentfiller{#1}%
    \scratchdimen\dimexpr\fillerparameter\c!rightmargindistance\relax
    \ifzeropt\scratchdimen\else
      \parfillskip \scratchdimen\s!plus \plusone\s!fil\relax
    \fi
    \filler[#1]%
-   \doifsomething{#2}{\hbox{#2}}%
+   \ifempty{#2}\else
+     \hbox{#2}%
+   \fi
    \par
    \endgroup
    \ignorespaces}

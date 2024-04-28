@@ -40,10 +40,11 @@
 
 \let\strc_sectionblock_define_normal\definesectionblock
 
-\permanent\overloaded\tolerant\protected\def\definesectionblock[#1]#*[#2]#*[#3]% singular plural settings
+\permanent\overloaded\tolerant\protected\def\definesectionblock[#1]#*[#2]#*[#S#3]% singular plural settings
   {\strc_sectionblock_define_normal[#1][#3]%
   %\expandafter\newif\csname if#2\endcsname % obsolete
    \strc_sectionblock_set_environment{#1}\empty
+   \definemode[*#1]%
    \frozen\protected\defcsname\e!start#2\endcsname{\startsectionblock[#1]}%
    \frozen\protected\defcsname\e!stop #2\endcsname{\stopsectionblock}}
 
@@ -72,8 +73,8 @@
     \resetallstructuremarks
 \to \everyaftersectionblock
 
-\permanent\tolerant\protected\def\setsectionblock[#1]#*[#2]% used to set the default
-  {\edef\currentsectionblock{#1}% from now on we assume a value
+\permanent\tolerant\protected\def\setsectionblock[#1]#*[#S#2]% used to set the default
+  {\cdef\currentsectionblock{#1}% from now on we assume a value
    \setupcurrentsectionblock[#2]%
    \clf_setsectionblock{#1}
       bookmark {\sectionblockparameter\c!bookmark}%
@@ -81,22 +82,22 @@
 
 \mutable\lettonothing\currentsectionblock % was \s!unknown
 
-\permanent\tolerant\protected\def\startsectionblock[#1]#*[#2]%
+\permanent\tolerant\protected\def\startsectionblock[#1]#*[#S#2]%
   {%\ctxlua{structures.counters.check(0)}% we assume sane usage of \page, as this is the only workable place (in push)
    \begingroup
-   \edef\currentsectionblock{#1}% from now on we assume a value
+   \cdef\currentsectionblock{#1}% from now on we assume a value
    \setupcurrentsectionblock[#2]%
    \clf_pushsectionblock{#1}
      bookmark {\sectionblockparameter\c!bookmark}%
    \relax
   %\csname #1true\endcsname % obsolete
    \setsystemmode\currentsectionblock
-   \the\everybeforesectionblock\relax
+   \expand\everybeforesectionblock\relax
    \showmessage\m!structures1\currentsectionblock}
 
 \permanent\protected\def\stopsectionblock
   {\showmessage\m!structures2\currentsectionblock
-   \the\everyaftersectionblock\relax
+   \expand\everyaftersectionblock\relax
    \clf_popsectionblock
    \endgroup}
 

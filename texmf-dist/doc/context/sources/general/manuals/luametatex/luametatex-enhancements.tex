@@ -270,11 +270,11 @@ live in a \UNICODE\ galaxy that is no real problem.
 
 \stopsubsection
 
-\startsubsection[title={\prm {Uchar}}]
+\startsubsection[title={\prm {tocharacter}}]
 
 \topicindex{\UNICODE}
 
-The expandable command \prm {Uchar} reads a number between~0 and $1{,}114{,}111$
+The expandable command \prm {tocharacter} reads a number between~0 and $1{,}114{,}111$
 and expands to the associated \UNICODE\ character.
 
 \stopsubsection
@@ -1258,15 +1258,15 @@ In addition to these \ASCII\ combinations, we also support some \UNICODE\
 variants. The extra comparison options are:
 
 \starttabulate[|l|c|c|l|]
-\DB character      \BC               \BC            \BC operation         \NC \NR
+\DB character      \BC                     \BC            \BC operation         \NC \NR
 \TB
-\NC \type {0x2208} \NC $\Uchar"2208$ \NC            \NC element of        \NC \NR
-\NC \type {0x2209} \NC $\Uchar"2209$ \NC            \NC not element of    \NC \NR
-\NC \type {0x2260} \NC $\Uchar"2260$ \NC \type {!=} \NC not equal         \NC \NR
-\NC \type {0x2264} \NC $\Uchar"2264$ \NC \type {!>} \NC less equal        \NC \NR
-\NC \type {0x2265} \NC $\Uchar"2265$ \NC \type {!<} \NC greater equal     \NC \NR
-\NC \type {0x2270} \NC $\Uchar"2270$ \NC            \NC not less equal    \NC \NR
-\NC \type {0x2271} \NC $\Uchar"2271$ \NC            \NC not greater equal \NC \NR
+\NC \type {0x2208} \NC $\tocharacter"2208$ \NC            \NC element of        \NC \NR
+\NC \type {0x2209} \NC $\tocharacter"2209$ \NC            \NC not element of    \NC \NR
+\NC \type {0x2260} \NC $\tocharacter"2260$ \NC \type {!=} \NC not equal         \NC \NR
+\NC \type {0x2264} \NC $\tocharacter"2264$ \NC \type {!>} \NC less equal        \NC \NR
+\NC \type {0x2265} \NC $\tocharacter"2265$ \NC \type {!<} \NC greater equal     \NC \NR
+\NC \type {0x2270} \NC $\tocharacter"2270$ \NC            \NC not less equal    \NC \NR
+\NC \type {0x2271} \NC $\tocharacter"2271$ \NC            \NC not greater equal \NC \NR
 \LL
 \stoptabulate
 
@@ -1762,6 +1762,30 @@ addition there is \prm {lastnodesubtype}.
 Another last one is \prm {lastnamedcs} which holds the last match but this one
 should be used with care because one never knows if in the meantime something
 else \quote {last} has been seen.
+
+\stopsubsection
+
+\stopsection
+
+\startsection[title=Kerns and penalties]
+
+\startsubsection[title=\prm {hkern} and \prm {vkern}]
+
+\topicindex {kerns}
+
+These two primitives complement \prm {hskip} and \prm {vskip} and force the right
+mode when issued. Contrary to the skips, internally we still have a common kern
+command code but that is not something the user has to worry about.
+
+\stopsubsection
+
+\startsubsection[title=\prm {hpenalty} and \prm {vpenalty}]
+
+\topicindex {penalties}
+
+As the kern and skip related primitives mentioned in the in the previous section
+these two primitives are there fort consistency: they force the right (related)
+mode. (Sometimes being a bit more explicit is cleaner.)
 
 \stopsubsection
 
@@ -2483,6 +2507,38 @@ Unit equivalent to ten Toves or one Edith.
 \getbuffer
 \stopcolor
 \stoppacked
+
+\stopsubsection
+
+\stopsection
+
+\startsection[title=Registers]
+
+
+\startsubsection[title={32 bit floats}]
+
+The engine has native float registers which means that we have a similar set of
+primitives as for dimensions and integers: \prm {float}, \prm {floatdef}, \prm
+{floatexpr} and \prm {iffloat}. In the context if an integer a rounded value is
+used, in the context of a dimensions the floating point number is interpreted as
+points. Internally floats are stored as so called posits, which gives more accuracy
+for smaller values.
+
+\stopsubsection
+
+\startsubsection[title={32 bit posits}]
+
+{\em This is a playground. It will stay but might evolve.}
+
+\stopsubsection
+
+\startsubsection[title={Extra features}]
+
+There are \prm {ifabsnum}, \prm {ifabsdim} and \prm {ifabsfloat} that compare
+absolute values of quantities. The primitives \prm{ifzeronum}, \prm{ifzerodim},
+\prm{ifzerofloat} do a fast test for zero. The \prm {ifintervalnum}, \prm
+{ifintervaldim} and \prm {ifintervalfloat} primitives take a delta and two values
+and check if these values overlap within the ranges dedicated by the delta.
 
 \stopsubsection
 

@@ -71,7 +71,7 @@
 \installcorenamespace{language}
 \installcorenamespace{languagelinked}
 
-\mutable\def\currentusedlanguage{\currentlanguage}
+\mutable\def\currentusedlanguage{\currentlanguage} % no \cdef
 
 \permanent\def\defaultlanguage#1%
   {\ifcsname\??language#1\s!default\endcsname
@@ -119,7 +119,7 @@
    \fi}
 
 \permanent\protected\def\setusedlanguage#1%
-  {\edef\currentusedlanguage{\reallanguagetag{#1}}%
+  {\cdef\currentusedlanguage{\reallanguagetag{#1}}%
    \ifempty\currentusedlanguage
      \let\currentusedlanguage  \currentlanguage
      \enforced\let\usedlanguageparameter\languageparameter
@@ -193,16 +193,16 @@
 
 \mutable\lettonothing\currentsetuplanguage
 
-\permanent\tolerant\protected\def\installlanguage[#1]#*[#2]%
-  {\ifcondition\validassignment{#2}%
+\permanent\tolerant\protected\def\installlanguage[#1]#*[#S#2]%
+  {\ifhastok={#2}%
      \doifelselanguage{#1}
        {\getparameters[\??language#1][#2]}
        {\defcsname\??languagelinked#1\endcsname{#1}%
         \getparameters[\??language#1][\c!state=\v!start,#2]%
         \lang_basics_install_indeed{#1}{#1}}%
-     \edef\currentsetuplanguage{#1}%
+     \cdef\currentsetuplanguage{#1}%
      \clf_definelanguage{#1}{\specificlanguageparameter{#1}\s!default}%
-     \the\everysetuplanguage
+     \expand\everysetuplanguage
    \else
      \defcsname\??languagelinked#1\endcsname{#2}%
      \clf_setlanguagesynonym{#1}{#2}%
@@ -244,20 +244,19 @@
 
 \installmacrostack\currentlanguage
 
-\permanent\tolerant\protected\def\setuplanguage[#1]#*[#2]%
+\permanent\tolerant\protected\def\setuplanguage[#S#1]#*[#S#2]%
   {\ifarguments
      % only synchronize
    \or
      \let\currentsetuplanguage\currentlanguage
      \getparameters[\??language\currentsetuplanguage][#1]%
-     \the\everysetuplanguage
+     \expand\everysetuplanguage
    \or
      \push_macro_currentlanguage % can be default
-     \edef\currentsetuplanguage{\reallanguagetag{#1}}%
+     \cdef\currentsetuplanguage{\reallanguagetag{#1}}%
      \getparameters[\??language\currentsetuplanguage][#2]%
-     \the\everysetuplanguage
+     \expand\everysetuplanguage
      \pop_macro_currentlanguage
-    %\doif\currentsetuplanguage\currentlanguage we can have influenced inheritance (default)
    \fi
    \lang_basics_synchronize}
 
@@ -392,7 +391,7 @@
      \fi
    \endcsname
    \relax
-   \the\everylanguage
+   \expand\everylanguage
    \relax}
 
 \newinteger\hyphenstate
@@ -447,7 +446,8 @@
   + \collapsehyphenationcode          % collapse -- and ---
 \relax
 
-\hccode"002D "002D
+\hccode"002D "002D % hyphen
+\hccode"00B7 "00B7 % centered text period (used in some languages)
 
 \permanent\protected\def\keephyphensequences
   {\hccode"2010 \zerocount
@@ -463,8 +463,8 @@
 
 % maybe a (un)setter for handlers
 
-\permanent\protected\def\dohyphens {\hyphenationmode\completehyphenationcode}
-\permanent\protected\def\nohyphens {\hyphenationmode\partialhyphenationcode}
+\permanent\protected\def\dohyphens{\hyphenationmode\completehyphenationcode}
+\permanent\protected\def\nohyphens{\hyphenationmode\partialhyphenationcode}
 
 % \permanent\protected\def\dohyphens
 %   {\ifbitwiseand\hyphenationmode\collapsehyphenationcode
@@ -487,8 +487,7 @@
 \permanent\protected\def\noexplicithyphens{\hyphenationmode\bitwiseflip\hyphenationmode-\explicithyphenationcode}
 
 \permanent\protected\def\usehyphensparameter#1%
-  {\edef\p_hyphens{#1\c!hyphens}%
-   \ifx\p_hyphens\v!no
+  {\ifcstok{#1\c!hyphens}\v!no
      \ifbitwiseand\hyphenationmode\collapsehyphenationcode
        \nohyphens
      \else
@@ -562,8 +561,7 @@
 % this will move to core-spa !
 
 \appendtoks
-    \edef\p_spacing{\languageparameter\c!spacing}%
-    \ifx\p_spacing\v!broad
+    \ifcstok{\languageparameter\c!spacing}\v!broad
       \nonfrenchspacing
     \else
       \frenchspacing
@@ -662,8 +660,14 @@
 
 %D Used at all?
 
-\permanent\def\splitsequence#1#2%
-  {\doifelse{#1}\v!no{#2}{\doifelse{#1}\v!yes{\languageparameter\c!limittext}{#1}}}
+\permanent\def\splitsequence#1#2% append periods etc
+  {\ifcstok{#1}\v!no
+     #2%
+   \orelse\ifcstok{#1}\v!yes
+      \languageparameter\c!limittext
+   \else
+     #1%
+   \fi}
 
 \permanent\def\splitsymbol#1%
   {\splitsequence{#1}{\languageparameter\c!limittext}}
@@ -855,20 +859,20 @@
 %D {ef{\norightligaturing f}icient ff fi}\par
 %D \stoptyping
 
-\immutable\chardef\nokerningcode   \numexpr\noleftkernglyphoptioncode    +\norightkernglyphoptioncode    \relax
-\immutable\chardef\noligaturingcode\numexpr\noleftligatureglyphoptioncode+\norightligatureglyphoptioncode\relax
+\immutable\integerdef\nokerningcode   \numexpr\noleftkernglyphoptioncode        +\norightkernglyphoptioncode           \relax
+\immutable\integerdef\noligaturingcode\numexpr\noleftligatureglyphoptioncode    +\norightligatureglyphoptioncode       \relax
+\immutable\integerdef\noitalicscode   \numexpr\noitaliccorrectionglyphoptioncode+\nozeroitaliccorrectionglyphoptioncode\relax
 
-\permanent\protected\def\nokerning   {\bitwiseflip\glyphoptions\nokerningcode}
-\permanent\protected\def\noligaturing{\bitwiseflip\glyphoptions\noligaturingcode}
+\permanent\protected\def\nokerning         {\bitwiseflip\glyphoptions\nokerningcode}
+\permanent\protected\def\noligaturing      {\bitwiseflip\glyphoptions\noligaturingcode}
+\permanent\protected\def\noitaliccorrection{\bitwiseflip\glyphoptions\noitalicscode}
 
-\permanent\protected\def\noleftkerning    {\bitwiseflip\glyphoptions\noleftkernglyphoptioncode}
-\permanent\protected\def\noleftligaturing {\bitwiseflip\glyphoptions\noleftligatureglyphoptioncode}
-\permanent\protected\def\norightkerning   {\bitwiseflip\glyphoptions\norightkernglyphoptioncode}
-\permanent\protected\def\norightligaturing{\bitwiseflip\glyphoptions\norightligatureglyphoptioncode}
+\permanent\protected\def\noleftkerning     {\bitwiseflip\glyphoptions\noleftkernglyphoptioncode}
+\permanent\protected\def\noleftligaturing  {\bitwiseflip\glyphoptions\noleftligatureglyphoptioncode}
+\permanent\protected\def\norightkerning    {\bitwiseflip\glyphoptions\norightkernglyphoptioncode}
+\permanent\protected\def\norightligaturing {\bitwiseflip\glyphoptions\norightligatureglyphoptioncode}
 
-% This is not really language related but let's define it here:
-
-\permanent\protected\def\noitaliccorrection{\bitwiseflip\glyphoptions\noitaliccorrectionglyphoptioncode}
+\bitwiseflip\glyphoptions\nozeroitaliccorrectionglyphoptioncode % for the moment default avoid the side effect
 
 %D Also \LMTX:
 

@@ -35,6 +35,7 @@ local getnext            = nuts.getnext
 local getprev            = nuts.getprev
 local getid              = nuts.getid
 local getfont            = nuts.getfont
+local getxscale          = nuts.getxscale
 local getsubtype         = nuts.getsubtype
 local getchar            = nuts.getchar
 local getdisc            = nuts.getdisc
@@ -53,11 +54,13 @@ local setglue            = nuts.setglue
 local setkern            = nuts.setkern
 local setchar            = nuts.setchar
 local setglue            = nuts.setglue -- todo
+local setattrlist        = nuts.setattrlist
 
 local texsetattribute    = tex.setattribute
-local unsetvalue         = attributes.unsetvalue
 
-local new_kern           = nodepool.kern
+local unsetvalue         <const> = attributes.unsetvalue
+
+local new_kern           = nodepool.kern -- fontkern
 local new_glue           = nodepool.glue
 
 local nodecodes          = nodes.nodecodes
@@ -66,26 +69,26 @@ local gluecodes          = nodes.gluecodes
 local disccodes          = nodes.disccodes
 local listcodes          = nodes.listcodes
 
-local glyph_code         = nodecodes.glyph
-local kern_code          = nodecodes.kern
-local disc_code          = nodecodes.disc
-local glue_code          = nodecodes.glue
-local hlist_code         = nodecodes.hlist
-local vlist_code         = nodecodes.vlist
-local math_code          = nodecodes.math
+local glyph_code         <const> = nodecodes.glyph
+local kern_code          <const> = nodecodes.kern
+local disc_code          <const> = nodecodes.disc
+local glue_code          <const> = nodecodes.glue
+local hlist_code         <const> = nodecodes.hlist
+local vlist_code         <const> = nodecodes.vlist
+local math_code          <const> = nodecodes.math
 
-local boxlist_code       = listcodes.box
-local unknownlist_code   = listcodes.unknown
+local boxlist_code       <const> = listcodes.box
+local unknownlist_code   <const> = listcodes.unknown
 
-local discretionarydisc_code = disccodes.discretionary
-local automaticdisc_code     = disccodes.automatic
+local discretionarydisc_code <const> = disccodes.discretionary
+local automaticdisc_code     <const> = disccodes.automatic
 
-local fontkern_code      = kerncodes.fontkern
-local userkern_code      = kerncodes.userkern
+local fontkern_code      <const> = kerncodes.fontkern
+local userkern_code      <const> = kerncodes.userkern
 
-local userskip_code      = gluecodes.userskip
-local spaceskip_code     = gluecodes.spaceskip
-local xspaceskip_code    = gluecodes.xspaceskip
+local userskip_code      <const> = gluecodes.userskip
+local spaceskip_code     <const> = gluecodes.spaceskip
+local xspaceskip_code    <const> = gluecodes.xspaceskip
 
 local fonthashes         = fonts.hashes
 local chardata           = fonthashes.characters
@@ -99,8 +102,10 @@ local tracers            = nodes.tracers
 local setcolor           = tracers.colors.set
 local resetcolor         = tracers.colors.reset
 
-local v_max              = interfaces.variables.max
-local v_auto             = interfaces.variables.auto
+local setattrlist        = nuts.setattrlist
+
+local v_max              <const> = interfaces.variables.max
+local v_auto             <const> = interfaces.variables.auto
 
 typesetters              = typesetters or { }
 local typesetters        = typesetters
@@ -109,12 +114,13 @@ local kerns              = typesetters.kerns or { }
 typesetters.kerns        = kerns
 
 local report             = logs.reporter("kerns")
-local trace_ligatures    = false  trackers.register("typesetters.kerns.ligatures",        function(v) trace_ligatures   = v end)
+local trace_ligatures    = false  trackers.register("typesetters.kerns.ligatures",         function(v) trace_ligatures   = v end)
 local trace_ligatures_d  = false  trackers.register("typesetters.kerns.ligatures.details", function(v) trace_ligatures_d = v end)
 
 kerns.mapping            = kerns.mapping or { }
 kerns.factors            = kerns.factors or { }
-local a_kerns            = attributes.private("kern")
+
+local a_kerns            <const> = attributes.private("kern")
 
 local contextsetups      = fonts.specifiers.contextsetups
 
@@ -203,33 +209,35 @@ end
 
 -- can be optimized .. the prev thing .. but hardly worth the effort
 
-local function kern_injector(fillup,kern)
+local function kern_injector(fillup,kern,template)
+    local n
     if fillup then
-        local g = new_glue(kern)
-        setfield(g,"stretch",kern)
-        setfield(g,"stretchorder",1)
-        return g
+        n = new_glue(kern)
+        setfield(n,"stretch",kern)
+        setfield(n,"stretchorder",1)
     else
-        return new_kern(kern)
+        n = new_kern(kern)
     end
+    setattrlist(n,template)
+    return n
 end
 
 -- a simple list injector, no components and such .. just disable ligatures in
 -- kern mode .. maybe not even hyphenate ... anyway, the next one is for simple
 -- sublists .. beware: we can have char -1
 
-local function inject_begin(boundary,prev,keeptogether,krn,ok) -- prev is a glyph
+local function inject_begin(boundary,prev,keeptogether,krn,ok,scale) -- prev is a glyph
     local char, id = isglyph(boundary)
     if char then
         if keeptogether and keeptogether(boundary,prev) then
             -- keep 'm
         else
-            local prevchar = isglyph(prev)
-            if prevchar and prevchar > 0 then
-                local font  = getfont(boundary)
-                local data  = chardata[font][prevchar]
+            local prevchar, prevfont = isglyph(prev)
+            if prevchar and prevchar > 0 and prevfont == id then
+                local data  = chardata[id][prevchar]
                 local kerns = data and data.kerns
-                local kern  = new_kern((kerns and kerns[char] or 0) + quaddata[font]*krn)
+                local kern  = new_kern(scale*((kerns and kerns[char] or 0) + quaddata[id]*krn))
+                setattrlist(kern,boundary)
                 setlink(kern,boundary)
                 return kern, true
             end
@@ -245,7 +253,7 @@ local function inject_begin(boundary,prev,keeptogether,krn,ok) -- prev is a glyp
             end
             if inject then
                 -- not yet ok, as injected kerns can be overlays (from node-inj.lua)
-                setkern(boundary,getkern(boundary) + quaddata[getfont(prev)]*krn,userkern_code)
+                setkern(boundary,getkern(boundary) + scale*quaddata[getfont(prev)]*krn) -- ,userkern_code)
                 return boundary, true
             end
         end
@@ -253,20 +261,21 @@ local function inject_begin(boundary,prev,keeptogether,krn,ok) -- prev is a glyp
     return boundary, ok
 end
 
-local function inject_end(boundary,next,keeptogether,krn,ok)
+local function inject_end(boundary,next,keeptogether,krn,ok,scale)
     local tail = find_node_tail(boundary)
     local char, id = isglyph(tail)
     if char then
         if keeptogether and keeptogether(tail,two) then
             -- keep 'm
         else
-            local nextchar = isglyph(tail)
-            if nextchar and nextchar > 0 then
-                local font  = getfont(tail)
-                local data  = chardata[font][nextchar]
+            -- base mode
+            local nextchar, nextfont = isglyph(tail)
+            if nextchar and nextchar > 0 and nextfont == id then
+                local data  = chardata[id][nextchar]
                 local kerns = data and data.kerns
-                local kern  = (kerns and kerns[char] or 0) + quaddata[font]*krn
-                setlink(tail,new_kern(kern))
+                local kern  = new_kern(scale*((kerns and kerns[char] or 0) + quaddata[id]*krn))
+                setattrlist(kern,boundary)
+                setlink(tail,kern)
                 return boundary, true
             end
         end
@@ -281,7 +290,7 @@ local function inject_end(boundary,next,keeptogether,krn,ok)
             end
             if inject then
                 -- not yet ok, as injected kerns can be overlays (from node-inj.lua)
-                setkern(tail,getkern(tail) + quaddata[getfont(next)]*krn,userkern_code)
+                setkern(tail,getkern(tail) + scale*quaddata[getfont(next)]*krn) -- ,userkern_code)
                 return boundary, true
             end
         end
@@ -295,13 +304,15 @@ local function process_list(head,keeptogether,krn,font,okay)
     local pid   = nil
     local kern  = 0
     local mark  = font and markdata[font]
+    local scale = 1
     while start  do
         local char, id = isglyph(start)
         if char then
             if not font then
-                font = id -- getfont(start)
-                mark = markdata[font]
-                kern = quaddata[font]*krn
+                font  = id -- getfont(start)
+                mark  = markdata[font]
+                kern  = quaddata[font]*krn
+                scale = getxscale(start)
             end
             if prev then
                 if mark[char] then
@@ -317,7 +328,7 @@ local function process_list(head,keeptogether,krn,font,okay)
                         end
                         if inject then
                             -- not yet ok, as injected kerns can be overlays (from node-inj.lua)
-                            setkern(prev,getkern(prev) + kern,userkern_code)
+                            setkern(prev,getkern(prev) + scale*kern) -- ,userkern_code)
                             okay = true
                         end
                     end
@@ -331,17 +342,19 @@ local function process_list(head,keeptogether,krn,font,okay)
                      -- if kerns then
                      --     print("it happens indeed, basemode kerns not yet injected")
                      -- end
-                        insertnodebefore(head,start,new_kern((kerns and kerns[char] or 0) + kern))
+                        local kern = new_kern(scale*((kerns and kerns[char] or 0) + kern))
+                        setattrlist(kern,start)
+                        insertnodebefore(head,start,kern)
                         okay = true
                     end
                 end
             end
+            pid = glyph_code
+        else
+            pid = id
         end
-        if start then
-            prev  = start
-            pid   = id
-            start = getnext(start)
-        end
+        prev  = start
+        start = getnext(start)
     end
     return head, okay, prev
 end
@@ -378,6 +391,7 @@ function kerns.handler(head)
         local prevfont     = nil
         local prevmark     = nil
         local done         = false
+        local scale        = 1
         while start do
             -- fontkerns don't get the attribute but they always sit between glyphs so
             -- are always valid bound .. disc nodes also sometimes don't get them
@@ -396,6 +410,7 @@ function kerns.handler(head)
                 elseif char then -- id == glyph_code
                     local font = id -- more readable
                     local mark = markdata[font]
+                    scale = getxscale(start)
                     if keepligature and keepligature(start) then
                         -- keep 'm
                     else
@@ -434,7 +449,7 @@ function kerns.handler(head)
                             end
                             if inject then
                                 -- not yet ok, as injected kerns can be overlays (from node-inj.lua)
-                                setkern(prev,getkern(prev) + quaddata[font]*krn,userkern_code)
+                                setkern(prev,getkern(prev) + scale*quaddata[font]*krn) -- ,userkern_code)
                             end
                         end
                     elseif previd == glyph_code then
@@ -446,10 +461,10 @@ function kerns.handler(head)
                                 local data  = chardata[font][prevchar]
                                 local kerns = data and data.kerns
                                 local kern  = (kerns and kerns[char] or 0) + quaddata[font]*krn
-                                insertnodebefore(head,start,kern_injector(fillup,kern))
+                                insertnodebefore(head,start,kern_injector(fillup,scale*kern,start))
                             end
                         else
-                            insertnodebefore(head,start,kern_injector(fillup,quaddata[font]*krn))
+                            insertnodebefore(head,start,kern_injector(fillup,scale*quaddata[font]*krn,start))
                         end
                     end
                     prev     = start
@@ -482,7 +497,7 @@ function kerns.handler(head)
                             pglyph = prev and getid(prev) == glyph_code
                         end
                         if pglyph then
-                            pre, okay = inject_begin(pre,prev,keeptogether,krn,okay)
+                            pre, okay = inject_begin(pre,prev,keeptogether,krn,okay,scale)
                         end
                         pre, okay = process_list(pre,keeptogether,krn,false,okay)
                         if okay then
@@ -496,7 +511,7 @@ function kerns.handler(head)
                             nglyph = next and getid(next) == glyph_code
                         end
                         if nglyph then
-                            post, okay = inject_end(post,next,keeptogether,krn,okay)
+                            post, okay = inject_end(post,next,keeptogether,krn,okay,scale)
                         end
                         post, okay = process_list(post,keeptogether,krn,false,okay)
                         if okay then
@@ -510,21 +525,22 @@ function kerns.handler(head)
                             pglyph  = prev and getid(prev) == glyph_code
                         end
                         if pglyph then
-                            replace, okay = inject_begin(replace,prev,keeptogether,krn,okay)
+                            replace, okay = inject_begin(replace,prev,keeptogether,krn,okay,scale)
                         end
                         if not next then
                             next   = getnext(start)
                             nglyph = next and getid(next) == glyph_code
                         end
                         if nglyph then
-                            replace, okay = inject_end(replace,next,keeptogether,krn,okay)
+                            replace, okay = inject_end(replace,next,keeptogether,krn,okay,scale)
                         end
                         replace, okay = process_list(replace,keeptogether,krn,false,okay)
                         if okay then
                             indeed = true
                         end
                     elseif prevfont then
-                        replace = new_kern(quaddata[prevfont]*krn)
+                        replace = new_kern(scale*quaddata[prevfont]*krn)
+                        setattrlist(replace,start)
                         indeed  = true
                     end
                     if indeed then
@@ -559,11 +575,11 @@ function kerns.handler(head)
                         -- special case
                         local b, f = closest_bound(start,getprev)
                         if b then
-                            insertnodebefore(head,start,kern_injector(fillup,quaddata[f]*krn))
+                            insertnodebefore(head,start,kern_injector(fillup,scale*quaddata[f]*krn,start))
                         end
                         local b, f = closest_bound(start,getnext)
                         if b then
-                            insertnodeafter(head,start,kern_injector(fillup,quaddata[f]*krn))
+                            insertnodeafter(head,start,kern_injector(fillup,scale*quaddata[f]*krn,start))
                         end
                     end
                     bound = false

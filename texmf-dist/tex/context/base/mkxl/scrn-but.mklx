@@ -50,12 +50,12 @@
 \aliased\let\setupbuttons\setupbutton
 
 \appendtoks
-    \frozen\instance\setuevalue\currentbutton{\scrn_button_direct{\currentbutton}}%
+    \frozen\protected\instance\edefcsname\currentbutton\endcsname{\scrn_button_direct{\currentbutton}}%
 \to \everydefinebutton
 
 \protected\def\scrn_button_direct#tag%
   {\begingroup
-   \edef\currentbutton{#tag}%
+   \cdef\currentbutton{#tag}%
    \iflocation
      \expandafter\scrn_button_direct_status
    \else
@@ -73,7 +73,7 @@
 %
 % \button[settings]{}[action] % normally used at the tex end
 
-\tolerant\def\scrn_button_direct_indeed[#settings]#:#text[#action]%
+\tolerant\def\scrn_button_direct_indeed[#S#settings]#:#text[#action]%
   {\setupcurrentbutton[#settings]%
    % no \dontleavehmode as it will force a vbox to \hsize which then
    % spoils a tight box
@@ -88,7 +88,7 @@
    \egroup
    \endgroup}
 
-\tolerant\def\scrn_button_direct_ignore[#settings]#:#text[#destination]%
+\tolerant\def\scrn_button_direct_ignore[#S#settings]#:#text[#destination]%
   {\endgroup}
 
 \definebutton[button] % english
@@ -151,7 +151,7 @@
 \def\scrn_button_make#currentparameter#inheritedframed#letparameter#setparameter#text#action%
   {\begingroup
    \c_attr_reference\attributeunsetvalue
-   \global\setfalse\c_scrn_button_skipped
+   \global\c_scrn_button_skipped\conditionalfalse
    \locationboxpagestate\csname\??buttonlocation#currentparameter\c!samepage\endcsname % ?? bt: todo
    \doifelsereferencefound{#action}\scrn_button_make_yes\scrn_button_make_nop
      #currentparameter%
@@ -208,7 +208,7 @@
   {#inheritedframed{\ignorespaces#text\removeunwantedspaces}}
 
 \def\scrn_button_make_skipped#currentparameter#inheritedframed#letparameter#setparameter#text%
-  {\global\settrue\c_scrn_button_skipped}
+  {\global\c_scrn_button_skipped\conditionaltrue}
 
 \def\scrn_button_make_normal#currentparameter#inheritedframed#letparameter#setparameter#text%
   {\clf_injectcurrentreference
@@ -337,7 +337,7 @@
 
 \pushoverloadmode
 
-\permanent\tolerant\protected\def\defineinteractionmenu[#tag]#spacer[#category]#spacer[#settings]% category reflects location, settings can be parent
+\permanent\tolerant\protected\def\defineinteractionmenu[#tag]#spacer[#category]#spacer[#S#settings]% category reflects location, settings can be parent
   {\ifarguments\or
      \scrn_menu_define_original[#tag]%                                             % root definition
    \or
@@ -360,8 +360,8 @@
 
 \def\scrn_menu_register#tag#category%
   {\ifcsname\??menutoks#category\endcsname \else
-     \expandafter\newtoks \csname\??menutoks#category\endcsname
-     \expandafter\setfalse\csname\??menustate#category\endcsname
+     \expandafter\newtoks       \csname\??menutoks #category\endcsname
+     \expandafter\newconditional\csname\??menustate#category\endcsname
    \fi
  % \normalexpanded{\csname\??menutoks#category\endcsname{\the\csname\??menutoks#category\endcsname\scrn_menu_action{#tag}}}}
    \toksapp\csname\??menutoks#category\endcsname{\scrn_menu_action{#tag}}} % needs testing
@@ -373,15 +373,16 @@
 
 \aliased\letcsname\e!stop\v!interactionmenu\endcsname\relax
 
-%normalexpanded{\permanent\defcsname\e!start\v!interactionmenu\endcsname[#tag]#content\expandafter\noexpand\csname\e!stop\v!interactionmenu\endcsname}%
-% \normalexpanded{\permanent\expandafter\def\expandafter\noexpand\csname\e!start\v!interactionmenu\endcsname[#tag]#content\expandafter\noexpand\csname\e!stop\v!interactionmenu\endcsname}%
 \normalexpanded{\permanent\expandafter\def\expandafter\noexpand\csname\e!start\v!interactionmenu\endcsname[#tag]#content\csname\e!stop\v!interactionmenu\endcsname}%
-  {\def\currentinteractionmenu{#tag}%
-   \expandafter\settrue\csname\??menustate\interactionmenuparameter\c!category\endcsname
+  {\cdef\currentinteractionmenu{#tag}%
+  %\ifcsname\??menustate\interactionmenuparameter\c!category\endcsname\else
+  %  \expandafter\newconditional\csname\??menustate\interactionmenuparameter\c!category\endcsname
+  %\fi
+   \csname\??menustate\interactionmenuparameter\c!category\endcsname\conditionaltrue
    \setinteractionmenuparameter\c!menu{#content}}
 
 \permanent\protected\def\resetinteractionmenu[#tag]%
-  {\def\currentinteractionmenu{#tag}%
+  {\cdef\currentinteractionmenu{#tag}%
    \resetinteractionmenuparameter\c!menu}
 
 %D Placement of menus:
@@ -437,10 +438,10 @@
 \mutable\lettonothing\currentinteractionmenulocation
 
 \def\scrn_menu_set_used
-  {\d_scrn_menu_offset_left  \ifchkdim\interactionmenuparameter\c!leftoffset  \or\lastchkdim\else\zeropoint\fi
-   \d_scrn_menu_offset_right \ifchkdim\interactionmenuparameter\c!rightoffset \or\lastchkdim\else\zeropoint\fi
-   \d_scrn_menu_offset_top   \ifchkdim\interactionmenuparameter\c!topoffset   \or\lastchkdim\else\zeropoint\fi
-   \d_scrn_menu_offset_bottom\ifchkdim\interactionmenuparameter\c!bottomoffset\or\lastchkdim\else\zeropoint\fi
+  {\d_scrn_menu_offset_left  \ifchkdimension\interactionmenuparameter\c!leftoffset  \or\lastchkdimension\else\zeropoint\fi
+   \d_scrn_menu_offset_right \ifchkdimension\interactionmenuparameter\c!rightoffset \or\lastchkdimension\else\zeropoint\fi
+   \d_scrn_menu_offset_top   \ifchkdimension\interactionmenuparameter\c!topoffset   \or\lastchkdimension\else\zeropoint\fi
+   \d_scrn_menu_offset_bottom\ifchkdimension\interactionmenuparameter\c!bottomoffset\or\lastchkdimension\else\zeropoint\fi
    \d_scrn_menu_asked_width  \interactionmenuparameter\c!maxwidth
    \d_scrn_menu_asked_height \interactionmenuparameter\c!maxheight
    \d_scrn_menu_used_width\dimexpr
@@ -514,7 +515,7 @@
      \forgetall
      \global\d_scrn_menu_next_distance\zeropoint
      \let\scrn_menu_action\scrn_menu_package_indeed
-     \the\everysetmenucommands
+     \expand\everysetmenucommands
      \csname\??menupacker\namedinteractionmenuparameter\currentinteractionmenulocation\c!alternative\endcsname
    \fi
    \endgroup}
@@ -542,7 +543,7 @@
 
 \protected\def\scrn_menu_package_indeed#tag% one menu
   {\begingroup
-   \edef\currentinteractionmenu{#tag}%
+   \cdef\currentinteractionmenu{#tag}%
    \edef\currentinteractionmenustate{\interactionmenuparameter\c!state}%
    \ifx\currentinteractionmenustate\v!start
      \scrn_menu_packager
@@ -615,12 +616,12 @@
 
 \def\scrn_menu_button_meta_template
   {\currentinteractionmenulocation _menu_button(%
-     \number\c_scrn_menu_position,%
-     \number\c_scrn_menu_page_mode,%
-     \MPpos{\currentinteractionmenulocation:\number\c_scrn_menu_position}%
+     \the\c_scrn_menu_position,%
+     \the\c_scrn_menu_page_mode,%
+     \MPpos{\currentinteractionmenulocation:\the\c_scrn_menu_position}%
    );}
 
-\permanent\def\MPmenubuttons#1{\the\t_scrn_menu_meta_data}
+\permanent\def\MPmenubuttons#1{\expand\t_scrn_menu_meta_data}
 
 \appendtoks
     \global\t_scrn_menu_meta_data\emptytoks
@@ -639,7 +640,11 @@
   {\begingroup
    \global\c_scrn_menu_position\zerocount
    \def\scrn_menu_between_action_indeed{\interactionmenuparameter\c!inbetween}%
-   \doifelse{\interactionmenuparameter\c!position}\v!yes\settrue\setfalse\c_scrn_menu_positioning
+   \ifcstok{\interactionmenuparameter\c!position}\v!yes
+     \c_scrn_menu_positioning\conditionaltrue
+   \else
+     \c_scrn_menu_positioning\conditionalfalse
+   \fi
    \scrn_menu_set_align
    \setbox\b_scrn_menu\vbox to \d_scrn_menu_used_height \bgroup
      \hsize\d_scrn_menu_used_width
@@ -659,7 +664,11 @@
   {\begingroup
    \global\c_scrn_menu_position\zerocount
    \def\scrn_menu_between_action_indeed{\interactionmenuparameter\c!middle}%
-   \doifelse{\interactionmenuparameter\c!position}\v!yes\settrue\setfalse\c_scrn_menu_positioning
+   \ifcstok{\interactionmenuparameter\c!position}\v!yes
+     \c_scrn_menu_positioning\conditionaltrue
+   \else
+     \c_scrn_menu_positioning\conditionalfalse
+   \fi
    \setbox\b_scrn_menu\hbox to \d_scrn_menu_used_width \bgroup
      \interactionmenuparameter\c!left\relax
      \ignorespaces#content\unskip
@@ -717,7 +726,7 @@
      {\c_scrn_menu_page_mode\plustwo}%
    \xtoksapp\t_scrn_menu_meta_data{\scrn_menu_button_meta_template}%
    \hpos
-     {\currentinteractionmenulocation:\number\c_scrn_menu_position}%
+     {\currentinteractionmenulocation:\the\c_scrn_menu_position}%
      {\scrn_button_make
         #currentparameter%
         #inheritedframed%
@@ -799,17 +808,18 @@
 
 \permanent\protected\def\includemenu[#tag]%
   {\begingroup
-   \edef\currentinteractionmenu{#tag}%
-   \doif{\interactionmenuparameter\c!state}\v!local
-     {\letinteractionmenuparameter\c!state\v!start
-      \directinteractionmenuparameter\c!menu}%
+   \cdef\currentinteractionmenu{#tag}%
+   \ifcstok{\interactionmenuparameter\c!state}\v!local
+     \letinteractionmenuparameter\c!state\v!start
+     \directinteractionmenuparameter\c!menu
+   \fi
    \endgroup}
 
 %D Direct call (todo):
 
-\permanent\tolerant\protected\def\interactionmenu[#tag]#spacer[#settings]%
+\permanent\tolerant\protected\def\interactionmenu[#tag]#spacer[#S#settings]%
   {\begingroup
-   \edef\currentinteractionmenu{#tag}%
+   \cdef\currentinteractionmenu{#tag}%
    \setupcurrentinteractionmenu[#settings]%
    \scrn_menu_insert{#tag}%
    \endgroup}
@@ -826,9 +836,11 @@
 \let\scrn_menu_insert_content_ignore\gobbleoneargument
 
 \appendtoks
-    \doifelse{\interactionparameter\c!menu}\v!on
-      {\let\scrn_menu_insert_content\scrn_menu_insert_content_indeed}%
-      {\let\scrn_menu_insert_content\scrn_menu_insert_content_ignore}%
+    \ifcstok{\interactionparameter\c!menu}\v!on
+        \let\scrn_menu_insert_content\scrn_menu_insert_content_indeed
+    \else
+        \let\scrn_menu_insert_content\scrn_menu_insert_content_ignore
+    \fi
 \to \everysetupinteraction
 
 %D Plugs into the page builder:
@@ -836,7 +848,7 @@
 \protected\def\scrn_menu_leftedge
   {\hbox to \leftedgewidth \bgroup
      \hsize\leftedgewidth
-     \settrue\c_scrn_menu_zerodimensions
+     \c_scrn_menu_zerodimensions\conditionaltrue
      \scrn_menu_insert\v!left
    \egroup
    \hskip-\leftedgewidth}
@@ -844,7 +856,7 @@
 \protected\def\scrn_menu_rightedge
   {\hbox to \rightedgewidth \bgroup
      \hsize\rightedgewidth
-     \settrue\c_scrn_menu_zerodimensions
+     \c_scrn_menu_zerodimensions\conditionaltrue
      \scrn_menu_insert\v!right
    \egroup
    \hskip-\rightedgewidth}
@@ -852,7 +864,7 @@
 \protected\def\scrn_menu_top
   {\vbox to \topheight \bgroup
      \vsize\topheight
-     \settrue\c_scrn_menu_zerodimensions
+     \c_scrn_menu_zerodimensions\conditionaltrue
      \scrn_menu_insert\v!top
      \kern\zeropoint
    \egroup
@@ -861,7 +873,7 @@
 \protected\def\scrn_menu_bottom
   {\vbox to \bottomheight \bgroup
      \vsize\bottomheight
-     \settrue\c_scrn_menu_zerodimensions
+     \c_scrn_menu_zerodimensions\conditionaltrue
      \scrn_menu_insert\v!bottom
      \kern\zeropoint
    \egroup
@@ -965,9 +977,11 @@
 %D Sometimes handy:
 
 \def\scrn_button_direct_status
-  {\doifelse{\buttonparameter\c!state}\v!start
-     {\dosingleempty\scrn_button_direct_indeed}%
-     {\dosingleempty\scrn_button_direct_ignore}}
+  {\ifcstok{\buttonparameter\c!state}\v!start
+     \expandafter\scrn_button_direct_indeed
+   \else
+     \expandafter\scrn_button_direct_ignore
+   \fi}
 
 \permanent\protected\def\menubutton % tag settings text action
   {\iflocation
@@ -976,7 +990,7 @@
      \expandafter\scrn_menu_menu_button_ignore
    \fi}
 
-\tolerant\def\scrn_menu_menu_button_indeed[#menutag]#spacer[#settings]#:#text[#action]%
+\tolerant\def\scrn_menu_menu_button_indeed[#menutag]#spacer[#S#settings]#:#text[#action]%
   {\ifcstok{\interactionmenuparameter\c!state}\v!start
      \ifparameter#settings\or
        \expandafter\scrn_menu_menu_button_a
@@ -987,12 +1001,12 @@
      \fi{#menutag}{#settings}{#text}{#action}%
    \fi}
 
-\tolerant\def\scrn_menu_menu_button_ignore[#menutag]#spacer[#settings]#:#text[#action]%
+\tolerant\def\scrn_menu_menu_button_ignore[#menutag]#spacer[#S#settings]#:#text[#action]%
   {}
 
 \def\scrn_menu_menu_button_a#tag#settings#text#action%
   {\dontleavehmode \begingroup
-     \edef\currentinteractionmenu{#tag}%
+     \cdef\currentinteractionmenu{#tag}%
      \setupcurrentinteractionmenu[#settings]%
      \scrn_button_make
        \interactionmenuparameter
@@ -1018,7 +1032,7 @@
 
 \def\scrn_menu_menu_button_c#tag#dummy#text#action%
   {\dontleavehmode \begingroup
-     \edef\currentinteractionmenu{#tag}%
+     \cdef\currentinteractionmenu{#tag}%
      \scrn_button_make
        \interactionmenuparameter
        \inheritedinteractionmenuframed

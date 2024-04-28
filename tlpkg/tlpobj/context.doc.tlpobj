@@ -1,9 +1,9 @@
 name context.doc
 category Package
-revision 67039
+revision 70360
 shortdesc doc files of context
-docfiles size=26897
- texmf-dist/doc/context/README.adoc
+docfiles size=28441
+ texmf-dist/doc/context/context-readme.txt
  texmf-dist/doc/context/documents/general/leaflets/leaflet-context.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-luametatex.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-mixing.pdf
@@ -37,6 +37,7 @@ docfiles size=26897
  texmf-dist/doc/context/documents/general/manuals/interaction.pdf
  texmf-dist/doc/context/documents/general/manuals/languages-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/libraries-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-accuracy.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-alignments.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-boxes.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-buffers.pdf
@@ -45,6 +46,7 @@ docfiles size=26897
  texmf-dist/doc/context/documents/general/manuals/lowlevel-expansion.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-grouping.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-inserts.pdf
+ texmf-dist/doc/context/documents/general/manuals/lowlevel-lines.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-localboxes.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-loops.pdf
  texmf-dist/doc/context/documents/general/manuals/lowlevel-macros.pdf
@@ -75,6 +77,7 @@ docfiles size=26897
  texmf-dist/doc/context/documents/general/manuals/onandon.pdf
  texmf-dist/doc/context/documents/general/manuals/ontarget.pdf
  texmf-dist/doc/context/documents/general/manuals/pagecolumns.pdf
+ texmf-dist/doc/context/documents/general/manuals/pdfmerge.pdf
  texmf-dist/doc/context/documents/general/manuals/primitives.pdf
  texmf-dist/doc/context/documents/general/manuals/rules-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/spacing-mkiv.pdf
@@ -293,9 +296,6 @@ docfiles size=26897
  texmf-dist/doc/context/scripts/mkiv/context.html
  texmf-dist/doc/context/scripts/mkiv/context.man
  texmf-dist/doc/context/scripts/mkiv/context.xml
- texmf-dist/doc/context/scripts/mkiv/luatools.html
- texmf-dist/doc/context/scripts/mkiv/luatools.man
- texmf-dist/doc/context/scripts/mkiv/luatools.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-babel.html
  texmf-dist/doc/context/scripts/mkiv/mtx-babel.man
  texmf-dist/doc/context/scripts/mkiv/mtx-babel.xml
@@ -320,6 +320,12 @@ docfiles size=26897
  texmf-dist/doc/context/scripts/mkiv/mtx-context.html
  texmf-dist/doc/context/scripts/mkiv/mtx-context.man
  texmf-dist/doc/context/scripts/mkiv/mtx-context.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-convert.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-convert.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-convert.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-ctan.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-ctan.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-ctan.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-dvi.html
  texmf-dist/doc/context/scripts/mkiv/mtx-dvi.man
  texmf-dist/doc/context/scripts/mkiv/mtx-dvi.xml
@@ -332,6 +338,9 @@ docfiles size=26897
  texmf-dist/doc/context/scripts/mkiv/mtx-fcd.html
  texmf-dist/doc/context/scripts/mkiv/mtx-fcd.man
  texmf-dist/doc/context/scripts/mkiv/mtx-fcd.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-flac.html
  texmf-dist/doc/context/scripts/mkiv/mtx-flac.man
  texmf-dist/doc/context/scripts/mkiv/mtx-flac.xml
@@ -341,9 +350,18 @@ docfiles size=26897
  texmf-dist/doc/context/scripts/mkiv/mtx-grep.html
  texmf-dist/doc/context/scripts/mkiv/mtx-grep.man
  texmf-dist/doc/context/scripts/mkiv/mtx-grep.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-install.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-install.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-install.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-interface.html
  texmf-dist/doc/context/scripts/mkiv/mtx-interface.man
  texmf-dist/doc/context/scripts/mkiv/mtx-interface.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-kpse.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-kpse.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-kpse.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-metapost.html
  texmf-dist/doc/context/scripts/mkiv/mtx-metapost.man
  texmf-dist/doc/context/scripts/mkiv/mtx-metapost.xml
@@ -377,12 +395,12 @@ docfiles size=26897
  texmf-dist/doc/context/scripts/mkiv/mtx-spell.html
  texmf-dist/doc/context/scripts/mkiv/mtx-spell.man
  texmf-dist/doc/context/scripts/mkiv/mtx-spell.xml
+ texmf-dist/doc/context/scripts/mkiv/mtx-synctex.html
+ texmf-dist/doc/context/scripts/mkiv/mtx-synctex.man
+ texmf-dist/doc/context/scripts/mkiv/mtx-synctex.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-texworks.html
  texmf-dist/doc/context/scripts/mkiv/mtx-texworks.man
  texmf-dist/doc/context/scripts/mkiv/mtx-texworks.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-timing.html
- texmf-dist/doc/context/scripts/mkiv/mtx-timing.man
- texmf-dist/doc/context/scripts/mkiv/mtx-timing.xml
  texmf-dist/doc/context/scripts/mkiv/mtx-tools.html
  texmf-dist/doc/context/scripts/mkiv/mtx-tools.man
  texmf-dist/doc/context/scripts/mkiv/mtx-tools.xml
@@ -626,6 +644,7 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup-whatsits.tex
  texmf-dist/doc/context/sources/general/manuals/followingup/followingup.tex
  texmf-dist/doc/context/sources/general/manuals/fonts/fonts-appendix.tex
+ texmf-dist/doc/context/sources/general/manuals/fonts/fonts-compact.tex
  texmf-dist/doc/context/sources/general/manuals/fonts/fonts-demo-rule.lua
  texmf-dist/doc/context/sources/general/manuals/fonts/fonts-environment.tex
  texmf-dist/doc/context/sources/general/manuals/fonts/fonts-extensions.tex
@@ -728,6 +747,7 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/languages/languages-sorting.tex
  texmf-dist/doc/context/sources/general/manuals/libraries/ecmascript-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/libraries/libraries-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-accuracy.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-alignments.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-boxes.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-buffers.tex
@@ -736,6 +756,7 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-expansion.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-grouping.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-inserts.tex
+ texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-lines.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-localboxes.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-loops.tex
  texmf-dist/doc/context/sources/general/manuals/lowlevel/lowlevel-macros.tex
@@ -1005,12 +1026,20 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/mk/mk-xml.xml
  texmf-dist/doc/context/sources/general/manuals/mk/mk-zapfino.tex
  texmf-dist/doc/context/sources/general/manuals/mk/mk.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/eutypon-gr-e-blog-21-02-13-why-i-do-not-like-luatex.png
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-assumptions.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-children.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-contents.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-deserved.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-dontusetex.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-history.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-hownotto.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-manuals.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-names.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-perception.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-perfection.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-performance.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-plain.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-roadmap.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-speed.tex
@@ -1020,6 +1049,7 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/musings/musings-texlive.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-titlepage.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-toocomplex.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-treasures.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-unicode.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-whytex.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings.tex
@@ -1060,21 +1090,34 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-speed-012.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon-variable.tex
  texmf-dist/doc/context/sources/general/manuals/onandon/onandon.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-accuracy.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-active.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-alsomath.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-anchoring.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-bars.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-binary.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-constants.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-contents.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-dk.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-envelopes.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-eventually.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-fairphone.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-gettingridof.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-green.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-introduction.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-jmn.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-makesnosense.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-makessense.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-math.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-mathfonts.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-metapost.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-nostalgic-pgc.pdf
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-nostalgic.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-profiles.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-radicals.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-registers.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-ridofjit.tex
+ texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-standardize.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-style.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget-titlepage.tex
  texmf-dist/doc/context/sources/general/manuals/ontarget/ontarget.tex
@@ -1087,6 +1130,8 @@ docfiles size=26897
  texmf-dist/doc/context/sources/general/manuals/pagecolumns/pagecolumns-006.tex
  texmf-dist/doc/context/sources/general/manuals/pagecolumns/pagecolumns-007.tex
  texmf-dist/doc/context/sources/general/manuals/pagecolumns/pagecolumns.tex
+ texmf-dist/doc/context/sources/general/manuals/pdfmerge/pdfmerge-testfiles.zip
+ texmf-dist/doc/context/sources/general/manuals/pdfmerge/pdfmerge.tex
  texmf-dist/doc/context/sources/general/manuals/primitives/primitives.tex
  texmf-dist/doc/context/sources/general/manuals/publications/122176.pdf
  texmf-dist/doc/context/sources/general/manuals/publications/124484.mol
@@ -1320,6 +1365,10 @@ docfiles size=26897
  texmf-dist/doc/man/man1/mtx-colors.man1.pdf
  texmf-dist/doc/man/man1/mtx-context.1
  texmf-dist/doc/man/man1/mtx-context.man1.pdf
+ texmf-dist/doc/man/man1/mtx-convert.1
+ texmf-dist/doc/man/man1/mtx-convert.man1.pdf
+ texmf-dist/doc/man/man1/mtx-ctan.1
+ texmf-dist/doc/man/man1/mtx-ctan.man1.pdf
  texmf-dist/doc/man/man1/mtx-dvi.1
  texmf-dist/doc/man/man1/mtx-dvi.man1.pdf
  texmf-dist/doc/man/man1/mtx-epub.1
@@ -1328,14 +1377,22 @@ docfiles size=26897
  texmf-dist/doc/man/man1/mtx-evohome.man1.pdf
  texmf-dist/doc/man/man1/mtx-fcd.1
  texmf-dist/doc/man/man1/mtx-fcd.man1.pdf
+ texmf-dist/doc/man/man1/mtx-fixpdf.1
+ texmf-dist/doc/man/man1/mtx-fixpdf.man1.pdf
  texmf-dist/doc/man/man1/mtx-flac.1
  texmf-dist/doc/man/man1/mtx-flac.man1.pdf
  texmf-dist/doc/man/man1/mtx-fonts.1
  texmf-dist/doc/man/man1/mtx-fonts.man1.pdf
  texmf-dist/doc/man/man1/mtx-grep.1
  texmf-dist/doc/man/man1/mtx-grep.man1.pdf
+ texmf-dist/doc/man/man1/mtx-install-modules.1
+ texmf-dist/doc/man/man1/mtx-install-modules.man1.pdf
+ texmf-dist/doc/man/man1/mtx-install.1
+ texmf-dist/doc/man/man1/mtx-install.man1.pdf
  texmf-dist/doc/man/man1/mtx-interface.1
  texmf-dist/doc/man/man1/mtx-interface.man1.pdf
+ texmf-dist/doc/man/man1/mtx-kpse.1
+ texmf-dist/doc/man/man1/mtx-kpse.man1.pdf
  texmf-dist/doc/man/man1/mtx-metapost.1
  texmf-dist/doc/man/man1/mtx-metapost.man1.pdf
  texmf-dist/doc/man/man1/mtx-modules.1
@@ -1358,10 +1415,10 @@ docfiles size=26897
  texmf-dist/doc/man/man1/mtx-server.man1.pdf
  texmf-dist/doc/man/man1/mtx-spell.1
  texmf-dist/doc/man/man1/mtx-spell.man1.pdf
+ texmf-dist/doc/man/man1/mtx-synctex.1
+ texmf-dist/doc/man/man1/mtx-synctex.man1.pdf
  texmf-dist/doc/man/man1/mtx-texworks.1
  texmf-dist/doc/man/man1/mtx-texworks.man1.pdf
- texmf-dist/doc/man/man1/mtx-timing.1
- texmf-dist/doc/man/man1/mtx-timing.man1.pdf
  texmf-dist/doc/man/man1/mtx-tools.1
  texmf-dist/doc/man/man1/mtx-tools.man1.pdf
  texmf-dist/doc/man/man1/mtx-unicode.1

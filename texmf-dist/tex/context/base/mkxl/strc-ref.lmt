@@ -55,6 +55,7 @@ local commands           = commands
 local implement          = interfaces.implement
 
 local ctx_latelua        = context.latelua
+local ctx_doifelse       = commands.doifelse
 
 local texiscount         = tex.iscount
 local texgetcount        = tex.getcount
@@ -69,7 +70,8 @@ local justacomponent     = resolvers.jobs.justacomponent
 local settings_to_array  = utilities.parsers.settings_to_array
 local settings_to_table  = utilities.parsers.settings_to_array_obey_fences
 local process_settings   = utilities.parsers.process_stripped_settings
-local unsetvalue         = attributes.unsetvalue
+
+local unsetvalue         <const> = attributes.unsetvalue
 
 local structures         = structures
 local helpers            = structures.helpers
@@ -125,12 +127,12 @@ local componentsplitter  = references.componentsplitter
 
 local currentreference   = nil
 
-local txtcatcodes        = catcodes.numbers.txtcatcodes -- or just use "txtcatcodes"
+local txtcatcodes        <const> = catcodes.numbers.txtcatcodes -- or just use "txtcatcodes"
 
-local c_realpageno               = texiscount("realpageno")
-local c_locationcount            = texiscount("locationcount")
-local c_locationorder            = texiscount("locationorder")
-local c_lastdestinationattribute = texiscount("lastdestinationattribute")
+local c_realpageno               <const> = texiscount("realpageno")
+local c_locationcount            <const> = texiscount("locationcount")
+local c_locationorder            <const> = texiscount("locationorder")
+local c_lastdestinationattribute <const> = texiscount("lastdestinationattribute")
 
 local p_splitter = lpeg.splitat(":")
 local p_lower    = lpeg.patterns.utf8lower
@@ -785,7 +787,7 @@ end
 
 implement {
     name      = "doifelseurldefined",
-    actions   = { urls.found, commands.doifelse },
+    actions   = { urls.found, ctx_doifelse },
     arguments = "string"
 }
 
@@ -836,7 +838,7 @@ end
 
 implement {
     name      = "doifelsefiledefined",
-    actions   = { files.found, commands.doifelse },
+    actions   = { files.found, ctx_doifelse },
     arguments = "string"
 }
 
@@ -1122,13 +1124,12 @@ local function loadexternalreferences(name,utilitydata)
         local sections = struc.sections.collected
         -- a bit weird one, as we don't have the externals in the collected
         for prefix, set in next, external do
-            if prefix == "" then
-                prefix = name -- this can clash!
-            end
+            -- prefix is currently not used, only in reporting
+            local usedprefix = prefix == "" and name or prefix -- this can clash!
             for reference, data in next, set do
                 if trace_importing then
                     report_importing("registering %a reference, kind %a, name %a, prefix %a, reference %a",
-                        "external","regular",name,prefix,reference)
+                        "external","regular",name,usedprefix,reference)
                 end
                 -- weird code
              -- local section  = reference.section
@@ -1431,12 +1432,12 @@ implement {
     end
 }
 
-local useproduct = commands.useproduct
+local ctx_useproductuseproduct = commands.useproduct
 
-if useproduct then
+if ctx_useproduct then
 
     local function newuseproduct(product)
-        useproduct(product)
+        ctx_useproduct(product)
         if texconditionals.autocrossfilereferences then
             local component = justacomponent()
             if component then
@@ -1654,6 +1655,9 @@ local function identify_inner(set,var,prefix,collected,derived)
         end
         --
         local n, list = resolvers.jobs.currentstructure()
+-- print(prefix)
+-- inspect(set)
+-- inspect(list)
         if list then
             for i=#list,1,-1 do
                 local l = list[i]
@@ -1661,8 +1665,9 @@ local function identify_inner(set,var,prefix,collected,derived)
                 if i then
                     i = i[inner]
                     if i then
-                     -- return finish_inner(set,var,"",i)
-                        return finish_inner(set,var,l,i)
+local p = i.references.prefix or l -- which is what we use in the destination
+--                         return finish_inner(set,var,l,i)
+                        return finish_inner(set,var,p,i)
                     end
                 end
             end
@@ -2135,7 +2140,7 @@ end
 
 implement {
     name      = "doifelsereference",
-    actions   = { references.valid, commands.doifelse },
+    actions   = { references.valid, ctx_doifelse },
     arguments = {
         "string",
         "string",
@@ -2149,7 +2154,7 @@ implement {
 
 implement {
     name      = "doifelsereferencechecked",
-    actions   = { references.checked, commands.doifelse },
+    actions   = { references.checked, ctx_doifelse },
     arguments = {
         "string",
         "string",
@@ -2208,7 +2213,7 @@ function references.setlinkmethod(inner,outer)
     end
     if toboolean(outer) or outer == v_page or outer == v_yes then
         outermethod = v_page
-    elseif inner == v_name then
+    elseif outer == v_name then
         outermethod = v_name
     else
         outermethod = v_auto

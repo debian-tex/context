@@ -58,7 +58,7 @@ local registerafmfeature  = afmfeatures.register
 local afmenhancers        = constructors.enhancers.afm
 local registerafmenhancer = afmenhancers.register
 
-afm.version               = 1.513 -- incrementing this number one up will force a re-cache
+afm.version               = 1.540 -- incrementing this number one up will force a re-cache
 afm.cache                 = containers.define("fonts", "one", afm.version, true)
 afm.autoprefixed          = true -- this will become false some day (catches texnansi-blabla.*)
 
@@ -363,8 +363,8 @@ local function enhance_add_extra_kerns(rawdata) -- using shcodes is not robust h
                 if kerns then
                     local extrakerns
                     for complex, simple in next, what do
-                        complex = unicodes[complex]
-                        simple = unicodes[simple]
+                        local complex = unicodes[complex]
+                        local simple = unicodes[simple]
                         if complex and simple then
                             local ks = kerns[simple]
                             if ks and not kerns[complex] then
@@ -386,8 +386,8 @@ local function enhance_add_extra_kerns(rawdata) -- using shcodes is not robust h
     local function do_it_copy(what)
         if what then
             for complex, simple in next, what do
-                complex = unicodes[complex]
-                simple  = unicodes[simple]
+                local complex = unicodes[complex]
+                local simple  = unicodes[simple]
                 if complex and simple then
                     local complexdescription = descriptions[complex]
                     if complexdescription then -- optional
@@ -579,6 +579,9 @@ local function copytotfm(data)
         parameters.designsize = (metadata.designsize or 10)*65536
         parameters.ascender   = abs(metadata.ascender  or 0)
         parameters.descender  = abs(metadata.descender or 0)
+        parameters.capheight  = abs(metadata.capheight or 0)
+        parameters.ascent     = abs(metadata.ascent    or parameters.ascender  or 0)
+        parameters.descent    = abs(metadata.descent   or parameters.descender or 0)
         parameters.units      = 1000
         --
         properties.spacer   = spacer
@@ -589,10 +592,6 @@ local function copytotfm(data)
         properties.psname   = fullname
         properties.name     = filename or fullname or fontname
         properties.private  = properties.private or data.private or privateoffset
-        --
-if not CONTEXTLMTXMODE or CONTEXTLMTXMODE == 0 then
-        properties.encodingbytes = 2
-end
         --
         if next(characters) then
             return {
@@ -712,7 +711,7 @@ local function read_from_afm(specification)
     if tfmdata then
         tfmdata.properties.name = specification.name
         tfmdata.properties.id   = specification.id
-        tfmdata = constructors.scale(tfmdata, specification)
+        tfmdata = constructors.scale(tfmdata,specification)
         local allfeatures = tfmdata.shared.features or specification.features.normal
         constructors.applymanipulators("afm",tfmdata,allfeatures,trace_features,report_afm)
         fonts.loggers.register(tfmdata,'afm',specification)

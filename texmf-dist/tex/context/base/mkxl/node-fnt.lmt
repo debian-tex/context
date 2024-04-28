@@ -67,10 +67,10 @@ local nextchar          = nuts.traversers.char
 local flushnode         = nuts.flush
 local removefromlist    = nuts.removefromlist
 
-local disc_code         = nodecodes.disc
-local boundary_code     = nodecodes.boundary
+local disc_code         <const> = nodecodes.disc
+local boundary_code     <const> = nodecodes.boundary
 
-local wordboundary_code = boundarycodes.word
+local wordboundary_code <const> = boundarycodes.word
 
 local protectglyphs     = nuts.protectglyphs
 local unprotectglyphs   = nuts.unprotectglyphs
@@ -646,8 +646,17 @@ do
         end
     end
 
+    -- local hasglyph = nuts.hasglyph
+
     function handlers.characters(head,groupcode,direction)
-        -- either next or not, but definitely no already processed list
+
+    -- no gain:
+
+    -- local h = hasglyph(head)
+    -- if not h then
+    --     return head
+    -- end
+
         starttiming(nodes)
 
         usedfonts    = { }

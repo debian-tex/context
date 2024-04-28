@@ -18,33 +18,58 @@
 %D raising and lowering style. In this module we define some of those logos.
 
 %D We define the uppercase logo commands as (unfrozen) instances because they can be
-%D redefined in the synonyms modules.
+%D redefined in the synonyms modules. We use old school definitions. Watch out: when
+%D a math font is used the \AMS\ logos can come out ugly but they are ugly anyway.
 
 \unprotect
+
+% \frozen\instance\protected\def\TeX
+%   {\dontleavehmode
+%    \begingroup
+%    T%
+%    \setbox\scratchbox\hbox{M}%
+%    \kern-.1667\wd\scratchbox
+%    \lower.5\exheight\hbox{E}%
+%    \kern-.125\wd\scratchbox
+%    X%
+%    \endgroup}
 
 \frozen\instance\protected\def\TeX
   {\dontleavehmode
    \begingroup
+   \scratchdimen\scaledfontcharwd\font`M%
    T%
-   \setbox\scratchbox\hbox{M}%
-   \kern-.1667\wd\scratchbox
-   \lower.5\exheight\hbox{E}%
-   \kern-.125\wd\scratchbox
+   \kern-.1667\scratchdimen
+  %\lower.3183\scaledfontcharht\font`T\hbox{E}% .318316 but no exact match possible anyway
+   \lower.5\exheight\hbox{E}% but on the average this looks better
+   \kern-.125\scratchdimen
    X%
    \endgroup}
 
 \frozen\instance\protected\def\TeXsuffix{\wordboundary\TeX}
 \frozen\instance\protected\def\TeXprefix{\TeX\wordboundary}
 
-\frozen\instance\protected\def\ConTeXt
-  {\dontleavehmode
-   \begingroup
-   Con%
+\def\syst_logos_context
+  {Con%
    \wordboundary
    \setbox\scratchboxone\hbox{T\kern\zeropoint e}%
    \setbox\scratchboxtwo\hbox{Te}%
    \discretionary{-}{}{\kern\dimexpr\wd\scratchboxtwo-\wd\scratchboxone\relax}%
-   \TeX t%
+   \TeX t}
+
+\frozen\instance\protected\def\ConTeXt
+  {\dontleavehmode
+   \begingroup
+   \ifcase\getcharactercasingcategory % todo: also other logos
+     \syst_logos_context
+   \or % 1 uppercase
+     \syst_logos_context
+   \or % 2 lowercase
+     \resetcharactercasing
+     con\-text
+   \else
+     Con\-text
+   \fi
    \endgroup}
 
 \frozen\instance\protected\def\PPCHTeX{ppch\TeX}
@@ -81,15 +106,15 @@
 \frozen\instance\protected\def\AmSTeX
   {\dontleavehmode
    \syst_logos_ams_script A%
-   \kern-.1667\emwidth\lower.5\exheight\hbox{\syst_logos_ams_script M}%
+   \kern-.5\emwidth\lower.5\exheight\hbox{\syst_logos_ams_script M}% was .1667 for old math
    \kern-.125\emwidth\syst_logos_ams_script S%
    -\TeX}
 
 \frozen\instance\protected\def\LamSTeX
   {L%
-   \kern-.4\emwidth\raise.3\exheight\hbox{\syst_logos_ams_script A}%
-   \kern-.25\emwidth\lower.4\exheight\hbox{\syst_logos_ams_script M}%
-   \kern-.1\emwidth{\syst_logos_ams_script S}%
+   \kern-.4\emwidth\raise.4\exheight\hbox{\syst_logos_ams_script A}% was .4 .3 for old math
+   \kern-.5\emwidth\lower.3\exheight\hbox{\syst_logos_ams_script M}% was .25 for old math
+   \kern-.125\emwidth{\syst_logos_ams_script S}%
    -\TeX}
 
 %D Alternative \CONTEXT\ logo, first Idris S.~Hamid's version:

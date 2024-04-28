@@ -60,7 +60,7 @@
    % \enforced\let~\fixedspace
      \enforced\letcharcode\tildeasciicode\fixedspace % why
      \inhibitblank % \blank[\v!disable]% % added
-     \the\everytableparbox}
+     \expand\everytableparbox}
 
 \protected\def\tabl_table_end_par_box
   {\removelastskip                                     % itemize or so
@@ -271,7 +271,7 @@
      \aligntab
      \the\!taPreamble\tabskip\tablerighttabskip
      \aligntab
-     \aligncontent\tabskip\zeropoint\cr}
+     \aligncontent\tabskip\zeroskip\cr}
    \!taBeginFormatfalse
    \!ttDoHalign}
 
@@ -282,7 +282,7 @@
    \!taRightGlue\emptytoks
    \begingroup
    \tabl_table_use_bar
-   \expanded{\endgroup\noexpand\doreadtableformatkeys#1]}}% appear in a \tabl_table_reformat cmd; this is here as a safeguard.
+   \normalexpanded{\endgroup\noexpand\doreadtableformatkeys#1]}}% appear in a \tabl_table_reformat cmd; this is here as a safeguard.
 
 \aliased\let\ReFormat\relax
 
@@ -445,19 +445,19 @@
    \doreadtableformatkeys}
 
 \newtableformatkey c%
-  {\prependtoks\raggedcenter\to\!taDataColumnTemplate
+  {\tokspre\!taDataColumnTemplate\raggedcenter
    \doreadtableformatkeys \LeftGlue\hfil \RightGlue\hfil}
 
 \newtableformatkey l%
-  {\prependtoks\raggedright\to\!taDataColumnTemplate
+  {\tokspre\!taDataColumnTemplate\raggedright
    \doreadtableformatkeys \LeftGlue\empty \RightGlue\hfil}
 
 \newtableformatkey r%
-  {\prependtoks\raggedleft\to\!taDataColumnTemplate
+  {\tokspre\!taDataColumnTemplate\raggedleft
    \doreadtableformatkeys \LeftGlue\hfil \RightGlue\empty}
 
 \newtableformatkey x%
-  {\prependtoks\notragged\to\!taDataColumnTemplate
+  {\tokspre\!taDataColumnTemplate\notragged
    \doreadtableformatkeys \LeftGlue\hfil \RightGlue\empty}
 
 % Key "k": Adds kerns to left and right of "#" This key and the two below use Plain
@@ -466,22 +466,22 @@
 % is currently under construction, there's no problem.
 
 \newtableformatkey k%
-  {\settrue\c_tabl_table_spacing_left
-   \settrue\c_tabl_table_spacing_right
+  {\c_tabl_table_spacing_left\conditionaltrue
+   \c_tabl_table_spacing_right\conditionaltrue
    \!tgGetValue{\!tgInsertKern}}
 
 % Key "i": Adds a kern to the left of "#"
 
 \newtableformatkey i%
-  {\settrue\c_tabl_table_spacing_left
-   \setfalse\c_tabl_table_spacing_right
+  {\c_tabl_table_spacing_left\conditionaltrue
+   \c_tabl_table_spacing_right\conditionalfalse
    \!tgGetValue{\!tgInsertKern}}
 
 % Key "j": Adds a kern to the right of "#"
 
 \newtableformatkey j%
-  {\setfalse\c_tabl_table_spacing_left
-   \settrue\c_tabl_table_spacing_right
+  {\c_tabl_table_spacing_left\conditionalfalse
+   \c_tabl_table_spacing_right\conditionaltrue
    \!tgGetValue{\!tgInsertKern}}
 
 % Key "n": numeric item , non-math mode.
@@ -660,10 +660,10 @@
    \ifempty\tempstring
      \!taDimenC\zeropoint
    \else
-     \setbox\scratchbox\hbox{\mathsurround\zeropoint #1.#3#1}%
+     \setbox\scratchbox\hbox{\mathsurround\zeropoint\mathsurroundskip\zeroskip#1.#3#1}%
      \!taDimenC\wd\scratchbox
    \fi
-   \setbox\scratchbox\hbox{\mathsurround\zeropoint #1#2#1}%
+   \setbox\scratchbox\hbox{\mathsurround\zeropoint\mathsurroundskip\zeroskip#1#2#1}%
    \!thToksEdef\!taDataColumnTemplate
      {\noexpand\!tnSetNumericItem{\the\wd\scratchbox}{\the\!taDimenC}{#1}%
       \the\!taDataColumnTemplate}% Might have tabskip glue in here
@@ -676,8 +676,8 @@
 
 \def\!tnSetNumericItemA #1#2#3#4.#5.#6!%
   {\def\tempstring{#6}%
-   \hbox to #1{\hss \mathsurround\zeropoint #3#4#3}%
-   \hbox to #2{\ifempty\tempstring\else\mathsurround\zeropoint #3.#5#3\fi\hss}}
+   \hbox to #1{\hss \mathsurround\zeropoint\mathsurroundskip\zeroskip#3#4#3}%
+   \hbox to #2{\ifempty\tempstring\else\mathsurround\zeropoint\mathsurroundskip\zeroskip#3.#5#3\fi\hss}}
 
 % extensions
 
@@ -733,10 +733,10 @@
    \ifempty\tempstring
      \!taDimenC\zeropoint
    \else
-     \setbox\scratchbox\hbox{\mathsurround\zeropoint #1,#3#1}%
+     \setbox\scratchbox\hbox{\mathsurround\zeropoint\mathsurroundskip\zeroskip#1,#3#1}%
      \!taDimenC\wd\scratchbox
    \fi
-   \setbox\scratchbox\hbox{\mathsurround\zeropoint #1#2#1}%
+   \setbox\scratchbox\hbox{\mathsurround\zeropoint\mathsurroundskip\zeroskip#1#2#1}%
    \!thToksEdef\!taDataColumnTemplate
       {\noexpand\!tqSetQuantityItem{\the\wd\scratchbox}{\the\!taDimenC}{#1}%
        \the\!taDataColumnTemplate}%
@@ -747,8 +747,8 @@
 
 \def\!tqSetQuantityItemA #1#2#3#4,#5,#6!%
   {\def\tempstring{#6}%
-   \hbox to #1{\hss\mathsurround\zeropoint#3#4#3}%
-   \hbox to #2{\ifempty\tempstring\else\mathsurround\zeropoint#3,#5#3\fi\hss}}
+   \hbox to #1{\hss\mathsurround\zeropoint\mathsurroundskip\zeroskip#3#4#3}%
+   \hbox to #2{\ifempty\tempstring\else\mathsurround\zeropoint\mathsurroundskip\zeroskip#3,#5#3\fi\hss}}
 
 % \Enlarge<extra height><extra depth><original>
 % \enlarge<multiple for extra height><multiple for extra depth><original>
@@ -776,7 +776,7 @@
    \!TsFinishEnlarge}
 
 \def\!TsEnlargeMath#1#2%
-  {\setbox\scratchbox\hbox{\normalstartimath\mathsurround\zeropoint#1{#2}\normalstopimath}%
+  {\setbox\scratchbox\hbox{\normalstartimath\mathsurround\zeropoint\mathsurroundskip\zeroskip#1{#2}\normalstopimath}%
    \!TsFinishEnlarge}
 
 \def\!TsFinishEnlarge
@@ -830,7 +830,7 @@
    \let\!ttRightGlue\relax
    \everycr\emptytoks
    \ifnum\!taRecursionLevel=\plusone
-     \the\everytable
+     \expand\everytable
    \fi}
 
 \bgroup \catcode\tildeasciicode\activecatcode
@@ -856,10 +856,10 @@
       \lineskip     \the\lineskip
       \tabskip      \the\tabskip
       \relax}%
-   \baselineskip \zeropoint
+   \baselineskip \zeroskip
    \lineskiplimit\zeropoint
-   \lineskip     \zeropoint
-   \tabskip      \zeropoint
+   \lineskip     \zeroskip
+   \tabskip      \zeroskip
    \edef\p_tabl_table_textwidth{\directtablesparameter\c!textwidth}%
    % we are not in sync so:
    \synchronizedisplaydirection
@@ -948,7 +948,7 @@
 \def\tabl_table_use#1%
   {\ifnum#1>\plusone
      \omit
-     \global\setfalse\c_tabl_table_is_division       % added
+     \global\c_tabl_table_is_division\conditionalfalse       % added
      \scratchcounter\currenttablecolumn              % added
      \advanceby\scratchcounter #1%                     % added
      \advanceby\scratchcounter \minusone               % added
@@ -1056,7 +1056,7 @@
    \!thFinishVCS}
 
 \def\!thDoMathVCS#1#2%
-  {\setbox\zerocount\hbox{\normalstartimath\mathsurround\zeropoint#1{#2}\normalstopimath}%
+  {\setbox\zerocount\hbox{\normalstartimath\mathsurround\zeropoint\mathsurroundskip\zeroskip#1{#2}\normalstopimath}%
    \!thFinishVCS}
 
 \def\!thFinishVCS
@@ -1095,7 +1095,7 @@
    \!thFinishRaise} % From Plain TeX: \ht0=0pt \dp0=0pt \box0
 
 \def\!thDoMathRaise#1#2%
-  {\setbox\zerocount\hbox{\raise \!taDimenA\hbox{\normalstartimath\mathsurround\zeropoint#1{#2}\normalstopimath}}%
+  {\setbox\zerocount\hbox{\raise \!taDimenA\hbox{\normalstartimath\mathsurround\zeropoint\mathsurroundskip\zeroskip#1{#2}\normalstopimath}}%
    \!thFinishRaise}
 
 \def\!thFinishRaise
@@ -1466,14 +1466,14 @@
 %D splitting.
 
 \def\tabl_table_insert_head
-  {\noalign{\global\settrue\preventtablebreak\global\setfalse\hassometablehead}%
+  {\noalign{\global\preventtablebreak\conditionaltrue\global\hassometablehead\conditionalfalse}%
    \tabl_table_head
-   \noalign{\global\setfalse\preventtablebreak}}
+   \noalign{\global\preventtablebreak\conditionalfalse}}
 
 \def\tabl_table_insert_tail
-  {\noalign{\global\settrue\preventtablebreak\global\setfalse\hassometabletail}%
+  {\noalign{\global\preventtablebreak\conditionaltrue\global\hassometabletail\conditionalfalse}%
    \tabl_table_tail
-   \noalign{\global\setfalse\preventtablebreak}}
+   \noalign{\global\preventtablebreak\conditionalfalse}}
 
 % \def\doverysimpletableHL % todo
 %   {\noalign{\normalexpanded{\noexpand\tabl_table_normal_full_rule\m_tabl_table_HLheight}}
@@ -1498,10 +1498,10 @@
 % \gdef\tabl_table_second_stage[#1]% brr nested mess
 %   {\bgroup
 %    \tabl_table_use_bar
-%    \global\setfalse\tableactionstatepermitted
-%    \global\setfalse\hassometablehead
-%    \global\setfalse\hassometabletail
-%    \expanded{\doifelseinstring{|}{#1}}
+%    \global\tableactionstatepermitted\conditionalfalse
+%    \global\hassometablehead\conditionalfalse
+%    \global\hassometabletail\conditionalfalse
+%    \normalexpanded{\doifelseinstring{|}{#1}}
 %      {\xdef\tabl_table_restart{\noexpand\tabl_table_restart_indeed{\noexpand\tabl_table_third_stage{#1}}}}
 %      {\ifcsname\??tabletemplate#1\endcsname
 %         \gdef\tabl_table_restart{\csname\??tabletemplate#1\endcsname}%
@@ -1516,9 +1516,9 @@
 \def\tabl_table_second_stage[#1]% brr nested mess
   {\bgroup
    \tabl_table_use_bar
-   \global\setfalse\tableactionstatepermitted
-   \global\setfalse\hassometablehead
-   \global\setfalse\hassometabletail
+   \global\tableactionstatepermitted\conditionalfalse
+   \global\hassometablehead\conditionalfalse
+   \global\hassometabletail\conditionalfalse
    \normalexpanded{\noexpand\ifhastoks{|}{#1}}%
      \xdef\tabl_table_restart{\noexpand\tabl_table_restart_indeed{\noexpand\tabl_table_third_stage{#1}}}%
    \orelse\ifcsname\??tabletemplate#1\endcsname
@@ -1543,19 +1543,20 @@
 \mutable\lettonothing\currenttableformat
 
 \def\tabl_table_third_stage#1%
-  {\global\settrue\tableactionstatepermitted
+  {\global\tableactionstatepermitted\conditionaltrue
    \tabl_table_set_action\tableunknownstate
    \tabl_table_set_force\tableunknownstate
    \tabl_table_resetVLvalues
-   \appendtoks\tabl_table_local_setups\to\everytable
+   \toksapp\everytable{\tabl_table_local_setups}%
    \tabl_table_standard_begin[\ifsplittables u\else b\fi]%
    \the\localtabledefinitions
    \forgetall % added
    \edef\currenttableformat{#1}%
-   \doifsomething\currenttableformat
-     {\tabl_tables_get_nofcolumns\currenttableformat
-      % more modern is to use catcode tables
-      \expandafter\tabl_table_begin_format\currenttableformat\doendtableformat}}
+   \ifempty\currenttableformat\else
+     \tabl_tables_get_nofcolumns\currenttableformat
+     % more modern is to use catcode tables
+     \expandafter\tabl_table_begin_format\currenttableformat\doendtableformat
+   \fi}
 
 \def\tabl_table_finish
   {\tabl_tables_chuck_auto_row
@@ -1592,11 +1593,11 @@
    \splittablestrue
    \edef\p_tabl_table_split{\directtablesparameter\c!split}%
    \ifx\p_tabl_table_split\v!repeat
-     \settrue\c_tabl_table_repeat_head
-     \settrue\c_tabl_table_repeat_tail
+     \c_tabl_table_repeat_head\conditionaltrue
+     \c_tabl_table_repeat_tail\conditionaltrue
    \else
-     \setfalse\c_tabl_table_repeat_head
-     \setfalse\c_tabl_table_repeat_tail
+     \c_tabl_table_repeat_head\conditionalfalse
+     \c_tabl_table_repeat_tail\conditionalfalse
    \fi
    \flushnotes
    \setbox\tablecontentbox\vbox\bgroup
@@ -1623,12 +1624,10 @@
    \d_split_minimum_free_space\zeropoint
    \setbox\b_split_content\box#1%
    \ifconditional\c_tabl_table_repeat_head \ifconditional\hassometablehead
-     \setbox\b_split_head\vsplit\b_split_content to \lineheight
-     \setbox\b_split_head\vbox{\unvbox\b_split_head}% \vpack ?
+     \setbox\b_split_head\vsplit\b_split_content upto \lineheight
    \fi \fi
    \ifconditional\c_tabl_table_repeat_tail \ifconditional\hassometabletail
-     \setbox\b_split_tail\vsplit\b_split_content to \lineheight
-     \setbox\b_split_tail\vbox{\unvbox\b_split_tail}% \vpack ?
+     \setbox\b_split_tail\vsplit\b_split_content upto \lineheight
    \fi \fi
    \ifinsidefloat\else
      \t_split_before_result{\startbaselinecorrection}%
@@ -1683,11 +1682,11 @@
 
 \def\tabl_table_set_head[#1][#2]#3\end
   {\gdef\tabl_table_head{\begincsname\??tablehead#1\endcsname}% new
-   \defcsname\??tablehead#1\endcsname{\noalign{\global\settrue\hassometablehead}#3}}
+   \defcsname\??tablehead#1\endcsname{\noalign{\global\hassometablehead\conditionaltrue}#3}}
 
 \def\tabl_table_set_tail[#1][#2]#3\end
   {\gdef\tabl_table_tail{\begincsname\??tabletail#1\endcsname}% new
-   \defcsname\??tabletail#1\endcsname{\noalign{\global\settrue\hassometabletail}#3}}
+   \defcsname\??tabletail#1\endcsname{\noalign{\global\hassometabletail\conditionaltrue}#3}}
 
 \normalexpanded {
     \aliased\letcsname\e!stop\v!tablehead\endcsname\relax
@@ -1866,7 +1865,7 @@
      \writestatus\m!TABLE{\string#1\space changed into \string#2}%
    \fi
    \expandafter\tabl_table_normal_line_format#3#4\crcr % \crcr nodig ?
-   \noalign{\nobreak\global\settrue\tableactionstatepermitted}}
+   \noalign{\nobreak\global\tableactionstatepermitted\conditionaltrue}}
 
 %D In order to prevent (as good as possible) alignment overflow and therefore \TEX\
 %D error messages, we check the maximum number of columns. We keep track of the
@@ -1936,7 +1935,7 @@
    \global\advanceby\currenttablecolumn\plusone
    \glettonothing\m_tabl_table_vrule_color
    \global\c_tabl_table_vrule_thickness_factor\m_tabl_table_VLwidth\relax
-   \iftok{#1}\emptytoks\else
+   \ifempty{#1}\else
      \rawprocesscommalist[#1]\tabl_table_vrulecommand
    \fi
    \tabl_table_normal_line_complex_bar}% \relax breaks \use
@@ -2027,7 +2026,7 @@
   {\tabl_tables_chuck_auto_row
    \tabl_table_finish_row
    \noalign\bgroup
-   \blank[\iftok{#1}\emptytoks\directtablesparameter\c!NL\else#1\fi]%
+   \blank[\ifempty{#1}\directtablesparameter\c!NL\else#1\fi]%
    \nobreak
    \egroup}
 
@@ -2056,7 +2055,7 @@
 \newconditional\c_tabl_table_is_division
 
 \appendtoks
-    \global\setfalse\c_tabl_table_is_division
+    \global\c_tabl_table_is_division\conditionalfalse
     \enforced\let\DL\tabl_table_DL
     \enforced\let\DC\tabl_table_DC
     \enforced\let\DV\tabl_table_DV
@@ -2067,7 +2066,7 @@
   {\ifconditional\c_tabl_table_is_division\else
      \tabl_tables_chuck_auto_row
      \global\currenttablecolumn\zerocount
-     \global\settrue\c_tabl_table_is_division
+     \global\c_tabl_table_is_division\conditionaltrue
    \fi}
 
 \def\tabl_table_drulecommand#1% global assignments
@@ -2093,7 +2092,7 @@
      \tabl_table_set_action\tableunknownstate
      \global\c_tabl_table_hrule_thickness_factor\m_tabl_table_HLheight\relax
      \global\c_tabl_table_drule_span\zerocount
-     \iftok{#1}\emptytoks\else
+     \ifempty{#1}\else
        \glettonothing\m_tabl_table_hrule_color
        \rawprocesscommalist[#1]\tabl_table_drulecommand
      % \ifempty\m_tabl_table_hrule_color\else
@@ -2129,7 +2128,7 @@
    \tabl_table_normal_line_ending
    \noalign\bgroup
      \nobreak
-     \global\setfalse\c_tabl_table_is_division
+     \global\c_tabl_table_is_division\conditionalfalse
      \tabl_table_account_width % temporary solution
      \tabl_table_set_action\tablerulestate
    \egroup}
@@ -2183,9 +2182,11 @@
 \defcsname\??tablealign\s!unknown\endcsname{\def\tabl_table_paralignment{\notragged}}
 
 \appendtoks
-  \doifelse{\directtablesparameter\c!distance}\v!none
-    {\tablerowfactor\zerocount}
-    {\tablerowfactor\plustwo  }%
+    \ifcstok{\directtablesparameter\c!distance}\v!none
+        \tablerowfactor\zerocount
+    \else
+        \tablerowfactor\plustwo
+    \fi
 \to \localtabledefinitions
 
 \appendtoks

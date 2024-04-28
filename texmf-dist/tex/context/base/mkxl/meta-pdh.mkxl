@@ -170,7 +170,7 @@
    \fi}
 
 \def\setMPPDFobject#1#2% resources boxnumber
-  {\ifdefined\everyPDFxform\the\everyPDFxform\fi
+  {\ifdefined\everyPDFxform\expand\everyPDFxform\fi
    \immediate\saveboxresource resources{#1}#2%
    \edef\getMPPDFobject{\noexpand\useboxresource\the\lastsavedboxresourceindex}}
 
@@ -234,7 +234,7 @@
 %D from to n inner_r g b x y radius outer_r g b x y radius
 %D \stoptyping
 
-\newconditional\manyMPspecials \settrue\manyMPspecials
+\newconditional\manyMPspecials \manyMPspecials\conditionaltrue
 
 %D In case of \PDF, we need to prepare resourcs.
 
@@ -253,13 +253,8 @@
   \glet\currentPDFresources\empty % kind of redundant
 \to \MPstartresources
 
-% \appendtoks
-%    \collectPDFresources
-%    \glet\currentPDFresources\collectedPDFresources
-% \to \MPstopresources
-
-\appendtoksonce
-   \the\everyPDFxform
+\appendtoks
+   \expand\everyPDFxform
 \to \MPstopresources
 
 %D Special number~1 is dedicated to \CMYK\ support. If you
@@ -528,7 +523,7 @@
 %
 % \def\dohandleMPshade#1%
 %   {\revokeMPtransparencyspecial
-%    \settrue\ignoreMPpath
+%    \ignoreMPpath\conditionaltrue
 %    \def\extraMPpathcode{/Sh#1 sh Q}%
 %    \pdfliteral{q /Pattern cs}}
 %
@@ -710,7 +705,7 @@ implementing the special more convenient.
 
 % \def\dohandleMPshade#1%
 %   {\revokeMPtransparencyspecial
-%    \settrue\ignoreMPpath
+%    \ignoreMPpath\conditionaltrue
 %    \def\extraMPpathcode{/#1 sh Q}%
 %    \pdfliteral{q /Pattern cs}}
 

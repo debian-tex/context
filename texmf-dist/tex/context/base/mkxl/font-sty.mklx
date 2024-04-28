@@ -86,9 +86,12 @@
   {\begincsname\??alternativestyle#name\endcsname}
 
 \appendtoks
-    \doifelse{\alternativestylesparameter\c!method}\v!auto
-      {\c_fonts_basics_alternative_style_method\plusone}%
-      {\c_fonts_basics_alternative_style_method\zerocount}%
+    \c_fonts_basics_alternative_style_method
+      \ifcstok{\alternativestylesparameter\c!method}\v!auto
+        \plusone
+      \else
+        \zerocount
+      \fi
 \to \everysetupalternativestyles
 
 %D Maybe too generic, but probably ok is the following. (Maybe one day we will use a
@@ -178,12 +181,12 @@
 
 %D The new one:
 
-\setfalse\fontattributeisset
+\newconditional\fontattributeisset
 
 \mutable\lettonothing\currentdetokenizedstyleparameter
 
 \permanent\protected\def\dousestyleparameter#value%
-  {\edef\currentstyleparameter{#value}%
+  {\cdef\currentstyleparameter{#value}%
    \ifempty\currentstyleparameter\else
      \expandafter\dousecurrentstyleparameter
    \fi}
@@ -194,8 +197,8 @@
    \fi}
 
 \permanent\protected\def\dousecurrentstyleparameter % empty check outside here
-  {\edef\currentdetokenizedstyleparameter{\detokenize\expandafter{\currentstyleparameter}}%
-   \settrue\fontattributeisset % reset is done elsewhere
+  {\cdef\currentdetokenizedstyleparameter{\detokenize\expandafter{\currentstyleparameter}}%
+   \fontattributeisset\conditionaltrue % reset is done elsewhere
    \ifcsname\??alternativestyle\currentdetokenizedstyleparameter\endcsname
      \lastnamedcs
    \orelse\ifcsname\currentdetokenizedstyleparameter\endcsname
@@ -232,8 +235,7 @@
 
 \appendtoks
     \letcsname\??stylecheck\currentstyle\endcsname\relax
-    \edef\p_method{\styleparameter\c!method}%
-    \ifx\p_method\v!command
+    \ifcstok{\styleparameter\c!method}\v!command
         \frozen\instance\protected\edefcsname\e!start\currentstyle\endcsname{\font_styles_apply_start{\currentstyle}}%
         \frozen\instance\protected\edefcsname\e!stop \currentstyle\endcsname{\font_styles_apply_stop}%
         \frozen\instance\protected\edefcsname        \currentstyle\endcsname{\font_styles_apply_grouped{\currentstyle}}% no longer groupedcommand here
@@ -249,12 +251,12 @@
 
 \protected\def\font_styles_apply_grouped#name% assumes that the next is { or \bgroup
   {\bgroup % \beginsimplegroup
-   \def\currentstyle{\font_styles_use_defined{#name}}%
+   \cdef\currentstyle{\font_styles_use_defined{#name}}%
    \afterassignment\currentstyle
    \let\nexttoken}
 
 \protected\def\font_styles_use_defined#name%
-  {\edef\currentstyle{#name}%
+  {\cdef\currentstyle{#name}%
    \usestylestyleandcolor\c!style\c!color}
 
 \protected\def\font_styles_use_generic#specification%
@@ -295,9 +297,6 @@
 
 \defcsname\??stylehack\s!math\endcsname% dirty trick
   {\groupedcommandcs\normalstartimath\normalstopimath}
-
-% \def\font_styles_assignment#specification{\groupedcommand{\font_styles_use_generic{#specification}}{}}
-% \def\font_styles_direct    #specification{\groupedcommand{\definedfont[#specification]}{}}
 
 \def\font_styles_assignment#specification{\triggergroupedcommand{\font_styles_use_generic{#specification}}}
 \def\font_styles_direct    #specification{\triggergroupedcommand{\definedfont[#specification]}}
@@ -356,7 +355,7 @@
 
 \permanent\tolerant\protected\def\definestylecollection[#name]%
   {\ifarguments\or
-     \setuvalue{#name}{\styleinstance[#name]}%
+     \protected\instance\edefcsname#name\endcsname{\styleinstance[#name]}% \frozen ?
      \def\font_styles_define_style_collection_a#style%
        {\def\font_styles_define_style_collection_b#alternative{\undefinevalue{\??stylecollection#name:#style:#alternative}}%
         \font_helpers_process_alternative_list\font_styles_define_style_collection_b
@@ -401,8 +400,8 @@
 %D \mathematics {\utfchar{0x2229}\vsone{}}
 %D \stoptyping
 
-\permanent\protected\edef\vsone#character{#character\normalUchar"FE00 } % used
-\permanent\protected\edef\vstwo#character{#character\normalUchar"FE01 } % not used but handy for testing
+\permanent\protected\edef\vsone#character{#character\tocharacter"FE00 } % used
+\permanent\protected\edef\vstwo#character{#character\tocharacter"FE01 } % not used but handy for testing
 
 %D For historic reasons we keep the following around but they are no longer that
 %D relevant for \MKIV. But \unknown\ they will be dropped in \LMTX !
@@ -426,7 +425,7 @@
 \newconditional\c_font_styles_math
 
 \protected\def\font_styles_math_reset
-  {\setfalse\c_font_styles_math}
+  {\c_font_styles_math\conditionalfalse}
 
 \protected\def\font_styles_math_start
   {\ifconditional\c_font_styles_math
@@ -440,6 +439,6 @@
      \stopimath
    \fi}
 
-\definealternativestyle[\v!math][\settrue\c_font_styles_math]
+\definealternativestyle[\v!math][\c_font_styles_math\conditionaltrue]
 
 \protect \endinput

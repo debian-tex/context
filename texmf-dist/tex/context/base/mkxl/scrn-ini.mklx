@@ -40,9 +40,13 @@
 \to \everysetupinteraction
 
 \permanent\protected\def\checkinteractionstate
-  {\doifelse{\interactionparameter\c!state}\v!start
-     {\locationtrue  \setsystemmode  \v!interaction}%
-     {\locationfalse \resetsystemmode\v!interaction}}
+  {\ifcstok{\interactionparameter\c!state}\v!start
+     \locationtrue
+     \setsystemmode\v!interaction
+   \else
+     \locationfalse
+     \resetsystemmode\v!interaction
+   \fi}
 
 \permanent\def\doifelselocation % expandable
   {\iflocation
@@ -71,35 +75,35 @@
 % interactions so a general start-stop will do
 %
 % \appendtoks
-%     \setuevalue         \currentinteraction {\scrn_interaction_direct{\currentinteraction}}%
-%     \setuevalue{\e!start\currentinteraction}{\scrn_interaction_start {\currentinteraction}}%
-%     \setuevalue{\e!stop \currentinteraction}{\scrn_interaction_stop                       }%
+%     \frozen\instance\protected\edefcsname        \currentinteraction\endcsname{\scrn_interaction_direct{\currentinteraction}}%
+%     \frozen\instance\protected\edefcsname\e!start\currentinteraction\endcsname{\scrn_interaction_start {\currentinteraction}}%
+%     \frozen\instance\protected\edefcsname\e!stop \currentinteraction\endcsname{\scrn_interaction_stop                       }%
 % \to \everydefineinteraction
 %
 % \protected\def\scrn_interaction_direct#1%
-%   {\edef\currentinteraction{#1}}
+%   {\cdef\currentinteraction{#1}}
 %
 % \protected\def\scrn_interaction_start#1%
 %   {\pushmacro\currentinteraction
-%    \edef\currentinteraction{#1}}
+%    \cdef\currentinteraction{#1}}
 %
 % \protected\def\scrn_interaction_stop
 %   {\popmacro\currentinteraction}
 %
 % \protected\def\setinteraction[#1]%
-%   {\def\currentinteraction{#1}}
+%   {\cdef\currentinteraction{#1}}
 %
 % \defineinteraction[\v!interaction]
 
 \permanent\protected\def\startinteraction[#1]%
   {\pushmacro\currentinteraction
-   \edef\currentinteraction{#1}}
+   \cdef\currentinteraction{#1}}
 
 \permanent\protected\def\stopinteraction
   {\popmacro\currentinteraction}
 
 \permanent\protected\def\setinteraction[#1]%
-  {\def\currentinteraction{#1}}
+  {\cdef\currentinteraction{#1}}
 
 \defineinteraction % keep it simple
   [\v!hidden]
@@ -188,7 +192,7 @@
 %D the \LUA\ end. So this one gets called by the time we need the value.
 
 \def\scrn_identity_get#1%
-  {\clf_setidentityvariable{#1}{\prerolltostring{\interactionparameter{#1}}}}
+  {\setidentityvariable{#1}{\prerolltostring{\interactionparameter{#1}}}}
 
 % this comes before starttext
 

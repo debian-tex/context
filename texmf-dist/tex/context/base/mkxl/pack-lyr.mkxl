@@ -34,7 +34,7 @@
 
 \pushoverloadmode
 
-\permanent\overloaded\tolerant\protected\def\defineoverlay[#1]#*[#2]#*[#3]% overlay [layer] content
+\permanent\overloaded\tolerant\protected\def\defineoverlay[#1]#*[#S#2]#*[#S#3]% overlay [layer] content
   {\ifnum\lastarguments=\plusthree
     %\writestatus{BEWARE}{This (overlay definition) has changed!}% temp
      \def\pack_framed_define_overlay_indeed##1{\defcsname\??overlay##1\endcsname{\setlayer[#2]{\executedefinedoverlay{##1}{#3}}}}%
@@ -103,8 +103,6 @@
 \lettonothing\m_pack_layers_target
 \lettonothing\p_pack_layers_column
 \lettonothing\p_pack_layers_corner
-\lettonothing\p_pack_layers_direction
-\lettonothing\p_pack_layers_doublesided
 \lettonothing\p_pack_layers_dx
 \lettonothing\p_pack_layers_dy
 \lettonothing\p_pack_layers_height
@@ -150,8 +148,7 @@
 \mutable\let\lastlayerdp  \!!zeropoint
 
 \appendtoks
-    \edef\p_pack_layers_doublesided{\layerparameter\c!doublesided}%
-    \ifx\p_pack_layers_doublesided\v!yes
+    \ifcstok{\layerparameter\c!doublesided}\v!yes
         \relateparameterhandlers{layer}{\v!left \currentlayer}{layer}\currentlayer % permits left*
         \relateparameterhandlers{layer}{\v!right\currentlayer}{layer}\currentlayer % permits right*
         \pack_layers_preset_box{\v!left \currentlayer}%
@@ -206,11 +203,11 @@
 \permanent\def\thelayerwidth #1{\the\ifcsname\??layerbox#1\endcsname\wd\lastnamedcs\else\zeropoint\fi}
 \permanent\def\thelayerheight#1{\the\ifcsname\??layerbox#1\endcsname\ht\lastnamedcs\else\zeropoint\fi}
 
-\permanent\tolerant\protected\def\setlayer[#1]#*[#2]#*[#3]% #4 == box do \fi is ok
+\permanent\tolerant\protected\def\setlayer[#1]#*[#S#2]#*[#S#3]% #4 == box do \fi is ok
   {\bgroup
    \nofarguments\lastarguments
    \checkpositionoverlays % otherwise funny regions
-   \edef\currentlayer{#1}%
+   \cdef\currentlayer{#1}%
    \edef\p_pack_layers_state{\layerparameter\c!state}%
    \ifx\p_pack_layers_state\v!stop
      \dowithnextboxcs\egroup\hbox % no pack ?
@@ -232,7 +229,7 @@
    \dontcomplain
    \edef\p_pack_layers_option{\layerparameter\c!option}%
    \ifx\p_pack_layers_option\v!test
-     \settrue\c_pack_layers_trace
+     \c_pack_layers_trace\conditionaltrue
      \traceboxplacementtrue
    \fi
    \dowithnextbox{\pack_layers_set_finish{#1}}\hbox}
@@ -289,12 +286,12 @@
    \d_pack_layers_y_position\p_pack_layers_sy\dimexpr\p_pack_layers_y\relax
    \glet\lastlayerxpos\!!zeropoint
    \glet\lastlayerypos\!!zeropoint
-   \doifinset\v!bottom\p_pack_layers_corner\pack_layers_set_bottom_positions
-   \doifinset\v!right \p_pack_layers_corner\pack_layers_set_right_positions
-   \doifinset\v!middle\p_pack_layers_corner\pack_layers_set_middle_positions
+   \ifinset\v!bottom\p_pack_layers_corner\pack_layers_set_bottom_positions\fi
+   \ifinset\v!right \p_pack_layers_corner\pack_layers_set_right_positions \fi
+   \ifinset\v!middle\p_pack_layers_corner\pack_layers_set_middle_positions\fi
    \edef\m_pack_layers_page{\layerparameter\c!page}}
 
-\permanent\tolerant\protected\def\definelayerpreset[#1]#*[#2]%
+\permanent\tolerant\protected\def\definelayerpreset[#1]#*[#S#2]%
   {\ifarguments\or
      \letcsname\??layerpreset#1\endcsname\empty
    \orelse\ifhastok={#2}%
@@ -337,7 +334,6 @@
    \edef\p_pack_layers_column   {\layerparameter\c!column   }%
    \edef\p_pack_layers_width    {\layerparameter\c!width    }% local ones
    \edef\p_pack_layers_height   {\layerparameter\c!height   }% local ones
-   \edef\p_pack_layers_direction{\layerparameter\c!direction}%
    %
    \ifx\p_pack_layers_position\v!overlay
      \let\p_pack_layers_width   \zeropoint
@@ -383,7 +379,7 @@
         \ht\b_layers_page\zeropoint
         \dp\b_layers_page\zeropoint
         \wd\b_layers_page\zeropoint
-        \ifx\p_pack_layers_direction\v!reverse\else
+        \ifcstok{\layerparameter\c!direction}\v!reverse\else
           \box\b_layers_page
         \fi
       \fi
@@ -509,7 +505,7 @@
 \permanent\protected\def\flushlayer[#1]% quite core, so optimized (todo: check for void)
   {\begingroup
    \forgetall
-   \edef\currentlayer{#1}%
+   \cdef\currentlayer{#1}%
    \edef\p_pack_layers_state{\layerparameter\c!state}%
    \ifx\p_pack_layers_state\v!stop
      % nothing
@@ -517,21 +513,18 @@
      \global\letlayerparameter\c!state\v!start  % dangerous, stack-built-up
    \orelse\ifx\p_pack_layers_state\v!continue
      \global\letlayerparameter\c!state\v!repeat % dangerous, stack-built-up
-   \else
-     \edef\p_pack_layers_doublesided{\layerparameter\c!doublesided}%
-     \ifx\p_pack_layers_doublesided\v!yes
-       \ifcsname\??layerbox#1\endcsname
-         % we can make a dedicated one for this
-         \doifbothsidesoverruled
-           {\pack_layers_flush_double\v!left }%
-           {\pack_layers_flush_double\v!right}%
-           {\pack_layers_flush_double\v!left }%
-       \else
-         \pack_layers_flush_single
-       \fi
+   \orelse\ifcstok{\layerparameter\c!doublesided}\v!yes
+     \ifcsname\??layerbox#1\endcsname
+       % we can make a dedicated one for this
+       \doifbothsidesoverruled
+         {\pack_layers_flush_double\v!left }%
+         {\pack_layers_flush_double\v!right}%
+         {\pack_layers_flush_double\v!left }%
      \else
        \pack_layers_flush_single
      \fi
+   \else
+     \pack_layers_flush_single
    \fi
    \endgroup}
 
@@ -611,23 +604,23 @@
    \edef\p_pack_layers_method{\layerparameter\c!method}%
    \edef\p_pack_layers_option{\layerparameter\c!option}%
    \ifx\p_pack_layers_option\v!test
-     \settrue\c_pack_layers_trace
+     \c_pack_layers_trace\conditionaltrue
      \traceboxplacementtrue
    \fi
    \ifcase#1\relax
-     \setfalse\c_pack_layers_repeated
+     \c_pack_layers_repeated\conditionalfalse
    \else
      \edef\p_pack_layers_position{\layerparameter\c!position}%
      \ifx\p_pack_layers_position\v!yes
-       \setfalse\c_pack_layers_repeated
+       \c_pack_layers_repeated\conditionalfalse
      \else
        \edef\p_pack_layers_repeat{\layerparameter\c!repeat}%
        \ifx\p_pack_layers_repeat\v!yes
-         \settrue\c_pack_layers_repeated
+         \c_pack_layers_repeated\conditionaltrue
        \orelse\ifx\p_pack_layers_state\v!repeat
-         \settrue\c_pack_layers_repeated
+         \c_pack_layers_repeated\conditionaltrue
        \else
-         \setfalse\c_pack_layers_repeated
+         \c_pack_layers_repeated\conditionalfalse
        \fi
      \fi
    \fi
@@ -660,7 +653,7 @@
       \box\nextbox
 %
       \pack_layers_bottom_fill}%
-   % \edef\currentlayer{#2}% :\the\realpageno}% local .. check \anchor
+ % \cdef\currentlayer{#2}% :\the\realpageno}% local .. check \anchor
    \edef\p_pack_layers_position{\layerparameter\c!position}% local
    \ifx\p_pack_layers_position\v!yes
      \edef\p_pack_layers_region{\layerparameter\c!region}%
@@ -703,7 +696,7 @@
 
 \permanent\protected\def\tightlayer[#1]%
   {\hpack
-     {\def\currentlayer{#1}% todo: left/right
+     {\cdef\currentlayer{#1}% todo: left/right
       \setbox\nextbox\emptybox
       \d_overlay_width \layerparameter\c!width
       \d_overlay_height\layerparameter\c!height
@@ -744,12 +737,12 @@
 \mutable\def\MPlayerwidth {\hsize}
 \mutable\def\MPlayerheight{\vsize}
 
-\permanent\tolerant\protected\def\setMPlayer[#1]#*[#2]#*[#3]%
+\permanent\tolerant\protected\def\setMPlayer[#1]#*[#2]#*[S#3]%
   {\edef\MPlayerwidth {\MPw{#2}}%
    \edef\MPlayerheight{\MPh{#2}}%
    \setlayer[#1][\c!x=\MPx{#2},\c!y=\MPy{#2},\c!position=\v!no,#3]}
 
-\permanent\tolerant\protected\def\getMPlayer[#1]#*[#2]%
+\permanent\tolerant\protected\def\getMPlayer[#1]#*[#S#2]%
   {\framed[\c!background={\v!foreground,#1},\c!frame=\v!off,\c!offset=\v!overlay,#2]} % takes argument
 
 %D Watch out, a redefinition:

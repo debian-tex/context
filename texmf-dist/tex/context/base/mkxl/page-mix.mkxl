@@ -98,7 +98,7 @@
    \c!step=.25\lineheight, % needs some experimenting
   %\c!splitmethod=\v!fixed, % will be default
    \c!direction=\v!normal, % new (also todo in the new columnsets)
-   \c!notes=\v!yes,
+ % \c!notes=\v!yes, % needs an update because now we flush weirdly inside the columns
    \c!define=\v!yes,
    \c!method=\ifinner\s!box\else\s!otr\fi] % automatic as suggested by WS
 
@@ -240,7 +240,7 @@
 
 \protected\def\page_mix_command_routine
   {\ifcase\c_page_mix_routine
-     \page_one_command_routine
+     \page_one_command_routine % not ok as we need to also adapt the vsize setter
    \or
      \page_mix_routine_intercept
    \or
@@ -329,11 +329,11 @@
 
 \def\page_mix_enable_grid_snapping
   {\edef\p_grid{\mixedcolumnsparameter\c!grid}%
-   \setfalse\c_page_mix_grid_snapping
+   \c_page_mix_grid_snapping\conditionalfalse
    \ifempty\p_grid
      % just follow the default grid settings
    \else
-     \ifgridsnapping\settrue\c_page_mix_grid_snapping\fi
+     \ifgridsnapping\c_page_mix_grid_snapping\conditionaltrue\fi
      \gridsnappingtrue
      \setsystemmode\v!grid
      \spac_grids_snap_value_set\p_grid
@@ -406,7 +406,7 @@
 \installmacrostack\currentmixedcolumns
 \installmacrostack\currentmixedcolumnsmethod
 
-\permanent\tolerant\protected\def\startmixedcolumns[#1]#*[#2]%
+\permanent\tolerant\protected\def\startmixedcolumns[#S#1]#*[#S#2]%
   {\push_macro_currentmixedcolumns
    \push_macro_currentmixedcolumnsmethod
    \ifparameters
@@ -428,12 +428,12 @@
    \fi}
 
 \def\page_mix_start_columns_a[#1]% [#2]%
-  {\edef\currentmixedcolumns{#1}%
+  {\cdef\currentmixedcolumns{#1}%
    \page_mix_start_columns_checked
      \page_mix_start_columns_a_yes
      \page_mix_start_columns_a_nop}
 
-\def\page_mix_start_columns_a_yes[#1]%
+\def\page_mix_start_columns_a_yes[#S#1]%
   {\mixedcolumnsparameter\c!before\relax
    \begincsname\??mixedcolumnsbefore\currentmixedcolumnsmethod\endcsname\relax
    \begingroup
@@ -442,21 +442,21 @@
    \begincsname\??mixedcolumnsstart\currentmixedcolumnsmethod\endcsname
    \enforced\let\stopmixedcolumns\page_mix_columns_stop_yes}
 
-\def\page_mix_start_columns_a_nop[#1]%
+\def\page_mix_start_columns_a_nop[#S#1]%
   {\begingroup
    \enforced\let\stopmixedcolumns\page_mix_columns_stop_nop}
 
-\def\page_mix_start_columns_b[#1][#2]%
+\def\page_mix_start_columns_b[#S#1][#S#2]%
   {\ifhastok={#1}%
      \lettonothing\currentmixedcolumns
      \page_mix_error_b
      \page_mix_start_columns_checked\page_mix_start_columns_b_yes\page_mix_start_columns_b_nop[#1]%
    \else
-     \edef\currentmixedcolumns{#1}%
+     \cdef\currentmixedcolumns{#1}%
      \page_mix_start_columns_checked\page_mix_start_columns_b_yes\page_mix_start_columns_b_nop[#2]%
    \fi}
 
-\def\page_mix_start_columns_b_yes[#1]%
+\def\page_mix_start_columns_b_yes[#S#1]%
   {\mixedcolumnsparameter\c!before\relax % so, it doesn't listen to local settings !
    \begincsname\??mixedcolumnsbefore\currentmixedcolumnsmethod\endcsname\relax
    \begingroup
@@ -493,7 +493,7 @@
 \protected\def\page_mix_fast_columns_start#1%
   {\push_macro_currentmixedcolumns
    \push_macro_currentmixedcolumnsmethod
-   \edef\currentmixedcolumns{#1}%
+   \cdef\currentmixedcolumns{#1}%
    \edef\currentmixedcolumnsmethod{\mixedcolumnsparameter\c!method}%
    \mixedcolumnsparameter\c!before\relax % so, it doesn't listen to local settings !
    \begincsname\??mixedcolumnsbefore\currentmixedcolumnsmethod\endcsname\relax
@@ -523,14 +523,14 @@
    \mixedcolumnsparameter\c!after\relax
    \pop_macro_currentmixedcolumnsmethod
    \pop_macro_currentmixedcolumns
-   \the\t_page_mix_at_the_end\global\t_page_mix_at_the_end\emptytoks}
+   \expand\t_page_mix_at_the_end\global\t_page_mix_at_the_end\emptytoks}
 
 \protected\def\page_mix_columns_stop_nop
   {\page_mix_finalize_columns
    \endgroup
    \pop_macro_currentmixedcolumnsmethod
    \pop_macro_currentmixedcolumns
-   \the\t_page_mix_at_the_end\global\t_page_mix_at_the_end\emptytoks}
+   \expand\t_page_mix_at_the_end\global\t_page_mix_at_the_end\emptytoks}
 
 % \protected\def\page_mix_columns_stop_yes
 %   {\begincsname\??mixedcolumnsstop \currentmixedcolumnsmethod\endcsname % no \relax
@@ -568,6 +568,8 @@
 
 %D The common initialization:
 
+%D !!! todo: notes \automigrationmode\zerocount as well as notes=yes
+
 \def\page_mix_initialize_columns
   {\page_mix_enable_grid_snapping
    %
@@ -581,10 +583,14 @@
    \d_page_mix_leftskip \leftskip
    \d_page_mix_rightskip\rightskip
    % \frozen ?
-   \leftskip \zeropoint
-   \rightskip\zeropoint
+   \leftskip \zeroskip
+   \rightskip\zeroskip
    %
-   \doifelse{\mixedcolumnsparameter\c!notes}\v!yes\settrue\setfalse\c_page_mix_process_notes
+   \ifcstok{\mixedcolumnsparameter\c!notes}\v!yes
+     \c_page_mix_process_notes\conditionaltrue
+   \else
+     \c_page_mix_process_notes\conditionalfalse
+   \fi
    \ifconditional\c_page_mix_process_notes \else
      \startpostponingnotes
    \fi
@@ -606,7 +612,7 @@
    \useblankparameter  \mixedcolumnsparameter
    \useprofileparameter\mixedcolumnsparameter % new
    %
-   \automigrationmode\zerocount % for now
+   \automigrationmode\zerocount % for now (see notes=yes)
    %
    \nofcolumns\c_page_mix_n_of_columns} % public
 
@@ -678,9 +684,11 @@
 \defcsname\??mixedcolumnsstop\s!otr\endcsname
   {\par
    \ifcase\c_page_mix_otr_nesting\or
-     \doifelse{\mixedcolumnsparameter\c!balance}\v!yes
-       {\c_page_mix_routine\c_page_mix_routine_balance}%
-       {\penalty-\plustenthousand}% weird hack, we need to trigger the otr sometimes (new per 20140306, see balancing-001.tex)
+     \ifcstok{\mixedcolumnsparameter\c!balance}\v!yes
+       \c_page_mix_routine\c_page_mix_routine_balance
+     \else
+       \penalty-\plustenthousand % weird hack, we need to trigger the otr sometimes (new per 20140306, see balancing-001.tex)
+     \fi
      \page_otr_trigger_output_routine
      \ifvoid\b_page_mix_preceding \else
         % empty columns so we need to make sure pending content is flushed
@@ -770,8 +778,7 @@
      \page_mix_hbox to \d_page_mix_max_width \bgroup
        \edef\p_separator{\mixedcolumnsparameter\c!separator}%
        \mixedcolumnseparatorwidth\d_page_mix_distance % \mixedcolumnsparameter\c!rulethickness\relax
-       \edef\p_direction{\mixedcolumnsparameter\c!direction}%
-       \ifx\p_direction\v!reverse
+       \ifcstok{\mixedcolumnsparameter\c!direction}\v!reverse
          \dostepwiserecurse\c_page_mix_n_of_columns\plusone\minusone
             {\page_mix_routine_package_step
              \ifnum\recurselevel>\plusone
@@ -849,16 +856,17 @@
         %writestatus\m!columns{construct balance}%
         \page_mix_routine_construct\v!yes
         \page_mix_routine_package
-        \c_page_mix_routine\c_page_mix_routine_regular
-      % \setupoutputroutine[\s!singlecolumn]%
+      % \c_page_mix_routine\c_page_mix_routine_regular % no, because we also need to set vsize
+        \setupoutputroutine[\s!singlecolumn]%
         \page_otr_command_set_vsize
         \page_otr_command_set_hsize
         \par
         %writestatus\m!columns{flush balance}%
         \page_grids_add_to_mix\b_page_mix_collected % no linenumbers here
         \box\b_page_mix_collected
-        \vskip\zeropoint % triggers recalculation of page stuff (weird that this is needed but it *is* needed, see mixed-001.tex)
-        \par
+        % can't we do this differently now?
+%         \vskip\zeroskip % triggers recalculation of page stuff (weird that this is needed but it *is* needed, see mixed-001.tex)
+%         \par
         \nointerlineskip
         \prevdepth\strutdp
         \clf_mixflushrest% rubish
@@ -989,9 +997,9 @@
 
 \protected\def\page_mix_command_check_if_float_fits
   {\ifpostponecolumnfloats
-     \global\setfalse\c_page_floats_room
+     \global\c_page_floats_room\conditionalfalse
    \orelse\ifconditional\c_page_floats_not_permitted
-     \global\setfalse\c_page_floats_room
+     \global\c_page_floats_room\conditionalfalse
    \else
 %        \bgroup
 %        \getcolumnstatus{\count255}{\dimen0}{\dimen2}%
@@ -1001,13 +1009,13 @@
 %           \snaptogrid\vbox{\vskip\floatheight}}% copy?
 %        \advanceby\dimen0\dimexpr\ht\scratchbox+2\openlineheight+.5\lineheight\relax\relax % needed because goal a bit higher
 %        \ifdim\dimen0>\dimen2
-%          \global\setfalse\c_page_floats_room
+%          \global\c_page_floats_room\conditionalfalse
 %    \else
-      \global\settrue\c_page_floats_room
+      \global\c_page_floats_room\conditionaltrue
    \fi
    \ifdim\floatwidth>\hsize
      \showmessage\m!columns{11}\empty
-     \global\setfalse\c_page_floats_room
+     \global\c_page_floats_room\conditionalfalse
    \fi}
 
 \protected\def\page_mix_command_flush_floats

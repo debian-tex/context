@@ -7450,6 +7450,12 @@ return {
    ["en"]="alignmentrightwidth",
    ["fr"]="largeurdroitealignement",
   },
+  ["interscriptfactor"]={
+    ["en"]="interscriptfactor",
+  },
+  ["alignscripts"]={
+   ["en"]="alignscripts",
+  },
   ["alignsymbol"]={
    ["en"]="alignsymbol",
    ["fr"]="alignersursymbol",
@@ -7633,6 +7639,9 @@ return {
    ["nl"]="autobreedte",
    ["pe"]="عرض‌خودکار",
    ["ro"]="autolatime",
+  },
+  ["autointervals"]={
+   ["en"]="autointervals",
   },
   ["autopunctuation"]={
    ["en"]="autopunctuation",
@@ -7962,6 +7971,9 @@ return {
    ["nl"]="onderstatus",
    ["pe"]="وضعیت‌پایین",
    ["ro"]="starejos",
+  },
+  ["bottomstyle"]={
+   ["en"]="bottomstyle",
   },
   ["break"]={
    ["en"]="break",
@@ -8402,6 +8414,9 @@ return {
    ["pe"]="دش",
    ["ro"]="dash",
   },
+  ["dashstep"]={
+   ["en"]="dashstep",
+  },
   ["dat"]={
    ["cs"]="dat",
    ["de"]="dat",
@@ -8502,6 +8517,9 @@ return {
    ["pe"]="تصحیح‌عمق",
    ["ro"]="corectieadancime",
   },
+  ["differentiald"]={
+    ["en"]="differentiald",
+  },
   ["direction"]={
    ["cs"]="smer",
    ["de"]="richtung",
@@ -8535,6 +8553,9 @@ return {
   ["displaythreshold"]={
    ["en"]="displaythreshold",
    ["fr"]="seuilaffichage",
+  },
+  ["displayfactor"]={
+   ["en"]="displayfactor",
   },
   ["distance"]={
    ["cs"]="vzdalenost",
@@ -9351,6 +9372,12 @@ return {
    ["en"]="hyphens",
    ["fr"]="traitsdunion",
   },
+  ["hz"]={
+   ["en"]="hz",
+  },
+  ["vz"]={
+   ["en"]="vz",
+  },
   ["icommand"]={
    ["cs"]="iprikaz",
    ["de"]="ibefehl",
@@ -9449,6 +9476,9 @@ return {
   ["inlinethreshold"]={
    ["en"]="inlinethreshold",
    ["fr"]="seuilenligne",
+  },
+  ["inlinefactor"]={
+   ["en"]="inlinefactor",
   },
   ["inner"]={
    ["cs"]="vnitrni",
@@ -9878,6 +9908,10 @@ return {
    ["pe"]="مرحله‌ها",
    ["ro"]="nivele",
   },
+  ["limit"]={
+   ["en"]="limit",
+   ["nl"]="beperk",
+  },
   ["limittext"]={
    ["cs"]="limittext",
    ["de"]="limittext",
@@ -9887,6 +9921,10 @@ return {
    ["nl"]="limiettekst",
    ["pe"]="مرزمتن",
    ["ro"]="limittext",
+  },
+  ["limitstretch"]={
+   ["en"]="limitstretch",
+   ["nl"]="limietrek",
   },
   ["line"]={
    ["cs"]="radek",
@@ -10080,6 +10118,9 @@ return {
    ["en"]="mathclass",
    ["fr"]="classemath",
   },
+  ["mathmeaning"]={
+   ["en"]="mathmeaning",
+  },
   ["leftclass"]={
    ["en"]="leftclass",
   },
@@ -10150,6 +10191,9 @@ return {
    ["nl"]="menu",
    ["pe"]="منو",
    ["ro"]="meniu",
+  },
+  ["metadata"]={
+   ["en"]="metadata",
   },
   ["method"]={
    ["cs"]="metoda",
@@ -10634,6 +10678,16 @@ return {
    ["pe"]="حاشیه‌فرد",
    ["ro"]="margineimpara",
   },
+  ["off"]={
+   ["cs"]="vyp",
+   ["de"]="aus",
+   ["en"]="off",
+   ["fr"]="arret",
+   ["it"]="disattivo",
+   ["nl"]="uit",
+   ["pe"]="خاموش",
+   ["ro"]="dezactivat",
+  },
   ["offset"]={
    ["cs"]="offset",
    ["de"]="offset",
@@ -10643,6 +10697,16 @@ return {
    ["nl"]="offset",
    ["pe"]="آفست",
    ["ro"]="offset",
+  },
+  ["on"]={
+   ["cs"]="zap",
+   ["de"]="an",
+   ["en"]="on",
+   ["fr"]="marche",
+   ["it"]="attivo",
+   ["nl"]="aan",
+   ["pe"]="روی",
+   ["ro"]="on",
   },
   ["openaction"]={
    ["cs"]="otevriakci",
@@ -10715,6 +10779,9 @@ return {
    ["nl"]="buitenmarge",
    ["pe"]="حاشیه‌خارجی",
    ["ro"]="outermargin",
+  },
+  ["overflow"]={
+   ["en"]="overflow",
   },
   ["overprint"]={
    ["cs"]="overprint",
@@ -12553,6 +12620,9 @@ return {
    ["nl"]="bovenstatus",
    ["pe"]="وضعیت‌بالا",
    ["ro"]="staresus",
+  },
+  ["topstyle"]={
+   ["en"]="topstyle",
   },
   ["totalnumber"]={
    ["en"]="totalnumber",
@@ -15082,6 +15152,10 @@ return {
    ["en"]="camel",
    ["fr"]="camel",
   },
+  ["Camel"]={
+   ["en"]="Camel",
+   ["fr"]="Camel",
+  },
   ["cap"]={
    ["cs"]="kap",
    ["de"]="kap",
@@ -15352,6 +15426,16 @@ return {
    ["pe"]="فضای‌برش",
    ["ro"]="cutspace",
   },
+  ["dash"]={
+   ["cs"]="pomlcka",
+   ["de"]="strich",
+   ["en"]="dash",
+   ["fr"]="pointille",
+   ["it"]="dash",
+   ["nl"]="streep",
+   ["pe"]="دش",
+   ["ro"]="dash",
+  },
   ["dataset"]={
    ["en"]="dataset",
    ["fr"]="jeudedonnees",
@@ -15435,6 +15519,9 @@ return {
    ["nl"]="scherm",
    ["pe"]="نمایش",
    ["ro"]="display",
+  },
+  ["document"]={
+   ["en"]="document",
   },
   ["dot"]={
    ["cs"]="tecka",
@@ -15533,6 +15620,9 @@ return {
    ["nl"]="eindnoot",
    ["pe"]="ته‌نوشت",
    ["ro"]="endnote",
+  },
+  ["mathnote"]={
+   ["en"]="mathnote",
   },
   ["enumeration"]={
    ["cs"]="vycet",
@@ -15730,6 +15820,10 @@ return {
    ["nl"]="vast",
    ["pe"]="ثابت",
    ["ro"]="fixat",
+  },
+  ["spread"]={
+    ["en"]="spread",
+    ["nl"]="gespreid",
   },
   ["flexible"]={
    ["cs"]="prizpusobive",
@@ -16040,6 +16134,14 @@ return {
    ["pe"]="بیاویز",
    ["ro"]="suspenda",
   },
+  ["hangleft"]={
+   ["en"]="hangleft",
+   ["nl"]="hanglinks",
+  },
+  ["hangright"]={
+   ["en"]="hangright",
+   ["nl"]="hangrechts",
+  },
   ["hanging"]={
    ["cs"]="visici",
    ["de"]="haengend",
@@ -16188,14 +16290,10 @@ return {
    ["ro"]="despsilabe",
   },
   ["hz"]={
-   ["cs"]="hz",
-   ["de"]="hz",
    ["en"]="hz",
-   ["fr"]="hz",
-   ["it"]="hz",
-   ["nl"]="hz",
-   ["pe"]="hz",
-   ["ro"]="hz",
+  },
+  ["vz"]={
+   ["en"]="vz",
   },
   ["inbetween"]={
    ["cs"]="mezi",
@@ -16750,6 +16848,10 @@ return {
   ["letterspacing"]={
    ["en"]="letterspacing",
    ["fr"]="espacementlettre",
+  },
+  ["limit"]={
+   ["en"]="limit",
+   ["nl"]="beperk",
   },
   ["line"]={
    ["cs"]="radek",
@@ -17622,6 +17724,12 @@ return {
    ["pe"]="لبه‌خارجی",
    ["ro"]="outeredge",
   },
+  ["outlined"]={
+   ["en"]="outlined",
+  },
+  ["outline"]={
+   ["en"]="outline",
+  },
   ["outermargin"]={
    ["cs"]="outermargin",
    ["de"]="outermargin",
@@ -18465,6 +18573,16 @@ return {
    ["pe"]="six",
    ["ro"]="six",
   },
+  ["size"]={
+   ["cs"]="velikost",
+   ["de"]="groesse",
+   ["en"]="size",
+   ["fr"]="taille",
+   ["it"]="dimensione",
+   ["nl"]="formaat",
+   ["pe"]="اندازه",
+   ["ro"]="dimensiune",
+  },
   ["slanted"]={
    ["cs"]="sklonene",
    ["de"]="geneigt",
@@ -19244,6 +19362,10 @@ return {
    ["fr"]="resserre",
    ["nl"]="krap",
   },
+  ["verytight"]={
+   ["en"]="verytight",
+   ["nl"]="heelkrap",
+  },
   ["title"]={
    ["cs"]="titul",
    ["de"]="titel",
@@ -19263,6 +19385,9 @@ return {
    ["nl"]="toggle",
    ["pe"]="تغییر",
    ["ro"]="toggle",
+  },
+  ["granular"]={
+   ["en"]="granular",
   },
   ["tolerant"]={
    ["cs"]="tolerantni",

@@ -196,7 +196,7 @@
 %D This is used in the beginners manual. One needs to set the font size to an
 %D acceptable value for this to work.
 
-\permanent\tolerant\protected\def\startnicelyfilledbox[#1]%
+\permanent\tolerant\protected\def\startnicelyfilledbox[#S#1]%
   {\vbox\bgroup
    \forgetall
    \letdummyparameter\c!width \hsize
@@ -208,22 +208,25 @@
    \setbox\scratchbox\vbox to \dummyparameter\c!height \bgroup
    \hsize\dummyparameter\c!width\relax
    \emergencystretch10\scratchoffset
-   \parfillskip\zeropoint
+   \parfillskip\zeroskip
+   \parfillleftskip\zeroskip
    \leftskip \scratchoffset
    \rightskip\scratchoffset}
 
 \permanent\protected\def\stopnicelyfilledbox
   {\egroup
    \vbox to \dummyparameter\c!height \bgroup
-     \doifelse{\dummyparameter\c!strut}\v!yes
-       {\dorecurse{\boxlines\scratchbox}%
-          {\boxlineht\scratchbox\recurselevel\strutht
-           \boxlinedp\scratchbox\recurselevel\strutdp
-           \boxline\scratchbox\recurselevel
-           \vss}}%
-       {\dorecurse{\boxlines\scratchbox}%
-          {\boxline\scratchbox\recurselevel
-           \vss}}%
+     \ifcstok{\dummyparameter\c!strut}\v!yes
+       \dorecurse{\boxlines\scratchbox}%
+         {\boxlineht\scratchbox\recurselevel\strutht
+          \boxlinedp\scratchbox\recurselevel\strutdp
+          \boxline\scratchbox\recurselevel
+          \vss}%
+     \else
+       \dorecurse{\boxlines\scratchbox}%
+         {\boxline\scratchbox\recurselevel
+          \vss}%
+     \fi
      \unskip
    \egroup
    \egroup}

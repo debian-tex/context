@@ -49,7 +49,7 @@
 \installmacrostack\currentmodulecategory
 \installmacrostack\currentmoduleparameters
 
-\permanent\tolerant\protected\def\usemodules[#category]#spacer[#name]#spacer[#parameters]% category=t|m|x|p|...
+\permanent\tolerant\protected\def\usemodules[#category]#spacer[#S#name]#spacer[#S#parameters]% category=t|m|x|p|...
   {\push_macro_currentmodule
    \push_macro_currentmodulecategory
    \push_macro_currentmoduleparameters
@@ -57,21 +57,21 @@
      \lettonothing\currentmodule
    \or
      \lettonothing\currentmodulecategory
-     \edef\currentmodule{#category}%
+     \cdef\currentmodule{#category}%
      \lettonothing\currentmoduleparameters
    \or
      \ifhastok={#name}%
        \lettonothing\currentmodulecategory
-       \edef\currentmodule{#category}%
+       \cdef\currentmodule{#category}%
        \edef\currentmoduleparameters{#name}%
      \else
        \edef\currentmodulecategory{#category}%
-       \edef\currentmodule{#name}%
+       \cdef\currentmodule{#name}%
        \lettonothing\currentmoduleparameters
      \fi
    \or
      \edef\currentmodulecategory  {#category}%
-     \edef\currentmodule          {#name}%
+     \cdef\currentmodule          {#name}%
      \def \currentmoduleparameters{#parameters}%
    \fi
    \processcommacommand[\currentmodule]{\strc_modules_use\currentmodulecategory}%
@@ -96,7 +96,7 @@
   {\global\advanceby\c_syst_modules_nesting\plusone
    \push_macro_currentmodule
    \push_macro_currentmoduleparameters
-   \def\currentmodule{#1#2}}
+   \cdef\currentmodule{#1#2}}
 
 \permanent\protected\def\stopmodule
   {\ifcase\c_syst_modules_nesting
@@ -114,17 +114,19 @@
       \expandafter\syst_modules_setup_yes
    \fi}
 
-\tolerant\def\syst_modules_setup_nop[#name]#spacer[#parameters]%
+\tolerant\def\syst_modules_setup_nop[#S#name]#spacer[#S#parameters]%
   {\ifarguments
      % nothing
    \or
-     \doifassignmentelse{#name}{\getparameters[\??module\currentmodule:][#name]}\donothing
+     \ifhastok={#name}%
+       \getparameters[\??module\currentmodule:][#name]%
+     \fi
    \or
      \getparameters[\??module#name:][#parameters]% internal (defaults)
    \fi
-   \the\everysetupmodule}
+   \expand\everysetupmodule}
 
-\tolerant\def\syst_modules_setup_yes[#name]#spacer[#parameters]%
+\tolerant\def\syst_modules_setup_yes[#S#name]#spacer[#S#parameters]%
   {\scratchtoks\expandafter{\currentmoduleparameters}%
    \ifparameters
      \normalexpanded{\getparameters[\??module\currentmodule:][\the\scratchtoks]}%
@@ -140,7 +142,7 @@
      \normalexpanded{\getparameters[\??module#name:][\the\scratchtoks]}% loadtime (user)
    \fi
    \lettonothing\currentmoduleparameters
-   \the\everysetupmodule}
+   \expand\everysetupmodule}
 
 \permanent\def\moduleparameter#name#parameter% should have been \namedmoduleparameter
   {\begincsname\??module#name:#parameter\endcsname}
@@ -176,12 +178,14 @@
 \permanent\protected\def\startmoduletestsection
   {\begingroup
    \setupmodule % we need to make sure that the vars are set
-   \doifelse{\currentmoduleparameter\v!test}\v!yes
-     {\endgroup
-      \writestatus\currentmodule{loading experimental code}}
-     {\endgroup
-      \writestatus\currentmodule{skipping experimental code}%
-      \gobbleuntil\stopmoduletestsection}}
+   \ifcstok{\currentmoduleparameter\v!test}\v!yes
+     \endgroup
+     \writestatus\currentmodule{loading experimental code}%
+   \else
+     \endgroup
+     \writestatus\currentmodule{skipping experimental code}%
+     \expandafter\ignoreupto\expandafter\stopmoduletestsection
+   \fi}
 
 \aliased\let\stopmoduletestsection\donothing
 

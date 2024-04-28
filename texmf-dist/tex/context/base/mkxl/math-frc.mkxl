@@ -83,11 +83,14 @@
 
 % color only applies to rule, use regular color for rest
 
+\integerdef\math_frac_no_delim "2E % or just \zerocount
+
 \setupmathfractions
   [\c!mathstyle=,
    \c!method=\v!vertical,
    \c!mathnumeratorstyle=\mathfractionparameter\c!mathstyle,
    \c!mathdenominatorstyle=\mathfractionparameter\c!mathstyle,
+   \c!mathmeaning=\currentglobalmathfraction,
    \c!mathclass=\mathfractioncode,
    \c!alternative=\v!inner,
    \c!margin=\zeropoint,
@@ -127,7 +130,7 @@
 % why only displaystyle .. a bit weak .. will become a set
 
 \protected\def\math_fraction_set_distance_top
-  {\Umathfractionnumup    \displaystyle\m_math_fraction_distance_top
+  {\Umathfractionnumup\displaystyle\m_math_fraction_distance_top
    \relax}
 
 \protected\def\math_fraction_set_distance_bot
@@ -207,7 +210,7 @@
 
 \installlocalcurrenthandler\??mathfractions {mathfraction}
 
-\tolerant\protected\def\math_frac#1#*[#2]%%
+\tolerant\protected\def\math_frac#1#*[#S#2]%%
   {\beginmathgroup
    %
    \setlocalmathfractioncurrent{#1}% \edef\currentmathfraction{#1}%
@@ -215,6 +218,7 @@
    \ifparameter#2\or\setupcurrentmathfraction[#2]\fi
    %
    \edef\p_math_fraction_fences{\mathfractionparameter\c!fences}%
+   \dostarttagged\t!mfractionstack{\mathfractionparameter\c!mathmeaning}%
    %
    \math_atom_by_parameter\mathfractionparameter\bgroup
    \ifempty\p_math_fraction_fences \else
@@ -235,16 +239,19 @@
      \math_frac_no_strut
    \fi
    %
+   % This only adds a level of structure so that we don't get the everthing tagged
+   % fractionstack.
+   \dostarttagged\t!mfraction\currentglobalmathfraction
    \expandnamespaceparameter\??mathfractionalternative\mathfractionparameter\c!alternative\v!inner}
 
 \protected\def\math_frac_wrapup
   {\ifempty\p_math_fraction_fences \else
      \math_fenced_fenced_stop\p_math_fraction_fences
    \fi
+   \dostoptagged
    \egroup
+   \dostoptagged
    \endmathgroup}
-
-\integerdef\math_frac_no_delim "2E % or just \zerocount
 
 % Having a \withmarginornot{#1}{#2} makes not much sense nor do 4 tests or 4 redundant
 % kerns (longer node lists plus possible interference). A split in normal and margin
@@ -259,47 +266,59 @@
 % timestamp: 01/2022 : (re)watching eNerd⁴ - Time Capsule 2020 a.k.a. Farewell Party
 % for Normalcy (UHD) with the soekris/neumanns combination
 
+% Todo: \Umathfrac for all of them as we're keyword driven anyway.
+
 \installcorenamespace{fractionmethods}
 
 \defcsname\??fractionmethods\v!vertical  \v!no     \v!none\endcsname{\Uatop}
 \defcsname\??fractionmethods\v!vertical  \v!no            \endcsname{\Uatopwithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo}
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo}
 \defcsname\??fractionmethods\v!vertical  \v!yes    \v!none\endcsname{\Uabove}
 \defcsname\??fractionmethods\v!vertical  \v!yes           \endcsname{\Uabovewithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo}
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo}
 \defcsname\??fractionmethods\v!vertical  \v!hidden \v!none\endcsname{\Uabove}
 \defcsname\??fractionmethods\v!vertical  \v!hidden        \endcsname{\Uabovewithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo}
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo}
 \defcsname\??fractionmethods\v!vertical  \v!auto   \v!none\endcsname{\Uover}
 \defcsname\??fractionmethods\v!vertical  \v!auto          \endcsname{\Uoverwithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo}
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo}
 \defcsname\??fractionmethods\v!vertical  \v!symbol \v!none\endcsname{\Ustretched
-                                                                     \Udelimiter\zerocount\fam\scratchcounterthree}
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree}
 \defcsname\??fractionmethods\v!vertical  \v!symbol        \endcsname{\Ustretchedwithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo
-                                                                     \Udelimiter\zerocount\fam\scratchcounterthree}
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree}
 \defcsname\??fractionmethods\v!horizontal          \v!none\endcsname{\Uskewed
-                                                                     \Udelimiter\zerocount\fam\scratchcounterthree
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree
                                                                      \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
 \defcsname\??fractionmethods\v!horizontal                 \endcsname{\Uskewedwithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo
-                                                                     \Udelimiter\zerocount\fam\scratchcounterthree
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree
                                                                      \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
 \defcsname\??fractionmethods\v!line                \v!none\endcsname{\Uskewed
-                                                                     \Udelimiter\zerocount\fam\scratchcounterthree
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree
                                                                      \s!noaxis \space
                                                                      \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
 \defcsname\??fractionmethods\v!line                       \endcsname{\Uskewedwithdelims
-                                                                     \Udelimiter\zerocount\fam\scratchcounterone
-                                                                     \Udelimiter\zerocount\fam\scratchcountertwo
-                                                                     \Udelimiter\zerocount\fam\scratchcounterthree
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree
                                                                      \s!noaxis \space
+                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
+\defcsname\??fractionmethods\v!center              \v!none\endcsname{\Uskewed
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree
+                                                                     \s!noaxis \space \s!center
+                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
+\defcsname\??fractionmethods\v!center                     \endcsname{\Uskewedwithdelims
+                                                                     \Umathchar\zerocount\fam\scratchcounterone
+                                                                     \Umathchar\zerocount\fam\scratchcountertwo
+                                                                     \Umathchar\zerocount\fam\scratchcounterthree
+                                                                     \s!noaxis \space \s!center
                                                                      \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
 
 \setupmathfractions % we now inherit !
@@ -318,6 +337,8 @@
         \mathfractionparameter\c!middle
       \orelse\ifx\p_method\v!line
         \mathfractionparameter\c!middle
+      \orelse\ifx\p_method\v!center
+        \mathfractionparameter\c!middle
       \else
         \mathfractionparameter\c!symbol
       \fi
@@ -327,6 +348,7 @@
       \p_method
       \ifx\p_method\v!horizontal
       \orelse\ifx\p_method\v!line
+      \orelse\ifx\p_method\v!center
       \orelse\ifcsname\??fractionmethods\p_method\p_rule\endcsname % \v!vertical
         \p_rule
       \else
@@ -490,15 +512,15 @@
 \def\math_fraction_set_threshold_display_auto
    {\Umathfractiondelsize\alldisplaystyles\maxdimen}
 
-\def\math_fraction_set_threshold_inline_ratio
+\def\math_fraction_set_threshold_inline_ratio % watch the reverse compensation
   {\edef\p_threshold{\mathfractionparameter\c!inlinethreshold}%
-   \Umathfractiondelsize\alltextstyles        \p_threshold\dimexpr\textface\relax
-   \Umathfractiondelsize\allscriptstyles      \p_threshold\dimexpr\scriptface\relax
-   \Umathfractiondelsize\allscriptscriptstyles\p_threshold\dimexpr\scriptscriptface\relax}
+   \Umathfractiondelsize\alltextstyles        \p_threshold\glyphscaled\textface
+   \Umathfractiondelsize\allscriptstyles      \p_threshold\glyphscaled\scriptface
+   \Umathfractiondelsize\allscriptscriptstyles\p_threshold\glyphscaled\scriptscriptface}
 
-\def\math_fraction_set_threshold_display_ratio
+\def\math_fraction_set_threshold_display_ratio % watch the reverse compensation
   {\edef\p_threshold{\mathfractionparameter\c!displaythreshold}%
-   \Umathfractiondelsize\alldisplaystyles\p_threshold\dimexpr\textface\relax}
+   \Umathfractiondelsize\alldisplaystyles\p_threshold\glyphscaled\textface}
 
 \setupmathfractions
   [\c!inlinethreshold=1.2,      % no unit but fraction
@@ -558,58 +580,19 @@
 %D \ShowMathFractions{1}{b}\par
 %D \blank
 
-% % There is no real need to support ams styling so this is now obsolete:
+%D There is no real need to support ams styling any longer so we removed the
+%D related code.
 
 \permanent\protected\def\frac {\csname\inlineordisplaymath id:frac\endcsname}
 \permanent\protected\def\tfrac{\csname\inlineordisplaymath id:tfrac\endcsname}
 \permanent\protected\def\sfrac{\csname\inlineordisplaymath id:sfrac\endcsname}
 \permanent\protected\def\dfrac{\csname\inlineordisplaymath id:dfrac\endcsname}
 
-% \definemathfraction[ams]            [\c!strut=\v!no,\c!alternative=\v!outer]
-% \definemathfraction[i:ams:frac][ams][\c!mathstyle={\s!cramped,\s!text}]
-% \definemathfraction[d:ams:frac][ams][\c!mathstyle={\s!cramped,\s!display}]
-%
-% \permanent\protected\def\ctxfrac{\csname\inlineordisplaymath id:frac\endcsname}
-% \permanent\protected\def\amsfrac{\csname\inlineordisplaymath id:ams:frac\endcsname}
-%
-% \appendtoks
-%     \doifelse{\mathematicsparameter\c!fractions}{ams}%
-%       {\enforced\let\frac\amsfrac}%
-%       {\enforced\let\frac\ctxfrac}%
-% \to \everysetupmathematics
-
-% % Also gone:
-%
-% \definemathfraction[ddfrac][\c!mathstyle=\s!display]
-% \definemathfraction[ttfrac][\c!mathstyle=\s!text]
-% \definemathfraction[ssfrac][\c!mathstyle=\s!script]
-%
-% \protected\def\binom #1#2{{\Ustack      {{#1}\normalabovewithdelims()\zeropoint{#2}}}}
-% \protected\def\dbinom#1#2{{\displaystyle{{#1}\normalabovewithdelims()\zeropoint{#2}}}}
-% \protected\def\tbinom#1#2{{\textstyle   {{#1}\normalabovewithdelims()\zeropoint{#2}}}}
-%
-% \definemathfraction
-%   [binom]
-%   [\c!alternative=\v!outer,
-%    \c!rule=\v!no,
-%    \c!left="28,
-%    \c!right="29,
-%    \c!mathstyle=\s!auto]
-%
-% \definemathfraction
-%   [dbinom]
-%   [binom]
-%   [\c!mathstyle=\s!display]
-%
-% \definemathfraction
-%   [tbinom]
-%   [binom]
-%   [\c!mathstyle=\s!text]
-
 \definemathfraction
   [d:binom]
   [d:frac]
   [\c!rule=\v!no,
+   \c!mathmeaning=binom,
  % \c!mathstyle=\s!display,
    \c!left="28,
    \c!right="29]
@@ -618,6 +601,7 @@
   [i:binom]
   [i:frac]
   [\c!rule=\v!no,
+   \c!mathmeaning=binom,
   %\c!mathstyle=\s!text,
    \c!left="28,
    \c!right="29]
@@ -716,12 +700,12 @@
 
 \defcsname\??mathalignsimple\v!split:\v!flushleft\endcsname#1%
   {#1%
-   \ifchkdim\mathfractionparameter\c!distance\or\hskip\lastchkdim\fi
+   \ifchkdimension\mathfractionparameter\c!distance\or\hkern\lastchkdimension\fi
    \hfill}
 
 \defcsname\??mathalignsimple\v!split:\v!flushright\endcsname#1%
   {\hfill
-   \ifchkdim\mathfractionparameter\c!distance\or\hskip\lastchkdim\fi
+   \ifchkdimension\mathfractionparameter\c!distance\or\hkern\lastchkdimension\fi
    \mathatom \s!class \mathordcode \s!unroll {}% prevents +/- seen as sign, unroll prevents empty box
    #1}
 
@@ -754,8 +738,14 @@
 \definemathfraction
   [\s!vfrac]
   [\v!horizontal]
-  [\c!hfactor=20,
-   \c!vfactor=10]
+  [\c!hfactor=20, % quite small, as we have 1000 as default
+   \c!vfactor=10] % quite small, as we have 1000 as default
+
+\definemathfraction
+  [hfrac]
+  [\c!method=\v!center,
+   \c!hfactor=\zerocount,
+   \c!vfactor=\zerocount]
 
 %D And a cheat (for Mikael):
 
@@ -806,87 +796,3 @@
 \definemathfraction [Rightleftarrowtext]     [relfraction] [\c!middle="27FA]
 
 \protect \endinput
-
-% I have no clue what \mthfrac and \mthsqrt are supposed to do but
-% I guess that it can be done with tweaking luatex's math parameters.
-% Otherwise I'll write something from scratch.
-
-% \def\math_stylebuilders_frac#1#2#3#4#5#6#7%
-%   {\begingroup
-%    \mathsurround\zeropoint
-%    \setbox0\hbox{$#1 #6$}%
-%    \setbox2\hbox{$#1 #7$}%
-%    \dimen0\wd\ifdim\wd2>\wd0 2\else 0\fi
-%    \setbox4\hbox to \dimen0{\leaders\hbox{#4}\hss#5}%
-%    \mathord{\vcenter{{\offinterlineskip
-%      \hbox to \dimen0{\hss\box0\hss}%
-%      \kern\ht4%
-%      \hbox to \dimen0{\hss\copy4\hss}%
-%      \kern\ht4%
-%      \hbox to \dimen0{\hss\box2\hss}}}}%
-%    \endgroup}
-%
-% \def\math_stylebuilders_sqrt#1#2#3#4#5%
-%   {\begingroup
-%    \mathsurround\zeropoint
-%    \setbox0\hbox{$#1 #5$}%
-%    \ht0\dimexpr1.05\ht0+\onepoint\relax
-%    \dp0\dimexpr1.05\dp0+\onepoint\relax
-%    \setbox4\hbox to \wd0{\mr#2\leaders\hbox{#3}\hfill#4}%
-%    \delimitershortfall\zeropoint
-%    \nulldelimiterspace\zeropoint
-%    \setbox2\hbox{$\left\delimiter"0270370 \vrule \s!height\ht0 \s!depth \dp0 \s!width\zeropoint\right.$}% is this the right code point?
-%    \mathord{\vcenter{\hbox{\copy2\rlap{\raise\dimexpr\ht2-\ht4\relax\copy4}\copy0}}}%
-%    \endgroup}
-%
-% \def\mthfrac#1#2#3#4#5{\mathchoice
-%   {\math_stylebuilders_frac\displaystyle     \textface        {#1}{#2}{#3}{#4}{#5}}%
-%   {\math_stylebuilders_frac\textstyle        \textface        {#1}{#2}{#3}{#4}{#5}}%
-%   {\math_stylebuilders_frac\scriptstyle      \scriptface      {#1}{#2}{#3}{#4}{#5}}%
-%   {\math_stylebuilders_frac\scriptscriptstyle\scriptscriptface{#1}{#2}{#3}{#4}{#5}}}
-%
-% \def\mthsqrt#1#2#3{\mathchoice
-%   {\math_stylebuilders_sqrt\displaystyle     \textface{#1}{#2}{#3}}%
-%   {\math_stylebuilders_sqrt\textstyle        \textface{#1}{#2}{#3}}%
-%   {\math_stylebuilders_sqrt\scriptstyle      \textface{#1}{#2}{#3}}%
-%   {\math_stylebuilders_sqrt\scriptscriptstyle\textface{#1}{#2}{#3}}}
-
-% \protected\def\mthfrac#1#2#3{[mthfrac: #1 #2 #3]}
-% \protected\def\mthsqrt#1#2#3{[mthsqrt: #1 #2 #3]}
-
-% used for prototyping \Uskewed
-%
-% \protected\def\skewedfractiona#1#2{%
-%     \raise
-%         \Umathskewedfractionvgap\textstyle
-%         \hbox\bgroup
-%             $\scriptstyle#1\hskip\dimexpr\Umathskewedfractionhgap\scriptstyle/2\relax$%
-%         \egroup
-%         \hbox to \zeropoint\bgroup
-%             \hss$\textstyle/$\hss
-%         \egroup
-%     \lower
-%         \Umathskewedfractionvgap\textstyle
-%         \hbox\bgroup
-%             $\hskip\dimexpr\Umathskewedfractionhgap\scriptstyle/2\relax\scriptstyle#2$%
-%         \egroup
-% }
-%
-% \protected\def\skewedfractionb#1#2{%
-%     \raise
-%         \Umathskewedfractionvgap\textstyle
-%         \hbox\bgroup
-%             $\scriptstyle#1\hskip\dimexpr\Umathskewedfractionhgap\textstyle/2\relax$%
-%         \egroup
-%         \hbox to \zeropoint\bgroup
-%             \hss$\textstyle/$\hss
-%         \egroup
-%     \lower
-%         \Umathskewedfractionvgapskewedfractionvgap\textstyle
-%         \hbox\bgroup
-%             $\hskip\dimexpr\Umathskewedfractionhgap\textstyle/2\relax\scriptstyle#2$%
-%         \egroup
-% }
-%
-% $\skewedfractiona{1}{2}$
-% $\skewedfractionb{1}{2}$
