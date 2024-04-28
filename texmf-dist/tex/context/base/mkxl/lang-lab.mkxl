@@ -11,6 +11,9 @@
 %C therefore copyrighted by \PRAGMA. See mreadme.pdf for
 %C details.
 
+% TODO: only preload English and delay loading of other languages
+% till some related command is used.
+
 \writestatus{loading}{ConTeXt Language Macros / Labels}
 
 \registerctxluafile{lang-lab}{autosuffix}
@@ -21,7 +24,7 @@
 %D Left-overs:
 
 \ifdefined\sixperemspace \else
-    \permanent\edef\sixperemspace{\normalUchar"2006}
+    \permanent\edef\sixperemspace{\tocharacter"2006}
 \fi
 
 %D In this module we deal with language dependant labels and prefixes, like in {\em
@@ -62,11 +65,12 @@
 
 % \lettonothing\currentlabelcategory
 
+
 \permanent\tolerant\protected\def\definelabelclass[#1]#*[#2]%
   {\normalexpanded
      {\lang_labels_define_class_indeed
         {#1}%
-        {\ifchknum#2\or#2\else\zerocount\fi}%
+        {\ifchknumber#2\or#2\else\zerocount\fi}% not \lastchknumber as we need expansion
         \expandafter\noexpand\csname lang_labels_#1_text_1\endcsname
         \expandafter\noexpand\csname            #1language\endcsname
         \expandafter\noexpand\csname lang_labels_#1_text_2\endcsname
@@ -182,11 +186,11 @@
 
 \tolerant\def\lang_labels_text_prefix_start[#1]#*[#2]#*[#3]% class language name
   {\ifarguments\or\or
-     \edef\currenttextprefixtag{\reallanguagetag\currentmainlanguage}%
-     \edef\currenttextprefixname{#2}%
+     \cdef\currenttextprefixtag{\reallanguagetag\currentmainlanguage}%
+     \cdef\currenttextprefixname{#2}%
    \else
-     \edef\currenttextprefixtag{\reallanguagetag{#2}}%
-     \edef\currenttextprefixname{#3}%
+     \cdef\currenttextprefixtag{\reallanguagetag{#2}}%
+     \cdef\currenttextprefixname{#3}%
    \fi
    \grabuntil{stop#1text}\lang_labels_text_prefix_start_indeed}
 
@@ -195,10 +199,10 @@
 
 \tolerant\def\lang_labels_text_prefix_setup[#1]#*[#2]%
   {\ifarguments\or
-     \edef\currenttextprefixtag{\reallanguagetag\currentmainlanguage}%
+     \cdef\currenttextprefixtag{\reallanguagetag\currentmainlanguage}%
      \processcommalist[#1]\lang_labels_text_prefix_setup_indeed
    \else
-     \edef\currenttextprefixtag{\reallanguagetag{#1}}%
+     \cdef\currenttextprefixtag{\reallanguagetag{#1}}%
      \processcommalist[#2]\lang_labels_text_prefix_setup_indeed
    \fi}
 
@@ -253,10 +257,10 @@
 
 \tolerant\def\lang_labels_text_prefix_copy[#1]#*[#2]%
   {\ifarguments\or
-     \edef\currenttextprefixtag{\reallanguagetag\currentmainlanguage}%
+     \cdef\currenttextprefixtag{\reallanguagetag\currentmainlanguage}%
      \processcommalist[#1]\lang_labels_text_prefix_copy_indeed
    \else
-     \edef\currenttextprefixtag{\reallanguagetag{#1}}%
+     \cdef\currenttextprefixtag{\reallanguagetag{#1}}%
      \processcommalist[#2]\lang_labels_text_prefix_copy_indeed
    \fi}
 

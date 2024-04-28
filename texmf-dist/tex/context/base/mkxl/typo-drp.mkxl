@@ -58,6 +58,7 @@
    \c!n=3,
    \c!m=1,
    \c!method=\v!none,
+   \c!continue=\v!no, % yes will handle single line cases
  % \c!font=Bold sa 4,
  % \c!font=Bold ht \measure{initial:n},
    \c!font=Bold cp \measure{initial:n},
@@ -73,8 +74,14 @@
    \namedinitialparameter{#1}\c!before
    \enforced\edef\typo_initial_handle{\typo_initial_handle_indeed{#1}{}}}
 
-\permanent\tolerant\protected\def\setinitial[#1]#*[#2]%
+\permanent\tolerant\protected\def\setinitial[#1]#*[#S#2]%
   {\enforced\edef\typo_initial_handle{\typo_initial_handle_indeed{#1}{#2}}}
+
+%D \starttyping
+%D \framed
+%D   [width=10cm,align=normal,strut=no,toffset=1ex]
+%D   {\placeinitial \flushinitial \samplefile{ward}}
+%D \stoptyping
 
 \permanent\tolerant\protected\def\flushinitial % when used inside a mechanism that forgets
   {\typo_initial_handle}
@@ -102,12 +109,14 @@
 \protected\def\typo_initial_handle_indeed#1#2%
   {\dontleavehmode
    \begingroup
-   \edef\currentinitial{#1}%
+   \cdef\currentinitial{#1}%
    \setupcurrentinitial[#2]%
    \resetfontfeature % might be needed in more places
-   \doifelsenothing{\initialparameter\c!style}
-     {\definedfont[\initialparameter\c!font]}
-     {\useinitialstyleparameter\c!style}%
+   \ifempty{\initialparameter\c!style}%
+     \definedfont[\initialparameter\c!font]%
+   \else
+     \useinitialstyleparameter\c!style
+   \fi
    \useinitialcolorparameter\c!color
    \edef\p_voffset{\initialparameter\c!voffset}%
    \scratchcounter \initialparameter\c!n\relax
@@ -118,6 +127,7 @@
         n          \scratchcounter
         m          \numexpr\initialparameter\c!m\relax
         method     {\initialparameter\c!method}%
+        continue   {\initialparameter\c!continue}%
         distance   \dimexpr\initialparameter\c!distance\relax
         hoffset    \dimexpr\initialparameter\c!hoffset\relax
         voffset    \scratchvoffset
@@ -171,8 +181,8 @@
 
 \installtexexperiment
    {autoforgetinitials}
-   {\settrue \c_initial_synchronize}
-   {\setfalse\c_initial_synchronize}
+   {\c_initial_synchronize\conditionaltrue}
+   {\c_initial_synchronize\conditionalfalse}
 
 % \setupbodyfont[dejavu,9pt]
 %

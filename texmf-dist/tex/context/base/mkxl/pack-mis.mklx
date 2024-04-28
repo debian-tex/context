@@ -27,7 +27,7 @@
 \installcommandhandler \??placement {placement} \??placement
 
 \appendtoks
-   \frozen\instance\setuevalue{\e!place\currentplacement}{\pack_placement{\currentplacement}}%
+   \frozen\instance\protected\edefcsname\e!place\currentplacement\endcsname{\pack_placement{\currentplacement}}%
 \to \everydefineplacement
 
 \setupplacement
@@ -45,10 +45,10 @@
 
 \protected\def\pack_placement#tag%
   {\bgroup
-   \edef\currentplacement{#tag}%
+   \cdef\currentplacement{#tag}%
    \doifelsenextoptionalcs\pack_placement_yes\pack_placement_nop}
 
-\def\pack_placement_yes[#settings]%
+\def\pack_placement_yes[#S#settings]%
   {\setupcurrentplacement[#settings]%
    \pack_placement_nop}
 

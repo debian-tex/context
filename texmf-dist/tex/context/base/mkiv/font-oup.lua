@@ -11,6 +11,7 @@ local P, R, S = lpeg.P, lpeg.R, lpeg.S
 local lpegmatch = lpeg.match
 local insert, remove, copy, unpack = table.insert, table.remove, table.copy, table.unpack
 local find = string.find
+local idiv = number.idiv
 
 local formatters           = string.formatters
 local sortedkeys           = table.sortedkeys
@@ -739,6 +740,33 @@ local function checklookups(fontdata,missing,nofmissing)
             report_unicodes("not unicoded: % t",sortedkeys(done))
         end
     end
+
+    for k, v in next, descriptions do
+        local math = v.math
+        if math then
+            local variants = math.variants
+            local parts    = math.parts
+            local unicode  = v.unicode
+            if variants then
+                if unicode then
+                    for i=1,#variants do
+                        local v = descriptions[variants[i]]
+                        if not v then
+                            -- error
+                        elseif v.unicode then
+                            -- error
+                        else
+                            v.unicode = unicode
+                        end
+                    end
+                end
+            end
+            if parts then
+                parts[idiv(#parts,2)+1].unicode = unicode
+            end
+        end
+    end
+
 end
 
 local firstprivate = fonts.privateoffsets and fonts.privateoffsets.textbase or 0xF0000
@@ -945,7 +973,9 @@ local function unifyglyphs(fontdata,usenames)
             if colors then
                 for i=1,#colors do
                     local c = colors[i]
-                    c.slot = indices[c.slot]
+                    if c then -- safeguard
+                        c.slot = indices[c.slot]
+                    end
                 end
             end
         end

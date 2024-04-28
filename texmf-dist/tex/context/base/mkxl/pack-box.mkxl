@@ -53,13 +53,13 @@
 
 \mutable\lettonothing\currentanchor
 
-\permanent\tolerant\protected\def\defineanchor[#1]#*[#2]#*[#3]#*[#4]% name targetlayer layersetting framedsetting
+\permanent\tolerant\protected\def\defineanchor[#1]#*[#2]#*[#S#3]#*[#S#4]% name targetlayer layersetting framedsetting
   {\defcsname\??anchor#1\endcsname{\pack_anchors_process_defined{#2}{#3}{#4}}}
 
 \let\pack_anchors_process_defined_indeed\gobbletwooptionals
 
 \def\pack_anchors_process_defined#1#2#3% brrr
-  {\tolerant\def\pack_anchors_process_defined_indeed[##1]##*[##2]%
+  {\tolerant\def\pack_anchors_process_defined_indeed[##S##1]##*[##S##2]%
      {\ifarguments
         \def\next{\pack_anchors_process_indeed{#1}{#2}{#3}}%
       \or
@@ -104,12 +104,12 @@
 
 \protected\def\pack_anchors_register#1#2%
   {\global\advanceby\c_pack_anchors_n\plusone
-   \pagereference[\v!layer:\v!anchor:\number\c_pack_anchors_n]%
-   \putboxincache\v!anchor{\number\c_pack_anchors_n}\b_pack_anchors
-%    \xtoksapp\t_pack_anchors_flush{\pack_anchors_flush{\number\c_pack_anchors_n}{#1}{#2}}%
-   \doglobal\appendetoks
-     \pack_anchors_flush{\number\c_pack_anchors_n}{#1}{#2}%
-   \to \t_pack_anchors_flush
+   \pagereference[\v!layer:\v!anchor:\the\c_pack_anchors_n]%
+   \putboxincache\v!anchor{\the\c_pack_anchors_n}\b_pack_anchors
+   \xtoksapp\t_pack_anchors_flush{\pack_anchors_flush{\the\c_pack_anchors_n}{#1}{#2}}%
+ % \doglobal\appendetoks
+ %   \pack_anchors_flush{\the\c_pack_anchors_n}{#1}{#2}%
+ % \to \t_pack_anchors_flush
    \glet\pack_anchors_flush_all\pack_anchors_flush_all_indeed}
 
 \protected\def\pack_anchors_flush#1#2#3%
@@ -125,7 +125,7 @@
 
 \protected\def\pack_anchors_flush_all_indeed
   {\donefalse
-   \the\t_pack_anchors_flush
+   \expand\t_pack_anchors_flush
    \ifdone\else
       \global\t_pack_anchors_flush\emptytoks
       \glet\pack_anchors_flush_all\relax
@@ -152,7 +152,7 @@
 % \setlayeranchored[text-1][preset=lefttop]{HELLO WORLD} produces a simple (empty) hbox
 % synchronizes per page
 
-\permanent\tolerant\protected\def\setlayeranchored[#1]#*[#2]%
+\permanent\tolerant\protected\def\setlayeranchored[#1]#*[#S#2]%
   {\begingroup
    \ifarguments
      \dowithnextbox
@@ -202,10 +202,10 @@
 \def\pack_boxes_collector_check_box#1%
   {\edef\currentcollector{#1}%
    \ifcsname\??collectorbox\currentcollector\endcsname
-     \settrue\c_pack_boxes_collector_valid_box
+     \c_pack_boxes_collector_valid_box\conditionaltrue
      \expandafter\let\expandafter\b_pack_boxes_collector\lastnamedcs
    \else
-     \setfalse\c_pack_boxes_collector_valid_box
+     \c_pack_boxes_collector_valid_box\conditionalfalse
      \writestatus{collector}{unknown collector \currentcollector}%
    \fi}
 
@@ -324,7 +324,7 @@
 \permanent\protected\def\composedcollector#1% no [], handy as argument
   {\flushcollector[#1]}
 
-\permanent\tolerant\protected\def\adaptcollector[#1]#*[#2]% % a typical case where \global\wd looks better in the code
+\permanent\tolerant\protected\def\adaptcollector[#1]#*[#S#2]% % a typical case where \global\wd looks better in the code
   {\begingroup
    \pack_boxes_collector_check_box{#1}%
    \ifconditional\c_pack_boxes_collector_valid_box
@@ -348,10 +348,10 @@
 \definecollector
   [caption]
 
-\permanent\tolerant\protected\def\collectedtext[#1]#*[#2]% for captions
+\permanent\tolerant\protected\def\collectedtext[#1]#*[#S#2]% for captions
   {\pack_boxes_collector_text[#1][#2]}
 
-\def\pack_boxes_collector_text[#1][#2]#3% #3 is mandate so no tolerant here, so still two step
+\def\pack_boxes_collector_text[#1][#S#2]#3% #3 is mandate so no tolerant here, so still two step
   {\bgroup
    \dowithnextbox
      {\setcollector
@@ -419,7 +419,7 @@
    \c!foregroundcolor=\layeredtextparameter\c!color,
    \c!foregroundstyle=\layeredtextparameter\c!style]
 
-\permanent\tolerant\protected\def\placelayeredtext[#1]#*[#2]#*[#3]#4% tag layersettings content(framed)settings content
+\permanent\tolerant\protected\def\placelayeredtext[#1]#*[#S#2]#*[#S#3]#4% tag layersettings content(framed)settings content
   {\bgroup
    \edef\currentlayeredtext{#1}%
    \checklayeredtextparent % bonus
@@ -431,7 +431,7 @@
       \setlayer
         [\??layeredtextlayer]%
         [#2]%
-        {\setfalse\fontattributeisset
+        {\fontattributeisset\conditionalfalse
          \uselayeredtextstyleparameter\c!style
          \ifconditional\fontattributeisset
            \setupinterlinespace
@@ -463,15 +463,16 @@
 %   {gans}
 %   {\externalfigure[koe][width=3cm]}
 
-\permanent\tolerant\protected\def\ornamenttext[#1]#*[#2]% takes another argument
+\permanent\tolerant\protected\def\ornamenttext[#1]#*[#S#2]% takes another argument
   {\bgroup
    \doifelseassignment{#1}%
      {\letdummyparameter\c!alternative\v!a
       \getdummyparameters[#1]%
-      \doifelse{\directdummyparameter\c!alternative}\v!a
-        {\egroup\collectedtext}%
-        {\egroup\layeredtext  }%
-      [#1][#2]}%
+      \ifcstok{\directdummyparameter\c!alternative}\v!a
+        \egroup\expandafter\collectedtext
+      \else
+        \egroup\expandafter\layeredtext
+      \fi[#1][#2]}%
      {\egroup\csname#1\endcsname}}
 
 \permanent\tolerant\protected\def\defineornament[#1]#*[#2]#*[#3]%
@@ -535,18 +536,18 @@
 
 \installcorenamespace{bleedinglocation}
 
-\defcsname\??bleedinglocation  t\endcsname{\settrue\c_pack_boxes_t\scratchhoffset\zeropoint}
-\defcsname\??bleedinglocation  b\endcsname{\settrue\c_pack_boxes_b\scratchhoffset\zeropoint}
-\defcsname\??bleedinglocation  l\endcsname{\settrue\c_pack_boxes_l\scratchvoffset\zeropoint}
-\defcsname\??bleedinglocation  r\endcsname{\settrue\c_pack_boxes_r\scratchvoffset\zeropoint}
-\defcsname\??bleedinglocation bl\endcsname{\settrue\c_pack_boxes_l\settrue\c_pack_boxes_b}
-\defcsname\??bleedinglocation lb\endcsname{\settrue\c_pack_boxes_l\settrue\c_pack_boxes_b}
-\defcsname\??bleedinglocation br\endcsname{\settrue\c_pack_boxes_r\settrue\c_pack_boxes_b}
-\defcsname\??bleedinglocation rb\endcsname{\settrue\c_pack_boxes_r\settrue\c_pack_boxes_b}
-\defcsname\??bleedinglocation tl\endcsname{\settrue\c_pack_boxes_l\settrue\c_pack_boxes_t}
-\defcsname\??bleedinglocation lt\endcsname{\settrue\c_pack_boxes_l\settrue\c_pack_boxes_t}
-\defcsname\??bleedinglocation tr\endcsname{\settrue\c_pack_boxes_r\settrue\c_pack_boxes_t}
-\defcsname\??bleedinglocation rt\endcsname{\settrue\c_pack_boxes_r\settrue\c_pack_boxes_t}
+\defcsname\??bleedinglocation  t\endcsname{\c_pack_boxes_t\conditionaltrue\scratchhoffset\zeropoint}
+\defcsname\??bleedinglocation  b\endcsname{\c_pack_boxes_b\conditionaltrue\scratchhoffset\zeropoint}
+\defcsname\??bleedinglocation  l\endcsname{\c_pack_boxes_l\conditionaltrue\scratchvoffset\zeropoint}
+\defcsname\??bleedinglocation  r\endcsname{\c_pack_boxes_r\conditionaltrue\scratchvoffset\zeropoint}
+\defcsname\??bleedinglocation bl\endcsname{\c_pack_boxes_l\conditionaltrue\c_pack_boxes_b\conditionaltrue}
+\defcsname\??bleedinglocation lb\endcsname{\c_pack_boxes_l\conditionaltrue\c_pack_boxes_b\conditionaltrue}
+\defcsname\??bleedinglocation br\endcsname{\c_pack_boxes_r\conditionaltrue\c_pack_boxes_b\conditionaltrue}
+\defcsname\??bleedinglocation rb\endcsname{\c_pack_boxes_r\conditionaltrue\c_pack_boxes_b\conditionaltrue}
+\defcsname\??bleedinglocation tl\endcsname{\c_pack_boxes_l\conditionaltrue\c_pack_boxes_t\conditionaltrue}
+\defcsname\??bleedinglocation lt\endcsname{\c_pack_boxes_l\conditionaltrue\c_pack_boxes_t\conditionaltrue}
+\defcsname\??bleedinglocation tr\endcsname{\c_pack_boxes_r\conditionaltrue\c_pack_boxes_t\conditionaltrue}
+\defcsname\??bleedinglocation rt\endcsname{\c_pack_boxes_r\conditionaltrue\c_pack_boxes_t\conditionaltrue}
 
 \mutable\lettonothing\currentbleedposition
 \mutable\lettonothing\currentpageposition
@@ -558,7 +559,7 @@
    \enforced\permanent\xdef\bleedwidth {\the\hsize}%
    \enforced\permanent\xdef\bleedheight{\the\vsize}%
    %
-   \edef\currentbleedposition{bleed:\number\c_pack_boxes_bleeds}%
+   \edef\currentbleedposition{bleed:\the\c_pack_boxes_bleeds}%
    \edef\currentpageposition {page:0}% todo: per page
    %
    \setupcurrentbleeding[#1]%
@@ -569,14 +570,18 @@
    \scratchhoffset\bleedingparameter\c!hoffset
    \scratchvoffset\bleedingparameter\c!voffset
    %
-   \setfalse\c_pack_boxes_l % left
-   \setfalse\c_pack_boxes_r % right
-   \setfalse\c_pack_boxes_t % top
-   \setfalse\c_pack_boxes_b % bottom
+   \c_pack_boxes_l\conditionalfalse % left
+   \c_pack_boxes_r\conditionalfalse % right
+   \c_pack_boxes_t\conditionalfalse % top
+   \c_pack_boxes_b\conditionalfalse % bottom
    %
    \csname\??bleedinglocation\bleedingparameter\c!location\endcsname
    %
-   \doifelse{\bleedingparameter\c!stretch}\v!yes\donetrue\donefalse
+   \ifcstok{\bleedingparameter\c!stretch}\v!yes
+     \donetrue
+   \else
+     \donefalse
+   \fi
    %
    \enforced\permanent\xdef\bleedwidth{\the\dimexpr
      \ifdone
@@ -611,8 +616,9 @@
    \vsize\bleedheight}
 
 \def\pack_boxes_bleed_finish
-  {\doif{\bleedingparameter\c!page}\v!yes
-     {\setbox\nextbox\topskippedbox{\box\nextbox}}%
+  {\ifcstok{\bleedingparameter\c!page}\v!yes
+     \setbox\nextbox\topskippedbox{\box\nextbox}%
+   \fi
    \setbox\nextbox\hpack to \scratchwidth
      {\ifconditional\c_pack_boxes_l\hss\fi
       \box\nextbox
@@ -669,7 +675,7 @@
 % tricky: offsets apply to both the layer and the framed; it makes sense to
 % only apply the offset to ...
 
-\permanent\tolerant\protected\def\setlayerframed[#1]#*[#2]#*[#3]
+\permanent\tolerant\protected\def\setlayerframed[#1]#*[#S#2]#*[#S#3]
   {\ifarguments
      % error
    \or
@@ -692,7 +698,7 @@
   {\setlayer[#1][#2]%
      \normalframedwithsettings[#3]}
 
-\permanent\tolerant\protected\def\setlayertext[#1]#*[#2]#*[#3]%
+\permanent\tolerant\protected\def\setlayertext[#1]#*[#2]#*[#S#3]%
   {\bgroup
    \resetdummyparameter\c!align
    \letdummyparameter  \c!width\hsize
@@ -849,12 +855,12 @@
 
 \aliased\let\setupoffset\setupoffsetbox
 
-\permanent\tolerant\protected\def\offsetbox[#1]%
+\permanent\tolerant\protected\def\offsetbox[#S#1]%
   {\bgroup
    \pack_boxes_offset_check[#1]%
    \dowithnextboxcs\pack_boxes_offsetfinish}
 
-\permanent\tolerant\protected\def\offset[#1]%
+\permanent\tolerant\protected\def\offset[#S#1]%
   {\bgroup
    \pack_boxes_offset_check[#1]%
    \dowithnextboxcs\pack_boxes_offsetfinish\hbox}
@@ -881,8 +887,7 @@
    \ifzeropt\scratchtopoffset   \else\donetrue\fi
    \ifzeropt\scratchbottomoffset\else\donetrue\fi
    \ifdone
-     \edef\p_method{\offsetboxparameter\c!method}%
-     \ifx\p_method\v!fixed % new
+     \ifcstok{\offsetboxparameter\c!method}\v!fixed % new
        \ifzeropt\scratchleftoffset
          \ifzeropt\scratchrightoffset \else
            \scratchxposition-\scratchrightoffset
@@ -984,7 +989,7 @@
 
 % to be documented
 
-\permanent\protected\def\phantombox[#1]% == \framed[\c!empty=\v!yes,\c!offset=\v!overlay,#1]{}
+\permanent\protected\def\phantombox[#S#1]% == \framed[\c!empty=\v!yes,\c!offset=\v!overlay,#1]{}
   {\hpack\bgroup
    \letdummyparameter\c!width \zeropoint
    \letdummyparameter\c!height\zeropoint
@@ -1035,12 +1040,12 @@
      % to be considered: methods
      \ifcase\scratchcounter
      \or % x and y
-       \setbox\nextbox\hpack{\dorecurse\scratchnx{\copy\nextbox}}%
-       \setbox\nextbox\vpack{\dorecurse\scratchny{\copy\nextbox\endgraf}}%
+       \setbox\nextbox\hpack{\localcontrolledrepeat\scratchnx{\copy\nextbox}}%
+       \setbox\nextbox\vpack{\localcontrolledrepeat\scratchny{\copy\nextbox\endgraf}}%
      \or % x
-       \setbox\nextbox\hpack{\dorecurse\scratchnx{\copy\nextbox}}%
+       \setbox\nextbox\hpack{\localcontrolledrepeat\scratchnx{\copy\nextbox}}%
      \or % y
-       \setbox\nextbox\vpack{\dorecurse\scratchny{\copy\nextbox\endgraf}}%
+       \setbox\nextbox\vpack{\localcontrolledrepeat\scratchny{\copy\nextbox\endgraf}}%
      \fi
    \fi
    \ifdim\wd\nextbox>\scratchwidth
@@ -1167,10 +1172,10 @@
 
 \mutable\lettonothing\currentanchorbox
 
-\permanent\tolerant\protected\def\setanchorbox[#1]#*[#2]%
+\permanent\tolerant\protected\def\setanchorbox[#1]#*[#S#2]%
   {\begingroup
    \dowithnextbox
-     {\def\currentanchorbox{#1}%
+     {\cdef\currentanchorbox{#1}%
       \setupboxanchor[#2]%
       \scratchcounterone\csname\??boxanchorbox#1\endcsname\relax
       \scratchxoffset\boxanchorparameter\c!xoffset\relax
@@ -1290,13 +1295,13 @@
    \c!location=\v!height,
    \c!corner=\v!depth]
 
-\permanent\tolerant\protected\def\setboxanchor[#1]#*[#2]#*[#3]#*% assumes \defineboxanchor[#1]
+\permanent\tolerant\protected\def\setboxanchor[#1]#*[#S#2]#*[#S#3]#*% assumes \defineboxanchor[#1]
   {\begingroup
    \dowithnextbox
      {\ifhastok={#2}%
         \setupcurrentboxanchorcontent[#2]%
       \else
-        \def\currentboxanchorcontent{#2}%
+        \cdef\currentboxanchorcontent{#2}%
         \setupcurrentboxanchorcontent[#3]%
       \fi
       \scratchxoffset\boxanchorcontentparameter\c!xoffset

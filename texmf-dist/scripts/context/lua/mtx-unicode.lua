@@ -92,7 +92,7 @@ local application = logs.application {
 }
 
 local gmatch, match, gsub, find, lower, upper, format = string.gmatch, string.match, string.gsub, string.find, string.lower, string.upper, string.format
-local concat, sort = table.concat, table.sort
+local concat, sort, sortedhash = table.concat, table.sort, table.sortedhash
 local split, splitlines, strip = string.split, string.splitlines, string.strip
 local are_equal = table.are_equal
 local tonumber, tostring, rawget = tonumber, tostring, rawget
@@ -424,13 +424,13 @@ function scripts.unicode.update()
                             if l or r then
                                 mathextensible = 'm' -- mixed
                             else
-                                mathextensible = "u"     -- up
+                                mathextensible = "u" -- up
                             end
                         elseif d then
                             if l or r then
                                 mathextensible = 'm' -- mixed
                             else
-                                mathextensible = "d"     -- down
+                                mathextensible = "d" -- down
                             end
                         elseif l and r then
                             mathextensible = "h"     -- horizontal
@@ -449,7 +449,7 @@ function scripts.unicode.update()
         end
     end
     -- we need the hash .. add missing specials
-    for unicode, data in table.sortedhash(characterdata) do
+    for unicode, data in sortedhash(characterdata) do
         if not data.specials or data.comment and find(data.comment,"check special") then
             local description = data.description
             local b, m = match(description,"^(.+) WITH (.+)$")
@@ -609,7 +609,7 @@ function scripts.unicode.load()
             index                = splitindex(textdata.index),
         }
         --
-        for k, v in table.sortedhash(textfiles) do
+        for k, v in sortedhash(textfiles) do
             report("using: %s",v)
         end
         return true
@@ -673,7 +673,18 @@ end
 
 function scripts.unicode.save(filename)
     if preamble then
-        local data = table.serialize(characters.data,"characters.data", { hexify = true, noquotes = true })
+     -- for k, v in next, characters.data do
+     --     v.adobename = nil
+     -- end
+        --
+        characters.data[0x1FE3].uccode={ 0x3C5, 0x308, 0x301 }
+        characters.data[0x1FD3].uccode={ 0x3B9, 0x308, 0x301 }
+        characters.data[0x00DF].uccode={ 0x53, 0x53 }
+        --
+        local data = table.serialize(characters.data,"characters.data", {
+            hexify   = true,
+            noquotes = true,
+        })
         data = gsub(data,
             "%{%s+%[0xFE0E%]=\"text style\",%s+%[0xFE0F%]=\"emoji style\",%s+%}",
             "variants_emoji"
@@ -779,7 +790,7 @@ function scripts.unicode.extras() -- old code
  --     v.synonym  = nil
  --     v.synonyms = nil
  -- end
-    for k, v in table.sortedhash(index) do
+    for k, v in sortedhash(index) do
         local d = data[v]
         if d and d.description ~= upper(k) then
             local synonyms = d.synonyms
@@ -803,6 +814,53 @@ function scripts.unicode.extras() -- old code
             end
         end
     end
+--     --
+--     for name, block in sortedhash(characters.blocks) do
+--         if block.math then
+--             local isalphabet = find(name,"lowercase") or find(name,"uppercase") or find(name,"letterlike")
+--             for unicode=block.first,block.last do
+--                 local c = data[unicode]
+-- if c.mathspec and #c.mathspec == 0 then
+--     c.mathspec = { c.mathspec }
+-- end
+--                 if c.mathclass then
+--                     if isalphabet and c.mathclass ~= "variable" then
+--                         report("CHECK %C : %s",unicode,c.description)
+--                     end
+--                 elseif c.mathspec then
+--                     -- skip
+--                 else
+--                     report("%s : %C : %s",name,unicode,c.description)
+--                     if isalphabet then
+--                         c.mathclass = "variable"
+--                     end
+--                 end
+--             end
+--             local gaps = block.gaps
+--             if gaps then
+--                 for gap, unicode in sortedhash(gaps) do
+--                     local c = data[u]
+-- if c.mathspec and #c.mathspec == 0 then
+--     c.mathspec = { c.mathspec }
+-- end
+--                     if c.mathclass then
+--                         if isalphabet and c.mathclass ~= "variable" then
+--                             report("CHECK %C : %s",gap,c.description)
+--                         end
+--                         -- skip
+--                     elseif c.mathspec then
+--                         -- skip
+--                     else
+--                         report("%s : %U -> %C : %s",name,gap,unicode,c.description)
+--                         if isalphabet then
+--                             c.mathclass = "variable"
+--                         end
+--                     end
+--                 end
+--             end
+--         end
+--     end
+
 end
 
 do
@@ -907,7 +965,7 @@ else
         scripts.unicode.save("char-def-new.lua")
         scripts.unicode.emoji("char-emj-new.lua")
         report("saved file %a","char-def-new.lua")
-        report("saved file %a (current 14.0, check for updates, see above!)","char-emj-new.lua")
+        report("saved file %a (current 15.1, check for updates, see above!)","char-emj-new.lua")
     else
         report("nothing to do")
     end

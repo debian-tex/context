@@ -24,10 +24,13 @@
 \installcorenamespace{mathoperators}
 \installcorenamespace{mathoperatormethod}
 
+\mathlimitsmode\plusone % make long script look right ... font dependent!
+
 \installcommandhandler \??mathoperators {mathoperator} \??mathoperators
 
 \setupmathoperator
-  [\c!left=\zerocount]% so we always have something
+  [\c!left=\zerocount,
+   \c!mathclass=\mathoperatorcode]
 
 \aliased\let\setupmathoperators\setupmathoperator
 
@@ -61,44 +64,45 @@
 \protected\def\math_operator_operator#1#2%
   {\setlocalmathoperatorcurrent{#1}% \edef\currentmathoperator{#1}%
    \setupcurrentmathoperator[#2]%
+   \scratchclass\mathcodechecked{\mathoperatorparameter\c!mathclass}\relax
    \Uoperator
      \usedcolorparameterattributes{\mathoperatorparameter\c!color}%
      \begincsname\??mathoperatormethod\mathoperatorparameter\c!method\endcsname
-     \ifchkdim\mathoperatorparameter\c!size\or
-       \s!depth \mathoperatorparameter\c!size
-       \s!height\mathoperatorparameter\c!size
+     \ifchkdimension\mathoperatorparameter\c!size\or
+       \s!depth \lastchkdimension
+       \s!height\lastchkdimension
        \s!axis   % variants
        \s!noaxis % extensibles (assumes also axis)
        \s!exact  % make sure we don't overshoot when there are no variants and extensibles
      \orelse\ifcstok{\mathoperatorparameter\c!size}\v!auto
        \s!auto
      \fi
-     \s!class \mathoperatorcode
-     \s!attr \indexofregister \c_attr_mathsize \attributeunsetvalue
+     \s!class \scratchclass
+   % \s!attr \indexofregister \c_attr_mathsize \attributeunsetvalue
      % todo: find a way to pick up or pass sup/sub to here
-     \Udelimiter \zerocount \fam \mathoperatorparameter\c!left
+     \Umathchar \scratchclass \fam \mathoperatorparameter\c!left
      {\edef\m_operator_text{\mathoperatorparameter\c!top}%
       \ifempty\m_operator_text\else
          \mathstrut % todo: make option
-         \dousecolorparameter{\mathoperatorparameter\c!topcolor}
+         \dousecolorparameter{\mathoperatorparameter\c!topcolor}%
          \m_operator_text
       \fi}%
      {\edef\m_operator_text{\mathoperatorparameter\c!bottom}%
       \ifempty\m_operator_text\else
          \mathstrut % todo: make option
-         \dousecolorparameter{\mathoperatorparameter\c!bottomcolor}
+         \dousecolorparameter{\mathoperatorparameter\c!bottomcolor}%
          \m_operator_text
       \fi}}
 
-\tolerant\protected\def\math_operator#1#*[#2]#*#:#=% mandate braces
+\tolerant\protected\def\math_operator#1#*[#S#2]#*#:#=% mandate braces
   {\math_operator_operator{#1}{#2}#3\Uright.}
 
-\tolerant\protected\def\math_operator_start#1#*[#2]%
+\tolerant\protected\def\math_operator_start#1#*[#S#2]%
   {\math_operator_operator{#1}{#2}}
 
 \protected\def\math_operator_stop
   {\Uright.}
-% {\Uright\Udelimiter\zerocount \fam \zerocount }
+% {\Uright\Umathchar\zerocount \fam \zerocount }
 
 % \def\math_operator_default_size % is now the auto option
 %   {\ifconditional\indisplaymath\ifcase\Umathoperatorsize=\maxdimen\else
@@ -113,10 +117,14 @@
 \definemathoperator [products]
 \definemathoperator [operators]
 
-\setupmathoperators [integrals]  [\c!size=\v!auto,\c!method=\mathematicsparameter\c!integral] % cf Mikael's wish
 \setupmathoperators [summations] [\c!size=\v!auto]
 \setupmathoperators [products]   [\c!size=\v!auto]
 \setupmathoperators [operators]  [\c!size=\v!auto]
+
+\setupmathoperators [integrals]
+  [\c!size=\v!auto,
+   \c!mathclass=\mathintegralcode,
+   \c!method=\mathematicsparameter\c!integral] % cf Mikael's wish
 
 \setupmathematics[\c!integral=nolimits]
 
@@ -140,9 +148,9 @@
 \definemathoperator [barint]                [integrals]  [\c!left="2A0D] % Integral with bar
 \definemathoperator [doublebarint]          [integrals]  [\c!left="2A0E] % Integral with double bar
 \definemathoperator [slashint]              [integrals]  [\c!left="2A0F] % Integral with slash
-\definemathoperator [aodownintc]            [integrals]  [\c!left="2A11] 
+\definemathoperator [aodownintc]            [integrals]  [\c!left="2A11]
 \definemathoperator [rectangularpoleintc]   [integrals]  [\c!left="2A12]
-\definemathoperator [semicirclepoleintc]    [integrals]  [\c!left="2A13] 
+\definemathoperator [semicirclepoleintc]    [integrals]  [\c!left="2A13]
 \definemathoperator [circlepoleoutsideintc] [integrals]  [\c!left="2A14]
 \definemathoperator [circlepoleinsideintc]  [integrals]  [\c!left="2A15]
 \definemathoperator [squareintc]            [integrals]  [\c!left="2A16]
@@ -185,6 +193,5 @@
 \definemathoperator [bigreversesolidus] [operators]  [\c!left="29F9] % big reverse solidus
 \definemathoperator [bigdoublewedge]    [operators]  [\c!left="2A07] % big double wedge
 \definemathoperator [bigdoublevee]      [operators]  [\c!left="2A08] % big double vee
-
 
 \protect \endinput

@@ -65,20 +65,22 @@
 \setnewconstant\backgroundsplitmode\plusthree
 
 \appendtoks
-    \frozen\setuevalue{\e!start\currentbackground}{\pack_backgrounds_start [\currentbackground]}%
-    \frozen\setuevalue{\e!stop \currentbackground}{\pack_backgrounds_stop                      }%
-    \frozen\setuevalue        {\currentbackground}{\pack_backgrounds_direct[\currentbackground]}%
+    \frozen\protected\instance\defcsname\e!start\currentbackground\endcsname{\pack_backgrounds_start [\currentbackground]}%
+    \frozen\protected\instance\defcsname\e!stop \currentbackground\endcsname{\pack_backgrounds_stop                      }%
+    \frozen\protected\instance\defcsname        \currentbackground\endcsname{\pack_backgrounds_direct[\currentbackground]}%
 \to \everydefinebackground
 
 \protected\def\pack_backgrounds_start[#tag]%
   {\endgraf
    \begingroup
-   \def\currentbackground{#tag}%
-   \doifelse{\backgroundparameter\c!state}\v!start
-     \pack_backgrounds_start_indeed
-     \pack_backgrounds_start_ignore}
+   \cdef\currentbackground{#tag}%
+   \ifcstok{\backgroundparameter\c!state}\v!start
+     \expandafter\pack_backgrounds_start_indeed
+   \else
+     \expandafter\pack_backgrounds_start_ignore
+   \fi}
 
-\tolerant\def\pack_backgrounds_start_indeed[#settings]%
+\tolerant\def\pack_backgrounds_start_indeed[#S#settings]%
   {\setupcurrentbackground[#settings,\c!state=\v!start,\c!offset=\v!overlay]%
    \let\pack_backgrounds_stop\pack_backgrounds_stop_indeed
    \setbox\scratchboxone\vbox\bgroup
@@ -89,7 +91,7 @@
      \leftskip \backgroundparameter\c!leftoffset
      \rightskip\backgroundparameter\c!rightoffset}
 
-\tolerant\def\pack_backgrounds_start_ignore[#settings]%
+\tolerant\def\pack_backgrounds_start_ignore[#S#settings]%
   {\let\pack_backgrounds_stop\pack_backgrounds_stop_ignore}
 
 \let\pack_backgrounds_stop\relax
@@ -182,10 +184,12 @@
 
 \protected\def\pack_backgrounds_direct[#tag]%
   {\begingroup
-   \def\currentbackground{#tag}%
-   \doifelse{\backgroundparameter\c!state}\c!start
-     \pack_backgrounds_direct_indeed
-     \pack_backgrounds_direct_ignore}
+   \cdef\currentbackground{#tag}%
+   \ifcstok{\backgroundparameter\c!state}\c!start
+     \expandafter\pack_backgrounds_direct_indeed
+   \else
+     \expandafter\pack_backgrounds_direct_ignore
+   \fi}
 
 \def\pack_backgrounds_direct_indeed
   {\dowithnextboxcs\pack_backgrounds_direct_finish\vbox}

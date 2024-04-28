@@ -1,4 +1,4 @@
-%D \module
+%D \modul
 %D   [       file=publ-imp-apa,
 %D        version=2013.12.12,
 %D          title=APA bibliography style,
@@ -34,11 +34,13 @@
   [\c!default=default,
    \c!specification=apa,
    \c!otherstext={\btxspace\btxlabeltext{others}},
-   %c!journalconversion=\v!normal,
+  %\c!journalconversion=\v!normal,
    \c!monthconversion=\v!month,
-   \c!stopper:initials={. }, % with a (breakable) space
+  %\c!separator:firstnames={\btxnobreakspace}, % ?
+   \c!stopper:initials={\btxperiod}, % TODO: nobreak between multiple initials
+   \c!separator:invertedinitials={\btxcomma\btxnobreakspace},
    \c!separator:names:2={\btxcomma}, % aka namesep - in this namespace
-   \c!separator:names:3={\btxcomma\btxnobreakspace\textampersand\space}, % comma separated list
+   \c!separator:names:3={\btxcomma\btxnobreakspace\textampersand\space},
    \c!separator:names:4={\btxnobreakspace\textampersand\space}] % last of two, no comma!
 
 % First, define list and rendering parameters
@@ -181,7 +183,7 @@
   [apa:\s!list]
   [\c!style=\v!italic,
    \c!command=\Word,
-   \c!translate=\v!yes]
+  ] %\c!translate=\v!yes]
 
 \definebtx
   [apa:\s!list:title:article]
@@ -319,7 +321,8 @@
    \c!etaldisplay=1, % TODO: when 2-4, show all first time, etaldisplay subsequently...
    \c!authorconversion=\v!name,
    \c!sorttype=normal, % \v!normal ?
-   \c!style=,
+   \c!style=, % hyjacked below:
+   \c!style={\texdefinition{btx:apa:setlanguage}{\mainbtxlanguage}},
    \c!compress=\v!yes, % note that cite sorts only work with compress=yes.
    \c!separator:names:3={\btxcomma\btxlabeltext{and}\space}, % not \textampersand
    \c!separator:names:4={\btxspace\btxlabeltext{and}\space}] % not \textampersand
@@ -402,13 +405,17 @@
 \definebtx
   [apa:\s!cite:author:year] % todo
   [apa:\s!cite]
+  [\c!separator:2={\btxcomma},
+   \c!separator:3={\btxcomma}]
 
 \definebtx
   [apa:\s!cite:author:years] % todo
   [apa:\s!cite:authoryears]
   [\c!inbetween=,
    \c!left={\btxspace(},
-   \c!right={)}]
+   \c!right={)},
+   \c!separator:2={\btxcomma},
+   \c!separator:3={\btxcomma}]
 
 \definebtx
   [apa:\s!cite:lefttext]
@@ -435,7 +442,6 @@
   [\c!separator:2={\btxcomma}, % :0 and :1 - between items of a list
    \c!separator:3={\btxcomma\btxlabeltext{and}\space}, % not \textampersand
    \c!separator:4={\btxspace\btxlabeltext{and}\space}, % not \textampersand
-   \c!command={\language[\currentbtxlanguage]}, % BAH
    \c!sorttype=none,
    \c!style=\v!italic]
 
@@ -560,9 +566,9 @@
   [\c!left=,
    \c!right=,
    \c!inbetween={\btxspace},
-   \c!separator:2={\btxsemicolon},
-   \c!separator:3=\btxparameter{\c!separator:2},
-   \c!separator:4=\btxparameter{\c!separator:2}]
+   \c!separator:2={\btxcomma},
+   \c!separator:3={\btxsemicolon},
+   \c!separator:4={\btxsemicolon}]
 
 % Now we setup for the details of the renderings
 
@@ -860,6 +866,16 @@
 %D returned. In lua syntax, it can be understood as
 %D author or editor or publisher or title or ""
 
+\starttexdefinition mutable protected btx:apa:setlanguage #language
+    \language[#language]
+    \doifelse{#language}{french}
+        {\setcharacterspacing[frenchpunctuation]}
+        {\doifelse{#language}{fr}
+          {\setcharacterspacing[frenchpunctuation]}
+          {\setcharacterspacing[nofrenchpunctuation]}
+        }
+\stoptexdefinition
+
 % #title can be title or booktitle
 
 \starttexdefinition mutable protected btx:apa:translated-title #title
@@ -869,13 +885,14 @@
         % no need for an extra
     \else
         \btxdoif {#title:\mainbtxlanguage} {
-            \begingroup
-                \language[\mainbtxlanguage]
+            \begingroup % does this limit scope?
+                \texdefinition{btx:apa:setlanguage}{\mainbtxlanguage}
                 \btxleftbracket
                 \btxusecommand [apa:\s!list:#title:\currentbtxcategory] {
                     \btxflush{#title:\mainbtxlanguage}
                 }
                 \btxrightbracket
+                \texdefinition{btx:apa:setlanguage}{\currentbtxlanguage}
             \endgroup
         }
     \fi\fi
@@ -884,7 +901,7 @@
 \starttexdefinition mutable protected btx:apa:composed-title #title
     \btxstartstyleandcolor[apa:\s!list:#title:\currentbtxcategory]
         \begingroup
-            \language[\currentbtxlanguage]
+            \texdefinition{btx:apa:setlanguage}{\currentbtxlanguage}
             \btxusecommand [apa:\s!list:#title:\currentbtxcategory] {
                 \btxflush{#title}
                 \btxdoif {sub#title} {
@@ -892,6 +909,7 @@
                     \btxflush{sub#title}
                 }
             }
+            \texdefinition{btx:apa:setlanguage}{\mainbtxlanguage}
         \endgroup
         % which namespace?
         %\doif{\btxparameter{translate}}\v!yes {
@@ -909,7 +927,7 @@
     \setmode{btx:apa:title-placed}
     % we make the title active, opening "file"
     \btxdoifelse {file} {
-        \texdefinition{btx:format:inject}
+        \texdefinition{btx:format:goto}
             {url(file:\btxflush{file})}
             {
                 \texdefinition{btx:apa:composed-title}{title}
@@ -941,8 +959,6 @@
                 \btxlabeltext{apa:Translator}
             \btxrightparenthesis
         }
-        \btxperiod
-        % TODO: this period may NOT be wanted, as in: Title (2nd ed.).
     }
 \stoptexdefinition
 
@@ -951,7 +967,7 @@
         \resetmode{btx:apa:title-placed}
     } {
         \btxdoif {title} {
-            \btxspace
+            \btxperiod
             \texdefinition {btx:apa:title}
         }
     }
@@ -1071,8 +1087,7 @@
 
 \starttexdefinition mutable protected btx:apa:authoryear
     % we make the authoryear active, pointing to the citation
-    \texdefinition{btx:format:inject}
-        {internal(\currentbtxinternal)}
+    \texdefinition{btx:format:gotointernal}
         {
             \doifelsesetups{apa:list:sameauthor} {
                 \btxdoifelsesameasprevious {author} {
@@ -1088,7 +1103,6 @@
             \btxrightparenthesis
         }
     % outside of interaction
-    \btxperiod
     \doif {\btxfoundname{author}} {title} {
         \setmode{btx:apa:title-placed}
     }
@@ -1096,6 +1110,7 @@
 
 \starttexdefinition mutable protected btx:apa:editor-in
     \btxdoif {booktitle} {
+        \btxperiod
         \btxlabeltext{In}
         \btxspace
         \doifnot {\btxfoundname{author}} {editor} {
@@ -1105,7 +1120,6 @@
             }
         }
         \texdefinition{btx:apa:composed-title}{booktitle}
-        \btxperiod
     }
 \stoptexdefinition
 
@@ -1118,9 +1132,6 @@
         }
     }
 \stoptexdefinition
-
-% TODO: The title is terminated with period. However,
-% we probably don't want this before the parenthesis.
 
 \starttexdefinition mutable protected btx:apa:leftparenthesis-or-comma
     \doifelsemode {btx:apa:editionset-is-empty} {
@@ -1181,8 +1192,9 @@
         \btxflush{pages}
     }
     \doifnotmode {btx:apa:editionset-is-empty} {
-        \btxrightparenthesisperiod
+        \btxrightparenthesis
     }
+    \btxperiod
 \stoptexdefinition
 
 \starttexdefinition mutable protected btx:apa:journal
@@ -1276,44 +1288,27 @@
     \btxperiod
 \stoptexdefinition
 
-\definebreakpoints[doi]
-\definebreakpoint [doi][:][nleft=3,type=1]
-\definebreakpoint [doi][/][nleft=3,type=1]
-\definebreakpoint [doi][-][nleft=3,type=1]
-\definebreakpoint [doi][.][nleft=3,type=1]
-
 % use \btxentry here?
 
+% Alan's editor does not want lines to begin with these characters:
+\sethyphenatedurlafter{:./-_}
+
 \starttexdefinition mutable protected btx:apa:url
-    \begingroup
-        \setbreakpoints[doi]
-        \ifconditional\btxinteractive
-            \goto {
-                \hyphenatedurl{\btxflush{url}}
-            } [
-                url(\btxflush{url})
-            ]
-        \else
-            \hyphenatedurl{\btxflush{url}}
-        \fi
-    \endgroup
+    \texdefinition {btx:format:goto} {
+        url(\btxflush{url})
+    } {
+        \hyphenatedurl{\btxflush{url}}
+    }
 \stoptexdefinition
 
 % use \btxentry here?
 
 \starttexdefinition mutable protected btx:apa:doi
-    \begingroup
-        \setbreakpoints[doi]
-        \ifconditional\btxinteractive
-            \goto {
-                \hyphenatedurl{doi:\btxflush{doi}}
-            } [
-                url(http://dx.doi.org/\btxflush{doi})
-            ]
-        \else
-            \hyphenatedurl{doi:\btxflush{doi}}
-        \fi
-    \endgroup
+    \texdefinition {btx:format:goto} {
+        url(http://dx.doi.org/\btxflush{doi})
+    } {
+       \hyphenatedurl{doi:\btxflush{doi}}
+    }
 \stoptexdefinition
 
 \starttexdefinition mutable protected btx:apa:note
@@ -1335,13 +1330,14 @@
         \btxspace
         \texdefinition{btx:apa:doi}
     }
+    % should the following be hyperlinks? To where?
     \btxdoif {issn} {
         \btxspace
-        issn\colon\btxflush{issn}
+        \hyphenatedurl{issn:\btxflush{issn}}
     }
     \btxdoif {isbn} {
         \btxspace
-        isbn\colon\btxflush{isbn}
+        \hyphenatedurl{isbn:\btxflush{isbn}}
     }
     \texdefinition{btx:apa:note}
     \removeunwantedspaces
@@ -1351,7 +1347,7 @@
     \btxdoif {type} {
         \btxleftbracket
         \btxflush{type}
-        \btxrightbracketperiod
+        \btxrightbracket
     }
 \stoptexdefinition
 
@@ -1366,6 +1362,7 @@
     \texdefinition{btx:apa:authoryear}
     \texdefinition{btx:apa:title-if-not-placed}
     \texdefinition{btx:apa:type}
+    \btxperiod
     \texdefinition{btx:apa:journal-volume-number-pages}
     \texdefinition{btx:apa:url-doi-note}
 \stopsetups
@@ -1403,6 +1400,7 @@
 \startsetups btx:apa:list:standard
     \texdefinition{btx:apa:authoryear}
     \texdefinition{btx:apa:title-if-not-placed}
+    \btxperiod
     \texdefinition{btx:apa:url-doi-note}
 \stopsetups
 
@@ -1645,10 +1643,10 @@
     }
     \doifnot {\btxfoundname{title}} {album} {
         \btxdoif {album} {
+            \btxperiod
             \btxlabeltext{In}
             \btxspace
             \btxflush{album}
-            \btxperiod
         }
     }
     \texdefinition{btx:apa:type}
@@ -1671,6 +1669,7 @@
 \startsetups btx:apa:list:misc
     \texdefinition{btx:apa:authoryear}
     \texdefinition{btx:apa:title-if-not-placed}
+    \btxperiod
     \btxdoif {howpublished} {
         \btxspace
         \btxflush{howpublished}

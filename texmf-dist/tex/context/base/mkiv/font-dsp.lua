@@ -1183,25 +1183,30 @@ local function chainedcontext(f,fontdata,lookupid,lookupoffset,offset,glyphs,nof
             rules  = rules,
         }
     elseif subtype == 3 then
+        -- Maybe this one needs checking. Anyway zero current is bad.
         local before     = readarray(f)
         local current    = readarray(f)
         local after      = readarray(f)
         local noflookups = readushort(f)
-        local lookups    = readlookuparray(f,noflookups,#current)
-        before  = readcoveragearray(f,tableoffset,before,true)
-        current = readcoveragearray(f,tableoffset,current,true)
-        after   = readcoveragearray(f,tableoffset,after,true)
-        return {
-            format = "coverage",
-            rules  = {
-                {
-                    before  = before,
-                    current = current,
-                    after   = after,
-                    lookups = lookups,
+        local lookups    = current and readlookuparray(f,noflookups,#current)
+        if lookups then
+            before  = readcoveragearray(f,tableoffset,before,true)
+            current = readcoveragearray(f,tableoffset,current,true)
+            after   = readcoveragearray(f,tableoffset,after,true)
+            return {
+                format = "coverage",
+                rules  = {
+                    {
+                        before  = before,
+                        current = current,
+                        after   = after,
+                        lookups = lookups,
+                    }
                 }
             }
-        }
+        else
+            report("confusing subtype %a in %a %s",subtype,"chainedcontext",what)
+        end
     else
         report("unsupported subtype %a in %a %s",subtype,"chainedcontext",what)
     end
@@ -2134,7 +2139,7 @@ do
         return features
     end
 
-    local function readlookups(f,lookupoffset,lookuptypes,featurehash,featureorder)
+    local function readlookups(f,lookupoffset,lookuptypes,featurehash,featureorder,nofmarkclasses)
         setposition(f,lookupoffset)
         local noflookups = readushort(f)
         local lookups    = readcardinaltable(f,noflookups,ushort)
@@ -2152,12 +2157,12 @@ do
             end
             -- which one wins?
             local markclass = band(flagbits,0x0010) ~= 0 -- usemarkfilteringset
+            local markset   = rshift(flagbits,8)
             if markclass then
                 markclass = readushort(f) -- + 1
             end
-            local markset = rshift(flagbits,8)
             if markset > 0 then
-                markclass = markset -- + 1
+                markclass = nofmarkclasses + markset
             end
             lookups[lookupid] = {
                 type      = lookuptype,
@@ -2559,7 +2564,10 @@ do
                 return
             end
             --
-            local lookups = readlookups(f,lookupoffset,lookuptypes,featurehash,featureorder)
+            local markclasses    = fontdata.markclasses
+            local marksets       = fontdata.marksets
+            local nofmarkclasses = (markclasses and #markclasses or 0) - (marksets and #marksets or 0)
+            local lookups        = readlookups(f,lookupoffset,lookuptypes,featurehash,featureorder,nofmarkclasses)
             --
             if lookups then
                 resolvelookups(f,lookupoffset,fontdata,lookups,lookuptypes,lookuphandlers,what,tableoffset)
@@ -2740,8 +2748,9 @@ function readers.gdef(f,fontdata,specification)
                 end
             end
         end
-        -- mark sets : todo: just make the same as class sets above
+        -- mark sets
         if marksetsoffset ~= 0 then
+            local nofmarkclasses = fontdata.markclasses and #fontdata.markclasses or 0
             marksetsoffset = tableoffset + marksetsoffset
             setposition(f,marksetsoffset)
             local format = readushort(f)
@@ -2751,7 +2760,8 @@ function readers.gdef(f,fontdata,specification)
                 for i=1,nofsets do
                     local offset = sets[i]
                     if offset ~= 0 then
-                        marksets[i] = readcoverage(f,marksetsoffset+offset)
+                        markclasses[nofmarkclasses + i] = readcoverage(f,marksetsoffset+offset)
+                        marksets[i] = { }
                     end
                 end
             end
@@ -3199,9 +3209,6 @@ end
 
 local compress   = gzip and gzip.compress
 local compressed = compress and gzip.compressed
-
--- At some point I will delay loading and only store the offsets (in context lmtx
--- only).
 
 -- compressed = false
 
@@ -3981,4 +3988,8 @@ function readers.mvar(f,fontdata,specification)
         end
      -- setvariabledata(fontdata,"mregions",regions)
     end
+end
+
+function readers.dsig(f,fontdata,specification)
+    -- We're not going to deal with this security crap.
 end

@@ -16,8 +16,10 @@ return {
             AccentTopShiftUp                  =  -25,
             FlattenedAccentTopShiftUp         =  -25,
             AccentBaseDepth                   =   30,
-            DelimiterPercent                  =   90,
+            DelimiterPercent                  =   85,
             DelimiterShortfall                =  400,
+            DelimiterDisplayPercent           =   90,
+            DelimiterDisplayShortfall         =  400,
             DisplayOperatorMinHeight          = 1800, -- 1333 in font
             SubscriptShiftDown                = 177, -- 277 in font
             SuperscriptShiftUp                = 428, -- 381 in font
@@ -138,6 +140,7 @@ return {
                 {
                     tweak = "copyaccents",
                 },
+                presets.addmathkerns { },
                 {
                     tweak = "checkspacing",
                 },
@@ -152,7 +155,7 @@ return {
                 },
                 {
                     tweak    = "replacerules",
-                    fraction = { height = .254, yoffset = .746 },
+                    fraction = { height = .254, yoffset = .746, leftoffset = .1, rightoffset = .1,  },
                     radical  = { height = .17, leftoffset = .1, rightoffset = .1, yoffset = .485, yscale = .65  },
                     stacker  = { height = .254, yoffset = .746 },
                 },

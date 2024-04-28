@@ -133,7 +133,7 @@
 \def\typo_charalign_pass
   {\hbox\bgroup\signalcharacteralign\plusone\scratchcounter\let\next}
 
-\permanent\tolerant\protected\def\startcharacteralign[#1]%
+\permanent\tolerant\protected\def\startcharacteralign[#S#1]%
   {\doifelseassignment{#1}\typo_charalign_start_one\typo_charalign_start_two{#1}}
 
 \def\typo_charalign_start_one#1#2\stopcharacteralign
@@ -249,12 +249,12 @@
   [tnum=yes,
    lnum=no]
 
-\newconditional\c_tabl_ntb_char_align_auto_font \settrue\c_tabl_ntb_char_align_auto_font
+\newconditional\c_tabl_ntb_char_align_auto_font \c_tabl_ntb_char_align_auto_font\conditionaltrue
 
 \installtexdirective % yes or no ?
   {typesetters.characteralign.autofont}
-  {\settrue \c_tabl_ntb_char_align_auto_font}
-  {\setfalse\c_tabl_ntb_char_align_auto_font}
+  {\c_tabl_ntb_char_align_auto_font\conditionaltrue}
+  {\c_tabl_ntb_char_align_auto_font\conditionalfalse}
 
 \def\m_font_feature_auto_tabnum{system:tabnum}
 

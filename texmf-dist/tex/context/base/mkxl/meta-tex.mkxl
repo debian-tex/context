@@ -54,7 +54,7 @@
 \permanent\protected\def\definetextext[#1]%
   {\tolerant\defcsname\??graphictexarguments#1\endcsname}
 
-\permanent\tolerant\def\sometxt[#1]#*[#2]%
+\permanent\tolerant\def\sometxt[#1]#*[#S#2]%
   {\ifarguments
      \expandafter\meta_some_txt_a
    \or
@@ -227,7 +227,7 @@
 
 \permanent\protected\def\svg_normal_font#1#2#3%#4%
   {\hbox\bgroup
-   \iftok{#2}\emptytoks\else
+   \ifempty{#2}\else
       \edef\p_font{\ifcsname\??svgfamily#1\endcsname\lastnamedcs\else#1\fi-#2-#3}%
       \ifcsname svg:\p_font\endcsname
         \lastnamedcs
@@ -248,7 +248,7 @@
  % \egroup}
 
 \permanent\protected\def\svg_traced_pcode#1#2#3%
-  {\writestatus{SVG TEXT}{....[poscode #1 #2 \Uchar #3]}%
+  {\writestatus{SVG TEXT}{....[poscode #1 #2 \tocharacter#3]}%
    \svg_normal_pcode{#1}{#2}{#3}}
 
 \permanent\protected\def\svg_traced_pchar#1#2#3%
@@ -260,7 +260,7 @@
    \svg_normal_pspace{#1}{#2}}
 
 \permanent\protected\def\svg_traced_code#1%
-  {\writestatus{SVG TEXT}{....[char \Uchar #1]}%
+  {\writestatus{SVG TEXT}{....[char \tocharacter#1]}%
    \svg_normal_code{#1}}
 
 \permanent\protected\def\svg_traced_char#1%

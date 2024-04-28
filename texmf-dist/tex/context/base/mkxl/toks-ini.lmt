@@ -18,12 +18,15 @@ local printtable = table.print
 local concat     = table.concat
 local format     = string.format
 
-local commands  = token.getcommandvalues()
-local values    = token.getfunctionvalues()
+local commands  = token.getcommandvalues()  -- tex.functioncode
+
+local values    = token.getfunctionvalues() -- tex.functioncode
 values.dimen    = values.dimension
 values.count    = values.integer
+
 tokens.values   = utilities.storage.allocate(table.swapped(values, values))
 tokens.commands = utilities.storage.allocate(table.swapped(commands,commands))
+tokens.cache    = utilities.storage.allocate()
 
 local scantoks            = token.scantoks
 local scanstring          = token.scanstring
@@ -56,6 +59,8 @@ local scanluainteger      = token.scanluainteger
 local scanluacardinal     = token.scanluacardinal
 local scanintegerargument = token.scanintegerargument
 local scandimenargument   = token.scandimenargument
+local scandetokened       = token.scandetokened
+local scantokenstring     = token.scantokenstring
 
 local scannumber          = token.scannumber
 local scanboolean         = token.scanboolean
@@ -186,6 +191,8 @@ tokens.scanners = { -- these expand
     keywordcs       = scankeywordcs,
     csname          = scancsname,
     nextchar        = scannextchar,
+    detokened       = scandetokened,
+    tokenstring     = scantokenstring,
 
     next            = token.scannext,
     nextexpanded    = token.scannextexpanded,
@@ -293,7 +300,7 @@ if setinspector then -- can best be true
 
 end
 
-tokens.cache = table.setmetatableindex(function(t,k)
+table.setmetatableindex(tokens.cache, function(t,k)
     if not isdefined(k) then
         setmacro(k,"","global") -- So we default to nothing! Maybe some message as option?
     end

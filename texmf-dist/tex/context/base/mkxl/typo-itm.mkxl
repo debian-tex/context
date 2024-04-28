@@ -68,7 +68,7 @@
 \newbox      \b_typo_items_symbols
 \newbox      \b_typo_items_texts
 
-\permanent\tolerant\protected\def\items[#1]#:#2%
+\permanent\tolerant\protected\def\items[#S#1]#:#2%
   {\bgroup
    \setupitems[#1]%
    \edef\p_typo_items_alternative{\itemsparameter\c!alternative}%
@@ -182,15 +182,16 @@
       \scratchwidth\d_typo_items_text_width
       \useitemsstyleandcolor\c!textstyle\c!textcolor
       \typo_items_make{\processcommalist[#1]\typo_items_item}}%
-   \ifempty\p_typo_items_symbol
-     \setbox\b_typo_items_symbols\emptyhbox
-   \else
-     \setbox\b_typo_items_symbols\hbox
-       {\c_typo_items_m\zerocount
-        \let\m_typo_items_align\p_typo_items_align
-        \scratchwidth\d_typo_items_symbol_width
-        \useitemsstyleandcolor\c!style\c!color
-        \typo_items_make{\dorecurse\c_typo_items_n{\typo_items_item{\strut\m_typo_items_symbol\recurselevel}}}}%
+   \setbox\b_typo_items_symbols
+     \ifempty\p_typo_items_symbol
+       \emptyhbox
+     \else
+       \hbox
+         {\c_typo_items_m\zerocount
+          \let\m_typo_items_align\p_typo_items_align
+          \scratchwidth\d_typo_items_symbol_width
+          \useitemsstyleandcolor\c!style\c!color
+          \typo_items_make{\dorecurse\c_typo_items_n{\typo_items_item{\strut\m_typo_items_symbol{##1}}}}}%
    \fi}
 
 % alternatives:
@@ -235,7 +236,7 @@
    \typo_items_construct_items_boxes{#1}%
    \noindent\hbox\bgroup
      \ifvoid\b_typo_items_symbols \else
-       \llap{\box\b_typo_items_symbols\hskip\d_typo_items_distance}%
+       \llap{\box\b_typo_items_symbols\kern\d_typo_items_distance}%
      \fi
      \box\b_typo_items_texts
    \egroup}

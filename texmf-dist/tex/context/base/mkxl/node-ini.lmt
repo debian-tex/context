@@ -53,18 +53,6 @@ local function simplified(t)
     return r
 end
 
--- local noadoptions = allocate {
---     set      =        0x08,
---     unused_1 = 0x00 + 0x08,
---     unused_2 = 0x01 + 0x08,
---     axis     = 0x02 + 0x08,
---     no_axis  = 0x04 + 0x08,
---     exact    = 0x10 + 0x08,
---     left     = 0x11 + 0x08,
---     middle   = 0x12 + 0x08,
---     right    = 0x14 + 0x08,
--- }
-
 local nodecodes = simplified(node.types())
 
 gluecodes      = allocate(swapped(gluecodes,gluecodes))
@@ -217,9 +205,18 @@ nodes.specialskipcodes = {
 }
 
 table.setmetatableindex(listcodes,function(t,k)
-    -- fully qualified as yet unknown
---     local v = mathematics.classnames[k - 0x100] or listcodes.unknown
-    local v = mathematics.classes[k - 0x100] or mathematics.classnames[k - 0x100] or listcodes.unknown
+    local v
+ -- if mathematics then
+        if type(k) == "string" then
+            v = mathematics.classes[k] + 0x100
+        else
+            local i = k - 0x100
+            v = mathematics.classes[i] or mathematics.classnames[i]
+        end
+ -- end
+    if not v then
+        v = listcodes.unknown
+    end
     t[k] = v
     return v
 end)

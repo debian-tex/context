@@ -201,7 +201,7 @@
     \fi
 \to \everydefinefieldbody
 
-\permanent\tolerant\protected\def\fieldbody[#tag]#spacer[#settings]%
+\permanent\tolerant\protected\def\fieldbody[#tag]#spacer[#S#settings]%
   {\iflocation
      \hbox\bgroup
        \edef\currentfieldbody{#tag}%
@@ -328,9 +328,11 @@
 
 \appendtoks
     \lettonothing\currentfieldcategory
-    \doifelse{\interactionparameter\c!fieldlayer}\v!auto
-      {\setupcurrentfieldcategory[\c!fieldlayer=\currentviewerlayer]}%
-      {\setupcurrentfieldcategory[\c!fieldlayer=]}%
+    \ifcstok{\interactionparameter\c!fieldlayer}\v!auto
+        \setupcurrentfieldcategory[\c!fieldlayer=\currentviewerlayer]%
+    \else
+        \setupcurrentfieldcategory[\c!fieldlayer=]%
+    \fi
 \to \everysetupinteraction
 
 \setupinteraction
@@ -355,7 +357,7 @@
    \c!offset=\v!overlay,
    \c!align=]
 
-\permanent\tolerant\protected\def\fitfield[#tag]#spacer[#settings]%
+\permanent\tolerant\protected\def\fitfield[#tag]#spacer[#S#settings]%
   {\iflocation
      \begingroup
        \setbox\b_scrn_field_fit_symbol\hbox\bgroup
@@ -419,7 +421,7 @@
 
 % \setupcurrent
 
-\permanent\tolerant\protected\def\setupfield[#tag]#spacer[#variant]#spacer[#totalsettings]#spacer[#labelsettings]#spacer[#fieldsettings]%
+\permanent\tolerant\protected\def\setupfield[#tag]#spacer[#variant]#spacer[#S#totalsettings]#spacer[#S#labelsettings]#spacer[#S#fieldsettings]%
   {\ifarguments\or\or
      \definefieldcategory[#tag][\s!parent=\??fieldcontent#tag,#variant]%
      \setupfieldtotalframed  [#tag][\s!parent=\??fieldtotal]%
@@ -442,7 +444,7 @@
      \setupfieldcontentframed[#tag][\s!parent=\??fieldcontent,#fieldsettings]%
    \fi}
 
-\permanent\tolerant\protected\def\setupfields[#variant]#spacer[#totalsettings]#spacer[#labelsettings]#spacer[#fieldsettings]%
+\permanent\tolerant\protected\def\setupfields[#variant]#spacer[#S#totalsettings]#spacer[#S#labelsettings]#spacer[#S#fieldsettings]%
   {\ifarguments\or
      \setupfieldtotalframed  [#variant]%
    \or
@@ -550,22 +552,24 @@
 \def\scrn_field_set_content_box
   {\setbox\b_scrn_field_content\hbox
      {\reshapeframeboxtrue % else wrong dimensions (to be checked)
-      \doifnothing{\fieldcontentframedparameter\c!height}
-        {\ifconditional\fieldisvertical
-           \setfieldcontentframedparameter\c!height{6ex}%
-         \orelse\ifconditional\fieldishorizontal
-           \setfieldcontentframedparameter\c!height{\vsize}%
-         \else
-           \setfieldcontentframedparameter\c!height{2cm}%
-         \fi}%
-      \doifnothing{\fieldcontentframedparameter\c!width}
-        {\ifconditional\fieldisvertical
-           \setfieldcontentframedparameter\c!width{\hsize}%
-         \orelse\ifconditional\fieldishorizontal
-           \setfieldcontentframedparameter\c!width{20em}%
-         \else
-           \setfieldcontentframedparameter\c!width{2cm}%
-         \fi}%
+      \ifempty{\fieldcontentframedparameter\c!height}%
+        \ifconditional\fieldisvertical
+          \setfieldcontentframedparameter\c!height{6ex}%
+        \orelse\ifconditional\fieldishorizontal
+          \setfieldcontentframedparameter\c!height{\vsize}%
+        \else
+          \setfieldcontentframedparameter\c!height{2cm}%
+        \fi
+      \fi
+      \ifempty{\fieldcontentframedparameter\c!width}%
+        \ifconditional\fieldisvertical
+          \setfieldcontentframedparameter\c!width{\hsize}%
+        \orelse\ifconditional\fieldishorizontal
+          \setfieldcontentframedparameter\c!width{20em}%
+        \else
+          \setfieldcontentframedparameter\c!width{2cm}%
+        \fi
+      \fi
       \inheritedfieldcontentframedframed % lower framedoffset
         {\fieldbody
            [\currentfieldbody]
@@ -596,19 +600,19 @@
 %D todo: replace \processallactionsinset
 
 \def\scrn_field_analyze_setups
-  {\setfalse\fieldlabelshown
-   \setfalse\fieldframeshown
-   \setfalse\fieldishorizontal
-   \setfalse\fieldisvertical
+  {\fieldlabelshown\conditionalfalse
+   \fieldframeshown\conditionalfalse
+   \fieldishorizontal\conditionalfalse
+   \fieldisvertical\conditionalfalse
    \normalexpanded{\processallactionsinset[\fieldtotalframedparameter\c!alternative]}
-     [      \v!reset=>\setfalse\fieldlabelshown
-                      \setfalse\fieldframeshown
-                      \setfalse\fieldishorizontal
-                      \setfalse\fieldisvertical,
-            \v!label=>\settrue\fieldlabelshown,
-            \v!frame=>\settrue\fieldframeshown,
-       \v!horizontal=>\settrue\fieldishorizontal,
-         \v!vertical=>\settrue\fieldisvertical]%
+     [      \v!reset=>\fieldlabelshown\conditionalfalse
+                      \fieldframeshown\conditionalfalse
+                      \fieldishorizontal\conditionalfalse
+                      \fieldisvertical\conditionalfalse,
+            \v!label=>\fieldlabelshown\conditionaltrue,
+            \v!frame=>\fieldframeshown\conditionaltrue,
+       \v!horizontal=>\fieldishorizontal\conditionaltrue,
+         \v!vertical=>\fieldisvertical\conditionaltrue]%
    \ifconditional\fieldisvertical
      \setupfieldtotalframed[\c!distance=\zeropoint,\c!inbetween=\vskip\d_framed_local_offset,\c!align=\v!right,\c!width=20em]%
    \orelse\ifconditional\fieldishorizontal
@@ -622,7 +626,7 @@
 
 \newinteger\c_scrn_field_system_n
 
-\permanent\def\currentsystemfield{sys::\number\c_scrn_field_system_n}
+\permanent\def\currentsystemfield{sys::\the\c_scrn_field_system_n}
 
 \permanent\protected\def\nextsystemfield
   {\global\advanceby\c_scrn_field_system_n\plusone}
@@ -656,27 +660,27 @@
    \c!backgroundcolor=gray]
 
 \appendtoks
-    \frozen\instance\setuevalue\currenttooltip{\scrn_tooltip_direct{\currenttooltip}}%
+    \frozen\instance\protected\edefcsname\currenttooltip\endcsname{\scrn_tooltip_direct{\currenttooltip}}%
 \to \everydefinetooltip
 
 \protected\def\scrn_tooltip_direct#tag%
-  {\def\currenttooltip{#tag}%
+  {\cdef\currenttooltip{#tag}%
    \iflocation
      \expandafter\scrn_tooltip_indeed
    \else
      \expandafter\scrn_tooltip_ignore
    \fi}
 
-\tolerant\def\scrn_tooltip_ignore[#settings]#:#anchortext#tiptext%
+\tolerant\def\scrn_tooltip_ignore[#S#settings]#:#anchortext#tiptext%
   {#anchortext}
 
 \mutable\lettonothing\currenttooltipname
 
-\tolerant\def\scrn_tooltip_indeed[#settings]#:#anchortext#tiptext% a more modern aproach (push buttons)
+\tolerant\def\scrn_tooltip_indeed[#S#settings]#:#anchortext#tiptext% a more modern aproach (push buttons)
   {\dontleavehmode \hbox \bgroup
      \dontcomplain
      \global\advanceby\c_scrn_tooltip_n\plusone
-     \edef\currenttooltipname{tooltip:\number\c_scrn_tooltip_n}%
+     \edef\currenttooltipname{tooltip:\the\c_scrn_tooltip_n}%
      \setbox\b_scrn_tooltip_anchor\hbox
        {\strut#anchortext}%
      \doifelseassignment{#settings}
@@ -744,15 +748,15 @@
 
 \installcorenamespace {fieldstack}
 
-\permanent\tolerant\protected\def\definefieldstack[#tag]#spacer[#symbols]#spacer[#settings]%
+\permanent\tolerant\protected\def\definefieldstack[#tag]#spacer[#symbols]#spacer[#S#settings]%
   {\ifcsname\??fieldstack#tag\endcsname
      % already done
    \else
-     %setgvalue{\??fieldstack#tag}{\scrn_fieldstack_construct[#tag][#symbols][#settings]}%
-     \setxvalue{\??fieldstack#tag}{\scrn_fieldstack_construct[#tag][#symbols][\normalunexpanded{#settings}]}%
+     %xdefcsname\??fieldstack#tag\endcsname{\scrn_fieldstack_construct[#tag][#symbols][#settings]}%
+     \xdefcsname\??fieldstack#tag\endcsname{\scrn_fieldstack_construct[#tag][#symbols][\normalunexpanded{#settings}]}%
    \fi}
 
-\permanent\tolerant\protected\def\fieldstack[#tag]#spacer[#symbols]#spacer[#settings]%
+\permanent\tolerant\protected\def\fieldstack[#tag]#spacer[#symbols]#spacer[#S#settings]%
   {\ifparameter#symbols\or
      \definefieldstack[#tag][#symbols][#settings]%
    \fi
@@ -764,7 +768,7 @@
 
 \def\scrn_fieldstack_add#tag#settings#symbol%
   {\advanceby\scratchcounter\plusone
-   \edef\currentfieldstackname{#tag:\number\scratchcounter}%
+   \edef\currentfieldstackname{#tag:\the\scratchcounter}%
    \ifnum\scratchcounter=\fieldcategoryparameter\c!start\relax
      \definefieldbody[\currentfieldstackname][\c!type=check,\c!values={#symbol,\s!empty},\c!default={#symbol}]%
    \else
@@ -781,7 +785,7 @@
          \c!depth=\dp\b_scrn_fieldstack_box,
          #settings]}}
 
-\protected\def\scrn_fieldstack_construct[#tag][#symbols][#settings]% start=n, 0 == leeg
+\protected\def\scrn_fieldstack_construct[#tag][#symbols][#S#settings]% start=n, 0 == leeg
   {\iflocation
      \dontleavehmode
      \begingroup
@@ -819,23 +823,23 @@
      \global\advanceby\c_scrn_rollbutton_n_button\plusone
      \global\advanceby\c_scrn_rollbutton_n_symbol\plusone
      \definesymbol
-       [rollsymbol:\number\c_scrn_rollbutton_n_symbol]
+       [rollsymbol:\the\c_scrn_rollbutton_n_symbol]
        [{\framed[\c!frame=\v!off,\c!width=\overlaywidth,\c!height=\overlayheight]{}}]%
    % \definefieldbody
-   %   [rollbutton:\number\c_scrn_rollbutton_n_button]
+   %   [rollbutton:\the\c_scrn_rollbutton_n_button]
    %   [\c!type=push,
-   %    \c!values=rollsymbol:\number\c_scrn_rollbutton_n_symbol,
-   %    \c!default=rollsymbol:\number\c_scrn_rollbutton_n_symbol]%
+   %    \c!values=rollsymbol:\the\c_scrn_rollbutton_n_symbol,
+   %    \c!default=rollsymbol:\the\c_scrn_rollbutton_n_symbol]%
    % \fitfield
-   %   [rollbutton:\number\c_scrn_rollbutton_n_button]%
+   %   [rollbutton:\the\c_scrn_rollbutton_n_button]%
    %   [\c!regionin={#regionin},
    %    \c!regionout={#regionout}]%
      %
      \definefield
-       [rollbutton:\number\c_scrn_rollbutton_n_button][push][rollbutton]
-       [rollsymbol:\number\c_scrn_rollbutton_n_symbol]%
+       [rollbutton:\the\c_scrn_rollbutton_n_button][push][rollbutton]
+       [rollsymbol:\the\c_scrn_rollbutton_n_symbol]%
      \fitfield
-       [rollbutton:\number\c_scrn_rollbutton_n_button]%
+       [rollbutton:\the\c_scrn_rollbutton_n_button]%
        [\c!regionin={#1#3},\c!regionout={#2#4}]%
      %
      \egroup
@@ -868,7 +872,7 @@
 
 \newinteger\c_scrn_pushbutton_n
 
-\permanent\tolerant\protected\def\definepushbutton[#tag]#spacer[#settings]%
+\permanent\tolerant\protected\def\definepushbutton[#tag]#spacer[#S#settings]%
   {\scrn_pushbutton_define_variant{#tag}{n}{push}%
    \scrn_pushbutton_define_variant{#tag}{r}{\symbol[pushsymbol:#tag:n]}%
    \scrn_pushbutton_define_variant{#tag}{d}{\symbol[pushsymbol:#tag:r]}%
@@ -889,12 +893,12 @@
       \c!clickout={#reference},%
       #settings]%
    \definefield
-     [pushbutton:\number\c_scrn_pushbutton_n]%
+     [pushbutton:\the\c_scrn_pushbutton_n]%
      [push]%
      [pushbutton]%
      [pushsymbol:#tag:n,pushsymbol:#tag:r,pushsymbol:#tag:d]%
    \fitfield
-     [pushbutton:\number\c_scrn_pushbutton_n]%
+     [pushbutton:\the\c_scrn_pushbutton_n]%
    \egroup}
 
 \permanent\tolerant\protected\def\definepushsymbol[#tag]#spacer[#variant]% [#reference]
@@ -975,7 +979,7 @@
      \setbuttonparameter
      \usebuttonstyleandcolor}
 
-\permanent\tolerant\protected\def\rollbutton[#tag]#spacer[#settings]#:#text[#reference]%
+\permanent\tolerant\protected\def\rollbutton[#tag]#spacer[#S#settings]#:#text[#reference]%
   {\dontleavehmode
    \bgroup
    \global\advanceby\c_scrn_rollbutton_n_button\plusone
@@ -997,27 +1001,32 @@
      \let\scrn_rollbutton_symbol\scrn_rollbutton_symbol_b
    \fi
    % todo: share symbols, tricky since different dimensions (maybe \unique...)
-   \definesymbol[rollsymbol:\number\c_scrn_rollbutton_n_symbol:n][\scrn_rollbutton_symbol{n}{#text}]%
-   \definesymbol[rollsymbol:\number\c_scrn_rollbutton_n_symbol:r][\scrn_rollbutton_symbol{r}{#text}]%
-   \definesymbol[rollsymbol:\number\c_scrn_rollbutton_n_symbol:d][\scrn_rollbutton_symbol{d}{#text}]%
+   \definesymbol[rollsymbol:\the\c_scrn_rollbutton_n_symbol:n][\scrn_rollbutton_symbol{n}{#text}]%
+   \definesymbol[rollsymbol:\the\c_scrn_rollbutton_n_symbol:r][\scrn_rollbutton_symbol{r}{#text}]%
+   \definesymbol[rollsymbol:\the\c_scrn_rollbutton_n_symbol:d][\scrn_rollbutton_symbol{d}{#text}]%
    \definefield
-     [rollbutton:\number\c_scrn_rollbutton_n_button][push][rollbutton]
-     [rollsymbol:\number\c_scrn_rollbutton_n_symbol:n,%
-      rollsymbol:\number\c_scrn_rollbutton_n_symbol:r,%
-      rollsymbol:\number\c_scrn_rollbutton_n_symbol:d]%
+     [rollbutton:\the\c_scrn_rollbutton_n_button][push][rollbutton]
+     [rollsymbol:\the\c_scrn_rollbutton_n_symbol:n,%
+      rollsymbol:\the\c_scrn_rollbutton_n_symbol:r,%
+      rollsymbol:\the\c_scrn_rollbutton_n_symbol:d]%
    \fitfield
-     [rollbutton:\number\c_scrn_rollbutton_n_button]%
+     [rollbutton:\the\c_scrn_rollbutton_n_button]%
      [\c!clickout={#reference}]%
    \egroup}
 
 \protected\def\scrn_rollbutton_symbol_indeed#getparameter#inheritedframed#setparameter#usestyleandcolor#what#text%
   {\definecolor[rollover][rollover:#what]%
-   \doifelse{#what}{n}% ?
-     {\doifelse{#getparameter\c!alternative}\v!hidden\phantom\hbox}\hbox
-        {#setparameter\c!framecolor     {rollover}%
-         #setparameter\c!backgroundcolor{rollover}%
-         #setparameter\c!color          {rollover}%
-         #inheritedframed{#usestyleandcolor\c!style\c!color{#text}}}}
+   \ifcstok{#getparameter\c!alternative}\v!hidden
+     \expandafter\phantom
+   \else
+     \expandafter\hbox
+   \fi
+   \bgroup
+     #setparameter\c!framecolor     {rollover}%
+     #setparameter\c!backgroundcolor{rollover}%
+     #setparameter\c!color          {rollover}%
+     #inheritedframed{#usestyleandcolor\c!style\c!color{#text}}%
+   \egroup}
 
 %D We plug into the menu system
 
@@ -1036,5 +1045,32 @@
     \enforced\let\stoprob \relax
     \enforced\let\rob     \scrn_menu_rob_direct
 \to \everysetmenucommands
+
+%D Signing:
+%D
+%D \starttyping
+%D \setupinteraction[state=start]
+%D
+%D \definefield[signature][signed]
+%D
+%D \starttext
+%D
+%D     \defineoverlay[signature][my signature]
+%D
+%D     \startTEXpage[offset=1ts]
+%D         sign: \inframed
+%D           [background=signature]
+%D           {\fieldbody[signature][width=3cm,option=hidden]}
+%D     \stopTEXpage
+%D
+%D \stoptext
+%D \stoptyping
+%D
+%D after processing:
+%D
+%D \starttyping
+%D mtxrun --script pdf --sign   --certificate=somesign.pem --password=test --uselibrary somefile
+%D mtxrun --script pdf --verify --certificate=somesign.pem --password=test --uselibrary somefile
+%D \stoptyping
 
 \protect \endinput

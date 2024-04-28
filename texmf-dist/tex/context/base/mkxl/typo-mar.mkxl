@@ -136,7 +136,7 @@
    \c!align=\margindataparameter\c!align]
 
 \appendtoks
-    \frozen\instance\setuevalue\currentmargindata{\margindata[\currentmargindata]}%
+    \frozen\instance\protected\edefcsname\currentmargindata\endcsname{\margindata[\currentmargindata]}%
 \to \everydefinemargindata
 
 \newconditional\inhibitmargindata      % This one is used at the Lua end!
@@ -148,7 +148,7 @@
 \mutable\lettonothing\currentmarginreference
 
 \appendtoks
-    \settrue\inhibitmargindata
+    \inhibitmargindata\conditionaltrue
 \to \everyforgetall
 
 \appendtoks
@@ -183,20 +183,18 @@
      \expandafter\typo_margins_data_yes
    \fi}
 
-\permanent\tolerant\protected\def\typo_margins_data_nop[#name]#spacer[#dataparameters]#spacer[#textparameters]#:#content%
+\permanent\tolerant\protected\def\typo_margins_data_nop[#name]#spacer[#S#dataparameters]#spacer[#S#textparameters]#:#content%
   {}
 
-\permanent\tolerant\protected\def\typo_margins_data_yes[#name]#spacer[#dataparameters]#spacer[#textparameters]#:#content%
-  {\setfalse\inhibitmargindata % flushing afterwards
+\permanent\tolerant\protected\def\typo_margins_data_yes[#name]#spacer[#S#dataparameters]#spacer[#S#textparameters]#:#content%
+  {\inhibitmargindata\conditionalfalse % flushing afterwards
    \begingroup
-  %\settrue\inhibitmargindata  % no flushing in here
+  %\inhibitmargindata\conditionaltrue  % no flushing in here
    \def\currentmargindata{#name}%
    \let\currentmarginframed\currentmargindata
    \ifparameter#dataparameters\or
      \setupcurrentmargindata[#dataparameters]%
    \fi
- % \doifelsenothing{#content}\donefalse\donetrue
- % \doifelsetext{#content}\donetrue\donefalse
    \ifparameter#content\donefalse\or\donetrue\else\donefalse\fi
    \global\advanceby\c_typo_margins_n\plusone
    \ifdone
@@ -209,7 +207,7 @@
      \dotagmargintext\c_typo_margins_n
      \ifcsname\currentmarginframedhash\s!parent\endcsname
        \setbox\nextbox\naturalhbox \currentmarginreference \bgroup
-         \the\everymargindatacontent
+         \expand\everymargindatacontent
          \usemargindatastyleandcolor\c!style\c!color
          \setupcurrentmarginframed[\c!location=\v!normal,#textparameters]%
          \typo_margins_data_synchronize
@@ -229,7 +227,7 @@
        \ifempty\currentmargindatawidth
          \setbox\nextbox\naturalhbox \currentmarginreference \bgroup
            \typo_margins_data_synchronize
-           \the\everymargindatacontent
+           \expand\everymargindatacontent
            \usemargindatastyleandcolor\c!style\c!color
            \ifempty\currentmargindatastrut \else
              \synchronizestrut\currentmargindatastrut
@@ -245,7 +243,7 @@
            \typo_margins_data_synchronize
            \dosetraggedcommand{\margindataparameter\c!align}%
            \vtop \bgroup
-             \the\everymargindatacontent
+             \expand\everymargindatacontent
              \usemargindatastyleandcolor\c!style\c!color
              \hsize\currentmargindatawidth
              \raggedcommand
@@ -409,8 +407,8 @@
 
 % The following sort of works okay but is to be avoided ... it will disappear from lmtx:
 
-\permanent\tolerant\protected\def\defineinmargin[#name]#spacer[#location]#spacer[#align]#spacer[#settings]% not completely compatible
-  {\ifarguments\else
+\permanent\tolerant\protected\def\defineinmargin[#name]#spacer[#location]#spacer[#align]#spacer[#S#settings]% not completely compatible
+  {\ifparameter#1\else
      \definemargindata[#name][\c!location=#location,\c!align=#align,#settings]%
      \definemarginframed[#name][#location][\c!align=#align,#settings]%
    \fi}
@@ -469,7 +467,7 @@
     \executeifdefined{\headalternativeparameter\c!margintext}\margintext {
         \ifconditional\headshownumber
             \headnumbercontent
-            \hskip\headnumberdistance
+            \hkern\headnumberdistance
         \fi
         \headtextcontent
     }

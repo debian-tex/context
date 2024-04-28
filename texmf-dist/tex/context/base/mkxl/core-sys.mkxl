@@ -22,15 +22,17 @@
 %D Version checking:
 
 \permanent\protected\def\newcontextversion#1%
-  {\doifelse{#1}\contextversion
-      {\aliased\let\newcontextversion\gobbleoneargument}
-      {\writeline
-       \writestatus{Fatal    Error}{Your format does not match the base files!}%
-       \writeline
-       \writestatus{Format Version}{\contextversion\space\contextmark}%
-       \writestatus{Files  Version}{#1}%
-       \batchmode
-       \normalend}}
+  {\ifcstok{#1}\contextversion
+     \aliased\let\newcontextversion\gobbleoneargument
+   \else
+     \writeline
+     \writestatus{Fatal    Error}{Your format does not match the base files!}%
+     \writeline
+     \writestatus{Format Version}{\contextversion\space\contextmark}%
+     \writestatus{Files  Version}{#1}%
+     \batchmode
+     \normalend
+   \fi}
 
 %D End of lines to the output. \TEX\ will map this onto the platform specific
 %D line ending. I hate this mess.
@@ -89,9 +91,11 @@
 \permanent\def\jobfullname{\jobfilename.\jobfilesuffix}
 
 \permanent\protected\def\setjobfullname#1% #1 = default if not given
-  {\doifelsenothing\jobfilename
-     {\lettonothing\jobfullname}
-     {\doif\jobfilesuffix\c!tex{\edef\jobfullname{\jobfilename.#1}}}}
+  {\ifempty\jobfilename
+     \lettonothing\jobfullname
+   \orelse\ifcstok\jobfilesuffix\c!tex
+     \edef\jobfullname{\jobfilename.#1}%
+   \fi}
 
 %D There are a couple of system states avaiable:
 %D
@@ -123,21 +127,22 @@
 %D \stoptyping
 
 \permanent\protected\def\setuprandomize[#1]%
-  {\doifsomething{#1}
-     {\begingroup
-      % tex's time is in minutes
-      \scratchcounter\normaltime
-      \processaction
-        [#1]
-        [  \v!small=>\divideby\scratchcounter 15, %  900,
-          \v!medium=>\divideby\scratchcounter 30, % 1800,
-             \v!big=>\divideby\scratchcounter 60, % 3600,
-          \v!normal=>\scratchcounter\newrandomseed,
-         \s!default=>\scratchcounter\newrandomseed,
-         \s!unknown=>\scratchcounter#1]%
-      \setrandomseed\scratchcounter
-    % \writestatus\m!system{randomseed: \the\scratchcounter}%
-      \endgroup}}
+  {\ifempty{#1}\else
+     \begingroup
+     % tex's time is in minutes
+     \scratchcounter\normaltime
+     \processaction
+       [#1]
+       [  \v!small=>\divideby\scratchcounter 15, %  900,
+         \v!medium=>\divideby\scratchcounter 30, % 1800,
+            \v!big=>\divideby\scratchcounter 60, % 3600,
+         \v!normal=>\scratchcounter\newrandomseed,
+        \s!default=>\scratchcounter\newrandomseed,
+        \s!unknown=>\scratchcounter#1]%
+     \setrandomseed\scratchcounter
+    %\writestatus\m!system{randomseed: \the\scratchcounter}%
+     \endgroup
+   \fi}
 
 \setupsystem
   [\c!directory=,
@@ -189,9 +194,9 @@
 \installcommandhandler \??startstop {startstop} \??startstop
 
 \appendtoks
-    \frozen\setuevalue{\e!start\currentstartstop}{\syst_startstop_start {\currentstartstop}}%
-    \frozen\setuevalue{\e!stop \currentstartstop}{\syst_startstop_stop  {\currentstartstop}}%
-    \frozen\setuevalue        {\currentstartstop}{\syst_startstop_indeed{\currentstartstop}}%
+    \frozen\instance\protected\edefcsname        \currentstartstop\endcsname{\syst_startstop_indeed{\currentstartstop}}%
+    \frozen\instance\protected\edefcsname\e!start\currentstartstop\endcsname{\syst_startstop_start {\currentstartstop}}%
+    \frozen\instance\protected\edefcsname\e!stop \currentstartstop\endcsname{\syst_startstop_stop  {\currentstartstop}}%
 \to \everydefinestartstop
 
 \ifdefined\dotagconstruct \else \aliased\let\dotagconstruct\relax \fi
@@ -199,7 +204,7 @@
 \protected\def\syst_startstop_start#1%
   {\namedstartstopparameter{#1}\c!before\relax
    \bgroup
-   \def\currentstartstop{#1}%
+   \cdef\currentstartstop{#1}%
    % we will keep this for a while:
    \startstopparameter\c!commands\relax % obsolete
    % this is the new method:
@@ -215,12 +220,12 @@
 
 \protected\def\syst_startstop_indeed#1%
   {\groupedcommand
-     {\def\currentstartstop{#1}%
+     {\cdef\currentstartstop{#1}%
       \startstopparameter\c!commands\relax % better: setups so that will show op soon
       \dostarttagged\t!construct\currentstartstop
       \usestartstopstyleandcolor\c!style\c!color
       \startstopparameter\c!left\relax}
-     {\def\currentstartstop{#1}% safeguard, not really needed
+     {\cdef\currentstartstop{#1}% safeguard, not really needed
       \startstopparameter\c!right\relax
       \dostoptagged
       \startstopparameter\c!inbetween\relax}}
@@ -229,7 +234,7 @@
 
 % \protected\def\ignorestartstop[#1]%
 %   {\protected\defcsname\e!start#1\expandafter\endcsname\expandafter
-%      {\expandafter\gobbleuntil\csname\e!stop#1\endcsname}}
+%      {\expandafter\ignoreupto\csname\e!stop#1\endcsname}}
 %
 % \ignorestartstop[bagger]
 
@@ -266,7 +271,7 @@
 
 \permanent\protected\def\typo_highlights_indeed#1% inline style/color switch
   {\dontleavehmode\groupedcommand % otherwise wrong par number in tags
-     {\def\currenthighlight{#1}%
+     {\cdef\currenthighlight{#1}%
       \dostarttagged\t!highlight\currenthighlight
       \usehighlightstyleandcolor\c!style\c!color
     % \usehighlightstyleandcolor\c!style\c!color
@@ -279,7 +284,7 @@
 
 \permanent\protected\def\starthighlight[#1]%
   {\begingroup
-   \def\currenthighlight{#1}%
+   \cdef\currenthighlight{#1}%
    \dostarttagged\t!highlight\currenthighlight
    \usehighlightstyleandcolor\c!style\c!color
  % \usehighlightstyleandcolor\c!style\c!color
@@ -323,6 +328,11 @@
      #1#3##1##2##3##4##5##6##7{#4}\or
      #1#3##1##2##3##4##5##6##7##8{#4}\or
      #1#3##1##2##3##4##5##6##7##8##9{#4}\else
+     #1#3##1##2##3##4##5##6##7##8##9##A{#4}\else
+     #1#3##1##2##3##4##5##6##7##8##9##A##B{#4}\else
+     #1#3##1##2##3##4##5##6##7##8##9##A##B##C{#4}\else
+     #1#3##1##2##3##4##5##6##7##8##9##A##B##C##D{#4}\else
+     #1#3##1##2##3##4##5##6##7##8##9##A##B##C##D##E{#4}\else
      #1#3{#4}\fi
    \catcode\hashasciicode\c_syst_parameter_catcode}
 
@@ -440,40 +450,28 @@
 \permanent\protected\def\macroname#1% brrr
   {\begincsname#1\endcsname}
 
-% %D A weird one that I probably needed once, so it might as well become
-% %D obsolete.
-%
-% \protected\def\usecommands#1%
-%   {\begingroup
-%    \def\docommand##1{\setbox\scratchbox\hbox{\csname\string##1\endcsname##1}}%
-%    \processcommalist[#1]\docommand
-%    \endgroup}
-
-\permanent\protected\def\syst_log_indeed#1#2#3%
-  {\ctxcommand{systemlog("#1","#2",\!!bs#3\!!es)}}
-
-\aliased\let\systemlog\syst_log_indeed
+% \definedasluacommand\systemlog
 
 \permanent\protected\def\systemlogfirst
   {\ifcase\directsystemparameter\c!n\relax
-     \expandafter\syst_log_indeed
+     \expandafter\systemlog
    \or
-     \expandafter\syst_log_indeed
+     \expandafter\systemlog
    \else
      \expandafter\gobblethreearguments
    \fi}
 
 \permanent\protected\def\systemloglast
   {\ifcase\directsystemparameter\c!n\relax
-     \expandafter\syst_log_indeed
-   \or
-      \expandafter\gobblethreearguments
+     \expandafter\systemlog
    \or
      \expandafter\gobblethreearguments
    \or
      \expandafter\gobblethreearguments
    \or
-     \expandafter\syst_log_indeed
+     \expandafter\gobblethreearguments
+   \or
+     \expandafter\systemlog
    \fi}
 
 \protect \endinput

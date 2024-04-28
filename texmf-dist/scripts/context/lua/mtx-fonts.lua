@@ -16,7 +16,10 @@ local lower, gsub = string.lower, string.gsub
 local concat = table.concat
 local write_nl = (logs and logs.writer) or (texio and texio.write_nl) or print
 
-local otlversion  = 3.133
+local versions = {
+    otl = 3.140,
+    one = 1.520,
+}
 
 local helpinfo = [[
 <?xml version="1.0"?>
@@ -288,14 +291,19 @@ local function showfeatures(tag,specification)
                 for f,ff in table.sortedhash(data) do
                     local done = false
                     for s, ss in table.sortedhash(ff) do
-                        if s == "*"  then s       = "all" end
-                        if ss  ["*"] then ss["*"] = nil ss.all = true end
+                        local s = s == "*" and all or s
+                        if ss["*"] then
+                            ss["*"] = nil
+                            ss.all  = true
+                        end
+                        local name
                         if done then
-                            f = ""
+                            name = ""
                         else
                             done = true
+                            name = f
                         end
-                        report("  %-8s %-8s %-8s",f,s,concat(table.sortedkeys(ss), " ")) -- todo: padd 4
+                        report("  %-8s %-8s %-8s",name,s,concat(table.sortedkeys(ss), " ")) -- todo: padd 4
                     end
                 end
             end
@@ -471,10 +479,22 @@ end
 function scripts.fonts.unpack()
     local name = removesuffix(basename(givenfiles[1] or ""))
     if name and name ~= "" then
-        local cacheid   = getargument("cache") or "otl"
-        local cache     = containers.define("fonts", cacheid, otlversion, true) -- cache is temp
-        local cleanname = containers.cleanname(name)
-        local data = containers.read(cache,cleanname)
+        local cacheid   = false
+        local cache     = false
+        local cleanname = false
+        local data      = false
+        local list = { getargument("cache") or false, "otl", "one" }
+        for i=1,#list do
+            cacheid   = list[i]
+            if cacheid then
+                cache     = containers.define("fonts", cacheid, versions[cacheid], true) -- cache is temp
+                cleanname = containers.cleanname(name)
+                data      = containers.read(cache,cleanname)
+                if data then
+                    break
+                end
+            end
+        end
         if data then
             local savename = addsuffix(cleanname .. "-unpacked","tma")
             report("fontsave, saving data in %s",savename)

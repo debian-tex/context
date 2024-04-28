@@ -34,20 +34,19 @@ local processors           = typesetters.processors
 local splitprocessor       = processors.split
 
 local texgetcount          = tex.getcount
-local texiscount           = tex.iscount
 
 local variables            = interfaces.variables
-local v_forward            = variables.forward
-local v_all                = variables.all
-local v_no                 = variables.no
-local v_yes                = variables.yes
-local v_packed             = variables.packed
-local v_current            = variables.current
-local v_previous           = variables.previous
-local v_first              = variables.first
-local v_last               = variables.last
-local v_text               = variables.text
-local v_section            = variables.section
+local v_forward            <const> = variables.forward
+local v_all                <const> = variables.all
+local v_no                 <const> = variables.no
+local v_yes                <const> = variables.yes
+local v_packed             <const> = variables.packed
+local v_current            <const> = variables.current
+local v_previous           <const> = variables.previous
+local v_first              <const> = variables.first
+local v_last               <const> = variables.last
+local v_text               <const> = variables.text
+local v_section            <const> = variables.section
 
 local context              = context
 local ctx_latelua          = context.latelua
@@ -66,10 +65,10 @@ local setinternalreference = references.setinternalreference
 
 local setmetatableindex    = table.setmetatableindex
 
-local absmaxlevel          = 5 -- \c_strc_registers_maxlevel
+local absmaxlevel          <const> = 5 -- \c_strc_registers_maxlevel
 
-local c_realpageno         = texiscount("realpageno")
-local c_locationcount      = texiscount("locationcount")
+local c_realpageno         <const> = tex.iscount("realpageno")
+local c_locationcount      <const> = tex.iscount("locationcount")
 
 local h_prefixpage              = helpers.prefixpage
 local h_prefixlastpage          = helpers.prefixlastpage
@@ -622,48 +621,38 @@ local function enhanceregister(specification)
     end
 end
 
--- This can become extendregister(specification)!
-
-local function extendregister(name,tag,rawdata) -- maybe do lastsection internally
-    if type(tag) == "string" then
-        tag = tagged[tag]
-    end
-    if tag then
-        local data = tobesaved[name].metadata.notsaved and collected[name] or tobesaved[name]
-        local entry = data.entries[tag]
-        if entry then
-            local references = entry.references
-            references.lastrealpage = texgetcount(c_realpageno)
-            references.lastsection = currentid()
-            if rawdata then
-                local userdata = rawdata.userdata
-                if userdata then
-                    rawdata.userdata = touserdata(userdata)
-                end
-                if rawdata.entries then
-                    preprocessentries(rawdata)
-                end
-                local metadata = rawdata.metadata
-                if metadata and not metadata.catcodes then
-                    metadata.catcodes = tex.catcodetable -- get
-                end
-                for k, v in next, rawdata do
-                    local rk = references[k]
-                    if not rk then
-                        references[k] = v
-                    else
-                        for kk, vv in next, v do
-                            if type(vv) == "table" then
-                                if next(vv) then
-                                    rk[kk] = vv
-                                end
-                            elseif vv ~= "" then
-                                rk[kk] = vv
-                            end
+local function extendregister(rawdata) -- this is probably not okay in mkiv
+    local references = rawdata.references
+    local metadata   = rawdata.metadata
+    if references and metadata then
+        local name = rawdata.metadata.name
+        local tag  = references.label
+        if type(tag) == "string" then
+            tag = tagged[tag]
+        end
+        if tag then
+            local data = tobesaved[name].metadata.notsaved and collected[name] or tobesaved[name]
+            local entry = data.entries[tag]
+            if entry then
+                references = entry.references
+                references.lastrealpage = texgetcount(c_realpageno)
+                references.lastsection = currentid()
+                if rawdata then
+                    local userdata = rawdata.userdata
+                    if userdata and userdata ~= "" then
+                        entry.userdata = table.merged(entry.userdata or { },touserdata(userdata))
+                    end
+                    if rawdata.entries then
+                        preprocessentries(rawdata)
+                        if next(rawdata.list) then
+                            entry.list = rawdata.list
                         end
                     end
-                end
-            end
+                    if metadata then
+                        entry.metadata = table.merged(entry.metadata or { },metadata)
+                    end
+               end
+           end
         end
     end
 end
@@ -697,8 +686,47 @@ implement {
 implement {
     name      = "extendregister",
     actions   = extendregister,
-    arguments = "2 strings",
+    arguments = {
+        {
+            { "metadata", {
+                    { "name" },
+                    { "coding" },
+                    { "catcodes", "integer" },
+                    { "own" },
+                }
+            },
+            { "entries", {
+                    { "entries", "list" },
+                    { "keys", "list" },
+                    { "processors", "list" },
+                    { "entry" },
+                    { "key" },
+                    { "processor" },
+                }
+            },
+            { "references", {
+                    { "label" },
+                }
+            },
+            { "userdata" },
+        }
+    }
 }
+
+implement {
+    name      = "extendregisterlate",
+    arguments = "2 strings",
+    actions   = function(name,label)
+        context.latelua(function()
+            extendregister {
+                metadata   = { name =  name },
+                references = { abel =  label },
+            }
+        end)
+    end,
+}
+
+-- commands.extendregister = extendregister
 
 implement {
     name      = "storeregister",
@@ -1276,7 +1304,12 @@ local function collapsedpage(pages)
         local second_first_last = second_first.references.lastrealpage
         if first_last_last then
             first_last_pn = first_last_last
-            if second_first == second_last and second_first_pn <= first_last_pn then
+            if first_last_pn == second_first_pn then
+                -- 2-3, 3-9 -> 2-9
+                pages[i-1] = { first_first, second_last }
+                remove(pages,i)
+                return true
+            elseif second_first == second_last and second_first_pn <= first_last_pn then
                 -- 2=8, 5 -> 12=8
                 remove(pages,i)
                 return true
@@ -1691,7 +1724,6 @@ function registers.flush(data,options,prefixspec,pagespec)
     for i=1,#entries do
         entries[i].split = nil
     end
- -- collectgarbage("collect")
 end
 
 function registers.process(class,...)

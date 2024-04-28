@@ -41,7 +41,11 @@
 
 \appendtoks
     \iflocation
-      \doif\figurefiletype{pdf}{\doifnot{\externalfigureparameter\c!interaction}\v!none\grph_epdf_add_overlay}%
+      \iftok{\figurefiletype}{pdf}% a lua call
+        \ifcstok{\externalfigureparameter\c!interaction}\v!none\else
+          \grph_epdf_add_overlay
+        \fi
+      \fi
     \fi
 \to \externalfigurepostprocessors
 
@@ -71,6 +75,26 @@
 \definesymbol[TopSecret]           [\epdfstampsymbol{TopSecret}]
 \definesymbol[Draft]               [\epdfstampsymbol{Draft}]
 \definesymbol[ForPublicRelease]    [\epdfstampsymbol{ForPublicRelease}]
+
+%D For team Ramkumar:
+
+\defineframed
+  [epdftextfield]
+  [\c!frame=\v!off,
+   \c!offset=\v!overlay,
+   \c!foregroundstyle=\epdffieldfont,
+   \c!align={\v!middle,\v!lohi}]
+
+\defineframed
+  [epdflinefield]
+  [\c!frame=\v!off,
+   \c!offset=\v!overlay,
+   \c!foregroundstyle=\epdffieldfont,
+   \c!align={\v!middle,\v!lohi}]
+
+\definefont
+  [epdffieldfont]
+  [\directframedparameter{epdf:font}*\s!default\space @ \directframedparameter{epdf:size}]
 
 \protect \endinput
 

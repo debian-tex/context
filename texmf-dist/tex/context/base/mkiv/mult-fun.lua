@@ -50,6 +50,8 @@ return {
         "matrixbox", "matrixcell", "matrixspan",
         --
         "pensilcolor", "pensilstep",
+        --
+        "uu"
     },
     commands = {
         "loadfile", "loadimage", "loadmodule",
@@ -239,5 +241,8 @@ return {
         "xnormalized", "ynormalized", "xynormalized",
         "phantom",
         "scrutinized",
+        --
+        "xshifted",
+        "yshifted",
     },
 }

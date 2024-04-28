@@ -1,5 +1,16 @@
 % language=us runpath=texruns:manuals/luametatex
 
+%     \definefontfeature
+%       [default]
+%       [default]
+%       [expansion=quality]
+
+%    %     \setupalignpass[none]
+%     \setupalignpass[decent]
+%    %     \setupalignpass[quality]
+
+% \pushoverloadmode \let\cdef\edef \let\cdefcsname\edefcsname \popoverloadmode
+
 % \enabledirectives[backend.pdf.inmemory]
 
 % \setupalign[profile]
@@ -108,17 +119,35 @@
 % End Feburari 2023 I observed 8.2 seconds for 360 pages and making a format needed
 % 1.9 seconds instead if the usual 2.1 but that can be a side effect of the terminal
 % because the amount of output which is sensitive for refresh delays set. The new
-% target is nwo 50 pages per second for this manual but on this laptop that is
+% target is now 50 pages per second for this manual but on this laptop that is
 % unlikely to happen any time soon. With tabulateusesize and tabulatesparseskips
-% experiments enabled we needed 8.1 second and 44.3 pps.
+% experiments enabled we needed 8.1 second and 44.3 pps.% 368 pages may/june 2023:
+%
+% no constant definitions : 8.55
+% constant \*!whatever    : 8.47
+% also constant \current* : 8.36
 
 % \enableexperiments [tabulateusesize]
 % \enableexperiments [tabulatesparseskips]
 
-\ifdefined\linebuffering \linebuffering \fi
+% 2023-07-10: context --make > temp.log (after a few times so with cached files)
+%
+% 1.90 sec including mtxrun
+% 1.65 sec tex only
+% 1.45 sec without saving format
+
+% 20230714      : 368 pages
+%
+% mingw         :  8.4 (we gained more that for the amd ... more cache and faster mem)
+% rpi 64        :      (hdd, not overclocked)
+% amd 10 fitlet : 30.9 12pps (we gained over 25% compared to the 268 page manual)
+
+% \ifdefined\linebuffering \linebuffering \fi
+
+% \linebuffering
 
 \enableexperiments[fonts.compact]
-%disableexperiments[fonts.accurate]
+% \enableexperiments[fonts.accurate]
 
 % \enabledirectives[fonts.injections.method=advance] % tricky ... not all xoffsets are advance robust
 

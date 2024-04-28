@@ -17,7 +17,7 @@ local lpegmatch = lpeg.match
 local P, S, C = lpeg.P, lpeg.S, lpeg.C
 local patterns = lpeg.patterns
 local setmetatableindex = table.setmetatableindex
-local formatters, strip = string.formatters, string.strip
+local formatters, strip, collapse = string.formatters, string.strip, utilities.strings.collapse
 
 local tex, xml = tex, xml
 local lowerchars, upperchars, lettered = characters.lower, characters.upper, characters.lettered
@@ -33,6 +33,10 @@ local notcatcodes        = catcodenumbers.notcatcodes -- todo: use different met
 local commands           = commands
 local context            = context
 local contextsprint      = context.sprint             -- with catcodes (here we use fast variants, but with option for tracing)
+
+local ctx_doif           = commands.doif
+local ctx_doifnot        = commands.doifnot
+local ctx_doifelse       = commands.doifelse
 
 local synctex            = luatex.synctex
 
@@ -644,7 +648,7 @@ function lxml.include(id,pattern,attribute,options)
         if filename then
             -- preprocessing
             if options.prepare then
-                filename = commands.preparedfile(filename)
+                filename = ctxrunner.preparedfile(filename)
             end
             -- handy if we have a flattened structure
             if options.basename then
@@ -672,6 +676,20 @@ function lxml.include(id,pattern,attribute,options)
         end
     end)
     stoptiming(xml)
+end
+
+function lxml.filename(id)
+    local e = getid(id)
+    if e then
+        context(e.cf)
+    end
+end
+
+function lxml.fileline(id)
+    local e = getid(id)
+    if e then
+        context(e.cl)
+    end
 end
 
 function lxml.inclusion(id,default,base)
@@ -1428,7 +1446,7 @@ local function all(collected)
     end
 end
 
-local function reverse(collected)
+texfinalizers.reverse = function(collected)
     if collected then
         local nc = #collected
         if nc >0 then
@@ -1687,7 +1705,7 @@ local function ctxtext(collected)
     end
 end
 
-local function stripped(collected) -- tricky as we strip in place
+texfinalizers.stripped = function(collected) -- tricky as we strip in place
     if collected then
         local nc = #collected
         if nc > 0 then
@@ -1698,7 +1716,16 @@ local function stripped(collected) -- tricky as we strip in place
     end
 end
 
-local function lower(collected)
+texfinalizers.collapsed = function(collected)
+    if collected and #collected > 0 then
+        local s = xmltext(collected[1])
+        if s ~= "" then
+            sprint(collapse(s))
+        end
+    end
+end
+
+texfinalizers.lower = function(collected)
     if not collected then
         local nc = #collected
         if nc > 0 then
@@ -1709,7 +1736,7 @@ local function lower(collected)
     end
 end
 
-local function upper(collected)
+texfinalizers.upper = function(collected)
     if collected then
         local nc = #collected
         if nc > 0 then
@@ -1778,30 +1805,30 @@ local function depth(collected)
     contextsprint(ctxcatcodes,d)
 end
 
+-- todo just move up as not used local
+
 texfinalizers.first          = first
 texfinalizers.last           = last
 texfinalizers.all            = all
-texfinalizers.reverse        = reverse
 texfinalizers.count          = count
 texfinalizers.command        = command
 texfinalizers.attribute      = attribute
-texfinalizers.param          = parameter
+texfinalizers.param          = parameter            -- obsolete
 texfinalizers.parameter      = parameter
 texfinalizers.text           = text
-texfinalizers.stripped       = stripped
-texfinalizers.lower          = lower
-texfinalizers.upper          = upper
 texfinalizers.ctxtext        = ctxtext
 texfinalizers.context        = ctxtext
 texfinalizers.position       = position
 texfinalizers.match          = match
 texfinalizers.index          = index
 texfinalizers.concat         = concatlist
-texfinalizers.concatrange    = concatrange
+texfinalizers.concatrange    = concatrange         -- used below
 texfinalizers.chainattribute = chainattribute
 texfinalizers.chainpath      = chainpath
 texfinalizers.default        = all -- !!
-texfinalizers.depth          = depth
+texfinalizers.depth          = depth               -- used below
+
+--
 
 function texfinalizers.tag(collected,n)
     if collected then
@@ -2070,6 +2097,24 @@ do
         end
     end
 
+    function lxml.texatt(id,a,default)
+        local e = getid(id)
+        if e then
+            local at = e.at
+            if at then
+                att = at[a]
+                if att ~= "" then
+--                     context(ctxcatcodes,att)
+                    context(att)
+                end
+            else
+                att = ""
+            end
+        else
+            att = ""
+        end
+    end
+
     function lxml.ifatt(id,a,value)
         local e = getid(id)
         if e then
@@ -2113,10 +2158,6 @@ do
     function lxml.lastatt()
         contextsprint(notcatcodes,att)
     end
-
-    local ctx_doif     = commands.doif
-    local ctx_doifnot  = commands.doifnot
-    local ctx_doifelse = commands.doifelse
 
     implement {
         name      = "xmldoifatt",
@@ -2328,14 +2369,12 @@ do
 
     local found, empty = xml.found, xml.empty
 
-    local doif, doifnot, doifelse = commands.doif, commands.doifnot, commands.doifelse
-
-    function lxml.doif         (id,pattern) doif    (found(getid(id),pattern)) end
-    function lxml.doifnot      (id,pattern) doifnot (found(getid(id),pattern)) end
-    function lxml.doifelse     (id,pattern) doifelse(found(getid(id),pattern)) end
-    function lxml.doiftext     (id,pattern) doif    (not empty(getid(id),pattern)) end
-    function lxml.doifnottext  (id,pattern) doifnot (not empty(getid(id),pattern)) end
-    function lxml.doifelsetext (id,pattern) doifelse(not empty(getid(id),pattern)) end
+    function lxml.doif         (id,pattern) ctx_doif    (found(getid(id),pattern)) end
+    function lxml.doifnot      (id,pattern) ctx_doifnot (found(getid(id),pattern)) end
+    function lxml.doifelse     (id,pattern) ctx_doifelse(found(getid(id),pattern)) end
+    function lxml.doiftext     (id,pattern) ctx_doif    (not empty(getid(id),pattern)) end
+    function lxml.doifnottext  (id,pattern) ctx_doifnot (not empty(getid(id),pattern)) end
+    function lxml.doifelsetext (id,pattern) ctx_doifelse(not empty(getid(id),pattern)) end
 
     -- special case: "*" and "" -> self else lpath lookup
 
@@ -2352,9 +2391,9 @@ do
 
     xml.checkedempty = checkedempty
 
-    function lxml.doifempty    (id,pattern) doif    (checkedempty(id,pattern)) end
-    function lxml.doifnotempty (id,pattern) doifnot (checkedempty(id,pattern)) end
-    function lxml.doifelseempty(id,pattern) doifelse(checkedempty(id,pattern)) end
+    function lxml.doifempty    (id,pattern) ctx_doif    (checkedempty(id,pattern)) end
+    function lxml.doifnotempty (id,pattern) ctx_doifnot (checkedempty(id,pattern)) end
+    function lxml.doifelseempty(id,pattern) ctx_doifelse(checkedempty(id,pattern)) end
 
 end
 
@@ -2847,5 +2886,57 @@ do
     --         end
     --     )
     -- end
+
+end
+
+do
+
+    local lpegmatch = lpegmatch
+    local unescaper = lpeg.patterns.urlunescaper
+
+    function xmlfinalizers.url(e,a)
+        local u = #e > 0 and e[1].at[a]
+        return u and lpegmatch(unescaper,u)
+    end
+
+    if CONTEXTLMTXMODE > 0 then
+
+        function texfinalizers.url(e,a)
+            local u = #e > 0 and e[1].at[a]
+            if u then
+                contextsprint(tex.hshcatcodes,string.texhashed(lpegmatch(unescaper,u)))
+            end
+        end
+
+    else
+
+        function texfinalizers.url(e,a)
+            local u = #e > 0 and e[1].at[a]
+            if u then
+             -- context.verbatim(lpegmatch(unescaper,u)) -- no hash intercept here, verbatim is new per 23-09-06
+                context(lpegmatch(unescaper,u))
+            end
+        end
+
+    end
+
+end
+
+if CONTEXTLMTXMODE > 0 then
+
+    local setmacro = tokens.setters.macro
+
+    xmlfinalizers.tomacro = function(collected,macroname,index)
+        if macroname and macroname ~= '' then
+            if index == 'last' then
+                index = #collected
+            elseif index == 'first' then
+                index = 1
+            else
+                index = tonumber(index) or 1
+            end
+            setmacro(tex.nilcatcodes,macroname,collapse(xmltext(collected[index])))
+        end
+    end
 
 end

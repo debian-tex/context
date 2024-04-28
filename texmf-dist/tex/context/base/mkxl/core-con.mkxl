@@ -13,7 +13,7 @@
 
 \writestatus{loading}{ConTeXt Core Macros / Conversion}
 
-\registerctxluafile{core-con}{}
+\registerctxluafile{core-con}{autosuffix}
 
 % todo: iso date ranges (from/to)
 
@@ -115,9 +115,10 @@
 \aliased  \let\koreanparenthesisnumerals\koreannumeralsp
 \aliased  \let\koreancirclenumerals     \koreannumeralsc
 
-\permanent\def\chinesenumerals   #1{\clf_chinesenumerals\numexpr#1\relax{normal}}
-\permanent\def\chinesecapnumerals#1{\clf_chinesenumerals\numexpr#1\relax{cap}}
-\permanent\def\chineseallnumerals#1{\clf_chinesenumerals\numexpr#1\relax{all}}
+\permanent\def\chinesenumerals    #1{\clf_chinesenumerals\numexpr#1\relax{normal}}
+\permanent\def\chinesecapnumerals #1{\clf_chinesenumerals\numexpr#1\relax{cap}}
+\permanent\def\chineseallnumerals #1{\clf_chinesenumerals\numexpr#1\relax{all}}
+\permanent\def\chinesedatenumerals#1{\clf_chinesenumerals\numexpr#1\relax{date}}
 
 %D \macros
 %D   {character,Character}
@@ -434,7 +435,7 @@
 \permanent\tolerant\protected\def\currentdate[#1]%
   {\dontleavehmode
    \begingroup
-   \the\everycurrentdate
+   \expand\everycurrentdate
    \edef\m_syst_converters_date{#1}%
    \syst_converters_check_date_specification\m_syst_converters_date
    \syst_converters_check_date_specification\currentdatespecification
@@ -451,15 +452,15 @@
    \getdummyparameters[#1]%
    \normalexpanded
      {\endgroup
-      \iftok{\directdummyparameter\c!d}\emptytoks\else\normalday  \number\directdummyparameter\c!d\relax\fi
-      \iftok{\directdummyparameter\c!m}\emptytoks\else\normalmonth\number\directdummyparameter\c!m\relax\fi
-      \iftok{\directdummyparameter\c!y}\emptytoks\else\normalyear \number\directdummyparameter\c!y\relax\fi}}
+      \ifempty{\directdummyparameter\c!d}\else\normalday  \number\directdummyparameter\c!d\relax\fi
+      \ifempty{\directdummyparameter\c!m}\else\normalmonth\number\directdummyparameter\c!m\relax\fi
+      \ifempty{\directdummyparameter\c!y}\else\normalyear \number\directdummyparameter\c!y\relax\fi}}
 
 \permanent\tolerant\protected\def\date[#1]#,[#2]% sets the date !
   {\dontleavehmode
    \begingroup
    \setdate[#1]% sets the date !
-   \the\everycurrentdate
+   \expand\everycurrentdate
    \edef\m_syst_converters_date{#2}%
    \syst_converters_check_date_specification\m_syst_converters_date
    \syst_converters_check_date_specification\currentdatespecification
@@ -767,10 +768,12 @@
 \defineconversion [chinesenumerals]      [\chinesenumerals]
 \defineconversion [chinesecapnumerals]   [\chinesecapnumerals]
 \defineconversion [chineseallnumerals]   [\chineseallnumerals]
+\defineconversion [chinesedatenumerals]  [\chinesedatenumerals]
 
 \defineconversion [cn]                   [\chinesenumerals]
 \defineconversion [cn-c]                 [\chinesecapnumerals]
 \defineconversion [cn-a]                 [\chineseallnumerals]
+\defineconversion [cn-d]                 [\chinesedatenumerals]
 
 %D Moved from lang-def.mkiv:
 %D
@@ -984,7 +987,7 @@
 
 \mutable\lettonothing\spaceddigitsmethod    % alternative methods   : 1 default, 2 and 3 only when > 4
 \mutable\lettonothing\spaceddigitssymbol    % extra splitter symbol : {,}
-\mutable\lettonothing\spaceddigitsseparator % separator symbol      : {\Uchar{"2008}}
+\mutable\lettonothing\spaceddigitsseparator % separator symbol      : {\tocharacter{"2008}}
 
 \permanent\protected\def\spaceddigits#1%
   {\clf_spaceddigits
@@ -1009,7 +1012,7 @@
 %D \stoptext
 %D \stoptyping
 
-\permanent\def\zeronumberconversion#1{\number\numexpr#1-\plusone\relax}
+\permanent\def\zeronumberconversion#1{\the\numexpr#1-\plusone\relax}
 
 \defineconversion [zero] [\zeronumberconversion]
 

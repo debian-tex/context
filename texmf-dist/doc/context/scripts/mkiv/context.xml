@@ -4,7 +4,7 @@
     <metadata>
         <entry name="name">mtx-context</entry>
         <entry name="detail">ConTeXt Process Management</entry>
-        <entry name="version">1.04</entry>
+        <entry name="version">1.05</entry>
         <entry name="comment">external helpinfo file</entry>
     </metadata>
     <flags>
@@ -68,7 +68,7 @@
                     <short>set directive variables (show list with <ref name="showdirectives"/>)</short>
                 </flag>
                 <flag name="silent" value="list">
-                    <short>disable logcatgories (show list with <ref name="showlogcategories"/>)</short>
+                    <short>disable logcategories (show list with <ref name="showlogcategories"/>)</short>
                 </flag>
                 <flag name="strip">
                     <short>strip Lua code (only meant for production where no errors are expected)</short>
@@ -87,6 +87,9 @@
                 </flag>
                 <flag name="purgeresult">
                     <short>purge result file before run</short>
+                </flag>
+                <flag name="find" value="string">
+                    <short>search for the given pattern in the documentation sources</short>
                 </flag>
             </subcategory>
             <subcategory>
@@ -177,8 +180,16 @@
                 <flag name="global">
                     <short>assume given file present elsewhere</short>
                 </flag>
-                    <flag name="nofile">
+                <flag name="nofile">
                     <short>use dummy file as jobname</short>
+                </flag>
+                <flag name="forceinput">
+                    <short>use this file as input file instead of the given one</short>
+                </flag>
+            </subcategory>
+            <subcategory>
+                <flag name="expert">
+                    <short>show some more options</short>
                 </flag>
             </subcategory>
         </category>
@@ -207,6 +218,9 @@
                 </flag>
                 <flag name="keeplog">
                     <short>keep previous log files (jobname-log-[run].tmp)</short>
+                </flag>
+                <flag name="notuc">
+                    <short>don't write a tuc file</short>
                 </flag>
                 <flag name="lmtx">
                     <short>force lmtx mode (when available)</short>
@@ -250,6 +264,14 @@
             <subcategory>
                 <flag name="pipe">
                     <short>do not check for file and enter scroll mode (<ref name="dummyfile"/>=whatever.tmp)</short>
+                </flag>
+            </subcategory>
+            <subcategory>
+                <flag name="parallel">
+                    <short>process multiple files at the same time (you can specify a number of processes, default: 8)</short>
+                </flag>
+                <flag name="parallellist">
+                    <short>process commands in this file (lines that start with 'context')</short>
                 </flag>
             </subcategory>
             <subcategory>

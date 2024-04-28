@@ -54,6 +54,7 @@ local setfield           = nuts.setfield
 local getruledata        = nuts.getruledata
 
 local isglyph            = nuts.isglyph
+local firstglyphnode     = nuts.firstglyphnode
 
 local flushlist          = nuts.flushlist
 local effectiveglue      = nuts.effectiveglue
@@ -73,20 +74,20 @@ local rulecodes          = nodes.rulecodes
 local gluecodes          = nodes.gluecodes
 local listcodes          = nodes.listcodes
 
-local glyph_code         = nodecodes.glyph
-local par_code           = nodecodes.par
-local dir_code           = nodecodes.dir
-local glue_code          = nodecodes.glue
-local hlist_code         = nodecodes.hlist
+local glyph_code         <const> = nodecodes.glyph
+local par_code           <const> = nodecodes.par
+local dir_code           <const> = nodecodes.dir
+local glue_code          <const> = nodecodes.glue
+local hlist_code         <const> = nodecodes.hlist
 
-local indentlist_code    = listcodes.indent
-local linelist_code      = listcodes.line
+local indentlist_code    <const> = listcodes.indent
+local linelist_code      <const> = listcodes.line
 
-local leftskip_code         = gluecodes.leftskip
-local rightskip_code        = gluecodes.rightskip
-local parfillleftskip_code  = gluecodes.parfillleftskip
-local parfillrightskip_code = gluecodes.parfillrightskip
-local indentskip_code       = gluecodes.indentskip
+local leftskip_code         <const> = gluecodes.leftskip
+local rightskip_code        <const> = gluecodes.rightskip
+local parfillleftskip_code  <const> = gluecodes.parfillleftskip
+local parfillrightskip_code <const> = gluecodes.parfillrightskip
+local indentskip_code       <const> = gluecodes.indentskip
 
 local nodepool           = nuts.pool
 
@@ -101,26 +102,26 @@ local n_tosequence       = nodes.tosequence
 local variables          = interfaces.variables
 local implement          = interfaces.implement
 
-local privateattributes  = attributes.private
+local privateattribute   = attributes.private
 
-local a_ruled            = privateattributes('ruled')
-local a_runningtext      = privateattributes('runningtext')
-local a_color            = privateattributes('color')
-local a_transparency     = privateattributes('transparency')
-local a_colormodel       = privateattributes('colormodel')
-local a_linefiller       = privateattributes("linefiller")
-local a_viewerlayer      = privateattributes("viewerlayer")
+local a_ruled            <const> = privateattribute('ruled')
+local a_runningtext      <const> = privateattribute('runningtext')
+local a_color            <const> = privateattribute('color')
+local a_transparency     <const> = privateattribute('transparency')
+local a_colormodel       <const> = privateattribute('colormodel')
+local a_linefiller       <const> = privateattribute("linefiller")
+local a_viewerlayer      <const> = privateattribute("viewerlayer")
 
 local registervalue      = attributes.registervalue
 local getvalue           = attributes.getvalue
 local texsetattribute    = tex.setattribute
 
-local v_both             = variables.both
-local v_left             = variables.left
-local v_right            = variables.right
-local v_local            = variables["local"]
-local v_yes              = variables.yes
-local v_foreground       = variables.foreground
+local v_both             <const> = variables.both
+local v_left             <const> = variables.left
+local v_right            <const> = variables.right
+local v_local            <const> = variables["local"]
+local v_yes              <const> = variables.yes
+local v_foreground       <const> = variables.foreground
 
 local fonthashes         = fonts.hashes
 local fontdata           = fonthashes.identifiers
@@ -130,7 +131,7 @@ local dimenfactor        = fonts.helpers.dimenfactor
 local splitdimen         = number.splitdimen
 local setmetatableindex  = table.setmetatableindex
 
-local runningrule        = tex.magicconstants.runningrule
+local runningrule        <const> = tex.magicconstants.runningrule
 
 local striprange         = nuts.striprange
 local processwords       = nuts.processwords
@@ -190,8 +191,6 @@ do
         mathaction(n,h,v,"hruleaction")
     end
 
-    local x
-
     local function useraction(n,h,v)
         local p = properties[n]
         if p then
@@ -225,7 +224,8 @@ do
     local enabled       = false
 
     local texgetattribute = tex.getattribute
-    local unsetvalue      = attributes.unsetvalue
+
+    local unsetvalue <const> = attributes.unsetvalue
 
     -- The setter is now the performance bottleneck but it is no longer
     -- limited to a certain number of cases before we cycle resources.
@@ -259,20 +259,38 @@ do
     -- we could check the passed level on the real one ... (no need to pass level)
 
     local function flush_ruled(head,f,l,d,level,parent,strip) -- not that fast but acceptable for this purpose
+        local max   = d.max or 1
         local level = d.stack or d.level or 1
-        if level > d.max then
+        if level > max then
             -- todo: trace message
             return head
         end
+        -- id == glyph_code
+        -- id == rule_code
+        -- id == hlist_code and getattr(n,a_runningtext)
+        -- id == disc_code
+        -- id == boundary_code
         local font = nil
         local char, id = isglyph(f)
         if char then
             font = id
         elseif id == hlist_code then
             font = getattr(f,a_runningtext)
+        else
+            -- rare case:
+            if id == disc_code then
+                font = usesfont(f)
+            end
+            -- hope for the best
+            if not font then
+                local g = firstglyphnode(f,l)
+                if g then
+                    font = getfont(g)
+                end
+            end
         end
         if not font then
-            -- saveguard ... we need to deal with rules and so (math)
+            -- maybe single rule -- saveguard ... we need to deal with rules and so (math)
             return head
         end
         local r, m
@@ -290,15 +308,14 @@ do
             return head
         end
         local wd, ht, dp    = getrangedimensions(parent,f,getnext(l))
-        local method        = d.method
+        local method        = d.method or 0
         local empty         = d.empty == v_yes
-        local offset        = d.offset
-        local dy            = d.dy
+        local offset        = d.offset or 0
+        local dy            = d.dy or 0
         local order         = d.order
-        local max           = d.max
         local mp            = d.mp
         local rulethickness = d.rulethickness
-        local unit          = d.unit
+        local unit          = d.unit or "ex"
         local ma            = d.ma
         local ca            = d.ca
         local ta            = d.ta
@@ -383,10 +400,20 @@ do
                 l = hpack_nodes(l,wd,"exactly")
                 inject(l,wd,ht,dp)
             else
-                local hd = (offset+(level-1)*dy)*e - m
-                local ht =  hd + rulethickness
-                local dp = -hd + rulethickness
-                inject(setcoloring(new_rule(wd,ht,dp),colorspace,color,transparency),wd,ht,dp)
+                local rule
+                if method == 2 then
+                    local height = d.height
+                    local depth  = d.depth
+                    if height > ht then ht = height end
+                    if depth  > dp then dp = depth  end
+                    rule = nodepool.outlinerule(wd,ht,dp,rulethickness)
+                else
+                    local hd = (offset+(level-1)*dy)*e - m
+                    ht =  hd + rulethickness
+                    dp = -hd + rulethickness
+                    rule = new_rule(wd,ht,dp)
+                end
+                inject(setcoloring(rule,colorspace,color,transparency),wd,ht,dp)
             end
         end
         return head
@@ -397,7 +424,6 @@ do
  --or-- local data = getvalues(a_ruled)
         if data then
             head = processwords(a_ruled,data,flush_ruled,head)
-
         end
         return head
     end
@@ -424,6 +450,8 @@ do
                 { "empty" },
                 { "text", "box" },
                 { "repeat" },
+                { "height", "dimension" },
+                { "depth", "dimension" },
             }
         }
     }
@@ -434,7 +462,7 @@ do
 
     local trace_shifted  = false  trackers.register("nodes.shifting", function(v) trace_shifted = v end)
     local report_shifted = logs.reporter("nodes","shifting")
-    local a_shifted      = attributes.private('shifted')
+    local a_shifted      <const> = privateattribute('shifted')
     local enabled        = false
 
     local shifts         = nodes.shifts or { }
@@ -574,7 +602,7 @@ do
         end
     end
 
-    local function getskips(list) -- this could be a helper
+    local function getskips(list) -- this could be a helper .. is already one
         local ls = nil
         local rs = nil
         local is = nil
@@ -708,24 +736,18 @@ interfaces.implement {
             { "yoffset", "dimension" },
             { "left", "dimension" },
             { "right", "dimension" },
+            { "on", "dimension" },
+            { "off", "dimension" },
         },
     },
     actions   = function(t)
         local n = new_rule(
-            t.width or runningrule,
+            t.width  or runningrule,
             t.height or runningrule,
-            t.depth or runningrule
+            t.depth  or runningrule
         )
         setattrlist(n,true)
-        setoffsets(n,t.xoffset,t.yoffset) -- ,t.left, t.right
-        local l = t.left
-        local r = t.right
-        if l then
-            setfield(n,"left",l)
-        end
-        if r then
-            setfield(n,"right",r)
-        end
+        setoffsets(n,t.xoffset,t.yoffset,t.left, t.right,t.on,t.off)
         context(tonode(n))
     end
 }

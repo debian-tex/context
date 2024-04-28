@@ -40,7 +40,7 @@
 \newtoks\everyinitializepagecounters
 
 \permanent\protected\def\initializepagecounters
-  {\the\everyinitializepagecounters}
+  {\expand\everyinitializepagecounters}
 
 \appendtoks
     \initializepagecounters
@@ -91,9 +91,9 @@
 
 \def\strc_pagenumbers_save_state#1{\edef\m_strc_pagenumbers_state_old{\namedcounterparameter#1\c!state}}
 
-\permanent\tolerant\protected\def\setuprealpagenumber[#1]{\strc_pagenumbers_save_state\s!realpage\setupcounter[\s!realpage][#1]\the\everysetuprealpagenumber}
-\permanent\tolerant\protected\def\setupuserpagenumber[#1]{\strc_pagenumbers_save_state\s!userpage\setupcounter[\s!userpage][#1]\the\everysetupuserpagenumber}
-\permanent\tolerant\protected\def\setupsubpagenumber [#1]{\strc_pagenumbers_save_state\s!subpage \setupcounter[\s!subpage ][#1]\the\everysetupsubpagenumber }
+\permanent\tolerant\protected\def\setuprealpagenumber[#S#1]{\strc_pagenumbers_save_state\s!realpage\setupcounter[\s!realpage][#1]\expand\everysetuprealpagenumber}
+\permanent\tolerant\protected\def\setupuserpagenumber[#S#1]{\strc_pagenumbers_save_state\s!userpage\setupcounter[\s!userpage][#1]\expand\everysetupuserpagenumber}
+\permanent\tolerant\protected\def\setupsubpagenumber [#S#1]{\strc_pagenumbers_save_state\s!subpage \setupcounter[\s!subpage ][#1]\expand\everysetupsubpagenumber }
 
 \permanent\protected\def\resetrealpagenumber {} % not permitted
 \permanent\protected\def\resetuserpagenumber {\strc_counters_reset\s!userpage}
@@ -312,15 +312,15 @@
 \newtoks\everysidedswitch
 
 \appendtoks
-   \singlesidedfalse \setfalse\layoutisdoublesided
-   \doublesidedfalse \setfalse\layoutissinglesided
+   \singlesidedfalse \layoutisdoublesided\conditionalfalse
+   \doublesidedfalse \layoutissinglesided\conditionalfalse
    \resetsystemmode\v!singlesided
    \resetsystemmode\v!doublesided
    \processallactionsinset
      [\directpagenumberingparameter\c!alternative]%
-     [ \v!singlesided=>\setsystemmode\v!singlesided\singlesidedtrue\settrue\layoutissinglesided,
-       \v!doublesided=>\setsystemmode\v!doublesided\doublesidedtrue\settrue\layoutisdoublesided]%
-   \the\everysidedswitch
+     [ \v!singlesided=>\setsystemmode\v!singlesided\singlesidedtrue\layoutissinglesided\conditionaltrue,
+       \v!doublesided=>\setsystemmode\v!doublesided\doublesidedtrue\layoutisdoublesided\conditionaltrue]%
+   \expand\everysidedswitch
    \pageduplexmode
      \ifsinglesided
        \ifdoublesided\plustwo\else\zerocount\fi
@@ -366,7 +366,9 @@
 \protected\def\strc_pagenumbers_place_location
   {\ifnum\c_strc_pagenumbers_state_userpage=\plustwo
      \ifnum\c_strc_pagenumbers_state=\plusone
-        \doif{\directpagenumberingparameter\c!strut}\v!yes\strut
+        \ifcstok{\directpagenumberingparameter\c!strut}\v!yes
+          \strut
+        \fi
         \begingroup
         \usepagenumberingstyleandcolor\c!style\c!color
         \directpagenumberingparameter\c!command
@@ -394,7 +396,7 @@
    \fi}
 
 \permanent\protected\def\referencepagenumber[#1]%
-  {\doifelsenothing{#1}{?}{}}
+  {\ifempty{#1}?\fi}
 
 % The numbered location handler is there because we need to be downward
 % compatible. So, in fact there can be multiple handlers active at the
@@ -424,9 +426,11 @@
 \to \everysetupsubpagenumber
 
 \appendtoks % todo: set state: none, start, stop, reset
-    \doifelse{\directpagenumberingparameter\c!state}\v!start
-      {\c_strc_pagenumbers_state\plusone  }%
-      {\c_strc_pagenumbers_state\zerocount}%
+    \ifcstok{\directpagenumberingparameter\c!state}\v!start
+      \c_strc_pagenumbers_state\plusone
+    \else
+      \c_strc_pagenumbers_state\zerocount
+    \fi
 \to \everysetuppagenumbering
 
 % Done

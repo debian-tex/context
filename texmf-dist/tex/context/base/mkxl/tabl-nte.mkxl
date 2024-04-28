@@ -59,7 +59,7 @@
 
 \newconditional\c_tabl_nte_in_nc
 
-\permanent\tolerant\protected\def\startTABLE[#1]%
+\permanent\tolerant\protected\def\startTABLE[#S#1]%
   {\bgroup
    \bTABLE[#1]%
    \enforced\let\NC\tabl_nte_start_nc
@@ -75,7 +75,7 @@
 
 \permanent\protected\def\tabl_nte_start_nr
   {\eTR
-   \setfalse\c_tabl_nte_in_nc}
+   \c_tabl_nte_in_nc\conditionalfalse}
 
 \permanent\protected\def\tabl_nte_start_nc
   {\futurelet\nexttoken\tabl_nte_start_nc_indeed}
@@ -87,7 +87,7 @@
 
 \def\tabl_nte_start_nc_finish#1\NC
   {\ifconditional\c_tabl_nte_in_nc \else
-     \settrue\c_tabl_nte_in_nc
+     \c_tabl_nte_in_nc\conditionaltrue
      \tabl_ntb_bTR[]%
    \fi
    \tabl_ntb_bTD#1\eTD\NC}
@@ -99,9 +99,9 @@
 \permanent\let\stopTABLEbody\relax
 \permanent\let\stopTABLEfoot\relax
 
-\permanent\tolerant\protected\def\startTABLEhead[#1]#:#2\stopTABLEhead{\appendtoks\tabl_ntb_section[#1]{#2}\to\t_tabl_ntb_head}
-\permanent\tolerant\protected\def\startTABLEnext[#1]#:#2\stopTABLEnext{\appendtoks\tabl_ntb_section[#1]{#2}\to\t_tabl_ntb_next}
-\permanent\tolerant\protected\def\startTABLEbody[#1]#:#2\stopTABLEbody{\appendtoks\tabl_ntb_section[#1]{#2}\to\t_tabl_ntb_body}
-\permanent\tolerant\protected\def\startTABLEfoot[#1]#:#2\stopTABLEfoot{\appendtoks\tabl_ntb_section[#1]{#2}\to\t_tabl_ntb_foot}
+\permanent\tolerant\protected\def\startTABLEhead[#S#1]#:#2\stopTABLEhead{\toksapp\t_tabl_ntb_head{\tabl_ntb_section[#1]{#2}}}
+\permanent\tolerant\protected\def\startTABLEnext[#S#1]#:#2\stopTABLEnext{\toksapp\t_tabl_ntb_next{\tabl_ntb_section[#1]{#2}}}
+\permanent\tolerant\protected\def\startTABLEbody[#S#1]#:#2\stopTABLEbody{\toksapp\t_tabl_ntb_body{\tabl_ntb_section[#1]{#2}}}
+\permanent\tolerant\protected\def\startTABLEfoot[#S#1]#:#2\stopTABLEfoot{\toksapp\t_tabl_ntb_foot{\tabl_ntb_section[#1]{#2}}}
 
 \protect \endinput

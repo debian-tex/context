@@ -30,6 +30,12 @@
 %D
 %D In due time some special visualzation of math will move here as well.
 
+% special case:
+%
+% \disabledirectives[backend.cleanup.flatten]
+% \bitwiseflip \normalizelinemode -\flattendiscretionariesnormalizecode
+% \showmakeup[discretionary]
+
 \writestatus{loading}{ConTeXt Tracing Macros / Visualization}
 
 \unprotect
@@ -95,7 +101,7 @@
     \global\t_syst_visualizers_optimize\emptytoks
 \to \t_syst_visualizers_optimize
 
-\def\syst_visualizers_speedup{\the\t_syst_visualizers_optimize}
+\def\syst_visualizers_speedup{\expand\t_syst_visualizers_optimize}
 
 % \appendtoks
 %     \enforced\global\protected\edef\ruledhbox   {\syst_visualizers_hbox    attr \visualattribute \number\clf_getvisual{simplehbox} }
@@ -126,7 +132,7 @@
 
 \permanent\tolerant\protected\def\setvisualizerfont[#1]% somename at 4pt
   {\begingroup
-   \iftok{#1}\emptytoks
+   \ifempty{#1}%
      \definedfont[Mono at 4pt]%
    \else
      \definedfont[#1]%
@@ -213,12 +219,12 @@
 \permanent\protected\def\dontinterfere
   {\reseteverypar
    \parindent\zeropoint
-   \parskip  \zeropoint
-   \leftskip \zeropoint
-   \rightskip\zeropoint
+   \parskip  \zeroskip
+   \leftskip \zeroskip
+   \rightskip\zeroskip
    \relax}
 
-%D We keep these for a while:
+%D We kept these for a while:
 
 % \aliased\let\ruledhss       \hss
 % \aliased\let\ruledhfil      \hfil

@@ -13,8 +13,10 @@
 
 \writestatus{loading}{ConTeXt Page Macros / Default Routine}
 
-%D This is just the good old \CONTEXT\ output routine, which
-%D has been there right from the start.
+%D This is just the good old \CONTEXT\ output routine, which has been there right
+%D from the start.
+
+% todo: flush page figures without header and footer
 
 \unprotect
 
@@ -40,8 +42,8 @@
 \newconditional\c_page_one_set_vsize_tmp
 
 \installtextracker{otr.insertheights}
-  {\settrue\c_page_one_set_vsize_tmp}
-  {\setfalse\c_page_one_set_vsize_tmp}
+  {\c_page_one_set_vsize_tmp\conditionaltrue}
+  {\c_page_one_set_vsize_tmp\conditionalfalse}
 
 \def\page_one_command_set_vsize_tmp
   {\settotalinsertionheight
@@ -152,74 +154,6 @@
 %
 % we can also have bottom notes on top of bottom insertions
 
-% \protected\def\page_one_command_package_contents#1#2% \box<n> \unvbox<n> % this one will be redone (checked)
-%   {\bgroup
-%    \strc_notes_check_if_bottom_present
-%    \d_page_one_natural_depth\dp#2\relax
-%    % we need to set the height as otherwise the shrink will not kick in so the following
-%    % no longer applies:
-%    %
-%    % \setbox\b_page_one_contents\vbox \ifconditional\c_notes_bottom_present to \textheight \fi
-%    %
-%    \setbox\b_page_one_contents\vbox to \textheight % probably no pack
-%      {\page_otr_command_flush_top_insertions
-%       % this is messy ... we will provide a more tight area (no big deal as we can
-%       % do that at the lua end)
-% % \parfillskip\zeropoint
-%       \page_one_registered_text_area_a#1#2% \unvbox <box>
-%       %
-%       \ifgridsnapping
-%         \unskip % new per 2019-06-18, otherwise weird bottom floats
-%         \vkern\dimexpr\openstrutdepth-\d_page_one_natural_depth\relax
-%         \prevdepth\openstrutdepth
-%         \page_otr_command_flush_bottom_insertions
-%         \vfil
-%       \orelse\ifcase\bottomraggednessmode
-%         % ragged (default)
-%         \unskip % new per 2019-06-18, otherwise weird bottom floats
-%         \vkern\dimexpr\openstrutdepth-\d_page_one_natural_depth\relax
-%         \prevdepth\openstrutdepth
-%         % these have whitespace before but we can have some more options
-%         % like a \vfill or so
-%         \page_otr_command_flush_bottom_insertions
-%         \vfil
-%       \or
-%         % align (normal)
-%         \page_otr_command_flush_bottom_insertions
-%       \or
-%         % baseline
-%         \unskip % new per 2019-06-18, otherwise weird bottom floats
-%         \vkern\dimexpr\maxdepth-\d_page_one_natural_depth\relax
-%         \page_otr_command_flush_bottom_insertions
-%       \fi
-%       \fakepagenotes}%
-%    \page_one_command_package_show_state
-%    \ifconditional\c_notes_bottom_present
-%      \ifgridsnapping
-%        \ifcase\layoutlines
-%          \getrawnoflines\textheight
-%        \else
-%          \noflines\layoutlines
-%        \fi
-%        \scratchoffset\dimexpr\numexpr\noflines-\plusone\relax\lineheight+\topskip\relax
-%      \else
-%        \scratchoffset\ht\b_page_one_contents
-%      \fi
-%      \setbox\b_page_one_bottom_notes\hpack
-%        {\lower\scratchoffset\vbox{\placebottomnotes\par\kern\zeropoint}}% kerns makes notes sit on bottom % pack ?
-%      \smashbox\b_page_one_bottom_notes
-%      \ht\b_page_one_contents\zeropoint
-%      \page_one_registered_text_area_b
-%        {\vpack to \textheight
-%           {\box\b_page_one_contents
-%            \box\b_page_one_bottom_notes}}%
-%    \else
-%      \ht\b_page_one_contents\textheight
-%      \page_one_registered_text_area_b
-%        {\box\b_page_one_contents}%
-%    \fi
-%    \egroup}
-
 %D \starttyping
 %D \setuplayout[height=middle] \showframe
 %D
@@ -235,6 +169,8 @@
 %D \stoptext
 %D \stoptyping
 
+%D This will be replaced by vz
+
 \newinteger\c_page_one_stretch % we use marked pages which actually slow down a little
 
 \def\page_one_check_stretch_contents
@@ -249,6 +185,8 @@
   {\edef\m_lines{\markedpageparameter\v!stretch\v!lines}%
    \ifempty\m_lines\else\c_page_one_stretch\m_lines\fi}
 
+\let\page_one_hook_for_checks\gobbleoneargument
+
 \protected\def\page_one_command_package_contents#1#2% \box<n> \unvbox<n> % this one will be redone (checked)
   {\bgroup
    \strc_notes_check_if_bottom_present
@@ -258,14 +196,16 @@
    %
    % \setbox\b_page_one_contents\vbox \ifconditional\c_notes_bottom_present to \textheight \fi
    %
-   \ifconditional\c_notes_bottom_present\else
-      \doifmarkedpage\v!stretch\page_one_check_stretch_lines
-   \fi
+   \page_layouts_check_stretch#2%
+   %
+%    \ifconditional\c_notes_bottom_present\else
+%       \doifmarkedpage\v!stretch\page_one_check_stretch_lines
+%    \fi
    \setbox\b_page_one_contents\vbox \ifcase\c_page_one_stretch to \textheight\fi % probably no pack
      {\page_otr_command_flush_top_insertions
       % this is messy ... we will provide a more tight area (no big deal as we can
       % do that at the lua end)
-    % \parfillskip\zeropoint
+    % \parfillskip\zeroskip
       \page_one_registered_text_area_a#1#2% \unvbox <box>
       %
       \ifgridsnapping
@@ -292,8 +232,14 @@
         \vkern\dimexpr\maxdepth-\d_page_one_natural_depth\relax
       % \srule depth \dimexpr\maxdepth-\d_page_one_natural_depth\relax
         \page_otr_command_flush_bottom_insertions
+      \or
+        % depth
+        \vkern-\d_page_one_natural_depth
+        \unskip % new per 2019-06-18, otherwise weird bottom floats
+        \page_otr_command_flush_bottom_insertions
       \fi
       \fakepagenotes}%
+   \page_one_hook_for_checks\b_page_one_contents % todo
    \page_one_command_package_show_state
    \ifconditional\c_notes_bottom_present
      \ifgridsnapping
@@ -315,9 +261,18 @@
           {\box\b_page_one_contents
            \box\b_page_one_bottom_notes}}%
    \else
-     \ifcase\c_page_one_stretch\else
-        \page_one_check_stretch_contents
+     \ifcase\c_page_scale_lines
+       % nothing to do: vz not enabled
+     \orelse\ifdim\d_page_box_stretch_delta>\zeropoint
+       \page_scale_text_box_register_box\b_page_one_contents
+       \page_scale_text_box\b_page_one_contents
+     \else
+       \page_scale_text_box_register_page
+       \page_scale_text_box\b_page_one_contents
      \fi
+%      \ifcase\c_page_one_stretch\else
+%         \page_one_check_stretch_contents
+%      \fi
      \ht\b_page_one_contents\textheight
      \page_one_registered_text_area_b
        {\box\b_page_one_contents}%
@@ -333,14 +288,14 @@
 %D Insertions
 
 \newconditional\c_page_one_top_of_insert
-\newconditional\c_page_one_correct_top_insert  \settrue\c_page_one_correct_top_insert % false moves up (tight)
+\newconditional\c_page_one_correct_top_insert  \c_page_one_correct_top_insert\conditionaltrue % false moves up (tight)
 \newgluespec   \s_page_one_between_top_insert
 
 \def\page_one_prepare_top_float
   {\ifzeropt\d_page_floats_inserted_top
-     \settrue\c_page_one_top_of_insert
+     \c_page_one_top_of_insert\conditionaltrue
    \else
-     \setfalse\c_page_one_top_of_insert
+     \c_page_one_top_of_insert\conditionalfalse
    \fi
    \s_page_one_between_top_insert\ifdim\d_strc_floats_top>\d_strc_floats_bottom\d_strc_floats_top\else\d_strc_floats_bottom\fi\relax
    \global\advanceby\d_page_floats_inserted_top\dimexpr\ht\floatbox+\dp\floatbox+\s_page_one_between_top_insert\relax}
@@ -441,7 +396,7 @@
        \page_floats_resave\s!text
        \noffloatinserts\c_page_floats_n_of_bottom\relax
      \fi
-     \global\settrue\c_page_floats_not_permitted % vgl topfloats s!
+     \global\c_page_floats_not_permitted\conditionaltrue % vgl topfloats s!
    \else
      \ifconditional\c_page_floats_some_waiting
        \showmessage\m!floatblocks7{\the\c_page_floats_n_of_bottom}%
@@ -460,8 +415,10 @@
   {\ifzeropt\page_inserts_get_height\namedinsertionnumber\s!topfloat\else
      \page_one_command_flush_top_insertions_indeed % less tracing
      \ifcase\bottomraggednessmode\or\else
-       % will be an option
-       \vskip\zeropoint plus \openstrutdepth minus \openstrutdepth
+       % will be an option because of stretch size effect when we limit
+       \ifzerodim\d_page_box_stretch_delta
+         \vskip\zeropoint\s!plus\openstrutdepth\s!minus\openstrutdepth\relax
+       \fi
      \fi
    \fi
    \global\d_page_floats_inserted_top\zeropoint}
@@ -487,7 +444,7 @@
      \page_one_command_flush_bottom_insertions_indeed
    \fi
    \global\d_page_floats_inserted_bottom\zeropoint
-   \global\setfalse\c_page_floats_not_permitted}
+   \global\c_page_floats_not_permitted\conditionalfalse}
 
 \def\page_one_command_flush_bottom_insertions_indeed
   {\ifgridsnapping
@@ -501,7 +458,7 @@
    \fi}
 
 \protected\def\page_one_command_flush_floats
-  {\global\settrue\c_page_floats_flushing
+  {\global\c_page_floats_flushing\conditionaltrue
    \ifconditional\c_page_floats_some_waiting
      \par
      % if kept, then option and definitely off in gridmode ! ! ! !
@@ -509,8 +466,8 @@
      \page_one_command_flush_floats_indeed
    \fi
    \global\savednoffloats\zerocount
-   \global\setfalse\c_page_floats_some_waiting
-   \global\setfalse\c_page_floats_flushing}
+   \global\c_page_floats_some_waiting\conditionalfalse
+   \global\c_page_floats_flushing\conditionalfalse}
 
 \protected\def\page_one_command_flush_float_box
   {\ifconditional\c_page_floats_center_box \ifdim\wd\floatbox<\hsize
@@ -519,7 +476,7 @@
    \snaptogrid\hpack{\box\floatbox}} % was copy
 
 \def\page_one_command_floats_get_compressed
-  {\setfalse\c_page_floats_center_box % not needed as we do call directly
+  {\c_page_floats_center_box\conditionalfalse % not needed as we do call directly
    %% no longer (interferes with footnotes):
    %%
    %% \page_one_command_set_vsize % test 2011.06.24.001
@@ -567,7 +524,7 @@
      \fi
      \page_otr_command_next_page % \page
      \ifvoid\b_page_margin_blocks
-       \global\setfalse\c_page_margin_blocks_present
+       \global\c_page_margin_blocks_present\conditionalfalse
      \else
        \doubleexpandafter\page_one_command_flush_margin_blocks
      \fi
@@ -575,7 +532,7 @@
 
 \protected\def\page_one_command_check_if_float_fits
   {\ifconditional\c_page_floats_not_permitted
-     \global\setfalse\c_page_floats_room
+     \global\c_page_floats_room\conditionalfalse
    \else
      % new per 31/5/2004, should be an option, only one column mode
      \begingroup
@@ -606,9 +563,9 @@
      \fi
      \relax % really needed ! ! ! !
      \ifdim\scratchdimenone>\scratchdimentwo
-       \global\setfalse\c_page_floats_room
+       \global\c_page_floats_room\conditionalfalse
      \else
-       \global\settrue\c_page_floats_room
+       \global\c_page_floats_room\conditionaltrue
      \fi
    \fi}
 
@@ -619,7 +576,9 @@
      \page_one_command_set_top_insertions
      \page_one_command_set_bottom_insertions
      \ifconditional\c_page_floats_some_waiting
-        \doif{\rootfloatparameter\c!cache}\v!no\page_one_command_flush_floats % could be _otr_
+       \ifcstok{\rootfloatparameter\c!cache}\v!no
+         \page_one_command_flush_floats % could be _otr_
+       \fi
      \orelse\ifconditional\c_page_margin_blocks_present
        \page_one_command_flush_floats
      \fi
@@ -666,7 +625,9 @@
   {\setbox\floatbox\vpack{\box\floatbox}% ? can go
    \wd\floatbox\floatwidth
    #1{\box\floatbox}%
-   \doifinset\v!tall\floatlocationmethod\page_sides_flush_floats_after_par}
+   \ifinset\v!tall\floatlocationmethod
+     \page_sides_flush_floats_after_par
+   \fi}
 
 \def\page_one_place_float_left
   {\page_one_place_float_side_indeed
@@ -732,50 +693,35 @@
    \nonoindentation} % new, due to popular request
 
 \def\page_one_place_float_otherwise
-  {\doifelseinset\v!here\floatlocationmethod
+  {\ifinset\v!here\floatlocationmethod
      \page_one_place_float_otherwise_here
-     \page_one_place_float_otherwise_else}
+   \else
+     \page_one_place_float_otherwise_else
+   \fi}
 
 \def\page_one_place_float_otherwise_here
-  {\doifelseinset\v!always\floatlocationmethod
-     {\page[\v!preference]%
-      \page_otr_command_check_if_float_fits
-      \ifconditional\c_page_floats_room
-        \page_one_place_float_here_indeed
-      \else
-        \showmessage\m!floatblocks9\empty
-        \page_floats_resave\s!text
-      \fi}
-     {\ifconditional\c_page_floats_some_waiting
-        \page_floats_save\s!text
-        \nonoindentation
-      \else
-        \page[\v!preference]%
-        \page_otr_command_check_if_float_fits
-        \ifconditional\c_page_floats_room
-          \page_one_place_float_here_indeed
-        \else
-          \page_floats_save\s!text
-          \nonoindentation
-        \fi
-      \fi}}
-
-% \def\page_one_place_float_otherwise_else
-%   {\doifelseinset\v!always\floatlocationmethod
-%      {\page_otr_command_check_if_float_fits
-%       \ifconditional\c_page_floats_room
-%         \page_one_place_float_auto_top_bottom
-%       \else
-%         \showmessage\m!floatblocks9\empty
-%         \page_floats_resave\s!text
-%       \fi}
-%      {\page_otr_command_check_if_float_fits
-%       \ifconditional\c_page_floats_room
-%         \page_one_place_float_auto_top_bottom
-%       \else
-%         \page_floats_save\s!text
-%         \nonoindentation
-%       \fi}}
+  {\ifinset\v!always\floatlocationmethod
+     \page[\v!preference]%
+     \page_otr_command_check_if_float_fits
+     \ifconditional\c_page_floats_room
+       \page_one_place_float_here_indeed
+     \else
+       \showmessage\m!floatblocks9\empty
+       \page_floats_resave\s!text
+     \fi
+   \orelse\ifconditional\c_page_floats_some_waiting
+     \page_floats_save\s!text
+     \nonoindentation
+   \else
+     \page[\v!preference]%
+     \page_otr_command_check_if_float_fits
+     \ifconditional\c_page_floats_room
+       \page_one_place_float_here_indeed
+     \else
+       \page_floats_save\s!text
+       \nonoindentation
+     \fi
+   \fi}
 
 % Some new always top/bottom trickery.
 %
@@ -784,25 +730,29 @@
 % Harrison level creativity.
 
 \def\page_one_place_float_otherwise_else
-   {\doifelseinset\v!always\floatlocationmethod
-      {\page_otr_command_check_if_float_fits
-       \ifconditional\c_page_floats_room
-         \page_one_place_float_auto_top_bottom
-       \else
-         \showmessage\m!floatblocks9\empty
-         \doifelseinset\v!top\floatlocationmethod
-           {\page_floats_save\s!top}
-           {\doifelseinset\v!bottom\floatlocationmethod
-              {\page_floats_save\s!bottom}
-              {\page_floats_resave\s!text}}%
-       \fi}
-      {\page_otr_command_check_if_float_fits
-       \ifconditional\c_page_floats_room
-         \page_one_place_float_auto_top_bottom
-       \else
-         \page_floats_save\s!text
-         \nonoindentation
-       \fi}}
+   {\ifinset\v!always\floatlocationmethod
+      \page_otr_command_check_if_float_fits
+      \ifconditional\c_page_floats_room
+        \page_one_place_float_auto_top_bottom
+      \else
+        \showmessage\m!floatblocks9\empty
+        \ifinset\v!top\floatlocationmethod
+          \page_floats_save\s!top
+        \orelse\ifinset\v!bottom\floatlocationmethod
+          \page_floats_save\s!bottom
+        \else
+          \page_floats_resave\s!text
+        \fi
+      \fi
+    \else
+      \page_otr_command_check_if_float_fits
+      \ifconditional\c_page_floats_room
+        \page_one_place_float_auto_top_bottom
+      \else
+        \page_floats_save\s!text
+        \nonoindentation
+      \fi
+    \fi}
 
 \protected\def\page_one_command_set_always_insertions_bottom_indeed
   {\page_floats_flush\s!bottom\plusone

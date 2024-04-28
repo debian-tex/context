@@ -85,20 +85,20 @@ local autosectiondepth  = sections.autodepth
 
 local variables         = interfaces.variables
 
-local v_all             = variables.all
-local v_reference       = variables.reference
-local v_title           = variables.title
-local v_command         = variables.command
-local v_text            = variables.text
-local v_current         = variables.current
-local v_previous        = variables.previous
-local v_intro           = variables.intro
-local v_here            = variables.here
-local v_component       = variables.component
-local v_product         = variables.product
-local v_file            = variables.file
-local v_local           = variables["local"]
-local v_default         = variables.default
+local v_all             <const> = variables.all
+local v_reference       <const> = variables.reference
+local v_title           <const> = variables.title
+local v_command         <const> = variables.command
+local v_text            <const> = variables.text
+local v_current         <const> = variables.current
+local v_previous        <const> = variables.previous
+local v_intro           <const> = variables.intro
+local v_here            <const> = variables.here
+local v_component       <const> = variables.component
+local v_product         <const> = variables.product
+local v_file            <const> = variables.file
+local v_local           <const> = variables["local"]
+local v_default         <const> = variables.default
 
 local cheats = {
     [variables.fit]   = true,
@@ -151,7 +151,9 @@ local function initializer()
                     -- we're okay
                 elseif lastblock then
                     if blockdone[block] then
-                        report_lists("out of order sectionsblocks, maybe use \\setsectionblock")
+                        if trace_lists then
+                            report_lists("out of order sectionsblocks, maybe use \\setsectionblock")
+                        end
                     else
                         blockdone[block] = true
                         sectionblocks[#sectionblocks+1] = block
@@ -912,7 +914,8 @@ setmetatableindex(result,{ external = reference }) -- brr
             for i=1,#collected do
                 local v = collected[i]
                 local m = v.metadata
-                if m and names[m.name] or all then
+--                 if m and names[m.name] or all then
+                if m and not m.nolist and (names[m.name] or all) then
                     nofresult = nofresult + 1
                     result[nofresult] = v
                 end

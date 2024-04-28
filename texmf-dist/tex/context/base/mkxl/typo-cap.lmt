@@ -45,12 +45,12 @@ local nextglyph       = nuts.traversers.glyph
 local nodecodes       = nodes.nodecodes
 local kerncodes       = nodes.kerncodes
 
-local glyph_code      = nodecodes.glyph
-local kern_code       = nodecodes.kern
-local disc_code       = nodecodes.disc
-local math_code       = nodecodes.math
+local glyph_code      <const> = nodecodes.glyph
+local kern_code       <const> = nodecodes.kern
+local disc_code       <const> = nodecodes.disc
+local math_code       <const> = nodecodes.math
 
-local fontkern_code   = kerncodes.fontkern
+local fontkern_code   <const> = kerncodes.fontkern
 
 local enableaction    = nodes.tasks.enableaction
 
@@ -63,10 +63,13 @@ local fontchar        = fonthashes.characters
 local currentfont     = font.current
 
 local variables       = interfaces.variables
-local v_reset         = variables.reset
+local v_reset         <const> = variables.reset
 
 local texsetattribute = tex.setattribute
+local texgetattribute = tex.getattribute
 local texgetscales    = tex.getglyphscales
+
+local integer_value   <const> = tokens.values.integer
 
 typesetters           = typesetters or { }
 local typesetters     = typesetters
@@ -76,23 +79,30 @@ local cases           = typesetters.cases
 
 cases.actions         = { }
 local actions         = cases.actions
-local a_cases         = attributes.private("case")
+
+local a_cases         <const> = attributes.private("case")
 
 local run             = 0 -- a trick to make neighbouring ranges work
 
 local registervalue   = attributes.registervalue
 local getvalue        = attributes.getvalue
-local texsetattribute = tex.setattribute
 
-local function set(tag,font)
+local function set(tag,font,category,xscale,yscale)
     run = run + 1
+    local scales = { texgetscales() }
     local settings = {
-        font    = font,
-        tag     = tag,
-        run     = run, -- still needed ?
-     -- blocked = false
-        scales  = { texgetscales() },
+        font     = font,
+        tag      = tag,
+        run      = run, -- still needed ?
+        category = category or 0,
+        scales   = scales,
     }
+    if xscale and xscale ~= 1000 then
+        scales[2] = scales[2] * xscale / 1000
+    end
+    if yscale and yscale ~= 1000 then
+        scales[3] = scales[3] * yscale / 1000
+    end
     texsetattribute(a_cases,registervalue(a_cases,settings))
 end
 
@@ -190,7 +200,7 @@ local function camel(start,data,lastfont,n,count,where,first)
     return start, true
 end
 
-local function mixed(start,data,lastfont,n,count,where,first)
+local function mixed(start,data,lastfont,n,count,where,first,keep)
     if where == "post" then
         return
     end
@@ -208,10 +218,14 @@ local function mixed(start,data,lastfont,n,count,where,first)
                 setscales(used,s[1],s[2],s[3])
             end
         end
-    else
+    elseif not keep then
         replacer(used,uccodes)
     end
     return start, true
+end
+
+local function Camel(start,data,lastfont,n,count,where,first)
+    return mixed(start,data,lastfont,n,count,where,first,true)
 end
 
 local function Capital(start,data,lastfont,n,count,where,first,once) -- 3
@@ -281,6 +295,7 @@ register(variables.none,   none)              --   7 (dummy)
 register(variables.random, randomized)        --   8
 register(variables.mixed,  mixed)             --   9
 register(variables.camel,  camel)             --  10
+register(variables.Camel,  Camel)             --  11
 
 register(variables.cap,    variables.capital) -- clone
 register(variables.Cap,    variables.Capital) -- clone
@@ -389,7 +404,7 @@ end
 
 local enabled = false
 
-function cases.set(n,id)
+local function setcases(n,id,category,xscale,yscale)
     if n ~= v_reset then
         n = registered[n] or tonumber(n)
         if n then
@@ -400,21 +415,33 @@ function cases.set(n,id)
                 end
                 enabled = true
             end
-            set(n,id or currentfont())
+            set(n,id or currentfont(),category,xscale,yscale)
             return
         end
     end
     texsetattribute(a_cases)
 end
 
+cases.set = setcases
+
 -- interface
 
 interfaces.implement {
     name      = "setcharactercasing",
- -- public    = true,
- -- protected = true,
-    actions   = cases.set,
-    arguments = { "argument" }
+    actions   = function(name,category,xscale,yscale)
+        setcases(name,false,category,xscale,yscale)
+    end,
+    arguments = { "argument", "integer", "integer", "integer" },
+}
+
+interfaces.implement {
+    name      = "getcharactercasingcategory",
+    public    = true,
+    usage     = "value",
+    actions   = function()
+        local v = getvalue(a_cases,texgetattribute(a_cases))
+        return integer_value, v and v.category or 0
+    end,
 }
 
 -- An example of a special plug, see type-imp-punk for usage.

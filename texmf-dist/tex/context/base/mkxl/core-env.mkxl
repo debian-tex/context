@@ -13,6 +13,8 @@
 
 \writestatus{loading}{ConTeXt Core Macros / Environments}
 
+\installcorenamespace{setup} % is referenced in the lmt file:
+
 \registerctxluafile{core-env}{autosuffix}
 
 \unprotect
@@ -189,12 +191,12 @@
      \expandafter\syst_modes_check_nop
    \fi#1#2{#3}}
 
-\def\syst_modes_check_ss#1#2[#3]%
-  {\ifcsname\??mode#3\endcsname
-     \expandafter\syst_modes_check_yes
-   \else
-     \expandafter\syst_modes_check_nop
-   \fi#1#2{#3}}
+% \def\syst_modes_check_ss#1#2[#3]%
+%   {\ifcsname\??mode#3\endcsname
+%      \expandafter\syst_modes_check_yes
+%    \else
+%      \expandafter\syst_modes_check_nop
+%    \fi#1#2{#3}}
 
 % all
 
@@ -213,47 +215,82 @@
      \let\syst_modes_check_all_step\gobbleoneargument
    \fi}
 
-\def\syst_modes_check_all_lr#1#2#3%
-  {\let\syst_modes_check_all_step\syst_modes_check_all_indeed
-   \fastprocesscommacommand[#3]\syst_modes_check_all_step
-   \ifx\syst_modes_check_all_step\gobbleoneargument
-     \expandafter#2%
-   \else
-     \expandafter#1%
-   \fi}
+% \def\syst_modes_check_all_lr#1#2#3%
+%   {\let\syst_modes_check_all_step\syst_modes_check_all_indeed
+%    \fastprocesscommacommand[#3]\syst_modes_check_all_step
+%    \ifx\syst_modes_check_all_step\gobbleoneargument
+%      \expandafter#2%
+%    \else
+%      \expandafter#1%
+%    \fi}
 
-\def\syst_modes_check_all_ss#1#2[#3]%
-  {\let\syst_modes_check_all_step\syst_modes_check_all_indeed
-   \fastprocesscommacommand[#3]\syst_modes_check_all_step
-   \ifx\syst_modes_check_all_step\gobbleoneargument
-     \expandafter#2%
-   \else
-     \expandafter#1%
-   \fi}
+% \def\syst_modes_check_all_ss#1#2[#3]%
+%   {\let\syst_modes_check_all_step\syst_modes_check_all_indeed
+%    \fastprocesscommacommand[#3]\syst_modes_check_all_step
+%    \ifx\syst_modes_check_all_step\gobbleoneargument
+%      \expandafter#2%
+%    \else
+%      \expandafter#1%
+%    \fi}
 
-\permanent\protected\def\doifelsemode    {\syst_modes_check_lr    \firstoftwoarguments    \secondoftwoarguments}
-\permanent\protected\def\doifmode        {\syst_modes_check_lr    \firstofoneargument     \gobbleoneargument}
-\permanent\protected\def\doifnotmode     {\syst_modes_check_lr    \gobbleoneargument      \firstofoneargument}
-\permanent\protected\def\startmode       {\syst_modes_check_ss    \donothing              \syst_modes_stop_yes}
-\permanent\protected\def\startnotmode    {\syst_modes_check_ss    \syst_modes_stop_nop    \donothing}
-\permanent\protected\def\doifelseallmodes{\syst_modes_check_all_lr\firstoftwoarguments    \secondoftwoarguments}
-\permanent\protected\def\doifallmodes    {\syst_modes_check_all_lr\firstofoneargument     \gobbleoneargument}
-\permanent\protected\def\doifnotallmodes {\syst_modes_check_all_lr\gobbleoneargument      \firstofoneargument}
-\permanent\protected\def\startallmodes   {\syst_modes_check_all_ss\donothing              \syst_modes_stop_all_yes}
-\permanent\protected\def\startnotallmodes{\syst_modes_check_all_ss\syst_modes_stop_all_nop\donothing}
+% \enablemode[foomode]
+% \enablemode[oofmode]
+%
+% \ifmode          {foomode}          YES  \else  NOP \fi \par
+% \ifmodes         {oofmode,foomode}  YES  \else  NOP \fi \par
+% \ifallmodes      {oofmode,foomode}  YES  \else  NOP \fi \par
+% \doifelsemode    {foomode}         {YES}       {NOP}    \par
+% \doifelsemode    {oofmode,foomode} {YES}       {NOP}    \par
+% \doifelseallmodes{oofmode,foomode} {YES}       {NOP}    \par
 
-\aliased\let\doifmodeelse    \doifelsemode
-\aliased\let\doifallmodeselse\doifelseallmodes
+% \permanent\protected\def\doifelsemode    {\syst_modes_check_lr    \firstoftwoarguments    \secondoftwoarguments}
+% \permanent\protected\def\doifmode        {\syst_modes_check_lr    \firstofoneargument     \gobbleoneargument}
+% \permanent\protected\def\doifnotmode     {\syst_modes_check_lr    \gobbleoneargument      \firstofoneargument}
+% \permanent\protected\def\startmode       {\syst_modes_check_ss    \donothing              \syst_modes_stop_yes}
+% \permanent\protected\def\startnotmode    {\syst_modes_check_ss    \syst_modes_stop_nop    \donothing}
+% \permanent\protected\def\doifelseallmodes{\syst_modes_check_all_lr\firstoftwoarguments    \secondoftwoarguments}
+% \permanent\protected\def\doifallmodes    {\syst_modes_check_all_lr\firstofoneargument     \gobbleoneargument}
+% \permanent\protected\def\doifnotallmodes {\syst_modes_check_all_lr\gobbleoneargument      \firstofoneargument}
+% \permanent\protected\def\startallmodes   {\syst_modes_check_all_ss\donothing              \syst_modes_stop_all_yes}
+% \permanent\protected\def\startnotallmodes{\syst_modes_check_all_ss\syst_modes_stop_all_nop\donothing}
+%
+% \aliased\let\doifmodeelse    \doifelsemode
+% \aliased\let\doifallmodeselse\doifelseallmodes
+%
+% \permanent\protected\def\stopmode       {} % no relax
+% \permanent\protected\def\stopnotmode    {} % no relax
+% \permanent\protected\def\stopallmodes   {} % no relax
+% \permanent\protected\def\stopnotallmodes{} % no relax
+%
+% \def\syst_modes_stop_yes    #-\stopmode       {}
+% \def\syst_modes_stop_nop    #-\stopnotmode    {}
+% \def\syst_modes_stop_all_yes#-\stopallmodes   {}
+% \def\syst_modes_stop_all_nop#-\stopnotallmodes{}
+
+\permanent\protected\def\doifelsemode    #1{\ifmodes   {#1}\expandafter\firstoftwoarguments\else\expandafter\secondoftwoarguments\fi}
+\permanent\protected\def\doifmode        #1{\ifmodes   {#1}\expandafter\firstofoneargument \else\expandafter\gobbleoneargument   \fi}
+\permanent\protected\def\doifnotmode     #1{\ifmodes   {#1}\expandafter\gobbleoneargument  \else\expandafter\firstofoneargument  \fi}
+\permanent\protected\def\doifelseallmodes#1{\ifallmodes{#1}\expandafter\firstoftwoarguments\else\expandafter\secondoftwoarguments\fi}
+\permanent\protected\def\doifallmodes    #1{\ifallmodes{#1}\expandafter\firstofoneargument \else\expandafter\gobbleoneargument   \fi}
+\permanent\protected\def\doifnotallmodes #1{\ifallmodes{#1}\expandafter\gobbleoneargument  \else\expandafter\firstofoneargument  \fi}
+
+% \permanent\protected\def\startmode       [#1]{\ifmodes   {#1}\else\expandafter\ignoreupto\expandafter\stopmode       \fi}
+% \permanent\protected\def\startallmodes   [#1]{\ifallmodes{#1}\else\expandafter\ignoreupto\expandafter\stopallmodes   \fi}
+% \permanent\protected\def\startnotmode    [#1]{\ifmodes   {#1}\expandafter     \ignoreupto\expandafter\stopnotmode    \fi}
+% \permanent\protected\def\startnotallmodes[#1]{\ifallmodes{#1}\expandafter     \ignoreupto\expandafter\stopnotallmodes\fi}
+
+\permanent\protected\def\startmode       [#1]{\ifmodes   {#1}\else\expandafter\ignorenestedupto\expandafter\startmode       \expandafter\stopmode       \fi}
+\permanent\protected\def\startallmodes   [#1]{\ifallmodes{#1}\else\expandafter\ignorenestedupto\expandafter\startallmodes   \expandafter\stopallmodes   \fi}
+\permanent\protected\def\startnotmode    [#1]{\ifmodes   {#1}\expandafter     \ignorenestedupto\expandafter\startnotmode    \expandafter\stopnotmode    \fi}
+\permanent\protected\def\startnotallmodes[#1]{\ifallmodes{#1}\expandafter     \ignorenestedupto\expandafter\startnotallmodes\expandafter\stopnotallmodes\fi}
 
 \permanent\protected\def\stopmode       {} % no relax
 \permanent\protected\def\stopnotmode    {} % no relax
 \permanent\protected\def\stopallmodes   {} % no relax
 \permanent\protected\def\stopnotallmodes{} % no relax
 
-\def\syst_modes_stop_yes    #1\stopmode       {}
-\def\syst_modes_stop_nop    #1\stopnotmode    {}
-\def\syst_modes_stop_all_yes#1\stopallmodes   {}
-\def\syst_modes_stop_all_nop#1\stopnotallmodes{}
+\aliased\let\doifmodeelse    \doifelsemode
+\aliased\let\doifallmodeselse\doifelseallmodes
 
 %D Pushing/popping:
 
@@ -310,7 +347,7 @@
 
 \permanent\protected\def\startmodeset
   {\push_macro_c_syst_modes_set_done
-   \setfalse\c_syst_modes_set_done
+   \c_syst_modes_set_done\conditionalfalse
    \syst_modes_set_start}
 
 \permanent\protected\lettonothing\stopmodeset
@@ -331,7 +368,7 @@
   {\syst_modes_check_lr\syst_modes_set_yes\syst_modes_set_nop\m_mode_case}
 
 \tolerant\def\syst_modes_set_yes#1%
-  {\settrue\c_syst_modes_set_done
+  {\c_syst_modes_set_done\conditionaltrue
    #1%
    \syst_modes_set_start}
 
@@ -348,7 +385,7 @@
 
 %D Setups:
 
-\installcorenamespace{setup} % we can probably get rid of some :'s later on
+% \installcorenamespace{setup} % we can probably get rid of some :'s later on
 
 % \protected\def\startsetups{} % to please dep checker
 % \protected\def\stopsetups {} % to please dep checker
@@ -366,7 +403,7 @@
 \letcsname\??setup:\??empty\endcsname\gobbleoneargument
 
 \permanent\def\syst_setups#1% the grid option will be extended to other main modes
-  {\csname\??setup
+  {\begincsname\??setup
      \ifgridsnapping
        \ifcsname\??setup\v!grid:#1\endcsname\v!grid:#1\else:\ifcsname\??setup:#1\endcsname#1\else\??empty\fi\fi
      \else
@@ -376,9 +413,9 @@
 
 % no checking and we assume it being defined:
 
-\permanent\def\fastsetup                     #1{\csname\??setup:#1\endcsname\empty}
-\permanent\def\fastsetupwithargument         #1{\csname\??setup:#1\endcsname}    % swapped per 2015-08-30
-\permanent\def\fastsetupwithargumentswapped#1#2{\csname\??setup:#2\endcsname{#1}}% swapped per 2015-09-05
+\permanent\def\fastsetup                     #1{\begincsname\??setup:#1\endcsname\empty}
+\permanent\def\fastsetupwithargument         #1{\begincsname\??setup:#1\endcsname}    % swapped per 2015-08-30
+\permanent\def\fastsetupwithargumentswapped#1#2{\begincsname\??setup:#2\endcsname{#1}}% swapped per 2015-09-05
 
 %D The next one is meant for \c!setups situations, hence the check for a
 %D shortcut.
@@ -528,52 +565,69 @@
 \permanent\protected\def\startlocalsetups{\begingroup\doifelsenextoptionalcs\syst_setups_start_loc_yes\syst_setups_start_loc_nop} \permanent\protected\lettonothing\stoplocalsetups
 \permanent\protected\def\startsetups     {\begingroup\doifelsenextoptionalcs\syst_setups_start_tex_yes\syst_setups_start_tex_nop} \permanent\protected\lettonothing\stopsetups
 
-\def\syst_setups_start_lua_two#1#2#+\stopluasetups  {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
-\def\syst_setups_start_xml_two#1#2#+\stopxmlsetups  {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
-\def\syst_setups_start_raw_two#1#2#+\stoprawsetups  {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
-\def\syst_setups_start_loc_two#1#2#+\stoplocalsetups{\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
-\def\syst_setups_start_tex_two#1#2#+\stopsetups     {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_lua_two#1#2#+\stopluasetups  {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_xml_two#1#2#+\stopxmlsetups  {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_raw_two#1#2#+\stoprawsetups  {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_loc_two#1#2#+\stoplocalsetups{\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_tex_two#1#2#+\stopsetups     {\endgroup\dodoglobal\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+
+% \def\syst_setups_start_lua_two#1#2#+\stopluasetups  {\endgroup\instance\defcsname\??setup#1:#2\endcsname##1{#3}} % + keep braces
+% \def\syst_setups_start_xml_two#1#2#+\stopxmlsetups  {\endgroup\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_raw_two#1#2#+\stoprawsetups  {\endgroup\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_loc_two#1#2#+\stoplocalsetups{\endgroup\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+% \def\syst_setups_start_tex_two#1#2#+\stopsetups     {\endgroup\instance\defcsname\??setup#1:#2\endcsname##1{#3}}
+
+\let\syst_setups_defcsname\defcsname
+
+\permanent\protected\def\pushglobalsetups{\let\syst_setups_defcsname\gdefcsname}
+\permanent\protected\def\popglobalsetups {\let\syst_setups_defcsname\defcsname }
+
+\def\syst_setups_start_lua_two#1#2#L\startluasetups  #R\stopluasetups  #+{\endgroup\instance\syst_setups_defcsname\??setup#1:#2\endcsname##1{#3}} % + keep braces
+\def\syst_setups_start_xml_two#1#2#L\startxmlsetups  #R\stopxmlsetups  #+{\endgroup\instance\syst_setups_defcsname\??setup#1:#2\endcsname##1{#3}}
+\def\syst_setups_start_raw_two#1#2#L\startrawsetups  #R\stoprawsetups  #+{\endgroup\instance\syst_setups_defcsname\??setup#1:#2\endcsname##1{#3}}
+\def\syst_setups_start_loc_two#1#2#L\startlocalsetups#R\stoplocalsetups#+{\endgroup\instance\syst_setups_defcsname\??setup#1:#2\endcsname##1{#3}}
+\def\syst_setups_start_tex_two#1#2#L\startsetups     #R\stopsetups     #+{\endgroup\instance\syst_setups_defcsname\??setup#1:#2\endcsname##1{#3}}
 
 \tolerant\def\syst_setups_start_lua_yes[#1]#*[#2]%
-  {\the\t_syst_setups_lua
+  {\expand\t_syst_setups_lua
    \ifarguments\expandafter\syst_setups_start_lua_one
    \or         \expandafter\syst_setups_start_lua_one
    \else       \expandafter\syst_setups_start_lua_two
    \fi{#1}{#2}}
 
 \tolerant\def\syst_setups_start_xml_yes[#1]#*[#2]%
-  {\the\t_syst_setups_xml
+  {\expand\t_syst_setups_xml
    \ifarguments\expandafter\syst_setups_start_xml_one
    \or         \expandafter\syst_setups_start_xml_one
    \else       \expandafter\syst_setups_start_xml_two
    \fi{#1}{#2}}
 
 \tolerant\def\syst_setups_start_raw_yes[#1]#*[#2]%
-  {\the\t_syst_setups_raw
+  {\expand\t_syst_setups_raw
    \ifarguments\expandafter\syst_setups_start_raw_one
    \or         \expandafter\syst_setups_start_raw_one
    \else       \expandafter\syst_setups_start_raw_two
    \fi{#1}{#2}}
 
 \tolerant\def\syst_setups_start_loc_yes[#1]#*[#2]%
-  {\the\t_syst_setups_loc
+  {\expand\t_syst_setups_loc
    \ifarguments\expandafter\syst_setups_start_loc_one
    \or         \expandafter\syst_setups_start_loc_one
    \else       \expandafter\syst_setups_start_loc_two
    \fi{#1}{#2}}
 
 \tolerant\def\syst_setups_start_tex_yes[#1]#*[#2]%
-  {\the\t_syst_setups_tex
+  {\expand\t_syst_setups_tex
    \ifarguments\expandafter\syst_setups_start_tex_one
    \or         \expandafter\syst_setups_start_tex_one
    \else       \expandafter\syst_setups_start_tex_two
    \fi{#1}{#2}}
 
-\def\syst_setups_start_lua_nop#1 {\the\t_syst_setups_lua\syst_setups_start_lua_two{}{#1}} % space delimited
-\def\syst_setups_start_xml_nop#1 {\the\t_syst_setups_xml\syst_setups_start_xml_two{}{#1}} % space delimited
-\def\syst_setups_start_raw_nop#1 {\the\t_syst_setups_raw\syst_setups_start_raw_two{}{#1}} % space delimited
-\def\syst_setups_start_loc_nop#1 {\the\t_syst_setups_loc\syst_setups_start_loc_two{}{#1}} % space delimited
-\def\syst_setups_start_tex_nop#1 {\the\t_syst_setups_tex\syst_setups_start_tex_two{}{#1}} % space delimited
+\def\syst_setups_start_lua_nop#1 {\expand\t_syst_setups_lua\syst_setups_start_lua_two{}{#1}} % space delimited
+\def\syst_setups_start_xml_nop#1 {\expand\t_syst_setups_xml\syst_setups_start_xml_two{}{#1}} % space delimited
+\def\syst_setups_start_raw_nop#1 {\expand\t_syst_setups_raw\syst_setups_start_raw_two{}{#1}} % space delimited
+\def\syst_setups_start_loc_nop#1 {\expand\t_syst_setups_loc\syst_setups_start_loc_two{}{#1}} % space delimited
+\def\syst_setups_start_tex_nop#1 {\expand\t_syst_setups_tex\syst_setups_start_tex_two{}{#1}} % space delimited
 
 \def\syst_setups_start_lua_one#1#2{\syst_setups_start_lua_two{}{#1}} % [..]
 \def\syst_setups_start_xml_one#1#2{\syst_setups_start_xml_two{}{#1}} % [..]
@@ -618,22 +672,24 @@
 
 \installcorenamespace{variables}
 
-\permanent\protected\def\setvariables {\syst_variables_set[\getrawparameters ]}
-\permanent\protected\def\setevariables{\syst_variables_set[\getraweparameters]}
-\permanent\protected\def\setgvariables{\syst_variables_set[\getrawgparameters]}
-\permanent\protected\def\setxvariables{\syst_variables_set[\getrawxparameters]}
+\permanent\protected\def\setvariables {\syst_variables_set\getparameters }
+\permanent\protected\def\setevariables{\syst_variables_set\geteparameters}
+\permanent\protected\def\setgvariables{\syst_variables_set\getgparameters}
+\permanent\protected\def\setxvariables{\syst_variables_set\getxparameters}
 
 \mutable\lettonothing\currentvariableclass
 
-\tolerant\def\syst_variables_set[#1]#*[#2]#*[#3]% tricky, test on s-pre-60
-  {\doifelse{#2}\currentvariableclass
-     {#1[\??variables#2:][#3]}%
-     {\pushmacro\currentvariableclass
-      \def\currentvariableclass{#2}%
-      \getvariable{#2}\s!reset
-      #1[\??variables#2:][#3]%
-      \getvariable{#2}\s!set
-      \popmacro\currentvariableclass}}
+\tolerant\def\syst_variables_set#1#*[#2]#*[#S#3]% tricky, test on s-pre-60
+  {\ifcstok{#2}\currentvariableclass
+     #1[\??variables#2:][#3]%
+   \else
+     \pushmacro\currentvariableclass
+     \cdef\currentvariableclass{#2}%
+     \getvariable{#2}\s!reset
+     #1[\??variables#2:][#3]%
+     \getvariable{#2}\s!set
+     \popmacro\currentvariableclass
+   \fi}
 
 \permanent\protected\def\setvariable #1#2#3{\defcsname \??variables#1:#2\endcsname{#3}}
 \permanent\protected\def\setevariable#1#2#3{\edefcsname\??variables#1:#2\endcsname{#3}}
@@ -648,20 +704,36 @@
 %D
 %D I'll probably forget that this on exists.
 
-\lettonothing\m_syst_variables_temp
+% \lettonothing\m_syst_variables_temp
+%
+% \permanent\tolerant\def\checkvariables[#1]#*[#2]%
+%   {\dogetparameters\syst_variables_check_value[#1][#2]}
+%
+% \def\syst_variables_check_value#1#2#3%
+%   {\ifcsname\??variables#1:#2\endcsname
+%      \edef\m_syst_variables_temp{\lastnamedcs}%
+%      \ifempty\m_syst_variables_temp
+%        \defcsname\??variables#1:#2\endcsname{#3}%
+%      \fi
+%    \else
+%      \defcsname\??variables#1:#2\endcsname{#3}%
+%    \fi}
 
-\permanent\tolerant\def\checkvariables[#1]#*[#2]%
-  {\dogetparameters\syst_variables_check_value[#1][#2]}
+\permanent\protected\def\checkvariables[#1]#*[#S#2]%
+  {\cdef\m_syst_parameter{#1}%
+   \syst_variables_check_value#2\ignorearguments\ignorearguments}
 
-\def\syst_variables_check_value#1#2#3%
-  {\ifcsname\??variables#1:#2\endcsname
-     \edef\m_syst_variables_temp{\lastnamedcs}%
-     \ifempty\m_syst_variables_temp
-       \defcsname\??variables#1:#2\endcsname{#3}%
-     \fi
-   \else
-     \defcsname\??variables#1:#2\endcsname{#3}%
-   \fi}
+\tolerant\def\syst_variables_check_value#*#1=#S#2,#M,%
+  {\ifarguments
+     \expandafter\gobbleoneargument
+   \or
+     \mult_interfaces_get_parameters_error_indeed\m_syst_parameter{#1}%
+   \orunless\ifcsname\??variables\m_syst_parameter:#1\endcsname
+     \defcsname\??variables\m_syst_parameter:#1\endcsname{#2}%
+   \orelse\ifempty{\lastnamedcs}%
+     \defcsname\??variables\m_syst_parameter:#1\endcsname{#2}%
+   \fi
+   \syst_variables_check_value}
 
 %D \macros
 %D   {doifelsevariable,doifvariable,doifnotvariable}
@@ -729,8 +801,8 @@
      \expandafter\firstofoneargument
    \fi}
 
-\permanent\tolerant\protected\def\setupenv[#1]%
-  {\syst_variables_set[\getrawparameters][\s!environment][#1]}
+\permanent\tolerant\protected\def\setupenv
+  {\syst_variables_set\getparameters[\s!environment]}
 
 \permanent\protected\def\doifelseenv{\doifelsevariable  \s!environment}
 \permanent\protected\def\doifenv    {\doifvariable      \s!environment}

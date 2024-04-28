@@ -129,6 +129,7 @@
 \definesystemconstant {noaxis}
 \definesystemconstant {exact}
 \definesystemconstant {a}
+\definesystemconstant {base}
 \definesystemconstant {bf}
 \definesystemconstant {big}
 \definesystemconstant {binary}
@@ -209,6 +210,7 @@
 \definesystemconstant {external}
 \definesystemconstant {ex}
 \definesystemconstant {e}
+\definesystemconstant {factor}
 \definesystemconstant {fallbacks}
 \definesystemconstant {fallback}
 \definesystemconstant {false}
@@ -246,6 +248,7 @@
 \definesystemconstant {hfactor}
 \definesystemconstant {hw}
 \definesystemconstant {hyphenmin}
+\definesystemconstant {implication}
 \definesystemconstant {indeed}
 \definesystemconstant {initializations}
 \definesystemconstant {insert} % maybe insertclass
@@ -326,6 +329,7 @@
 \definesystemconstant {ordinary}
 \definesystemconstant {orientation}
 \definesystemconstant {otr}
+\definesystemconstant {overlay}
 \definesystemconstant {pagefloat}
 \definesystemconstant {page}
 \definesystemconstant {paragraph}
@@ -432,6 +436,7 @@
 \definesystemconstant {userdata}
 \definesystemconstant {userpage}
 \definesystemconstant {user}
+\definesystemconstant {variant}
 \definesystemconstant {vfrac}
 \definesystemconstant {vfactor}
 \definesystemconstant {white}
@@ -625,6 +630,7 @@
 \definefileconstant {page_run} {s-layout-show}
 \definefileconstant {symb_run} {s-symbols-show}
 \definefileconstant {publ_tra} {s-publications-show}
+\definefileconstant {math_run} {s-math-show}
 
 %D For figure inclusion we need(ed):
 

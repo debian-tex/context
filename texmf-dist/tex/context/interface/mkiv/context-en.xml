@@ -257,6 +257,8 @@
      <cd:constant type="more"/>
      <cd:constant type="1*more"/>
      <cd:constant type="2*more"/>
+     <cd:constant type="fit"/>
+     <cd:constant type="profile"/>
     </cd:keywords>
    </cd:arguments>
   </cd:command>
@@ -14461,24 +14463,28 @@
      <cd:parameter name="topframe">
       <cd:constant default="yes" type="on"/>
       <cd:constant type="off"/>
+      <cd:constant type="dash"/>
       <cd:constant type="small"/>
       <cd:constant type="cd:name"/>
      </cd:parameter>
      <cd:parameter name="bottomframe">
       <cd:constant default="yes" type="on"/>
       <cd:constant type="off"/>
+      <cd:constant type="dash"/>
       <cd:constant type="small"/>
       <cd:constant type="cd:name"/>
      </cd:parameter>
      <cd:parameter name="leftframe">
       <cd:constant default="yes" type="on"/>
       <cd:constant type="off"/>
+      <cd:constant type="dash"/>
       <cd:constant type="small"/>
       <cd:constant type="cd:name"/>
      </cd:parameter>
      <cd:parameter name="rightframe">
       <cd:constant default="yes" type="on"/>
       <cd:constant type="off"/>
+      <cd:constant type="dash"/>
       <cd:constant type="small"/>
       <cd:constant type="cd:name"/>
      </cd:parameter>
@@ -14495,6 +14501,7 @@
      <cd:parameter name="frame">
       <cd:constant default="yes" type="on"/>
       <cd:constant type="off"/>
+      <cd:constant type="dash"/>
       <cd:constant type="overlay"/>
       <cd:constant type="small"/>
       <cd:constant type="closed"/>
@@ -14640,6 +14647,9 @@
      <cd:parameter name="linedirection">
       <cd:constant default="yes" type="normal"/>
       <cd:constant type="reverse"/>
+     </cd:parameter>
+     <cd:parameter name="dashstep">
+      <cd:constant type="cd:dimension"/>
      </cd:parameter>
     </cd:assignments>
    </cd:arguments>
@@ -15343,6 +15353,17 @@
      </cd:parameter>
      <cd:parameter name="ownerpassword">
       <cd:constant type="cd:text"/>
+     </cd:parameter>
+     <cd:parameter name="compact">
+      <cd:constant type="yes"/>
+      <cd:constant default="yes" type="no"/>
+      <cd:constant type="cd:text"/>
+     </cd:parameter>
+     <cd:parameter name="metadata">
+      <cd:constant default="yes" type="page"/>
+      <cd:constant type="document"/>
+      <cd:constant type="yes"/>
+      <cd:constant type="no"/>
      </cd:parameter>
     </cd:assignments>
    </cd:arguments>
@@ -45625,6 +45646,12 @@
      <cd:parameter name="bodyfont">
       <cd:inherit name="setupbodyfont"/>
      </cd:parameter>
+     <cd:parameter name="on">
+      <cd:constant type="cd:dimension"/>
+     </cd:parameter>
+     <cd:parameter name="off">
+      <cd:constant type="cd:dimension"/>
+     </cd:parameter>
     </cd:assignments>
    </cd:arguments>
   </cd:command>
@@ -46527,6 +46554,12 @@
      </cd:parameter>
      <cd:parameter name="n">
       <cd:constant type="cd:number"/>
+     </cd:parameter>
+     <cd:parameter name="on">
+      <cd:constant type="cd:dimension"/>
+     </cd:parameter>
+     <cd:parameter name="off">
+      <cd:constant type="cd:dimension"/>
      </cd:parameter>
     </cd:assignments>
    </cd:arguments>
@@ -48178,6 +48211,10 @@
       <cd:constant default="yes" type="yes"/>
       <cd:constant type="no"/>
       <cd:constant type="cd:number"/>
+     </cd:parameter>
+     <cd:parameter name="paragraph">
+      <cd:constant default="no" type="yes"/>
+      <cd:constant type="no"/>
      </cd:parameter>
      <cd:parameter name="escape">
       <cd:constant type="yes"/>

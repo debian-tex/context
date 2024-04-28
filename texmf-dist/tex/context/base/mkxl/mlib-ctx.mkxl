@@ -41,7 +41,15 @@
 \registerctxluafile{mlib-cnt}{autosuffix}
 \registerctxluafile{mlib-svg}{autosuffix}
 \registerctxluafile{mlib-fnt}{autosuffix} % outline fun
+\registerctxluafile{mlib-ptr}{autosuffix}
 
 \unprotect
+
+\defineframed
+  [potracebitmap]
+  [\c!foregroundstyle=\tttf,
+   \c!offset=\v!overlay,%
+   \c!align=\v!normal,%
+   \c!frame=\v!off]%
 
 \protect \endinput

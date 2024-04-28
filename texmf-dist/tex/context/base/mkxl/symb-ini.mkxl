@@ -51,8 +51,11 @@
 \installsetuphandler    \??symbols {symbols}
 
 \appendtoks
-   \doifelse{\symbolsparameter\c!stylealternative}\v!math
-     \settrue\setfalse\prefermathovertextchar
+    \ifcstok{\symbolsparameter\c!stylealternative}\v!math
+      \prefermathovertextchar\conditionaltrue
+    \else
+      \prefermathovertextchar\conditionalfalse
+    \fi
 \to \everysetupsymbols
 
 \setupsymbols
@@ -75,7 +78,7 @@
 \permanent\tolerant\protected\def\definesymbol[#1]#*[#2]#*[#3]%
   {\ifparameter#3\or
      \defcsname\??symbol#1:#2\endcsname{#3}%
-     \doifsomething{#1}{\addvalue{\??symbolset#1}{#2}}%
+     \ifempty{#1}\else\addvalue{\??symbolset#1}{#2}\fi
    \else
      \defcsname\??symbol\m_symb_current_set:#1\endcsname{#2}%
      \addvalue{\??symbolset\m_symb_current_set}{#1}%
@@ -130,16 +133,16 @@
    \fi}
 
 \def\symb_place_normal
-  {\setfalse\c_symb_found
-   \the\t_symb_setups
+  {\c_symb_found\conditionalfalse
+   \expand\t_symb_setups
    \ifconditional\c_symb_found \else
      \symb_place_retry\currentsymbol % hm, isn't this redundant?
    \fi}
 
 \def\symb_place_indeed#1% \relax's prevent lookahead problems
-  {\settrue\c_symb_found
+  {\c_symb_found\conditionaltrue
    \begingroup
-   \the\everysymbol
+   \expand\everysymbol
    \csname\??symbol#1\endcsname\relax
    \endgroup}
 
@@ -165,7 +168,7 @@
 \def\symb_place_named#1% \relax's prevent lookahead problems
   {\begingroup
    \setbox\scratchbox\hbox\bgroup
-     \the\everysymbol
+     \expand\everysymbol
      \getglyphstyled
        {\csname\??symboldefault#1\endcsname}%
        {\tochar{n:\currentsymbol}}%
@@ -175,15 +178,15 @@
      \unhbox\scratchbox
      \endgroup
      \xdefcsname\??symbol#1:\currentsymbol\endcsname{\symb_place_named_indeed{#1}{\currentsymbol}}%
-     \settrue\c_symb_found
+     \c_symb_found\conditionaltrue
    \else
      \endgroup
    \fi}
 
 \protected\def\symb_place_named_indeed#1#2% \relax's prevent lookahead problems
-  {\settrue\c_symb_found
+  {\c_symb_found\conditionaltrue
    \begingroup
-   \the\everysymbol
+   \expand\everysymbol
    \getglyphstyled
      {\csname\??symboldefault#1\endcsname}%
      {\tochar{n:#2}}%
@@ -212,10 +215,10 @@
 \mutable\def\defaultsymbolfactor{10}
 \mutable\def\defaultsymbolheight{1.25ex}
 
-\permanent\tolerant\protected\def\figuresymbol[#1]#,[#2]%
+\permanent\tolerant\protected\def\figuresymbol[#1]#,[#S#2]%
   {\externalfigure[#1][\c!reset=\v!yes,\c!symbol=\v!yes,\c!height=\defaultsymbolheight,#2]}
 
-\permanent\tolerant\protected\def\definefiguresymbol[#1]#*[#2]#*[#3]%
+\permanent\tolerant\protected\def\definefiguresymbol[#1]#*[#2]#*[#S#3]%
   {\ifarguments\or\else
      \definesymbol[#1][{\figuresymbol[#2][#3]}]%
    \fi}
@@ -233,17 +236,17 @@
    \fi}
 
 \def\symb_fetch_first_indeed#1%
-  {\doifinsymbolset{#1}\currentsymbol{\settrue\c_symb_found}}
+  {\doifinsymbolset{#1}\currentsymbol{\c_symb_found\conditionaltrue}}
 
 \def\symb_fetch_second#1%
-  {\doifinsymbolset\empty\currentsymbol{\settrue\c_symb_found}}
+  {\doifinsymbolset\empty\currentsymbol{\c_symb_found\conditionaltrue}}
 
 \permanent\protected\def\doifelsesymboldefined#1%
   {\begingroup
    \edef\currentsymbol{#1}%
    \let\symb_fetch\symb_fetch_first
-   \setfalse\c_symb_found
-   \the\t_symb_setups
+   \c_symb_found\conditionalfalse
+   \expand\t_symb_setups
    \ifconditional\c_symb_found
      \endgroup\expandafter\firstoftwoarguments
    \else
@@ -289,7 +292,7 @@
 
 \installcorenamespace{symbolsets}
 
-\permanent\tolerant\protected\def\startsymbolset[#1]#*[#2]%
+\permanent\tolerant\protected\def\startsymbolset[#1]#*[#S#2]%
   {\pushmacro\m_symb_current_set
    \def\m_symb_current_set{#1}%
    \ifarguments\or\or
@@ -303,14 +306,14 @@
 \permanent\protected\def\stopsymbolset
   {\popmacro\m_symb_current_set}
 
-\permanent\protected\def\setupsymbolset[#1]%
-  {\edef\currentsymbolset{#1}%
+\permanent\protected\def\setupsymbolset[#1]% should have been \setsymbolset
+  {\cdef\currentsymbolset{#1}%
    \ifcsname\??symbolsets\currentsymbolset\endcsname \else
      \symb_setup_symbol_set
    \fi}
 
 \def\symb_setup_symbol_set
-  {\normalexpanded{\t_symb_setups{\symb_fetch{\currentsymbolset}\the\t_symb_setups}}%
+  {\normalexpanded{\t_symb_setups{\symb_fetch{\currentsymbolset}\expand\t_symb_setups}}%
    \letcsname\??symbolsets\currentsymbolset\endcsname\empty} % speedup
 
 \permanent\protected\def\resetsymbolset

@@ -136,16 +136,20 @@
 
 \permanent\protected\def\structurelistinject[#tag]%
   {\begingroup
-   \edef\currentlist{#tag}%
-   \doifelse{\listparameter\c!state}\v!start\strc_lists_inject_yes\strc_lists_inject_nop}
+   \cdef\currentlist{#tag}%
+   \ifcstok{\listparameter\c!state}\v!start
+     \expandafter\strc_lists_inject_yes
+   \else
+     \expandafter\strc_lists_inject_nop
+   \fi}
 
-\tolerant\protected\def\strc_lists_inject_nop[#settings]#spacer[#userdata]%
+\tolerant\protected\def\strc_lists_inject_nop[#S#settings]#spacer[#S#userdata]%
   {\endgroup}
 
 \def\strc_lists_inject_enhance#listindex%
   {\expandafter\clf_deferredenhancelist\number#listindex\relax}
 
-\tolerant\protected\def\strc_lists_inject_yes[#settings]#spacer[#userdata]% can be used directly
+\tolerant\protected\def\strc_lists_inject_yes[#S#settings]#spacer[#S#userdata]% can be used directly
   {\setupcurrentlist[\c!type=userdata,\c!location=\v!none,#settings]% grouped (use \let...
    \edef\p_location{\listparameter\c!location}%
    \setnextinternalreference
@@ -185,50 +189,56 @@
 
 \protected\def\strc_lists_inject_direct[#tag]% [#settings][#userdata]
   {\begingroup
-   \edef\currentlist{#tag}%
+   \cdef\currentlist{#tag}%
    \strc_lists_inject_yes} % [#settings][#userdata]
 
 \permanent\protected\def\writebetweenlist[#tag]%
   {\begingroup
-   \edef\currentlist{#tag}%
-   \doifelse{\namedlistparameter{#tag}\c!state}\v!start
-     \strc_lists_write_between_yes
-     \strc_lists_write_between_nop}
+   \cdef\currentlist{#tag}%
+   \ifcstok{\namedlistparameter{#tag}\c!state}\v!start
+     \expandafter\strc_lists_write_between_yes
+   \else
+     \expandafter\strc_lists_write_between_nop
+   \fi}
 
-\tolerant\def\strc_lists_write_between_yes[#settings]#:#command%
+\tolerant\def\strc_lists_write_between_yes[#S#settings]#:#command%
   {\strc_lists_inject_yes[#settings,\c!type=\s!command][command={#command}]}
 
-\tolerant\def\strc_lists_write_between_nop[#settings]#:#command%
+\tolerant\def\strc_lists_write_between_nop[#S#settings]#:#command%
   {\endgroup}
 
 \permanent\protected\def\writedatatolist[#tag]%
   {\begingroup
-   \edef\currentlist{#tag}%
-   \doifelse{\namedlistparameter{#tag}\c!state}\v!start
-     \strc_lists_write_data_to_yes
-     \strc_lists_write_data_to_nop}
+   \cdef\currentlist{#tag}%
+   \ifcstok{\namedlistparameter{#tag}\c!state}\v!start
+     \expandafter\strc_lists_write_data_to_yes
+   \else
+     \expandafter\strc_lists_write_data_to_nop
+   \fi}
 
-\tolerant\def\strc_lists_write_data_to_yes[#settings]#spacer[#userdata]%
+\tolerant\def\strc_lists_write_data_to_yes[#S#settings]#spacer[#userdata]%
   {\ifparameter#userdata\or % no need to have an extra step ... used seldom
      \strc_lists_inject_yes[#settings,\c!type=\s!userdata][#userdata]%
    \else
      \strc_lists_inject_yes[\c!type=\s!userdata][#settings]%
    \fi}
 
-\tolerant\def\strc_lists_write_data_to_nop[#settings]#spacer[#userdata]%
+\tolerant\def\strc_lists_write_data_to_nop[#S#settings]#spacer[#userdata]%
   {\endgroup}
 
 \permanent\protected\def\writetolist[#tag]%
   {\begingroup
-   \edef\currentlist{#tag}%
-   \doifelse{\namedlistparameter{#tag}\c!state}\v!start
-     \strc_lists_write_to_yes
-     \strc_lists_write_to_nop}
+   \cdef\currentlist{#tag}%
+   \ifcstok{\namedlistparameter{#tag}\c!state}\v!start
+     \expandafter\strc_lists_write_to_yes
+   \else
+     \expandafter\strc_lists_write_to_nop
+   \fi}
 
-\tolerant\def\strc_lists_write_to_yes[#settings]#:#first#second% no \s!first because we don't expand user settings
+\tolerant\def\strc_lists_write_to_yes[#S#settings]#:#first#second% no \s!first because we don't expand user settings
   {\strc_lists_inject_yes[\c!location=\v!here,#settings,\c!type=\s!simple][first={#first},second={#second}]}
 
-\tolerant\def\strc_lists_write_to_nop[#settings]#:#first#second%
+\tolerant\def\strc_lists_write_to_nop[#S#settings]#:#first#second%
   {\endgroup} % \strc_lists_inject_nop[][]
 
 % \starttyping
@@ -255,7 +265,7 @@
 
 \newtoks\everystructurelist
 
-\permanent\tolerant\protected\def\placelist[#taglist]#spacer[#settings]%
+\permanent\tolerant\protected\def\placelist[#taglist]#spacer[#S#settings]%
   {\begingroup
    \startpacked[\v!blank]%
    \edef\m_list {#taglist}%
@@ -270,18 +280,20 @@
    \stoppacked
    \endgroup}
 
-\permanent\tolerant\protected\def\placerawlist[#tag]#spacer[#settings]% just one list
+\permanent\tolerant\protected\def\placerawlist[#tag]#spacer[#S#settings]% just one list
   {\strc_lists_place_indeed\empty{#tag}{#settings}}
 
 \aliased\let\strc_lists_place\placelist % used in strc-flt
 
 \def\strc_lists_place_indeed#tag#list#settings%
   {\begingroup
-   \the\t_lists_every_renderingcleanup % \lettonothing\currentlistentrylocation
-   \edef\currentlist{#tag}%
+   \expand\t_lists_every_renderingcleanup % \lettonothing\currentlistentrylocation
+   \cdef\currentlist{#tag}%
    \setupcurrentlist[#settings]%
-   \the\everystructurelist
- % \doif{\listparameter\c!coupling}\v!on{\startlistreferences{#tag}}%
+   \expand\everystructurelist
+ % \ifcstok{\listparameter\c!coupling}\v!on
+ %   \startlistreferences{#tag}%
+ % \fi
    \strc_lists_place_current % maybe inline
      {#list}%
      {\listparameter\c!criterium}%
@@ -309,17 +321,17 @@
 \ifdefined\stopnamedsection  \else \let\stopnamedsection \relax \fi
 \ifdefined\headtext          \else \let\headtext         \relax \fi
 
-\permanent\tolerant\protected\def\completelist[#tag]#spacer[#settings]%
+\permanent\tolerant\protected\def\completelist[#tag]#spacer[#S#settings]%
   {\normalexpanded{\startnamedsection[\v!title][\c!title=\headtext{#tag},\c!reference=#tag]}% {} around ref ?
    \strc_lists_place[#tag][#settings]%
    \stopnamedsection}
 
-\permanent\tolerant\protected\def\strc_lists_complete[#singular]#spacer[#plural]#spacer[#settings]% used in strc-flt
+\permanent\tolerant\protected\def\strc_lists_complete[#singular]#spacer[#plural]#spacer[#S#settings]% used in strc-flt
   {\normalexpanded{\startnamedsection[\v!title][\c!title=\headtext{#plural},\c!reference=#singular]}% {} around ref ?
    \strc_lists_place[#singular][#settings]%
    \stopnamedsection}
 
-\permanent\tolerant\def\strc_lists_combined_complete[#tag]#spacer[#settings]%
+\permanent\tolerant\def\strc_lists_combined_complete[#tag]#spacer[#S#settings]%
   {\normalexpanded{\startnamedsection[\v!title][\c!title={\headtext{#tag}},\c!reference=#tag]}%
    \placecombinedlist[#tag][#settings]%
    \stopnamedsection}
@@ -330,7 +342,7 @@
 %D \definecombinedlist[whatever][a,b,c][settings]
 %D \stoptyping
 
-\permanent\tolerant\protected\def\definecombinedlist[#tag]#spacer[#list]#spacer[#settings]%
+\permanent\tolerant\protected\def\definecombinedlist[#tag]#spacer[#list]#spacer[#S#settings]%
   {\definelist[#tag][\c!criterium=\v!local,\c!reference=,\c!alternative=,\c!list={#list},#settings]% inherits from root
    \frozen\instance\defcsname\e!setup#tag\e!endsetup\endcsname{\setupcombinedlist[#tag]}%
    \frozen\instance\defcsname\e!place#tag\endcsname{\placecombinedlist[#tag]}%
@@ -341,9 +353,9 @@
      \setuplist[#tag][#settings]% we don't want to mess up the parent
    \fi}
 
-\permanent\tolerant\protected\def\placecombinedlist[#tag]#spacer[#settings]% i.e. no list set in settings
+\permanent\tolerant\protected\def\placecombinedlist[#tag]#spacer[#S#settings]% i.e. no list set in settings
   {\begingroup
-   \edef\currentlist{#tag}%
+   \cdef\currentlist{#tag}%
    \setupcurrentlist[#settings]%
    \edef\m_strc_list_alternative{\listparameter\c!alternative}% we only inherit alternative
    \strc_lists_place_indeed{#tag}{\listparameter\c!list}{#settings}%
@@ -364,9 +376,9 @@
 
 \installcorenamespace {listpagenumber}
 
-\defcsname\??listpagenumber\v!always  \endcsname{\settrue\c_lists_show_page\settrue\c_lists_has_page}
-\defcsname\??listpagenumber\v!yes     \endcsname{\settrue\c_lists_show_page}
-\defcsname\??listpagenumber\s!realpage\endcsname{\settrue\c_lists_show_page\settrue\c_lists_show_realpage}
+\defcsname\??listpagenumber\v!always  \endcsname{\c_lists_show_page\conditionaltrue\c_lists_has_page\conditionaltrue}
+\defcsname\??listpagenumber\v!yes     \endcsname{\c_lists_show_page\conditionaltrue}
+\defcsname\??listpagenumber\s!realpage\endcsname{\c_lists_show_page\conditionaltrue\c_lists_show_realpage\conditionaltrue}
 
 \def\strc_lists_process_pagenumber#1%
   {\begincsname\??listpagenumber#1\endcsname}
@@ -533,7 +545,7 @@
 \permanent\protected\def\strclistsentryprocess#tag#method#index#extra% This one is called at the lua end!
   {\clf_pushlist#index\relax
   %\lettonothing\currentlistentrylocation
-   \edef\currentlist      {#tag}%
+   \cdef\currentlist      {#tag}%
    \edef\currentlistmethod{#method}%
    \edef\currentlistindex {#index}%
    \edef\currentlistextra {#extra}%
@@ -578,7 +590,7 @@
 
 \permanent\protected\def\listsymbol[#tag]#number%
   {\begingroup
-   \edef\currentlist{#tag}%
+   \cdef\currentlist{#tag}%
    \def\currentlistentrynumber{#number}% no edef else tag problems
    \currentlistsymbol
    \endgroup}
@@ -590,7 +602,7 @@
 
 \def\strc_lists_assign_dimen#dimension#key#default%
   {\edef\m_strc_list_dimen{\listparameter#key}%
-   \doifelseinset\m_strc_list_dimen{\v!fit,\v!broad}{#dimension#default}{#dimension\m_strc_list_dimen}\relax}
+   #dimension\ifinset{\m_strc_list_dimen}{\v!fit,\v!broad}#default\else\m_strc_list_dimen\fi\relax}
 
 \definesymbol[\v!list][\v!none   ][\strc_lists_symbol_none]
 \definesymbol[\v!list][\v!one    ][\strc_lists_symbol_one]
@@ -890,32 +902,36 @@
     % in mind that testing for empty fails do to tagging being applied
 %   \edef\p_pagenumber{\listparameter\c!pagenumber}%
 %   \ifx\p_pagenumber\v!always
-%     \settrue\c_lists_has_page
-%     \settrue\c_lists_show_page
+%     \c_lists_has_page\conditionaltrue
+%     \c_lists_show_page\conditionaltrue
 %   \else
-%     \doifelsestructurelisthaspage\settrue\setfalse\c_lists_has_page
+%     \doifelsestructurelisthaspage{\c_lists_has_page\conditionaltrue}{\c_lists_has_page\conditionalfalse}%
 %     \ifx\p_pagenumber\v!yes
-%       \settrue\c_lists_show_page
+%       \c_lists_show_page\conditionaltrue
 %     \else
-%       \setfalse\c_lists_show_page
+%       \c_lists_show_page\conditionalfalse
 %     \fi
 %   \fi
-    \setfalse\c_lists_show_page % necessary?
+    \c_lists_show_page\conditionalfalse % necessary?
     \processcommacommand[\listparameter\c!pagenumber]\strc_lists_process_pagenumber
     \ifconditional\c_lists_has_page \else
-      \doifelsestructurelisthaspage\settrue\setfalse\c_lists_has_page
+      \doifelsestructurelisthaspage
+        {\c_lists_has_page\conditionaltrue}%
+        {\c_lists_has_page\conditionalfalse}%
     \fi
     % always forces number placement (in bib we use a forced number)
     \edef\p_headnumber{\listparameter\c!headnumber}%
     \ifx\p_headnumber\v!always
-      \settrue\c_lists_has_number
-      \settrue\c_lists_show_number
+      \c_lists_has_number\conditionaltrue
+      \c_lists_show_number\conditionaltrue
     \else
-      \doifelsestructurelisthasnumber\settrue\setfalse\c_lists_has_number
+      \doifelsestructurelisthasnumber
+        {\c_lists_has_number\conditionaltrue}%
+        {\c_lists_has_number\conditionalfalse}%
       \ifx\p_headnumber\v!yes
-        \settrue\c_lists_show_number
+        \c_lists_show_number\conditionaltrue
       \else
-        \setfalse\c_lists_show_number
+        \c_lists_show_number\conditionalfalse
       \fi
     \fi
     \strc_lists_interaction_check
@@ -932,17 +948,17 @@
    \lettonothing\currentlistentrynumber
    \lettonothing\currentlistentrytitle
    \lettonothing\currentlistentrypagenumber
-   \setfalse\c_lists_has_page
-   \setfalse\c_lists_has_number
-   \setfalse\c_lists_show_page
-   \setfalse\c_lists_show_realpage
-   \setfalse\c_lists_show_number
+   \c_lists_has_page\conditionalfalse
+   \c_lists_has_number\conditionalfalse
+   \c_lists_show_page\conditionalfalse
+   \c_lists_show_realpage\conditionalfalse
+   \c_lists_show_number\conditionalfalse
 \to \t_lists_every_renderingcleanup
 
 \lettonothing\m_strc_list_alternative % combined
 
 \protected\def\strc_lists_apply_renderingsetup
-  {\the\t_lists_every_renderingsetup
+  {\expand\t_lists_every_renderingsetup
    % now we group
    \begingroup
    \ifempty\m_strc_list_alternative
@@ -953,7 +969,7 @@
    \directsetup{\listalternativeparameter\c!renderingsetup}\relax
    \endgroup
    % till here, where we reset locals
-   \the\t_lists_every_renderingcleanup}
+   \expand\t_lists_every_renderingcleanup}
 
 % todo: provide packager via attributes
 
@@ -966,7 +982,7 @@
 \stopsetups
 
 \permanent\protected\def\currentlistentrytitlesynchronize
-  {\the\t_lists_every_renderingsynchronize}
+  {\expand\t_lists_every_renderingsynchronize}
 
 \permanent\protected\def\currentlistentrytitlerendered
   {\currentlistentrytitlesynchronize\currentlistentrytitle}
@@ -1012,8 +1028,8 @@
                 \fi
                 \hbox \strc_lists_get_reference_attribute\v!text {
                     \strc_lists_set_style_color\c!textstyle\c!textcolor\v!text
-                    \the\t_lists_every_renderingtext
-                    \the\t_lists_every_renderingsynchronize
+                    \expand\t_lists_every_renderingtext
+                    \expand\t_lists_every_renderingsynchronize
                     \listparameter\c!textcommand\currentlistentrytitle
                 }
                 \ifconditional\c_lists_show_page
@@ -1140,8 +1156,8 @@
                 \begingroup
                 \strc_lists_set_reference_attribute\v!text
                 \strc_lists_set_style_color\c!textstyle\c!textcolor\v!text
-                \the\t_lists_every_renderingtext
-                \the\t_lists_every_renderingsynchronize
+                \expand\t_lists_every_renderingtext
+                \expand\t_lists_every_renderingsynchronize
                 \setstrut % needs checking, new here
                 \begstrut
                 \strc_lists_limitated_text\currentlistentrytitle
@@ -1222,8 +1238,8 @@
     \begingroup
     \strc_lists_set_reference_attribute\v!text
     \strc_lists_set_style_color\c!textstyle\c!textcolor\v!text
-    \the\t_lists_every_renderingtext
-    \the\t_lists_every_renderingsynchronize
+    \expand\t_lists_every_renderingtext
+    \expand\t_lists_every_renderingsynchronize
     \setstrut % needs checking, new here
     \begstrut
     \strc_lists_limitated_text\currentlistentrytitle
@@ -1262,8 +1278,8 @@
         \inheritedlistframed {
             \letinteractionparameter\c!strut\v!no % still needed?
             \strc_lists_set_style_color\c!style\c!color\v!all
-            \the\t_lists_every_renderingtext
-            \the\t_lists_every_renderingsynchronize
+            \expand\t_lists_every_renderingtext
+            \expand\t_lists_every_renderingsynchronize
             \setstrut
             \begstrut
             \strc_lists_limitated_text\currentlistentrytitle
@@ -1282,8 +1298,8 @@
         \dosetraggedhbox{\listparameter\c!align}%
         \raggedbox {
             \strc_lists_set_style_color\c!style\c!color\v!all
-            \the\t_lists_every_renderingtext
-            \the\t_lists_every_renderingsynchronize
+            \expand\t_lists_every_renderingtext
+            \expand\t_lists_every_renderingsynchronize
             \setstrut
             \begstrut
             \strc_lists_limitated_text\currentlistentrytitle
@@ -1301,8 +1317,8 @@
     \hbox \strc_lists_get_reference_attribute\v!all \strc_lists_get_destination_attribute {
         \midaligned {
             \strc_lists_set_style_color\c!style\c!color\v!all
-            \the\t_lists_every_renderingtext
-            \the\t_lists_every_renderingsynchronize
+            \expand\t_lists_every_renderingtext
+            \expand\t_lists_every_renderingsynchronize
             \setstrut
             \begstrut
             \strc_lists_limitated_text\currentlistentrytitle
@@ -1448,8 +1464,8 @@
 \letcsname\??listinteractions\v!yes          \endcsname\v!all
 
 \permanent\def\listboxproperties       {\strc_lists_get_reference_attribute}
-\permanent\def\listrenderingsetup      {\the\t_lists_every_renderingtext}
-\permanent\def\listrenderingsynchronize{\the\t_lists_every_renderingsynchronize}
+\permanent\def\listrenderingsetup      {\expand\t_lists_every_renderingtext}
+\permanent\def\listrenderingsynchronize{\expand\t_lists_every_renderingsynchronize}
 
 \protected\def\strc_lists_interaction_check
   {\iflocation
@@ -1498,8 +1514,7 @@
    \ifcsname\??listinteractions\p_interaction_forward\endcsname
     %\expandafter\let\expandafter\p_interaction_forward\csname\??listinteractions\p_interaction_forward\endcsname
      \expandafter\let\expandafter\p_interaction_forward\lastnamedcs
-    %\ifcstok{\structurelistexternal}\emptytoks % luacall
-     \iftok{\structurelistexternal}\emptytoks % luacall
+     \ifempty{\structurelistexternal}% luacall
        \strc_references_get_simple_reference{internal(\currentlistentrylocation)}%
      \else
      % \writestatus{FAR OUT LIST}{\structurelistexternal::page(\number\structurelistrealpagenumber)}%
@@ -1619,9 +1634,9 @@
 
 \mutable\let\listlength\!!zerocount           % also in strc-reg
 
-\permanent\tolerant\protected\def\determinelistcharacteristics[#list]#spacer[#settings]%
+\permanent\tolerant\protected\def\determinelistcharacteristics[#list]#spacer[#S#settings]%
   {\begingroup
-   \edef\currentlist{\firststructureelementinlist{#list}}%
+   \cdef\currentlist{\firststructureelementinlist{#list}}%
    \ifempty\currentlist
      \endgroup
      \let\listlength\!!zerocount

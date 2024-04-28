@@ -2141,7 +2141,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-table"] = package.loaded["l-table"] or true
 
--- original size: 41758, stripped down to: 22643
+-- original size: 42643, stripped down to: 23053
 
 if not modules then modules={} end modules ['l-table']={
  version=1.001,
@@ -2433,19 +2433,22 @@ local function copy(t,tables)
   tables[t]=tcopy
  end
  for i,v in next,t do 
+  local k
   if type(i)=="table" then
    if tables[i] then
-    i=tables[i]
+    k=tables[i]
    else
-    i=copy(i,tables)
+    k=copy(i,tables)
    end
+  else
+   k=i
   end
   if type(v)~="table" then
-   tcopy[i]=v
+   tcopy[k]=v
   elseif tables[v] then
-   tcopy[i]=tables[v]
+   tcopy[k]=tables[v]
   else
-   tcopy[i]=copy(v,tables)
+   tcopy[k]=copy(v,tables)
   end
  end
  local mt=getmetatable(t)
@@ -2642,7 +2645,11 @@ local function do_serialize(root,name,depth,level,indexed)
    elseif tv=="number" then
     if tk=="number" then
      if hexify then
-      handle(format("%s [0x%X]=0x%X,",depth,k,v))
+      if accurate then
+       handle(format("%s [0x%X]=%q,",depth,k,v))
+      else
+       handle(format("%s [0x%X]=%s,",depth,k,v))
+      end
      elseif accurate then
       handle(format("%s [%s]=%q,",depth,k,v))
      else
@@ -2650,7 +2657,11 @@ local function do_serialize(root,name,depth,level,indexed)
      end
     elseif tk=="boolean" then
      if hexify then
-      handle(format("%s [%s]=0x%X,",depth,k and "true" or "false",v))
+      if accurate then
+       handle(format("%s [%s]=%q,",depth,k and "true" or "false",v))
+      else
+       handle(format("%s [%s]=%s,",depth,k and "true" or "false",v))
+      end
      elseif accurate then
       handle(format("%s [%s]=%q,",depth,k and "true" or "false",v))
      else
@@ -2659,7 +2670,11 @@ local function do_serialize(root,name,depth,level,indexed)
     elseif tk~="string" then
     elseif noquotes and not reserved[k] and lpegmatch(propername,k) then
      if hexify then
-      handle(format("%s %s=0x%X,",depth,k,v))
+      if accurate then
+       handle(format("%s %s=%q,",depth,k,v))
+      else
+       handle(format("%s %s=0x%X,",depth,k,v))
+      end
      elseif accurate then
       handle(format("%s %s=%q,",depth,k,v))
      else
@@ -2667,7 +2682,11 @@ local function do_serialize(root,name,depth,level,indexed)
      end
     else
      if hexify then
-      handle(format("%s [%q]=0x%X,",depth,k,v))
+      if accurate then
+       handle(format("%s [%q]=%q,",depth,k,v))
+      else
+       handle(format("%s [%q]=0x%X,",depth,k,v))
+      end
      elseif accurate then
       handle(format("%s [%q]=%q,",depth,k,v))
      else
@@ -3848,7 +3867,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-os"] = package.loaded["l-os"] or true
 
--- original size: 20585, stripped down to: 10701
+-- original size: 20686, stripped down to: 10791
 
 if not modules then modules={} end modules ['l-os']={
  version=1.001,
@@ -3988,6 +4007,8 @@ os.type=os.type or (io.pathseparator==";"    and "windows") or "unix"
 os.name=os.name or (os.type=="windows" and "mswin"  ) or "linux"
 if os.type=="windows" then
  os.libsuffix,os.binsuffix,os.binsuffixes='dll','exe',{ 'exe','cmd','bat' }
+elseif os.name=="macosx" then
+ os.libsuffix,os.binsuffix,os.binsuffixes='dylib','',{ '' }
 else
  os.libsuffix,os.binsuffix,os.binsuffixes='so','',{ '' }
 end
@@ -6583,7 +6604,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-str"] = package.loaded["util-str"] or true
 
--- original size: 46322, stripped down to: 24128
+-- original size: 46976, stripped down to: 24530
 
 if not modules then modules={} end modules ['util-str']={
  version=1.001,
@@ -6777,6 +6798,7 @@ local p_prune_intospace=Cs (noleading*(notrailing+intospace+1     )^0 )
 local p_retain_normal=Cs ((normalline+normalempty )^0 )
 local p_retain_collapse=Cs ((normalline+doubleempty )^0 )
 local p_retain_noempty=Cs ((normalline+singleempty )^0 )
+local p_collapse_all=Cs (stripstart*(stripend+((whitespace+newline)^1/" ")+1)^0 )
 local striplinepatterns={
  ["prune"]=p_prune_normal,
  ["prune and collapse"]=p_prune_collapse,
@@ -6785,6 +6807,7 @@ local striplinepatterns={
  ["retain"]=p_retain_normal,
  ["retain and collapse"]=p_retain_collapse,
  ["retain and no empty"]=p_retain_noempty,
+ ["collapse all"]=p_collapse_all,
  ["collapse"]=patterns.collapser,
 }
 setmetatable(striplinepatterns,{ __index=function(t,k) return p_prune_collapse end })
@@ -7461,6 +7484,7 @@ end
 strings.formatters.add=add
 patterns.xmlescape=Cs((P("<")/"&lt;"+P(">")/"&gt;"+P("&")/"&amp;"+P('"')/"&quot;"+anything)^0)
 patterns.texescape=Cs((C(S("#$%\\{}"))/"\\%1"+anything)^0)
+patterns.ctxescape=Cs((C(S("#$%\\{}|"))/"\\%1"+anything)^0)
 patterns.luaescape=Cs(((1-S('"\n'))^1+P('"')/'\\"'+P('\n')/'\\n"')^0) 
 patterns.luaquoted=Cs(Cc('"')*((1-S('"\n'))^1+P('"')/'\\"'+P('\n')/'\\n"')^0*Cc('"'))
 add(formatters,"xml",[[lpegmatch(xmlescape,%s)]],{ xmlescape=patterns.xmlescape })
@@ -7529,6 +7553,20 @@ do
  end })
  function string.wordsplitter(s)
   return cache[s]
+ end
+end
+if CONTEXTLMTXMODE and CONTEXTLMTXMODE>0 then
+ local t={
+  ["#"]="#H",
+  ["\n"]="#L",
+  ['"']="#Q",
+  ["\r"]="#R",
+  [" "]="#S",
+  ["\t"]="#T",
+  ["\\"]="#X",
+ }
+ function string.texhashed(s)
+  return (gsub(s,".",t))
  end
 end
 
@@ -9347,7 +9385,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-prs"] = package.loaded["util-prs"] or true
 
--- original size: 25716, stripped down to: 16805
+-- original size: 26298, stripped down to: 17137
 
 if not modules then modules={} end modules ['util-prs']={
  version=1.001,
@@ -9643,7 +9681,17 @@ hashes.settings_to_set=table.setmetatableindex(function(t,k)
  t[k]=v
  return v
 end)
-getmetatable(hashes.settings_to_set).__mode="kv" 
+function parsers.settings_to_set(str)
+ return str and lpegmatch(pattern,str) or {}
+end
+local pattern=Ct((C((1-S(", "))^1)*S(", ")^0)^1)
+hashes.settings_to_list=table.setmetatableindex(function(t,k) 
+ local v=k and lpegmatch(pattern,k) or {}
+ t[k]=v
+ return v
+end)
+getmetatable(hashes.settings_to_set ).__mode="kv" 
+getmetatable(hashes.settings_to_list).__mode="kv" 
 function parsers.simple_hash_to_string(h,separator)
  local t={}
  local tn=0
@@ -9665,7 +9713,7 @@ local splitter=lpeg.tsplitat(" ")
 function parsers.options_to_array(str)
  return str and lpegmatch(splitter,str) or {}
 end
-local value=P(lbrace*C((nobrace+nestedbraces)^0)*rbrace)+C(digit^1*lparent*(noparent+nestedparents)^1*rparent)+C((nestedbraces+(1-comma))^1)
+local value=P(lbrace*C((nobrace+nestedbraces)^0)*rbrace)+C(digit^1*lparent*(noparent+nestedparents)^1*rparent)+C((nestedbraces+(1-comma))^1)+Cc("") 
 local pattern_a=spaces*Ct(value*(separator*value)^0)
 local function repeater(n,str)
  if not n then
@@ -9687,7 +9735,7 @@ local function repeater(n,str)
   end
  end
 end
-local value=P(lbrace*C((nobrace+nestedbraces)^0)*rbrace)+(C(digit^1)/tonumber*lparent*Cs((noparent+nestedparents)^1)*rparent)/repeater+C((nestedbraces+(1-comma))^1)
+local value=P(lbrace*C((nobrace+nestedbraces)^0)*rbrace)+(C(digit^1)/tonumber*lparent*Cs((noparent+nestedparents)^1)*rparent)/repeater+C((nestedbraces+(1-comma))^1)+Cc("") 
 local pattern_b=spaces*Ct(value*(separator*value)^0)
 function parsers.settings_to_array_with_repeat(str,expand) 
  if expand then
@@ -11901,7 +11949,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-soc-imp-http"] = package.loaded["util-soc-imp-http"] or true
 
--- original size: 12624, stripped down to: 9598
+-- original size: 13055, stripped down to: 9818
 
 
 local tostring,tonumber,setmetatable,next,type=tostring,tonumber,setmetatable,next,type
@@ -11953,7 +12001,7 @@ local function receiveheaders(sock,headers)
  while line~="" do
   local name,value=skipsocket(2,find(line,"^(.-):%s*(.*)"))
   if not (name and value) then
-   return nil,"malformed reponse headers"
+   return nil,"malformed response headers"
   end
   name=lower(name)
   line,err=sock:receive("*l")
@@ -12056,9 +12104,13 @@ function methods.sendbody(self,headers,source,step)
 end
 function methods.receivestatusline(self)
  local try=self.try
- local status=try(self.c:receive(5))
+ local status,err=try(self.c:receive(5))
  if status~="HTTP/" then
-  return nil,status 
+  if err=="timeout" then
+   return 408
+  else
+   return nil,status 
+  end
  end
  status=try(self.c:receive("*l",status))
  local code=skipsocket(2,find(status,"HTTP/%d*%.%d* (%d%d%d)"))
@@ -12163,7 +12215,7 @@ local function adjustrequest(originalrequest)
  end
  return request
 end
-local maxredericts=4
+local maxredericts=5
 local validredirects={ [301]=true,[302]=true,[303]=true,[307]=true }
 local validmethods={ [false]=true,GET=true,HEAD=true }
 local function shouldredirect(request,code,headers)
@@ -12182,7 +12234,8 @@ local function shouldredirect(request,code,headers)
  local method=request.method
  local redirect=request.redirect
  local redirects=request.nredirects or 0
- return redirect and validredirects[code] and validmethods[method] and redirects<=maxredericts
+ local maxredirects=request.maxredirects or maxredirects
+ return redirect and validredirects[code] and validmethods[method] and redirects<=maxredirects
 end
 local function shouldreceivebody(request,code)
  if request.method=="HEAD" then
@@ -12205,6 +12258,7 @@ tredirect=function(request,location)
   headers=request.headers,
   proxy=request.proxy,
   nredirects=(request.nredirects or 0)+1,
+  maxredirects=request.maxredirects or maxredirects,
   create=request.create,
  }
  if not headers then
@@ -12227,10 +12281,13 @@ trequest=function(originalrequest)
  local code,status=connection:receivestatusline()
  if not code then
   connection:receive09body(status,request.sink,request.step)
+  connection:close()
   return 1,200
+ elseif code==408 then
+  return 1,code
  end
  while code==100 do
-  headers=connection:receiveheaders()
+  connection:receiveheaders()
   code,status=connection:receivestatusline()
  end
  headers=connection:receiveheaders()
@@ -12283,7 +12340,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-soc-imp-ftp"] = package.loaded["util-soc-imp-ftp"] or true
 
--- original size: 10357, stripped down to: 8548
+-- original size: 10345, stripped down to: 8538
 
 
 local setmetatable,type,next=setmetatable,type,next
@@ -12394,7 +12451,7 @@ function methods.port(self,address,port)
  local tp=self.tp
  self.pasvt=nil
  if not address then
-  address,port=try(tp:getsockname())
+  address=try(tp:getsockname())
   self.server=try(bindsocket(address,0))
   address,port=try(self.server:getsockname())
   try(self.server:settimeout(ftp.TIMEOUT))
@@ -12411,7 +12468,7 @@ function methods.eprt(self,family,address,port)
  local tp=self.tp
  self.pasvt=nil
  if not address then
-  address,port=try(tp:getsockname())
+  address=try(tp:getsockname())
   self.server=try(bindsocket(address,0))
   address,port=try(self.server:getsockname())
   try(self.server:settimeout(ftp.TIMEOUT))
@@ -12895,7 +12952,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["trac-set"] = package.loaded["trac-set"] or true
 
--- original size: 14568, stripped down to: 9644
+-- original size: 14574, stripped down to: 9650
 
 if not modules then modules={} end modules ['trac-set']={ 
  version=1.001,
@@ -12980,10 +13037,10 @@ local function set(t,what,newvalue)
    else
     value=is_boolean(value,value,true) 
    end
-   w=topattern(w,true,true)
+   local p=topattern(w,true,true)
    for name,functions in sortedhash(data) do
     if done[name] then
-    elseif find(name,w) then
+    elseif find(name,p) then
      done[name]=true
      for i=1,#functions do
       functions[i](value)
@@ -13265,7 +13322,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["trac-log"] = package.loaded["trac-log"] or true
 
--- original size: 16017, stripped down to: 11045
+-- original size: 16046, stripped down to: 11072
 
 if not modules then modules={} end modules ['trac-log']={
  version=1.001,
@@ -13280,6 +13337,7 @@ local concat,insert,remove=table.concat,table.insert,table.remove
 local topattern=string.topattern
 local utfchar=utf.char
 local datetime=os.date
+local sleep=os.sleep
 local openfile=io.open
 local write_nl=print
 local write=io.write
@@ -13552,9 +13610,9 @@ local function setblocked(category,value)
    if v then
     v.state=value
    else
-    c=topattern(c,true,true)
+    local p=topattern(c,true,true)
     for k,v in next,data do
-     if find(k,c) then
+     if find(k,p) then
       v.state=value
      end
     end
@@ -14154,7 +14212,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-lua"] = package.loaded["util-lua"] or true
 
--- original size: 7149, stripped down to: 4997
+-- original size: 7166, stripped down to: 5009
 
 if not modules then modules={} end modules ['util-lua']={
  version=1.001,
@@ -14188,6 +14246,7 @@ luautilities.suffixes={
  tma="tma",
  tmc=(CONTEXTLMTXMODE and CONTEXTLMTXMODE>0 and "tmd") or (jit and "tmb") or "tmc",
  lua="lua",
+ lmt="lmt",
  luc=(CONTEXTLMTXMODE and CONTEXTLMTXMODE>0 and "lud") or (jit and "lub") or "luc",
  lui="lui",
  luv="luv",
@@ -14332,7 +14391,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-deb"] = package.loaded["util-deb"] or true
 
--- original size: 10593, stripped down to: 7102
+-- original size: 10416, stripped down to: 7076
 
 if not modules then modules={} end modules ['util-deb']={
  version=1.001,
@@ -14497,10 +14556,7 @@ function debugger.showstats(printer,threshold)
       realtime=realtime+real
      end
      totaltime=totaltime+total
-     if line<0 then
-      line=0
-     end
-     dataset[#dataset+1]={ real,total,count,name,source,line }
+     dataset[#dataset+1]={ real,total,count,name,source,line<0 and 0 or line }
     end
    end
   end
@@ -15496,7 +15552,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-env"] = package.loaded["util-env"] or true
 
--- original size: 9738, stripped down to: 5531
+-- original size: 10014, stripped down to: 5102
 
 if not modules then modules={} end modules ['util-env']={
  version=1.001,
@@ -15511,22 +15567,7 @@ local unquoted,quoted,optionalquoted=string.unquoted,string.quoted,string.option
 local concat,insert,remove=table.concat,table.insert,table.remove
 environment=environment or {}
 local environment=environment
-local setlocale=os.setlocale
-setlocale(nil,nil)
-local report=logs.reporter("system")
-function os.setlocale(a,b)
- if a or b then
-  if report then
-   report()
-   report("You're messing with os.locale in a supposedly locale neutral enviroment. From")
-   report("now on are on your own and without support. Crashes or unexpected side effects")
-   report("can happen but don't bother the luatex and context developer team with it.")
-   report()
-   report=nil
-  end
-  setlocale(a,b)
- end
-end
+os.setlocale(nil,nil) function os.setlocale() end
 local validengines=allocate {
  ["luatex"]=true,
  ["luajittex"]=true,
@@ -15604,7 +15645,8 @@ function environment.setargument(name,value)
  environment.arguments[name]=value
 end
 function environment.getargument(name,partial)
- local arguments,sortedflags=environment.arguments,environment.sortedflags
+ local arguments=environment.arguments
+ local sortedflags=environment.sortedflags
  if arguments[name] then
   return arguments[name]
  elseif partial then
@@ -15711,7 +15753,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["luat-env"] = package.loaded["luat-env"] or true
 
--- original size: 6267, stripped down to: 4115
+-- original size: 6293, stripped down to: 4141
 
  if not modules then modules={} end modules ['luat-env']={
  version=1.001,
@@ -15784,7 +15826,7 @@ local function strippable(filename)
   return false
  end
 end
-function environment.luafilechunk(filename,silent,macros) 
+function environment.luafilechunk(filename,silent,macros,optional) 
  filename=file.replacesuffix(filename,"lua")
  local fullname=environment.luafile(filename)
  if fullname and fullname~="" then
@@ -15794,7 +15836,7 @@ function environment.luafilechunk(filename,silent,macros)
   end
   return data
  else
-  if not silent then
+  if not optional and not silent then
    report_lua("unknown file %a",filename)
   end
   return nil
@@ -15876,7 +15918,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-zip"] = package.loaded["util-zip"] or true
 
--- original size: 23730, stripped down to: 14293
+-- original size: 33051, stripped down to: 16324
 
 if not modules then modules={} end modules ['util-zip']={
  version=1.001,
@@ -15902,11 +15944,13 @@ end
 local files=utilities.files
 local openfile=files.open
 local closefile=files.close
+local getsize=files.size
 local readstring=files.readstring
 local readcardinal2=files.readcardinal2le
 local readcardinal4=files.readcardinal4le
 local setposition=files.setposition
 local getposition=files.getposition
+local skipbytes=files.skip
 local band=bit32.band
 local rshift=bit32.rshift
 local lshift=bit32.lshift
@@ -15929,6 +15973,55 @@ local openzipfile,closezipfile,unzipfile,foundzipfile,getziphash,getziplist  do
    handle=openfile(name,0),
   }
  end
+ local function update(handle,data)
+  position=data.offset
+  setposition(handle,position)
+  local signature=readstring(handle,4)
+  if signature=="PK\3\4" then
+   local version=readcardinal2(handle)
+   local flag=readcardinal2(handle)
+   local method=readcardinal2(handle)
+          skipbytes(handle,4)
+   local crc32=readcardinal4(handle)
+   local compressed=readcardinal4(handle)
+   local uncompressed=readcardinal4(handle)
+   local namelength=readcardinal2(handle)
+   local extralength=readcardinal2(handle)
+   local filename=readstring(handle,namelength)
+   local descriptor=band(flag,8)~=0
+   local encrypted=band(flag,1)~=0
+   local acceptable=method==0 or method==8
+   local skipped=0
+   local size=0
+   if encrypted then
+    size=readcardinal2(handle)
+    skipbytes(handle,size)
+    skipped=skipped+size+2
+    skipbytes(8)
+    skipped=skipped+8
+    size=readcardinal2(handle)
+    skipbytes(handle,size)
+    skipped=skipped+size+2
+    size=readcardinal4(handle)
+    skipbytes(handle,size)
+    skipped=skipped+size+4
+    size=readcardinal2(handle)
+    skipbytes(handle,size)
+    skipped=skipped+size+2
+   end
+   if acceptable then
+     if        filename~=data.filename  then
+    else
+     position=position+30+namelength+extralength+skipped
+     data.position=position
+     return position
+    end
+   else
+   end
+  end
+  data.position=false
+  return false
+ end
  local function collect(z)
   if not z.list then
    local list={}
@@ -15936,72 +16029,68 @@ local openzipfile,closezipfile,unzipfile,foundzipfile,getziphash,getziplist  do
    local position=0
    local index=0
    local handle=z.handle
-   while true do
-    setposition(handle,position)
-    local signature=readstring(handle,4)
-    if signature=="PK\3\4" then
-     local version=readcardinal2(handle)
-     local flag=readcardinal2(handle)
-     local method=readcardinal2(handle)
-     local filetime=readcardinal2(handle)
-     local filedate=readcardinal2(handle)
-     local crc32=readcardinal4(handle)
-     local compressed=readcardinal4(handle)
-     local uncompressed=readcardinal4(handle)
-     local namelength=readcardinal2(handle)
-     local extralength=readcardinal2(handle)
-     local filename=readstring(handle,namelength)
-     local descriptor=band(flag,8)~=0
-     local encrypted=band(flag,1)~=0
-     local acceptable=method==0 or method==8
-     local skipped=0
-     local size=0
-     if encrypted then
-      size=readcardinal2(handle)
-      skipbytes(size)
-      skipped=skipped+size+2
-      skipbytes(8)
-      skipped=skipped+8
-      size=readcardinal2(handle)
-      skipbytes(size)
-      skipped=skipped+size+2
-      size=readcardinal4(handle)
-      skipbytes(size)
-      skipped=skipped+size+4
-      size=readcardinal2(handle)
-      skipbytes(size)
-      skipped=skipped+size+2
+   local size=getsize(handle)
+   for i=size-4,size-64*1024,-1 do
+    setposition(handle,i)
+    local enddirsignature=readcardinal4(handle)
+    if enddirsignature==0x06054B50 then
+     local thisdisknumber=readcardinal2(handle)
+     local centraldisknumber=readcardinal2(handle)
+     local thisnofentries=readcardinal2(handle)
+     local totalnofentries=readcardinal2(handle)
+     local centralsize=readcardinal4(handle)
+     local centraloffset=readcardinal4(handle)
+     local commentlength=readcardinal2(handle)
+     local comment=readstring(handle,length)
+     if size-i>=22 then
+      if thisdisknumber==centraldisknumber then
+       setposition(handle,centraloffset)
+       while true do
+        if readcardinal4(handle)==0x02014B50 then
+                skipbytes(handle,4)
+         local flag=readcardinal2(handle)
+         local method=readcardinal2(handle)
+                skipbytes(handle,4)
+         local crc32=readcardinal4(handle)
+         local compressed=readcardinal4(handle)
+         local uncompressed=readcardinal4(handle)
+         local namelength=readcardinal2(handle)
+         local extralength=readcardinal2(handle)
+         local commentlength=readcardinal2(handle)
+                skipbytes(handle,8)
+         local headeroffset=readcardinal4(handle)
+         local filename=readstring(handle,namelength)
+                skipbytes(handle,extralength+commentlength)
+         local descriptor=band(flag,8)~=0
+         local encrypted=band(flag,1)~=0
+         local acceptable=method==0 or method==8
+         if acceptable then
+          index=index+1
+          local data={
+           filename=filename,
+           index=index,
+           position=nil,
+           method=method,
+           compressed=compressed,
+           uncompressed=uncompressed,
+           crc32=crc32,
+           encrypted=encrypted,
+           offset=headeroffset,
+          }
+          hash[filename]=data
+          list[index]=data
+         end
+        else
+         break
+        end
+       end
+      end
+      break
      end
-     position=position+30+namelength+extralength+skipped
-     if descriptor then
-      setposition(handle,position+compressed)
-      crc32=readcardinal4(handle)
-      compressed=readcardinal4(handle)
-      uncompressed=readcardinal4(handle)
-     end
-     if acceptable then
-      index=index+1
-      local data={
-       filename=filename,
-       index=index,
-       position=position,
-       method=method,
-       compressed=compressed,
-       uncompressed=uncompressed,
-       crc32=crc32,
-       encrypted=encrypted,
-      }
-      hash[filename]=data
-      list[index]=data
-     else
-     end
-     position=position+compressed
-    else
-     break
     end
-    z.list=list
-    z.hash=hash
    end
+   z.list=list
+   z.hash=hash
   end
  end
  function getziplist(z)
@@ -16040,7 +16129,10 @@ local openzipfile,closezipfile,unzipfile,foundzipfile,getziphash,getziplist  do
    local handle=z.handle
    local position=data.position
    local compressed=data.compressed
-   if compressed>0 then
+   if position==nil then
+    position=update(handle,data)
+   end
+   if position and compressed>0 then
     setposition(handle,position)
     local result=readstring(handle,compressed)
     if data.method==8 then
@@ -16251,8 +16343,10 @@ if xzip then
    closezip(zipf)
   end
  end
- local function unzipdir(zipname,path,verbose)
+ local function unzipdir(zipname,path,verbose,collect,validate)
   if type(zipname)=="table" then
+   validate=zipname.validate
+   collect=zipname.collect
    verbose=zipname.verbose
    path=zipname.path
    zipname=zipname.zipname
@@ -16273,34 +16367,47 @@ if xzip then
     local done=0
     local steps=verbose=="steps"
     local time=steps and osclock()
+    if collect then
+     collect={}
+    else
+     collect=false
+    end
     for i=1,count do
      local l=list[i]
      local n=l.filename
-     local d=unzipfile(z,n) 
-     if d then
-      local p=filejoin(path,n)
-      if mkdirs(dirname(p)) then
-       if steps then
-        total=total+#d
-        done=done+1
-        if done>=step then
-         done=0
-         logwriter(format("%4i files of %4i done, %10i bytes, %0.3f seconds",i,count,total,osclock()-time))
+     if not validate or validate(n) then
+      local d=unzipfile(z,n) 
+      if d then
+       local p=filejoin(path,n)
+       if mkdirs(dirname(p)) then
+        if steps then
+         total=total+#d
+         done=done+1
+         if done>=step then
+          done=0
+          logwriter(format("%4i files of %4i done, %10i bytes, %0.3f seconds",i,count,total,osclock()-time))
+         end
+        elseif verbose then
+         logwriter(n)
         end
-       elseif verbose then
-        logwriter(n)
+        savedata(p,d)
+        if collect then
+         collect[#collect+1]=p
+        end
        end
-       savedata(p,d)
+      else
+       logwriter(format("problem with file %s",n))
       end
      else
-      logwriter(format("problem with file %s",n))
      end
     end
     if steps then
      logwriter(format("%4i files of %4i done, %10i bytes, %0.3f seconds",count,count,total,osclock()-time))
     end
     closezipfile(z)
-    return true
+    if collect then
+     return collect
+    end
    else
     closezipfile(z)
    end
@@ -16438,7 +16545,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["lxml-tab"] = package.loaded["lxml-tab"] or true
 
--- original size: 62221, stripped down to: 36225
+-- original size: 62465, stripped down to: 36432
 
 if not modules then modules={} end modules ['lxml-tab']={
  version=1.001,
@@ -16822,8 +16929,13 @@ do
   [ [[}]] ]="&U+7D;",
   [ [[~]] ]="&U+7E;",
  }
- local privates_n={ 
+ local privates_n={
  }
+ utilities.storage.mark(privates_u)
+ utilities.storage.mark(privates_p)
+ utilities.storage.mark(privates_s)
+ utilities.storage.mark(privates_x)
+ utilities.storage.mark(privates_n)
  local escaped=utf.remapper(privates_u,"dynamic")
  local unprivatized=utf.remapper(privates_p,"dynamic")
  local unspecialized=utf.remapper(privates_s,"dynamic")
@@ -17547,7 +17659,11 @@ local f_attribute=formatters['%s=%q']
 local function verbose_element(e,handlers,escape) 
  local handle=handlers.handle
  local serialize=handlers.serialize
- local ens,etg,eat,edt,ern=e.ns,e.tg,e.at,e.dt,e.rn
+ local ens=e.ns
+ local etg=e.tg
+ local eat=e.at
+ local edt=e.dt
+ local ern=e.rn
  local ats=eat and next(eat) and {}
  if ats then
   local n=0
@@ -17919,7 +18035,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["lxml-lpt"] = package.loaded["lxml-lpt"] or true
 
--- original size: 54589, stripped down to: 31258
+-- original size: 54738, stripped down to: 31395
 
 if not modules then modules={} end modules ['lxml-lpt']={
  version=1.001,
@@ -18923,9 +19039,11 @@ expressions.print=function(...)
  print(...)
  return true
 end
-expressions.find=find
-expressions.upper=upper
-expressions.lower=lower
+expressions.find=function(str,...)
+ return str and find(str,...)
+end
+expressions.upper=function(str) return str and upper(str) or "" end 
+expressions.lower=function(str) return str and lower(str) or "" end 
 expressions.number=tonumber
 expressions.boolean=toboolean
 function expressions.contains(str,pattern)
@@ -21051,7 +21169,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["data-exp"] = package.loaded["data-exp"] or true
 
--- original size: 18179, stripped down to: 10432
+-- original size: 18185, stripped down to: 10438
 
 if not modules then modules={} end modules ['data-exp']={
  version=1.001,
@@ -21133,10 +21251,10 @@ local function splitpathexpr(str,newlist,validate)
  str=lpegmatch(stripper_1,str)
  if validate then
   for s in gmatch(str,"[^,]+") do
-   s=validate(s)
-   if s then
+   local v=validate(s)
+   if v then
     n=n+1
-    t[n]=s
+    t[n]=v
    end
   end
  else
@@ -21459,7 +21577,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["data-env"] = package.loaded["data-env"] or true
 
--- original size: 9501, stripped down to: 6413
+-- original size: 9758, stripped down to: 6523
 
 if not modules then modules={} end modules ['data-env']={
  version=1.001,
@@ -21473,6 +21591,7 @@ local next,rawget=next,rawget
 local resolvers=resolvers
 local allocate=utilities.storage.allocate
 local setmetatableindex=table.setmetatableindex
+local sortedhash=table.sortedhash
 local suffixonly=file.suffixonly
 local formats=allocate()
 local suffixes=allocate()
@@ -21574,7 +21693,7 @@ local relations=allocate {
   lua={
    names={ "lua" },
    variable='LUAINPUTS',
-   suffixes={ luasuffixes.lua,luasuffixes.luc,luasuffixes.tma,luasuffixes.tmc },
+   suffixes={ luasuffixes.lmt,luasuffixes.lua,luasuffixes.luc,luasuffixes.tma,luasuffixes.tmc },
    usertype=true,
   },
   lib={
@@ -21675,8 +21794,8 @@ local relations=allocate {
 }
 resolvers.relations=relations
 function resolvers.updaterelations()
- for category,categories in next,relations do
-  for name,relation in next,categories do
+ for category,categories in sortedhash(relations) do
+  for name,relation in sortedhash(categories) do
    local rn=relation.names
    local rv=relation.variable
    if rn and rv then
@@ -21689,7 +21808,9 @@ function resolvers.updaterelations()
       suffixes[rni]=rs
       for i=1,#rs do
        local rsi=rs[i]
-       suffixmap[rsi]=rni
+       if not suffixmap[rsi] then
+        suffixmap[rsi]=rni
+       end
       end
      end
     end
@@ -22281,7 +22402,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["data-res"] = package.loaded["data-res"] or true
 
--- original size: 70711, stripped down to: 44839
+-- original size: 70699, stripped down to: 45019
 
 if not modules then modules={} end modules ['data-res']={
  version=1.001,
@@ -22346,18 +22467,37 @@ local criticalvars={
  "TEXMF",
  "TEXOS",
 }
-if environment.default_texmfcnf then
- resolvers.luacnfspec="home:texmf/web2c;"..environment.default_texmfcnf 
-else
+do
  local texroot=environment.texroot
- resolvers.luacnfspec="home:texmf/web2c;selfautoparent:/texmf-local/web2c;selfautoparent:/texmf-context/web2c;selfautoparent:/texmf/web2c"
- if texroot and isdir(texroot.."/texmf-context") then
+ resolvers.luacnfspec={
+  "home:texmf/web2c",
+  "selfautoparent:/texmf-local/web2c",
+  "selfautoparent:/texmf-context/web2c",
+  "selfautoparent:/texmf/web2c",
+ }
+ if environment.default_texmfcnf then
+  resolvers.luacnfspec={
+   "home:texmf/web2c",
+   environment.default_texmfcnf,
+  }
+ elseif texroot and isdir(texroot.."/texmf-context") then
  elseif texroot and isdir(texroot.."/texmf-dist") then
-  resolvers.luacnfspec="home:texmf/web2c;selfautoparent:/texmf-local/web2c;selfautoparent:/texmf-dist/web2c;selfautoparent:/texmf/web2c"
+  resolvers.luacnfspec={
+   "home:texmf/web2c",
+   "selfautoparent:/texmf-local/web2c",
+   "selfautoparent:",
+   "selfautoparent:/texmf-dist/web2c",
+   "selfautoparent:/texmf/web2c",
+  }
  elseif ostype~="windows" and isdir("/etc/texmf/web2c") then
-  resolvers.luacnfspec="home:texmf/web2c;/etc/texmf/web2c;selfautodir:/share/texmf/web2c"
+  resolvers.luacnfspec={
+   "home:texmf/web2c",
+   "/etc/texmf/web2c",
+   "selfautodir:/share/texmf/web2c",
+  }
  else
  end
+ resolvers.luacnfspec=concat(resolvers.luacnfspec,";")
 end
 local unset_variable="unset"
 local formats=resolvers.formats
@@ -23198,7 +23338,7 @@ end
 local preparetreepattern=Cs((P(".")/"%%."+P("-")/"%%-"+P(1))^0*Cc("$"))
 local collect_instance_files
 local function find_analyze(filename,askedformat,allresults)
- local filetype=''
+ local filetype=""
  local filesuffix=suffixonly(filename)
  local wantedfiles={}
  wantedfiles[#wantedfiles+1]=filename
@@ -23206,7 +23346,7 @@ local function find_analyze(filename,askedformat,allresults)
   if filesuffix=="" or not suffixmap[filesuffix] then
    local defaultsuffixes=resolvers.defaultsuffixes
    for i=1,#defaultsuffixes do
-    local forcedname=filename..'.'..defaultsuffixes[i]
+    local forcedname=filename.."."..defaultsuffixes[i]
     wantedfiles[#wantedfiles+1]=forcedname
     filetype=formatofsuffix(forcedname)
     if trace_locating then
@@ -23550,7 +23690,8 @@ collect_instance_files=function(filename,askedformat,allresults)
   local result={}
   local status={}
   local done={}
-  for k,r in next,results do
+  for k=1,#results do
+   local r=results[k]
    local method,list=r[1],r[2]
    if method and list then
     for i=1,#list do
@@ -25748,7 +25889,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["luat-sta"] = package.loaded["luat-sta"] or true
 
--- original size: 5703, stripped down to: 2321
+-- original size: 5608, stripped down to: 2321
 
 if not modules then modules={} end modules ['luat-sta']={
  version=1.001,
@@ -26138,8 +26279,8 @@ end -- of closure
 
 -- used libraries    : l-bit32.lua l-lua.lua l-macro.lua l-sandbox.lua l-package.lua l-lpeg.lua l-function.lua l-string.lua l-table.lua l-io.lua l-number.lua l-set.lua l-os.lua l-file.lua l-gzip.lua l-md5.lua l-sha.lua l-url.lua l-dir.lua l-boolean.lua l-unicode.lua l-math.lua util-str.lua util-tab.lua util-fil.lua util-sac.lua util-sto.lua util-prs.lua util-fmt.lua util-soc-imp-reset.lua util-soc-imp-socket.lua util-soc-imp-copas.lua util-soc-imp-ltn12.lua util-soc-imp-mime.lua util-soc-imp-url.lua util-soc-imp-headers.lua util-soc-imp-tp.lua util-soc-imp-http.lua util-soc-imp-ftp.lua util-soc-imp-smtp.lua trac-set.lua trac-log.lua trac-inf.lua trac-pro.lua util-lua.lua util-deb.lua util-tpl.lua util-sbx.lua util-mrg.lua util-env.lua luat-env.lua util-zip.lua lxml-tab.lua lxml-lpt.lua lxml-mis.lua lxml-aux.lua lxml-xml.lua trac-xml.lua data-ini.lua data-exp.lua data-env.lua data-tmp.lua data-met.lua data-res.lua data-pre.lua data-inp.lua data-out.lua data-fil.lua data-con.lua data-use.lua data-zip.lua data-tre.lua data-sch.lua data-lua.lua data-aux.lua data-tmf.lua data-lst.lua libs-ini.lua luat-sta.lua luat-fmt.lua
 -- skipped libraries : -
--- original bytes    : 1037585
--- stripped bytes    : 408686
+-- original bytes    : 1050273
+-- stripped bytes    : 417643
 
 -- end library merge
 
@@ -26487,8 +26628,8 @@ messages = messages or { } -- for the moment
 runners = runners  or { } -- global (might become local)
 
 runners.applications = {
-    ["lua"] = "luatex --luaonly",
-    ["luc"] = "luatex --luaonly",
+    ["lua"] = "luatex --luaonly --socket",
+    ["luc"] = "luatex --luaonly --socket",
     ["pl"] = "perl",
     ["py"] = "python",
     ["rb"] = "ruby",

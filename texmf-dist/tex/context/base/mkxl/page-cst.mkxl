@@ -124,7 +124,7 @@
      {\chaintocurrentpagegrid{\currentpagegrid:#1}}%
 \to \everydefinepagegrid
 
-\permanent\tolerant\protected\def\startpagegrid[#1]#*[#2]%
+\permanent\tolerant\protected\def\startpagegrid[#S#1]#*[#S#2]%
   {\bgroup
    \enforced\let\startpagegrid\page_grd_start_dummy
    \ifarguments
@@ -134,10 +134,10 @@
        \lettonothing\currentpagegrid
        \setupcurrentpagegrid[#1]%
      \else
-       \def\currentpagegrid{#1}%
+       \cdef\currentpagegrid{#1}%
      \fi
    \or
-     \edef\currentpagegrid{#1}%
+     \cdef\currentpagegrid{#1}%
      \setupcurrentpagegrid[#2]%
    \fi
    \usepageparameter\pagegridparameter
@@ -186,7 +186,7 @@
    %
    }%\begingroup}
 
-\tolerant\def\page_grd_start_dummy[#1]#*[#2]%
+\tolerant\def\page_grd_start_dummy[#S#1]#*[#S#2]%
   {\let\page_grd_stop\egroup}
 
 \permanent\protected\def\stoppagegrid
@@ -204,7 +204,7 @@
    \page_otr_command_set_vsize
    \page_otr_command_set_hsize}
 
-\permanent\protected\def\reservepagegrid[#1]%
+\permanent\protected\def\reservepagegrid[#S#1]%
   {\begingroup
    \letdummyparameter\c!c\plusone
    \letdummyparameter\c!r\plusone
@@ -220,7 +220,7 @@
    }%
    \endgroup}
 
-\permanent\tolerant\protected\def\setpagegrid[#1]%
+\permanent\tolerant\protected\def\setpagegrid[#S#1]%
   {\begingroup
    \letdummyparameter\c!c\zerocount
    \letdummyparameter\c!r\zerocount
@@ -309,7 +309,7 @@
      \page_lines_add_numbers_to_box\b_page_grd_column\privatescratchcounter\c_page_grd_n_of_left\plustwo
    \fi
    \begingroup
-   \edef\currentpagegrid{\currentpagegrid:#1}%
+   \cdef\currentpagegrid{\currentpagegrid:#1}%
    \inheritedpagegridframedbox\box\b_page_grd_column
    \endgroup}
 
@@ -318,17 +318,19 @@
    \setbox\b_page_grd_collected\hpack\bgroup
      \clf_preparecolumnsetflush{\currentpagegrid}%
      \letpagegridparameter\c!region\currentpagegrid
-     \doifelse{\pagegridparameter\c!direction}\v!reverse
-       {\dostepwiserecurse\c_page_grd_last_column\c_page_grd_first_column\minusone
-          {\page_grd_command_flush_page_column{##1}%
-           \ifnum##1>\plusone
-             \kern\namedpagegridparameter{\currentpagegrid:##1}\c!distance\relax
-           \fi}}%
-       {\dostepwiserecurse\c_page_grd_first_column\c_page_grd_last_column\plusone
-          {\page_grd_command_flush_page_column{##1}%
-           \ifnum##1<\c_page_grd_last_column
-             \kern\namedpagegridparameter{\currentpagegrid:##1}\c!distance\relax
-           \fi}}%
+     \ifcstok{\pagegridparameter\c!direction}\v!reverse
+       \dostepwiserecurse\c_page_grd_last_column\c_page_grd_first_column\minusone
+         {\page_grd_command_flush_page_column{##1}%
+          \ifnum##1>\plusone
+            \kern\namedpagegridparameter{\currentpagegrid:##1}\c!distance\relax
+          \fi}%
+     \else
+       \dostepwiserecurse\c_page_grd_first_column\c_page_grd_last_column\plusone
+         {\page_grd_command_flush_page_column{##1}%
+          \ifnum##1<\c_page_grd_last_column
+            \kern\namedpagegridparameter{\currentpagegrid:##1}\c!distance\relax
+          \fi}%
+     \fi
      \clf_finishcolumnsetflush{\currentpagegrid}%
    \egroup
    \page_otr_construct_and_shipout\box\b_page_grd_collected\zerocount % three arguments
@@ -393,14 +395,14 @@
 % needs checking
 
 \protected\def\page_grd_command_flush_floats
-  {\wait\global\settrue\c_page_floats_flushing
+  {\wait\global\c_page_floats_flushing\conditionaltrue
    \ifconditional\c_page_floats_some_waiting
      \par
      \page_grd_command_flush_floats_indeed
    \fi
    \global\savednoffloats\zerocount
-   \global\setfalse\c_page_floats_some_waiting
-   \global\setfalse\c_page_floats_flushing}
+   \global\c_page_floats_some_waiting\conditionalfalse
+   \global\c_page_floats_flushing\conditionalfalse}
 
 \def\page_grd_command_flush_floats_indeed % much in common with OTRSET
   {\ifconditional\c_page_floats_some_waiting
@@ -411,7 +413,7 @@
      % \or
      %   \page_floats_get
        \else
-         \setfalse\c_page_floats_center_box % not needed as we do call directly
+         \c_page_floats_center_box\conditionalfalse % not needed as we do call directly
          \global\setbox\floatbox\hbox to \hsize
            {\hfil
             \dorecurse\nofcollectedfloats
@@ -448,9 +450,9 @@
      box    \floatbox
    }%
    \ifcase\c_page_grd_reserved_state
-     \global\settrue\c_page_floats_room
+     \global\c_page_floats_room\conditionaltrue
    \else
-     \global\setfalse\c_page_floats_room
+     \global\c_page_floats_room\conditionalfalse
    \fi}
 
 \protected\def\page_grd_place_float_here_indeed
@@ -641,7 +643,7 @@
    \synchronizepagegrid
    \bgroup
    \forgetall
-   \edef\currentpagegridspan{#1}%
+   \cdef\currentpagegridspan{#1}%
    \clf_sethsizecolumnspan{\currentpagegrid}\pagegridspanparameter\c!n\relax
    \setbox\scratchbox\hbox\bgroup\inheritedpagegridspanframed\bgroup
      \def\page_grd_span_stop{\page_grd_span_stop_indeed{#2}}%
@@ -718,7 +720,7 @@
 \to \everydefinepagegridarea
 
 \permanent\tolerant\protected\def\setuppagegridareatext[#1]#*[#2]%
-  {\edef\currentpagegridarea{#1}%
+  {\cdef\currentpagegridarea{#1}%
    \setpagegridareaparameter\c!text{#2}}
 
 % maybe move the left/right correction to the tex end or the offset to lua
@@ -727,7 +729,7 @@
 
 \permanent\protected\def\setpagegridarea#1#2#3#4#5#6#7#8% can be optimized
   {\begingroup
-   \edef\currentpagegridarea{#2}%
+   \cdef\currentpagegridarea{#2}%
    \setpagegridareaparameter\c!width {#5\scaledpoint}%
    \setpagegridareaparameter\c!height{#6\scaledpoint}%
    \setbox\nextbox\hpack\bgroup\inheritedpagegridareaframed\bgroup

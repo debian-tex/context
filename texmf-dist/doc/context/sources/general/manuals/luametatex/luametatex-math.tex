@@ -68,14 +68,13 @@ transformed in the font engine later on, just as hyphenation directive can
 be added. Eventually one (normally) gets a mix of glyphs, font kerns from
 a sequence of glyphs
 
-In math mode \type {abc} results in three simple ordinary noads and \type {a
-b c} is equivalent to that: three noads. But \type {a bc} results in two
-ordinary noads where the second one has a sublist of two ordinary noads.
-Because characters have class properties, \type {( a + b = c )} results in a
-simple open noad, a simple ordinary, a simple binary, a simple ordinary, a
-simple relation, a simple ordinary and simple close noad. The next samples show a
-bit of this; in order to see th effects spacing between ordinary atoms set
-to \type {9mu}.
+In math mode \type {abc} results in three simple ordinary noads and \type {a b c}
+is equivalent to that: three noads. But \type {a bc} results in two ordinary
+noads where the second one has a sublist of two ordinary noads. Because
+characters have class properties, \type {( a + b = c )} results in a simple open
+noad, a simple ordinary, a simple binary, a simple ordinary, a simple relation, a
+simple ordinary and simple close noad. The next samples show a bit of this; in
+order to see the effects of spacing between ordinary atoms set it to \type {9mu}.
 
 \startbuffer
 \typebuffer[sample]
@@ -635,7 +634,7 @@ are not bound to fonts because we don't know if have a font involved.
 
 \startsection[title={Math styles}]
 
-\startsubsection[title={\prm {mathstyle}, \prm {mathstackstyle} and \prm {Ustyle}}]
+\startsubsection[title={\prm {mathstyle}, \prm {mathstackstyle} and \prm {givenmathstyle}}]
 
 \topicindex {math+styles}
 
@@ -756,12 +755,12 @@ that when you got it, and want to act upon it, you need to remap it onto say \pr
 why we also have a more efficient alternative that you can use in macros:
 
 \starttyping
-\normalexpand{ ... \Ustyle\the\mathstyle      ...}
-\normalexpand{ ... \Ustyle\the\mathstackstyle ...}
+\normalexpand{ ... \givenmathstyle\the\mathstyle      ...}
+\normalexpand{ ... \givenmathstyle\the\mathstackstyle ...}
 \stoptyping
 
-This new primitive \prm {Ustyle} accepts a numeric value. The \prm
-{mathstackstyle} primitive is just a bonus (it complements \prm {Ustack}).
+This new primitive \prm {givenmathstyle} accepts a numeric value. The \prm
+{mathstackstyle} primitive is just a bonus (it complements \prm {mathstack}).
 
 The styles that the different math components and their subcomponents start out
 with are no longer hard coded but can be set at runtime:
@@ -815,7 +814,7 @@ are no real reasons to change them.
 
 \stopsubsection
 
-\startsubsection[title={\prm {Ustack}}]
+\startsubsection[title={\prm {mathstack}}]
 
 \topicindex {math+stacks}
 
@@ -823,13 +822,13 @@ There are a few math commands in \TEX\ where the style that will be used is not
 known straight from the start. These commands (\prm {over}, \prm {atop},
 \prm {overwithdelims}, \prm {atopwithdelims}) would therefore normally return
 wrong values for \prm {mathstyle}. To fix this, \LUATEX\ introduces a special
-prefix command: \prm {Ustack}:
+prefix command: \prm {mathstack}:
 
 \starttyping
-$\Ustack {a \over b}$
+$\mathstack {a \over b}$
 \stoptyping
 
-The \prm {Ustack} command will scan the next brace and start a new math group
+The \prm {mathstack} command will scan the next brace and start a new math group
 with the correct (numerator) math style. The \prm {mathstackstyle} primitive
 relates to this feature.
 
@@ -1526,16 +1525,16 @@ front.
 
 \startbuffer
 $
-                                               x \Usubscript  {-}
-     \frozen\Umathsubshiftdown\textstyle  0pt  x \Usubscript  {0}
-    {\frozen\Umathsubshiftdown\textstyle  5pt  x \Usubscript  {5}}
-                                               x \Usubscript  {0}
-    {\frozen\Umathsubshiftdown\textstyle 15pt  x \Usubscript {15}}
-                                               x \Usubscript  {0}
-    {\frozen\Umathsubshiftdown\textstyle 20pt  x \Usubscript {20}}
-                                               x \Usubscript  {0}
-     \frozen\Umathsubshiftdown\textstyle 10pt  x \Usubscript {10}
-                                               x \Usubscript  {0}
+                                               x \subscript  {-}
+     \frozen\Umathsubshiftdown\textstyle  0pt  x \subscript  {0}
+    {\frozen\Umathsubshiftdown\textstyle  5pt  x \subscript  {5}}
+                                               x \subscript  {0}
+    {\frozen\Umathsubshiftdown\textstyle 15pt  x \subscript {15}}
+                                               x \subscript  {0}
+    {\frozen\Umathsubshiftdown\textstyle 20pt  x \subscript {20}}
+                                               x \subscript  {0}
+     \frozen\Umathsubshiftdown\textstyle 10pt  x \subscript {10}
+                                               x \subscript  {0}
 $
 \stopbuffer
 
@@ -1555,17 +1554,17 @@ unprocessed math list. The result looks as follows:
 
 \startsubsection[title={Arbitrary atoms with \prm {mathatom} etc.}]
 
-The original \TEX\ engine has primitives like \prm {mathord} and a limited set of
-possible atoms. In \LUAMETATEX\ we have many more built in and you can add more.
-It will take a while before we have documented all the new math features and more
-details can be found in the manuals that come with \CONTEXT\ for which all this
-was implemented. In addition to \prm {mathordinary} (aka \prm {mathord}), \prm
-{mathoperator} (aka \prm {mathop}), \prm {mathbinary} (aka \prm {mathbin}), \prm
-{mathrelation} (aka \prm {mathrel}), \prm {mathopen}, \prm {mathclose}, \prm
-{mathpunctuation} (aka {mathpunct}) and \prm {mathinner} we have \prm
-{mathfraction}, \prm {mathradical}, \prm {mathmiddle}, \prm {mathaccent}, \prm
-{mathfenced}, \prm {mathghost} and the existing \prm {mathunderline} (aka \prm
-{underline}) and \prm {mathoverline} (aka \prm {overline}) class driven atoms.
+% The original \TEX\ engine has primitives like \prm {mathord} and a limited set of
+% possible atoms. In \LUAMETATEX\ we have many more built in and you can add more.
+% It will take a while before we have documented all the new math features and more
+% details can be found in the manuals that come with \CONTEXT\ for which all this
+% was implemented. In addition to \prm {mathordinary} (aka \prm {mathord}), \prm
+% {mathoperator} (aka \prm {mathop}), \prm {mathbinary} (aka \prm {mathbin}), \prm
+% {mathrelation} (aka \prm {mathrel}), \prm {mathopen}, \prm {mathclose}, \prm
+% {mathpunctuation} (aka {mathpunct}) and \prm {mathinner} we have \prm
+% {mathfraction}, \prm {mathradical}, \prm {mathmiddle}, \prm {mathaccent}, \prm
+% {mathfenced}, \prm {mathghost} and the existing \prm {mathunderline} (aka \prm
+% {underline}) and \prm {mathoverline} (aka \prm {overline}) class driven atoms.
 
 The \prm {mathatom} primitive is the generic one and it accepts a couple of
 keywords:
@@ -2115,12 +2114,12 @@ These render as: \getbuffer
 
 \stopsubsection
 
-\startsubsection[title={Math styles: \prm {Ustyle}}]
+\startsubsection[title={Math styles: \prm {givenmathstyle}}]
 
 This primitive accepts a style identifier:
 
 \starttyping
-\Ustyle \displaystyle
+\givenmathstyle \displaystyle
 \stoptyping
 
 This in itself is not spectacular because it is equivalent to
@@ -2135,9 +2134,12 @@ zero upto seven (like the ones reported by the primitive \prm {mathstyle}). So, 
 next few lines give identical results:
 
 \startbuffer
-$\Ustyle0             \number\mathstyle \Ustyle7                         \number\mathstyle$
-$\Ustyle\displaystyle \number\mathstyle \Ustyle\crampedscriptscriptstyle \number\mathstyle$
-$       \displaystyle \number\mathstyle        \crampedscriptscriptstyle \number\mathstyle$
+$\givenmathstyle0                         \number\mathstyle
+ \givenmathstyle7                         \number\mathstyle$
+$\givenmathstyle\displaystyle             \number\mathstyle
+ \givenmathstyle\crampedscriptscriptstyle \number\mathstyle$
+$\displaystyle                            \number\mathstyle
+ \crampedscriptscriptstyle                \number\mathstyle$
 \stopbuffer
 
 Like: \inlinebuffer . Values outside the valid range are ignored.
@@ -2194,8 +2196,8 @@ influence the spacing. The numbers are the same as for character classes.
 
 \startsection[title={Extracting values}]
 
-\startsubsection[title={Codes and using \prm {Umathcode}, \prm {Umathcharclass}, \prm
-{Umathcharfam} and \prm {Umathcharslot}}]
+\startsubsection[title={Codes and using \prm {Umathcode}, \prm {mathcharclass}, \prm
+{mathcharfam} and \prm {mathcharslot}}]
 
 \topicindex {math+codes}
 
@@ -2210,7 +2212,7 @@ you can extract the components of a math character. Say that we have defined:
 then
 
 \starttyping
-[\Umathcharclass\Umathcode1] [\Umathcharfam\Umathcode1] [\Umathcharslot\Umathcode1]
+[\mathcharclass\Umathcode1] [\Umathcharfam\Umathcode1] [\Umathcharslot\Umathcode1]
 \stoptyping
 
 which will return:
@@ -2227,7 +2229,7 @@ These commands are provided as convenience. Before they became available you
 could do the following:
 
 \starttyping
-\def\Umathcharclass{\numexpr
+\def\mathcharclass{\numexpr
     \directlua{tex.print(tex.getmathcode(token.scan_int())[1])}
 \relax}
 \def\Umathcharfam{\numexpr
@@ -2279,8 +2281,8 @@ identifier that determines in what style we end up in.
 
 \stopsubsection
 
-\startsubsection[title={Verbose versions of single|-|character math commands like \prm {Usuperscript}
-and \prm {Usubscript}}]
+\startsubsection[title={Verbose versions of single|-|character math commands like \prm {superscript}
+and \prm {subscript}}]
 
 \topicindex {math+styles}
 
@@ -2290,8 +2292,8 @@ and \prm {Usubscript}}]
 \starttabulate[|l|l|]
 \DB primitive                \BC explanation \NC \NR
 \TB
-\NC \prm {Usuperscript}      \NC duplicates the functionality of \type {^} \NC \NR
-\NC \prm {Usubscript}        \NC duplicates the functionality of \type {_} \NC \NR
+\NC \prm {superscript}      \NC duplicates the functionality of \type {^} \NC \NR
+\NC \prm {subscript}        \NC duplicates the functionality of \type {_} \NC \NR
 \NC \prm {Ustartmath}        \NC duplicates the functionality of \type {$}, % $
                                    when used in non-math mode. \NC \NR
 \NC \prm {Ustopmath}         \NC duplicates the functionality of \type {$}, % $
@@ -2309,7 +2311,7 @@ the four mathon|/|mathoff commands with explicit dollar sign(s).
 
 \stopsubsection
 
-\startsubsection[title={Script commands \prm {Unosuperscript}, \prm {Unosubscript}, \prm {Unosuperprescript} and \prm {Unosubprescript}}]
+\startsubsection[title={Script commands \prm {nosuperscript}, \prm {nosubscript}, \prm {nosuperprescript} and \prm {nosubprescript}}]
 
 \topicindex {math+styles}
 \topicindex {math+scripts}
@@ -2319,10 +2321,10 @@ time of rendering). So,
 
 \startbuffer[script]
 $
-    x\Usuperscript  {1}\Usubscript  {2} =
-    x\Unosuperscript{1}\Unosubscript{2} =
-    x\Usuperscript  {1}\Unosubscript{2} =
-    x\Unosuperscript{1}\Usubscript  {2}
+    x\superscript  {1}\subscript  {2} =
+    x\nosuperscript{1}\nosubscript{2} =
+    x\superscript  {1}\nosubscript{2} =
+    x\nosuperscript{1}\subscript  {2}
 $
 \stopbuffer
 
@@ -2332,7 +2334,7 @@ results in \inlinebuffer[script].
 
 \stopsubsection
 
-\startsubsection[title={Script commands \prm {Ushiftedsuperscript}, \prm {Ushiftedsubscript}, \prm {Ushiftedsuperprescript} and \prm {Ushiftedsubprescript}}]
+\startsubsection[title={Script commands \prm {shiftedsuperscript}, \prm {shiftedsubscript}, \prm {shiftedsuperprescript} and \prm {shiftedsubprescript}}]
 
 \topicindex {math+styles}
 \topicindex {math+scripts}
@@ -2344,10 +2346,10 @@ are shown:
 
 \startbuffer[script]
 $
-    x\Usuperscript       {1}\Usubscript       {2} =
-    x\Ushiftedsuperscript{1}\Ushiftedsubscript{2} =
-    x\Usuperscript       {1}\Ushiftedsubscript{2} =
-    x\Ushiftedsuperscript{1}\Usubscript       {2}
+    x\superscript       {1}\subscript       {2} =
+    x\shiftedsuperscript{1}\shiftedsubscript{2} =
+    x\superscript       {1}\shiftedsubscript{2} =
+    x\shiftedsuperscript{1}\subscript       {2}
 $
 \stopbuffer
 
@@ -2357,7 +2359,7 @@ results in \inlinebuffer[script].
 
 \stopsubsection
 
-\startsubsection[title={Injecting primes with \prm {Uprimescript}}]
+\startsubsection[title={Injecting primes with \prm {primescript}}]
 
 This one is a bit special. In \LUAMETATEX\ a prime is a native element of a
 nucleus, alongside the two prescript and two postscripts. The most confusing
@@ -2367,9 +2369,9 @@ are applied so we don't covert it. That leaves three cases:
 
 \startbuffer[script]
 $
-    a \Uprimescript{1} \Usuperscript{2} \Usubscript {3} +
-    b \Usubscript  {3} \Uprimescript{1} +
-    c \Uprimescript{1} \Usubscript  {3} = d
+    a \primescript{1} \superscript{2} \subscript {3} +
+    b \subscript  {3} \primescript{1} +
+    c \primescript{1} \subscript  {3} = d
 $
 \stopbuffer
 
@@ -2380,16 +2382,16 @@ it were an index.
 
 \stopsubsection
 
-\startsubsection[title={Prescripts with \prm {Usuperprescript} and \prm {Usubprescript}}]
+\startsubsection[title={Prescripts with \prm {superprescript} and \prm {subprescript}}]
 
 \startbuffer
 \hbox{$
-    {\tf X}^1_2^^3__4 \quad
-    {\tf X}^1  ^^3    \quad
-    {\tf X}  _1   __4 \quad
-    {\tf X}    ^^3    \quad
-    {\tf X}       __4 \quad
-    {\tf X}^^3    __4
+    {\tf X}^1_2^^^3___4 \quad
+    {\tf X}^1  ^^^3    \quad
+    {\tf X}  _1    ___4 \quad
+    {\tf X}    ^^^3    \quad
+    {\tf X}        ___4 \quad
+    {\tf X}^^^3    ___4
 $}
 \stopbuffer
 
@@ -2409,15 +2411,15 @@ The more explicit commands are:
 
 \startbuffer
 \hbox{$
-{\tf X}\Usuperscript{1}                                                  \quad
-{\tf X}                \Usubscript{2}                                    \quad
-{\tf X}\Usuperscript{1}\Usubscript{2}                                    \quad
-{\tf X}\Usuperscript{1}              \Usuperprescript{3}                 \quad
-{\tf X}                \Usubscript{2}                   \Usubprescript{4}\quad
-{\tf X}\Usuperscript{1}\Usubscript{2}\Usuperprescript{3}\Usubprescript{4}\quad
-{\tf X}                              \Usuperprescript{3}                 \quad
-{\tf X}                                                 \Usubprescript{4}\quad
-{\tf X}                              \Usuperprescript{3}\Usubprescript{4}
+{\tf X}\superscript{1}                                               \quad
+{\tf X}               \subscript{2}                                  \quad
+{\tf X}\superscript{1}\subscript{2}                                  \quad
+{\tf X}\superscript{1}             \superprescript{3}                \quad
+{\tf X}               \subscript{2}                  \subprescript{4}\quad
+{\tf X}\superscript{1}\subscript{2}\superprescript{3}\subprescript{4}\quad
+{\tf X}                            \superprescript{3}                \quad
+{\tf X}                                              \subprescript{4}\quad
+{\tf X}                            \superprescript{3}\subprescript{4}
 $}
 \stopbuffer
 
@@ -2521,16 +2523,16 @@ If you also want to see something on the console make sure to set \prm
 
 \startsection[title={Classes}]
 
-\startsubsection[title={Forcing classes with \prm {Umathclass}}]
+\startsubsection[title={Forcing classes with \prm {mathclass}}]
 
 You can change the class of a math character on the fly:
 
 \startbuffer
-$x\mathopen    {!}+123+\mathclose   {!}x$
-$x\Umathclass4 `! +123+\Umathclass5 `! x$
-$x              ! +123+              ! x$
-$x\mathclose   {!}+123+\mathopen    {!}x$
-$x\Umathclass5 `! +123+\Umathclass4 `! x$
+$x\mathopen   {!}+123+\mathclose   {!}x$
+$x\mathclass4 `! +123+\mathclass5 `! x$
+$x             ! +123+             ! x$
+$x\mathclose  {!}+123+\mathopen   {!}x$
+$x\mathclass5 `! +123+\mathclass4 `! x$
 \stopbuffer
 
 \typebuffer
@@ -2655,17 +2657,21 @@ they indicate pre- and postscripts.
 \starttabulate[|c|c|c|c|]
 \NC \type {^}    \NC         \NC super \NC post \NC \NR
 \NC \type {_}    \NC         \NC sub   \NC post \NC \NR
-\NC \type {^^}   \NC         \NC super \NC pre  \NC \NR
-\NC \type {__}   \NC         \NC sub   \NC pre  \NC \NR
-\NC \type {^^^}  \NC shifted \NC super \NC post \NC \NR
-\NC \type {___}  \NC shifted \NC sub   \NC post \NC \NR
+\NC \type {^^}   \NC         \NC super \NC post \NC \NR
+\NC \type {__}   \NC         \NC sub   \NC post \NC \NR
+\NC \type {^^^}  \NC shifted \NC super \NC pre  \NC \NR
+\NC \type {___}  \NC shifted \NC sub   \NC pre  \NC \NR
 \NC \type {^^^^} \NC shifted \NC super \NC pre  \NC \NR
 \NC \type {____} \NC shifted \NC sub   \NC pre  \NC \NR
 \stoptabulate
 
-The shifted variants force a script to be an index and thereby make the other
-script move. This multiple character features used to be optional but is now always
-active.
+The shifted variants force a script to be marked as index. In versions upto 2.10
+a subscript was moved to after the superscript but when we introduced continued
+scripts that feature was disabled (we might bring it back as configurable
+option). The shifted variants now behave the same but at the \LUA\ end one can
+check if they carry this flag. Since 2.11 the one and two character are for post
+while three and four handle prescripts (indices are more common than prescripts).
+The \prm {noscript} command signals that we're up for a new continuation.
 
 Related to this is the issue of double scripts. The regular \TEX\ is to issue
 an error message, inject an ordinary node and carry on when asked to. Here we have

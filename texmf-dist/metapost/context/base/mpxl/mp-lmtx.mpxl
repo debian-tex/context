@@ -2677,6 +2677,9 @@ presetparameters "glyphshape" [
     baseline    = false,
     usedline    = true,
     usedbox     = true,
+    italic      = false,
+    accent      = false,
+    dimensions  = false,
 ] ;
 
 def lmt_glyphshape = applyparameters "glyphshape" "lmt_do_glyphshape" enddef ;
@@ -2697,35 +2700,194 @@ vardef glyphshape_height       = lua.mp.lmt_glyphshape_height()      enddef ;
 vardef glyphshape_depth        = lua.mp.lmt_glyphshape_depth()       enddef ;
 vardef glyphshape_italic       = lua.mp.lmt_glyphshape_italic()      enddef ;
 vardef glyphshape_accent       = lua.mp.lmt_glyphshape_accent()      enddef ;
+vardef glyphshape_llx          = lua.mp.lmt_glyphshape_llx()         enddef ;
+
+% vardef glyphshape_dimensions =
+%     unitsquare
+%         xscaled glyphshape_width
+%         yscaled (glyphshape_height - glyphshape_depth)
+%         shifted (glyphshape_llx,glyphshape_depth)
+% enddef ;
+
+vardef glyphshape_usedaccent =
+    (glyphshape_llx+glyphshape_accent,0.8*glyphshape_height) --
+    (glyphshape_llx+glyphshape_accent,1.2*glyphshape_height)
+enddef ;
+
+vardef glyphshape_useditalic =
+    (glyphshape_llx+glyphshape_width + glyphshape_italic,glyphshape_depth) --
+    (glyphshape_llx+glyphshape_width + glyphshape_italic,glyphshape_height)
+enddef ;
 
 vardef lmt_do_glyphshape =
     image (
         pushparameters "glyphshape" ;
-            lua.mp.lmt_glyphshape_start(getparameter "id", getparameter "character") ;
+            glyphshape_start(getparameter "id", getparameter "character") ;
             if getparameter "shape" :
-                draw for i=1 upto lua.mp.lmt_glyphshape_n() :
-                    lua.mp.lmt_glyphshape_path(i) &&
+                draw for i=1 upto glyphshape_n :
+                    glyphshape_path(i) &&
                 endfor cycle ;
             fi ;
+%             if getparameter "dimensions" :
+%                 draw
+%                     glyphshape_dimensions
+%                     withcolor red;
+%             ;
             if getparameter "boundingbox" :
                 draw
-                    lua.mp.lmt_glyphshape_boundingbox()
+                    glyphshape_boundingbox
                     withcolor red
-                ;
-            fi ;
-            if getparameter "usedline" :
-                draw
-                    lua.mp.lmt_glyphshape_usedline()
-                    withcolor green
                 ;
             fi ;
             if getparameter "usedbox" :
                 draw
-                    lua.mp.lmt_glyphshape_usedbox()
+                    glyphshape_usedbox
                     withcolor blue
                 ;
+                if getparameter "usedline" :
+                    draw
+                        glyphshape_usedline
+                        withcolor blue
+                    ;
+                fi ;
             fi ;
-            lua.mp.lmt_glyphshape_stop() ;
+            if (getparameter "accent") and (glyphshape_accent <> 0) :
+                draw glyphshape_usedaccent
+                    withcolor green
+                ;
+            fi ;
+            if (getparameter "italic") and (glyphshape_italic <> 0) :
+                draw glyphshape_useditalic
+                    withcolor green
+                ;
+            fi ;
+% drawdot (glyphshape_width,0) ;
+% drawdot (glyphshape_llx,0) ;
+            glyphshape_stop ;
         popparameters ;
     )
 enddef ;
+
+% experimental:
+
+numeric last_potraced_count   ;
+numeric last_potraced_width   ;
+numeric last_potraced_height  ;
+numeric last_potraced_xsize   ;
+numeric last_potraced_ysize   ;
+numeric last_potraced_xoffset ;
+numeric last_potraced_yoffset ;
+
+path    last_potraced_bounds  ; last_potraced_bounds := origin -- cycle ;
+path    last_potraced_sized   ; last_potraced_sized  := origin -- cycle ;
+
+pair    last_potraced_offset  ; last_potraced_offset := origin;
+
+presetparameters "potraced" [
+    bytes       = "",
+    width       = 0,
+    height      = 0,
+    nx          = 1,
+    ny          = 1,
+    explode     = false,
+    swap        = false,
+    value       = "1",
+    optimize    = false,      % opticurve
+    threshold   = 1,          % alphamax
+    policy      = "minority", % turnpolicy
+    tolerance   = 0.2,        % opttolerance
+    size        = 2,          % turdsize
+  % stringname  = "",
+  % filename    = "",
+    criterium   = 127,
+    alternative = "path", % draw fill -> picture
+    polygon     = false,
+] ;
+
+numeric n_lmt_potraced ; n_lmt_potraced := 0 ;
+
+def lmt_potraced = applyparameters "potraced" "lmt_do_potraced" enddef ;
+
+vardef lmt_do_potraced =
+    if n_lmt_potraced = 0 :
+        lmt_do_startpotraced ;
+        lua.mp.lmt_step_potrace()
+        hide (
+            lmt_do_steppotraced ;
+            lmt_do_stoppotraced ;
+        )
+    else :
+        lua.mp.lmt_step_potrace()
+        hide (
+            lmt_do_steppotraced ;
+        )
+    fi
+enddef ;
+
+def lmt_startpotraced = applyparameters "potraced" "lmt_do_startpotraced" enddef ;
+def lmt_stoppotraced  =                             lmt_do_stoppotraced   enddef ;
+
+def lmt_do_startpotraced =
+    if n_lmt_potraced = 0 :
+        n_lmt_potraced := n_lmt_potraced + 1 ;
+        pushparameters "potraced" ;
+        lua.mp.lmt_start_potrace() ;
+    fi
+enddef ;
+
+def lmt_do_stoppotraced =
+    if n_lmt_potraced = 1 :
+        n_lmt_potraced := n_lmt_potraced - 1 ;
+        lua.mp.lmt_stop_potrace() ;
+        popparameters ;
+    fi
+enddef ;
+
+vardef lmt_do_steppotraced =
+    last_potraced_count   := getparameter("count") ;
+    last_potraced_width   := getparameter("width") ;
+    last_potraced_height  := getparameter("height") ;
+    last_potraced_xsize   := getparameter("xsize");
+    last_potraced_ysize   := getparameter("ysize");
+    last_potraced_xoffset := getparameter("xoffset");
+    last_potraced_yoffset := getparameter("yoffset");
+    last_potraced_bounds  := unitsquare xscaled last_potraced_width yscaled last_potraced_height ;
+    last_potraced_sized   := unitsquare xscaled last_potraced_xsize yscaled last_potraced_ysize ;
+    last_potraced_offset  := (last_potraced_xoffset,-(last_potraced_ysize - last_potraced_yoffset)) ;
+enddef ;
+
+def lmt_showrivers(expr stepsize, width, height, showpolygon) =
+    picture q ; q := image (
+        lmt_startpotraced [
+            stringname = "profile",
+            threshold  = .5,
+        ] ;
+      % draw lmt_potraced [
+      %     size       = 1,
+      %     index      = 1,
+      % ] withcolor "middleyellow" ;
+      % draw lmt_potraced [
+      %     size       = 1,
+      %     index      = 2,
+      % ] withcolor "middlegray" ;
+        fill lmt_potraced [
+            size       = 1,
+            first      = 3,
+            polygon    = showpolygon,
+        ] withcolor "middlegreen" ;
+        fill lmt_potraced [
+            size       = 3,
+            first      = 3,
+            polygon    = showpolygon,
+        ] withcolor "middleblue" ;
+        fill lmt_potraced [
+            size       = stepsize,
+            first      = 3,
+            polygon    = showpolygon,
+        ] withcolor "middlered" ;
+        lmt_stoppotraced ;
+    ) ;
+
+    setbounds q to last_potraced_bounds enlarged (-2,-2) ;
+    draw q xysized (width,height) ;
+enddef;

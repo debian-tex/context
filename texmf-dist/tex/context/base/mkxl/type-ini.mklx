@@ -31,7 +31,7 @@
 \newconditional\c_font_typescripts_quit
 \newtoks       \c_font_typescripts_document
 \newconditional\c_font_typescripts_preload
-\newconditional\c_font_typescripts_first_pass          \settrue\c_font_typescripts_first_pass
+\newconditional\c_font_typescripts_first_pass          \c_font_typescripts_first_pass\conditionaltrue
 
 \newif         \iftypescriptfound              % will become a mode
 \newif         \iftracetypescripts
@@ -152,7 +152,7 @@
    \else
      \font_typescripts_use_display
    \fi
-   \setfalse\c_font_typescripts_first_pass
+   \c_font_typescripts_first_pass\conditionalfalse
    \pop_macro_stoptypescript
    \pop_macro_typescriptstate
    \pop_macro_typescriptmethod
@@ -165,12 +165,12 @@
 
 \def\font_typescripts_use_display
   {\processcommacommand[\typescriptfiles]\font_typescripts_load_file
-   \the\c_font_typescripts_document}
+   \expand\c_font_typescripts_document}
 
 \let\font_typescripts_use_inline\font_typescripts_use_display
 
 \permanent\protected\def\preloadtypescripts
-  {\ifproductionrun\settrue\c_font_typescripts_preload\fi}
+  {\ifproductionrun\c_font_typescripts_preload\conditionaltrue\fi}
 
 \prependtoks
     \preloadtypescripts
@@ -192,7 +192,7 @@
    \stopreadingfile}
 
 \permanent\protected\def\quittypescriptscanning
-  {\settrue\c_font_typescripts_quit} % public
+  {\c_font_typescripts_quit\conditionaltrue} % public
 
 \permanent\protected\def\font_typescripts_start_store#definitions\stoptypescript
   {\global\advanceby\c_font_typescripts_n_of_preloaded\plusone
@@ -209,7 +209,7 @@
      {\csname\??typescriptcache\the\c_font_typescripts_n_of_preloaded\endcsname}}
 
 \def\font_typescripts_load_file#filename%
-  {\setfalse\c_font_typescripts_quit
+  {\c_font_typescripts_quit\conditionalfalse
    \push_macro_currenttypefile
    \def\currenttypefile{#filename}%
    \ifconditional\c_font_typescripts_preload
@@ -220,7 +220,7 @@
    \pop_macro_currenttypefile
    \ifconditional\c_font_typescripts_quit
      \quitcommalist
-     \setfalse\c_font_typescripts_quit
+     \c_font_typescripts_quit\conditionalfalse
    \fi}
 
 \def\font_typescript_process_typescript_file_and_store
@@ -228,7 +228,7 @@
    \ifrelax\t_font_typescripts
      \font_typescript_process_typescript_store_indeed
    \fi
-   \the\t_font_typescripts}
+   \expand\t_font_typescripts}
 
 \def\font_typescript_process_typescript_store_indeed
   {\newtoks\t_font_typescripts % is \relaxed elsewhere
@@ -269,7 +269,7 @@
 % script [serif] [computer-modern] [special]
 
 \prependtoks
-    \settrue\c_font_typescripts_first_pass
+    \c_font_typescripts_first_pass\conditionaltrue
 \to \everyjob
 
 \permanent\protected\def\starttypescript
@@ -415,26 +415,28 @@
 
 %D This hooks into the font switcher:
 
-\settrue\autotypescripts
+\newconditional\autotypescripts  \autotypescripts\conditionaltrue
 
 \protected\def\fonts_helpers_try_currentfontclass#typeface%
   {\ifconditional\autotypescripts
      \usetypescript[#typeface]%
      \ifcsname\??fontclassyes#typeface\endcsname
-       \edef\fontclass{#typeface}%
+       \cdef\fontclass{#typeface}%
      \else
        \iftracetypescripts\writestatus\m!fonts{auto load typescript file 1: [#typeface]}\fi
        \usetypescriptfile[#typeface]%
        \usetypescript[#typeface]%
        \ifcsname\??fontclassyes#typeface\endcsname
-         \edef\fontclass{#typeface}%
+         \cdef\fontclass{#typeface}%
        \else
          % todo: message
+% \gletcsname
          \letcsname\??fontclassnop#typeface\endcsname\empty
        \fi
      \fi
    \else
      % todo: message
+% \gletcsname
      \letcsname\??fontclassnop#typeface\endcsname\empty
    \fi}
 
@@ -485,28 +487,33 @@
   {\clf_definetypeface{#name}{#specification}}
 
 \def\font_typefaces_define_indeed[#name][#style]% saveguard against redefinition
-  {\doifsomething{#name}
-     {\ifcsname\??typescriptdefaultstyles#name\endcsname \else
-        \registerfontclass{#name}%
-        \gdefcsname\??typescriptdefaultstyles#name\endcsname{#style}%
-      \fi
-      \ifcsname#name\endcsname \else
-        \protected\frozen\instance\gdefcsname#name\endcsname{\switchtotypeface[#name][#style]}%
-      \fi}}
+  {\ifempty{#name}\else
+     \ifcsname\??typescriptdefaultstyles#name\endcsname \else
+       \registerfontclass{#name}%
+       \gdefcsname\??typescriptdefaultstyles#name\endcsname{#style}%
+     \fi
+     \ifcsname#name\endcsname \else
+       \protected\frozen\instance\gdefcsname#name\endcsname{\switchtotypeface[#name][#style]}%
+     \fi
+   \fi}
+
+\lettonothing\m_ts_features
+\lettonothing\m_ts_fallbacks
+\lettonothing\m_ts_goodies
+\lettonothing\m_ts_designsize
 
 \def\font_typefaces_defining_start#name#style#settings%
-  {\let\m_ts_rscale    \!!plusone % as we push/pop
+  {\let\m_ts_rscale\!!plusone % as we push/pop
    \lettonothing\m_ts_features
    \lettonothing\m_ts_fallbacks
    \lettonothing\m_ts_goodies
-   \lettonothing\m_ts_direction
    \lettonothing\m_ts_designsize
    \geteparameters[m_ts_][#settings]% todo raw ... no need for key interpretation
    \push_macro_fontclass
    \push_macro_fontclassstyle
    \setcurrentfontclass{#name}%
-   \savefontclassparameters{#style}\m_ts_rscale\m_ts_features\m_ts_fallbacks\m_ts_goodies\m_ts_designsize\m_ts_direction
-   \the\everybeforedefinetypeface}
+   \savefontclassparameters{#style}\m_ts_rscale\m_ts_features\m_ts_fallbacks\m_ts_goodies\m_ts_designsize
+   \expand\everybeforedefinetypeface}
 
 \permanent\def\tsvar#key#default% undocumented and unofficial
   {\expandafter\ifempty\csname\??ts#key\endcsname
@@ -516,7 +523,7 @@
    \fi}
 
 \def\font_typefaces_defining_stop
-  {\the\everyafterdefinetypeface
+  {\expand\everyafterdefinetypeface
    \pop_macro_fontclassstyle
    \pop_macro_fontclass}
 
@@ -574,7 +581,7 @@
 %D \stoptyping
 
 \permanent\tolerant\protected\def\inherittypeface[#name]#spacer[#styles]#spacer[#parentclass]%
-  {\iftok{#styles}\emptytoks
+  {\ifempty{#styles}%
      \inherittypeface[#name][\s!rm,\s!ss,\s!tt,\s!mm][\fontclass]%
    \orelse\iftok{#name}{#parentclass}\else
      \glet\font_typescripts_inherit_check\font_typescripts_inherit_check_indeed
