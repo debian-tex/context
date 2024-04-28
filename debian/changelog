@@ -1,3 +1,10 @@
+context (2024.04.01.20240428+dfsg-1) experimental; urgency=medium
+
+  * New upstream release, suitable for TL 2024.
+    - Refresh patches.
+
+ -- Hilmar Preusse <hille42@web.de>  Sun, 28 Apr 2024 20:53:59 +0200
+
 context (2023.05.05.20230730+dfsg-2) unstable; urgency=medium
 
   * Upload to unstable.

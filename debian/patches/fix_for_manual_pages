@@ -1,6 +1,6 @@
 --- context.orig/texmf-dist/doc/man/man1/context.1
 +++ context/texmf-dist/doc/man/man1/context.1
-@@ -129,7 +129,7 @@
+@@ -132,7 +132,7 @@
  never initializes synctex (for production runs)
  .TP
  .B --synctex
@@ -11,7 +11,7 @@
  omit runtime dates in pdf file (optional value: a number (this 1970 offset time) or string "YYYY-MM-DD HH:MM")
 --- context.orig/texmf-dist/doc/man/man1/mtx-context.1
 +++ context/texmf-dist/doc/man/man1/mtx-context.1
-@@ -129,7 +129,7 @@
+@@ -132,7 +132,7 @@
  never initializes synctex (for production runs)
  .TP
  .B --synctex
