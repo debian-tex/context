@@ -134,7 +134,7 @@
      \charwidthlanguage:%
      \dostepwiserecurse\zerocount\plusfour\plusone
        {\setconstant\charwidthmethod\recurselevel\relax
-        \enspace\recurselevel/\the\dimexpr(\averagecharwidth)}%
+        \enspace\recurselevel/\todimension{\averagecharwidth}}%
    \egroup}
 
 %D Just for fun, we show a few frequency tables as graphic (\in {figure}

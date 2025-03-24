@@ -134,49 +134,30 @@
 \newinteger\c_node_rules_up
 \newinteger\c_node_rules_down
 
-% \permanent\protected\def\node_rules_set#1%
-%   {\cdef\currentbar{#1}%
-%    \advanceby\c_node_rules_level\plusone
-%    \usebarstyleandcolor\c!foregroundstyle\c!foregroundcolor
-%    \edef\p_node_color {\barparameter\c!color}% todo
-%    \edef\p_node_text  {\barparameter\c!text}%
-%    \edef\p_node_offset{\barparameter\c!offset}%
-%    % better is a dedicated key: up/down .. todo
-%    \advanceby\ifdim\p_node_offset\onepoint<\zeropoint\c_node_rules_down\else\c_node_rules_up\fi\plusone
-%    \clf_setrule
-%        continue      {\barparameter\c!continue}%
-%        unit          {\barparameter\c!unit}%
-%        order         {\barparameter\c!order}%
-%        level         \c_node_rules_level
-%        stack         \ifdim\p_node_offset\onepoint<\zeropoint\c_node_rules_down\else\c_node_rules_up\fi
-%        rulethickness {\barparameter\c!rulethickness}%
-%        method        \barparameter\c!method
-%        max           \barparameter\c!max\space % number
-%        mp            {\includeMPgraphic{\barparameter\c!mp}}
-%        ma            \c_attr_colormodel
-%        ca            \rawcolorattribute\p_node_color
-%        ta            \rawtransparencyattribute\p_node_color
-%        offset        \p_node_offset\space % number
-%        dy            \barparameter\c!dy\space % number, also fraction
-%        empty         {\barparameter\c!empty}%
-%      \ifempty\p_node_text\else
-%        text          \hbox{\p_node_text}%
-%        repeat        {\barparameter\c!repeat}%
-%      \fi
-%    \relax}
-
 \permanent\protected\def\node_rules_set#1%
   {\cdef\currentbar{#1}%
    \advanceby\c_node_rules_level\plusone
    \usebarstyleandcolor\c!foregroundstyle\c!foregroundcolor
-   \edef\p_node_color {\barparameter\c!color}% todo
-   \edef\p_node_offset{\barparameter\c!offset}%
+   \edef\p_node_color   {\barparameter\c!color}% todo
+   \edef\p_node_offset  {\barparameter\c!offset}%
+   \edef\p_node_continue{\barparameter\c!continue}%
    % better is a dedicated key: up/down .. todo
-   \advanceby\ifdim\p_node_offset\onepoint<\zeropoint\c_node_rules_down\else\c_node_rules_up\fi\plusone
    \scratchcounter\barparameter\c!method\relax
+   \ifnum\scratchcounter=\plustwo
+     % offset is dimension
+   \orelse\ifnum\scratchcounter=\plusthree
+     % offset is dimension
+   \else
+     % offset is number
+     \advanceby\ifdim\p_node_offset\onepoint<\zeropoint\c_node_rules_down\else\c_node_rules_up\fi\plusone
+   \fi
+   \ifx\p_node_continue\v!always
+      \attribute\runningtextattribute \minusone
+      \let\p_node_continue\v!yes % not needed
+   \fi
    \clf_setrule
          method        \scratchcounter
-         continue      {\barparameter\c!continue}%
+         continue      {\p_node_continue}%
          rulethickness {\barparameter\c!rulethickness}%
          mp            {\includeMPgraphic{\barparameter\c!mp}}
          ma            \c_attr_colormodel
@@ -184,15 +165,24 @@
          ta            \rawtransparencyattribute\p_node_color
          order         {\barparameter\c!order}%
      \ifnum\scratchcounter=\plustwo
-         height        \dimexpr\barparameter\c!height\relax
-         depth         \dimexpr\barparameter\c!depth\relax
+         height        {\barparameter\c!height}%
+         depth         {\barparameter\c!depth}%
+       \ifchkdimexpr\p_node_offset\or
+         offset        \number\lastchkdimension % dimension
+       \fi
+     \orelse\ifnum\scratchcounter=\plusthree
+         height        {\barparameter\c!height}%
+         depth         {\barparameter\c!depth}%
+       \ifchkdimexpr\p_node_offset\or
+         offset        \number\lastchkdimension % dimension
+      \fi
      \else
          unit          {\barparameter\c!unit}%
          level         \c_node_rules_level
          stack         \ifdim\p_node_offset\onepoint<\zeropoint\c_node_rules_down\else\c_node_rules_up\fi
-         max           \barparameter\c!max\space % number
-         offset        \p_node_offset\space % number
-         dy            \barparameter\c!dy\space % number, also fraction
+         max           \barparameter\c!max\relaxedspace % number
+         offset        \p_node_offset\relaxedspace % number
+         dy            \barparameter\c!dy\relaxedspace % number, also fraction
          empty         {\barparameter\c!empty}%
        \ifempty{\barparameter\c!text}\else
          text          \hbox{\lastnamedcs}%
@@ -295,7 +285,7 @@
 \definebar
   [\v!outline]
   [\c!method=2,
-   \c!offset=0,
+   \c!offset=\zeropoint,
    \c!rulethickness=0.25,
    \c!continue=\v!yes,
    \c!order=\v!background,
@@ -305,6 +295,33 @@
   [\v!outlined]
   [\v!outline]
   [\c!height=\strutht,
+   \c!depth=\strutdp]
+
+%D \starttyping
+%D \definebar[mybar][backgroundbar][offset=.25ex,color=red]
+%D
+%D \startformula
+%D             a      \alignhere= b + c \breakhere
+%D     \mybar {d + e} \alignhere= f     \breakhere
+%D             g      \alignhere= h + i
+%D \stopformula
+%D \stoptyping
+
+\definebar
+  [\v!backgroundbar] % joke
+  [\c!method=3,
+   \c!offset=0,
+   \c!rulethickness=0.25,
+   \c!continue=\v!yes,
+   \c!order=\v!background,
+   \c!color=lightgray]
+
+\definebar
+  [mathbackground]
+  [backgroundbar]
+  [\c!continue=\v!always,
+   \c!max=1,
+   \c!height=\strutht,
    \c!depth=\strutdp]
 
 % \setupbar[\v!overstrike][continue=all]
@@ -421,7 +438,11 @@
 \to \everydefineshift
 
 \protected\def\node_shifts_set#1% todo: check parent ! todo: move attr etc to lua
-  {\cdef\currentshift{#1}%
+  {\ifhastok={#1}%
+     \setupcurrentshift[#1]%
+   \else
+     \cdef\currentshift{#1}%
+   \fi
    \useshiftstyleandcolor\c!style\c!color
    \dosetupisolatedalign{\shiftparameter\c!align}% a weird feature that i probably needed once
    \clf_setshift
@@ -502,11 +523,11 @@
        ma             \c_attr_colormodel
        ca             \rawcolorattribute\p_node_color
        ta             \rawtransparencyattribute\p_node_color
-       height         \dimexpr\linefillerparameter\c!height\relax
-       depth          \dimexpr\linefillerparameter\c!depth\relax
-       distance       \dimexpr\linefillerparameter\c!distance\relax
-       threshold      \dimexpr\linefillerparameter\c!threshold\relax
-       rulethickness  \dimexpr\linefillerparameter\c!rulethickness\relax
+       height         {\linefillerparameter\c!height}%
+       depth          {\linefillerparameter\c!depth}%
+       distance       {\linefillerparameter\c!distance}%
+       threshold      {\linefillerparameter\c!threshold}%
+       rulethickness  {\linefillerparameter\c!rulethickness}%
    \relax}
 
 \permanent\tolerant\protected\def\startlinefiller[#1]#*[#S#2]%
@@ -588,5 +609,149 @@
 %D Bonus:
 
 % \autorule : defined at the lua end
+
+%D A joke:
+
+%D This will move: (a bit duplicated)
+
+\installcorenamespace{shadow}
+
+\installcommandhandler \??shadow {shadow} \??shadow
+
+\let\setupshadows\setupshadow
+
+\appendtoks
+    \frozen\protected\instance\edefcsname\currentshadow\endcsname{\node_shadows_direct{\currentshadow}}%
+\to \everydefineshadow
+
+\protected\def\node_shadows_set#1% todo: check parent ! todo: move attr etc to lua
+  {\ifhastok={#1}%
+     \setupcurrentshadow[#1]%
+   \else
+     \cdef\currentshadow{#1}%
+   \fi
+   \useshadowstyleandcolor\c!style\c!color
+   \edef\p_node_color{\shadowparameter\c!contrastcolor}% todo
+   \clf_setshadow
+       continue {\shadowparameter\c!continue}%
+       unit     {\shadowparameter\c!unit}%
+       weight   {\shadowparameter\c!weight}%
+       method   \shadowparameter\c!method
+       dx       \shadowparameter\c!dx\relaxedspace % number
+       dy       \shadowparameter\c!dy\relaxedspace % number
+       %
+       ma       \c_attr_colormodel
+       ca       \rawcolorattribute\p_node_color
+       ta       \rawtransparencyattribute\p_node_color
+   \relax}
+
+\permanent\protected\def\startshadow[#1]%
+  {\begingroup
+   \node_shadows_set{#1}%
+   \ignorespaces}
+
+\permanent\protected\def\stopshadow
+  {\removeunwantedspaces
+   \endgroup}
+
+\protected\def\node_shadows_direct#1%
+  {\groupedcommand
+     {\begingroup\dostartisolation\begingroup\node_shadows_set{#1}\ignorespaces}
+     {\removeunwantedspaces\endgroup\dostopisolation\endgroup}}
+
+\setupshadows
+  [\c!method=0,
+   \c!continue=\v!yes,
+   \c!dx=.04,
+   \c!dy=-.04,
+   \c!unit=ex,
+   \c!style=,
+   \c!color=,
+   \c!weight=100,
+   \c!contrastcolor=middlegray] % otherwise we don't see anything, users should set it anyway
+
+\defineshadow [shadowed]
+
+% \startTEXpage[offset=1ts]
+%     \samplefile{tufte}\removeunwantedspaces\space
+%     \startshadow[contrastcolor=red]\samplefile{tufte}\removeunwantedspaces\stopshadow\space
+%     \samplefile{tufte}
+% \stopTEXpage
+
+%D Quick and dirty, but useful in math matrices:
+
+\installcorenamespace{graphiclines}
+\installcorenamespace{graphiccolor}
+
+\newdimen\d_grph_line_width
+\newdimen\d_grph_line_offset
+\newcount\c_grph_line_action
+
+\defcsname\??graphiclines s\endcsname{\strut}
+\defcsname\??graphiclines m\endcsname{\setstrut\strutht.85\strutht\strutdp.85\strutdp}
+\defcsname\??graphiclines a\endcsname{\d_grph_line_offset 1ma}
+\defcsname\??graphiclines x\endcsname{\d_grph_line_offset 1ex}
+\defcsname\??graphiclines h\endcsname{\d_grph_line_offset \strutht}
+\defcsname\??graphiclines d\endcsname{\d_grph_line_offset-\strutdp}
+\defcsname\??graphiclines o\endcsname{\d_grph_line_offset \zeropoint}
+\defcsname\??graphiclines e\endcsname{\c_grph_line_action \plusone}  % end
+\defcsname\??graphiclines c\endcsname{\c_grph_line_action \plustwo}  % close + end
+\defcsname\??graphiclines r\endcsname{\c_grph_line_action \plustree} % reset
+\defcsname\??graphiclines t\endcsname{\d_grph_line_offset \strutht}
+\defcsname\??graphiclines b\endcsname{\d_grph_line_offset-\strutdp\c_grph_line_action\plusone}
+\defcsname\??graphiclines T\endcsname{\d_grph_line_offset .75\strutht}
+\defcsname\??graphiclines B\endcsname{\d_grph_line_offset-.25\strutdp\c_grph_line_action\plusone}
+
+\def\grph_line_inject_step#1%
+  {\ifcsname\??graphiclines#1\endcsname
+     \lastnamedcs
+   \orelse\ifchkdim#1\or
+      \d_grph_line_width#1\relax
+ % \orelse\ifchknum#1\or
+   \orelse\ifchkdim#1pt\or
+      \d_grph_line_width#1\d_grph_line_width % \dimexpr\mathmatrixparameter\c!rulethickness\relax
+   \else
+     \edef\m_rulecolor{#1}%
+   \fi}
+
+% \setupmathmatrix[rulethickness=3pt]
+
+\tolerant\permanent\protected\def\grph_line_inject
+  {\dontleavehmode
+   \iftrialtypesetting
+     \expandafter\gobbletwooptionals
+   \else
+     \expandafter\grph_line_inject_yes
+   \fi}
+
+\def\grph_line_inject_yes[#1]#*[#2]%
+  {\begingroup
+   \edef\m_rulecolor{\mathmatrixparameter\c!rulecolor}%
+   \d_grph_line_width{\mathmatrixparameter\c!rulethickness}%
+   \d_grph_line_offset\zeropoint
+   \c_grph_line_action\zerocount
+   \processcommacommand[#2]\grph_line_inject_step % use fast one
+   \ifcase\c_grph_line_action
+     \ifcstok{\begincsname\??graphiccolor#1\endcsname}\empty
+        \gletcsname\??graphiccolor#1\endcsname\m_rulecolor
+     \fi
+   \orelse\ifempty{#1}%
+     % ignore
+   \else
+     % we have to color the last node
+     \colo_helpers_direct_activate{\begincsname\??graphiccolor#1\endcsname}%
+     \gletcsname\??graphiccolor#1\endcsname\empty
+   \fi
+   \hpack \ifzeropt\d_grph_line_offset\else\s!yoffset\d_grph_line_offset\fi
+     {%\signalcharacter
+      \clf_linesegment
+        {#1}%
+        \c_math_eqalign_row
+        \c_math_eqalign_column
+        \c_grph_line_action
+        \d_grph_line_width}%
+   \endgroup}
+
+\let\graphicline\grph_line_inject
 
 \protect \endinput

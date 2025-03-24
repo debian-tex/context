@@ -8,7 +8,7 @@ if not modules then modules = { } end modules ['mlib-pdf'] = {
 
 local gsub = string.gsub
 local concat, insert, remove, sortedkeys = table.concat, table.insert, table.remove, table.sortedkeys
-local abs, sqrt, round = math.abs, math.sqrt, math.round
+local sqrt, round = math.sqrt, math.round
 local setmetatable, rawset, tostring, tonumber, type = setmetatable, rawset, tostring, tonumber, type
 local P, S, C, Ct, Cc, Cg, Cf, Carg = lpeg.P, lpeg.S, lpeg.C, lpeg.Ct, lpeg.Cc, lpeg.Cg, lpeg.Cf, lpeg.Carg
 local lpegmatch = lpeg.match
@@ -50,6 +50,7 @@ local f_j  = formatters["%i j"]
 local f_J  = formatters["%i J"]
 local f_d  = formatters["[%s] %.6N d"]
 local f_w  = formatters["%.6N w"]
+local f_r  = formatters["%.6N %.6N %.6N %.6N re"]
 
 directives.register("metapost.savetable",function(v)
     if type(v) == "string" then
@@ -87,9 +88,9 @@ function pdfflusher.tocomment(message)
     end
 end
 
-function pdfflusher.startfigure(n,llx,lly,urx,ury,message)
+function pdfflusher.startfigure(n,llx,lly,urx,ury,message,figure,plugmode)
     metapost.n = metapost.n + 1
-    context.startMPLIBtoPDF(f_f(llx),f_f(lly),f_f(urx),f_f(ury))
+    context.startMPLIBtoPDF(f_f(llx),f_f(lly),f_f(urx),f_f(ury),plugmode and "1" or "0")
 end
 
 function pdfflusher.stopfigure(message)
@@ -122,38 +123,9 @@ local function mpconcat(px, py) -- no tx, ty here / we can move this one inline 
 end
 
 local getbendtolerance = metapost.getbendtolerance
+local curved           = metapost.hascurvature
 
-local function curved(ith,pth,tolerance) --- still better than the build in
- -- if pth.right_x == pth.x_coord then
- --     if pth.right_y == pth.y_coord then
- --         if ith.left_x == ith.x_coord then
- --             if ith.left_y == ith.y_coord then
- --                 return false
- --             end
- --         end
- --     end
- -- end
-    local d = pth.left_x - ith.right_x
-    local b = abs(ith.right_x - ith.x_coord - d)
-    if b <= tolerance then
-        b = abs(pth.x_coord - pth.left_x - d)
-        if b <= tolerance then
-            d = pth.left_y - ith.right_y
-            b = abs(ith.right_y - ith.y_coord - d)
-            if b <= tolerance then
-                b = abs(pth.y_coord - pth.left_y - d)
-                if b <= tolerance then
---                  print(tolerance,ith.curved,pth.curved,false)
-                    return false
-                end
-            end
-        end
-    end
---  print(tolerance,ith.curved,pth.curved,true)
-    return true
-end
-
-local function flushnormalpath(path, t, open, tolerance)
+local function flushnormalpath(path,t,open,tolerance)
     local pth, ith, nt
     local length = #path
     if t then
@@ -162,13 +134,31 @@ local function flushnormalpath(path, t, open, tolerance)
         t = { }
         nt = 0
     end
+    if length == 4 and path.cycle then
+        local p1 = path[1]
+        local p2 = path[2]
+        local p3 = path[3]
+        local p4 = path[4]
+        if not p1.curved and not p2.curved and not p3.curved and not p4.curved then
+            local p1x = p1.x_coord
+            local p1y = p1.y_coord
+            local p3x = p3.x_coord
+            local p3y = p3.y_coord
+            if p1y == p2.y_coord and p1x == p4.x_coord and p2.x_coord == p3x and p3y == p4.y_coord then
+                nt = nt + 1
+                t[nt] = f_r(p1.x_coord,p1y,p3x-p1x,p3y-p1y)
+                path.rectangle = true
+                return
+            end
+        end
+    end
     for i=1,length do
         nt = nt + 1
         pth = path[i]
         if not ith or pth.state == 1 then
             t[nt] = f_m(pth.x_coord,pth.y_coord)
-        elseif curved(ith,pth,tolerance) then
--- elseif pth.curved then
+     -- elseif curved(ith,pth,tolerance) then
+        elseif pth.curved then
             t[nt] = f_c(ith.right_x,ith.right_y,pth.left_x,pth.left_y,pth.x_coord,pth.y_coord)
         else
             t[nt] = f_l(pth.x_coord,pth.y_coord)
@@ -178,10 +168,13 @@ local function flushnormalpath(path, t, open, tolerance)
     if not open then
         nt = nt + 1
         local one = path[1]
-        if one.state == 1 then
+        local len = path[length]
+        if len.state == 2 then
+            -- special case (potrace-001.tex)
+        elseif one.state == 1 then
             t[nt] = f_m(one.x_coord,one.y_coord)
-        elseif curved(pth,one,tolerance) then
--- if one.curved then
+     -- elseif curved(pth,one,tolerance) then
+        elseif one.curved then
             t[nt] = f_c(pth.right_x,pth.right_y,one.left_x,one.left_y,one.x_coord,one.y_coord)
         else
             t[nt] = f_l(one.x_coord,one.y_coord)
@@ -195,7 +188,7 @@ local function flushnormalpath(path, t, open, tolerance)
     return t
 end
 
-local function flushconcatpath(path, t, open, tolerance, transform)
+local function flushconcatpath(path,t,open,tolerance,transform)
     local pth, ith, nt
     local length = #path
     if t then
@@ -213,8 +206,8 @@ local function flushconcatpath(path, t, open, tolerance, transform)
         pth = path[i]
         if not ith or pth.state == 1 then
             t[nt] = f_m(mpconcat(pth.x_coord,pth.y_coord))
-        elseif curved(ith,pth,tolerance) then
--- elseif pth.curved then
+     -- elseif curved(ith,pth,tolerance) then
+        elseif pth.curved then
             local a, b = mpconcat(ith.right_x,ith.right_y)
             local c, d = mpconcat(pth.left_x,pth.left_y)
             t[nt] = f_c(a,b,c,d,mpconcat(pth.x_coord,pth.y_coord))
@@ -226,10 +219,13 @@ local function flushconcatpath(path, t, open, tolerance, transform)
     if not open then
         nt = nt + 1
         local one = path[1]
-        if one.state == 1 then
+        local len = path[length]
+        if len.state == 2 then
+            -- special case (potrace-001.tex)
+        elseif one.state == 1 then
             t[nt] = f_m(one.x_coord,one.y_coord)
-        elseif curved(pth,one,tolerance) then
--- if one.curved then
+     -- elseif curved(pth,one,tolerance) then
+        elseif one.curved then
             local a, b = mpconcat(pth.right_x,pth.right_y)
             local c, d = mpconcat(one.left_x,one.left_y)
             t[nt] = f_c(a,b,c,d,mpconcat(one.x_coord, one.y_coord))
@@ -272,7 +268,6 @@ local function toboundingbox(path)
         return { 0, 0, 0, 0 }
     end
 end
-
 
 function metapost.flushnormalpath(path, t, open, tolerance)
     return flushnormalpath(path, t, open, tolerance or getbendtolerance())
@@ -375,6 +370,16 @@ local function popproperties()
     metapost.properties = remove(stack)
 end
 
+local optimizecolor = false
+
+directives.register("metapost.optimizecolor", function(v)
+    optimizecolor = v
+end)
+
+local function enhancedobject(original)
+    return setmetatable({ }, { __index = original })
+end
+
 function metapost.flush(specification,result)
     if result then
         local flusher   = specification.flusher
@@ -384,10 +389,11 @@ function metapost.flush(specification,result)
         local figures   = result.fig
         if figures then
             flusher = flusher or pdfflusher
-            local resetplugins       = metapost.resetplugins       or ignore -- before figure
-            local processplugins     = metapost.processplugins     or ignore -- each object
-            local synchronizeplugins = metapost.synchronizeplugins or ignore
-            local pluginactions      = metapost.pluginactions      or ignore -- before / after
+local plugmode = not metapost.getbackendoption(specification.mpx,"noplugins")
+            local resetplugins       = plugmode and metapost.resetplugins       or ignore -- before figure
+            local processplugins     = plugmode and metapost.processplugins     or ignore -- each object
+            local synchronizeplugins = plugmode and metapost.synchronizeplugins or ignore
+            local pluginactions      = plugmode and metapost.pluginactions      or ignore -- before / after
             local startfigure        = flusher.startfigure
             local stopfigure         = flusher.stopfigure
             local flushfigure        = flusher.flushfigure
@@ -419,7 +425,7 @@ function metapost.flush(specification,result)
                     local ury        = properties.ury
                     if urx < llx then
                         -- invalid
-                        startfigure(properties.number,0,0,0,0,"invalid",figure)
+                        startfigure(properties.number,0,0,0,0,"invalid",figure,plugmode)
                         if tocomment then
                             result[#result+1] = tocomment("invalid")
                         end
@@ -516,6 +522,29 @@ function metapost.flush(specification,result)
                                                         dashed, linewidth = "", 1 -- to be sure
                                                     end
                                                     if before then
+                                                        -- We inject too many color and transparency directives although in practice
+                                                        -- it's not that relevant. However, we can optimize this a bit because we know
+                                                        -- what we can get so we just intercept these two cases:
+                                                        --
+                                                        -- { [1] = transparency, [2] = color }
+                                                        -- { [1] = color }
+                                                        --
+                                                        -- It is anyway a rather ugly hack because we should keep some kind of state
+                                                        -- but as we mix all kind of features that is also tricky. Maybe if I'd write
+                                                        -- this from scratch ... but that doesn't pay off. Also tracking a transstate
+                                                        -- is kind of fragile so maybe it should be optional.
+                                                        --
+                                                        if optimizecolor and after then
+                                                            local r = #result
+                                                            if result[r] == "0 g 0 G" and (after[1] == "0 g 0 G" or after[2] == "0 g 0 G") then
+                                                                result[r] = nil
+                                                                r = r - 1
+                                                            end
+                                                            if result[r] == "/Tr0 gs" and (after[1] == "/Tr0 gs" or after[2] == "/Tr0 gs") then
+                                                                result[r] = nil
+                                                            end
+                                                        end
+                                                        --
                                                         result = pluginactions(before,result,flushfigure)
                                                     end
                                                     local ml = object.miterlimit
@@ -593,7 +622,17 @@ function metapost.flush(specification,result)
                                                         else
                                                             flushnormalpath(path,result,open,tolerance)
                                                         end
-                                                        if outline or envelope then
+                                                        if path.rectangle then
+                                                            if outline or envelope then
+                                                                result[#result+1] = "S"
+                                                            elseif objecttype == "fill" then
+                                                                result[#result+1] = "f"
+                                                            elseif objecttype == "outline" then
+                                                                result[#result+1] = both and "B" or "S"
+                                                            elseif objecttype == "both" then
+                                                                result[#result+1] = "B"
+                                                            end
+                                                        elseif outline or envelope then
                                                             result[#result+1] = open and "S" or "h S"
                                                         elseif objecttype == "fill" then
                                                             result[#result+1] = evenodd and "h f*" or "h f" -- f* = eo
@@ -667,13 +706,16 @@ function metapost.flush(specification,result)
                                                 -- skip
                                             elseif objecttype == "start_group" then
                                                 if lpdf.flushgroup then
+                                                    local object = enhancedobject(object)
                                                     local before, after = processplugins(object)
-                                                    if before then
+                                                    local detail = object.detail
+                                                    if detail or before then
                                                         result[#result+1] = "q"
                                                         result = pluginactions(before,result,flushfigure)
                                                         insert(groupstack, {
                                                             after  = after,
                                                             result = result,
+                                                            detail = detail,
                                                             bbox   = toboundingbox(object.path),
                                                         })
                                                         result = { }
@@ -687,7 +729,8 @@ function metapost.flush(specification,result)
                                             elseif objecttype == "stop_group" then
                                                 local data = remove(groupstack)
                                                 if data then
-                                                    local reference = lpdf.flushgroup(concat(result,"\r"),data.bbox)
+                                                    local reference = lpdf.flushgroup(concat(result,"\r"),data.bbox,data.detail)
+-- crashes on after = false
                                                     result = data.result
                                                     result[#result+1] = reference
                                                     result = pluginactions(data.after,result,flushfigure)
@@ -719,7 +762,7 @@ function metapost.flush(specification,result)
                             end
                             flushfigure(result)
                         end
-                        startfigure(properties.number,llx,lly,urx,ury,"begin",figure)
+                        startfigure(properties.number,llx,lly,urx,ury,"begin",figure,plugmode)
                         if incontext then
                             context(function() processfigure() end)
                         else

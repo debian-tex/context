@@ -26,10 +26,12 @@
 \bitwiseflip \normalizelinemode \clipwidthnormalizecode
 \bitwiseflip \normalizelinemode \flattendiscretionariesnormalizecode
 \bitwiseflip \normalizelinemode \flattenhleadersnormalizecode
+\bitwiseflip \normalizelinemode \balanceinlinemathnormalizecode
 %bitwiseflip \normalizelinemode \discardzerotabskipsnormalizecode
 
 \bitwiseflip \normalizeparmode \normalizeparnormalizeparcode
 \bitwiseflip \normalizeparmode \flattenvleadersnormalizeparcode
+\bitwiseflip \normalizeparmode \removetrailingspacesnormalizeparcode
 
 \lettonothing\v_spac_indentation_current % amount/keyword
 
@@ -42,8 +44,20 @@
 %D After a blank or comparable situation (left side floats) we
 %D need to check if the next paragraph has to be indented.
 
+% \permanent\protected\def\presetindentation
+%   {\doifoutervmode{\ifconditional\c_spac_indentation_indent_first\else\spac_indentation_variant_no\fi}}
+
 \permanent\protected\def\presetindentation
-  {\doifoutervmode{\ifconditional\c_spac_indentation_indent_first\else\spac_indentation_variant_no\fi}}
+  {\unless\ifvmode
+     % do nothing
+   \orelse\ifinner
+     % do nothing
+   \orelse\ifconditional\c_spac_indentation_indent_first
+     % do nothing
+   \else
+     \spac_indentation_variant_no
+   \fi}
+
 
 \permanent\protected\def\setupindenting
   {\doifelsenextoptionalcs\spac_indentation_setup_options\spac_indentation_setup_size}
@@ -255,7 +269,7 @@
      % was : \hskip\parindent
      % can be: \indent
      % but we test:
-     \noindent\hskip\parindent % hm, we cannot undent this one
+     \noindent\hskip\parindent % hm, we cannot undent this one % TODO: indent skip
    \fi \fi}
 
 % public:
@@ -412,6 +426,44 @@
     \spacefactor\plusthousand
    \fi}
 
+%D Experimental (see periods-001.tex):
+%D
+%D \startbuffer
+%D Watch this            {S.           Bernhard} dog carry a can of drink.
+%D Watch this  \periodic {S.           Bernhard} dog carry a can of drink.
+%D Watch this  \Periodic {S.           Bernhard} dog carry a can of drink.
+%D Watch this            {St.          Bernhard} dog carry a can of drink.
+%D Watch this  \periodic {St.          Bernhard} dog carry a can of drink.
+%D Watch this  \Periodic {St.          Bernhard} dog carry a can of drink.
+%D Watch this            {Prof. Dr. S. Bernhard} dog carry a can of drink.
+%D Watch this  \periodic {Prof. Dr. S. Bernhard} dog carry a can of drink.
+%D Watch this  \Periodic {Prof. Dr. S. Bernhard} dog carry a can of drink.
+%D \stopbuffer
+%D
+%D \typebuffer
+%D
+%D \startlines
+%D \getbuffer
+%D \stoplines
+
+\permanent\protected\def\overloadspacefactor
+  {\bitwiseflip\glyphoptions\spacefactoroverloadglyphoptioncode}
+
+\newinteger\periodicshrink \periodicshrink 250
+
+\permanent\protected\def\Periodic
+  {\groupedcommand
+     {\overloadspacefactor
+      \spacefactoroverload\periodicshrink}%
+     \relax}
+
+\permanent\protected\def\periodic
+  {\groupedcommand
+     {\overloadspacefactor
+      \spacefactoroverload\periodicshrink
+      \sfcode\periodasciicode\periodicshrink}%
+     \relax}
+
 %D Here's a tweak .. if needed one can configure it in the configuration
 %D so that initialization happens more efficient.
 %D
@@ -522,10 +574,64 @@
     \let\softhyphen\explicitdiscretionary
 \fi
 
-% todo:
+%D We can do this:
+%D
+%D starttyping
+%D \nospaces\plusthree
+%D \spacechar\underscoreasciicode
+%D \hccode\underscoreasciicode\underscoreasciicode
+%D Where are the spaces?
+%D \stoptyping
+%D
+%D But that should not bleed into the page builder or nested constructs, so:
 
+\appendtoks
+    \nospaces \zerocount
+    \spacechar\asciispacechar % not needed as one sets it locally
+\to \everyforgetall
+
+%D This is a rubish approach vbecause it redefines \typ {\csname \endcsname} to
+%D \type {\space} so we need to fix that.
+
+\expandafter\let\expandafter\next\csname\endcsname
 \cldcontext{"\string\\protected\string\\def\string\\\string\n{\string\\space}"}
-%cldcontext{"\string\\let\string\\\string\n=\string\\space"}
+\expandafter\let\csname\endcsname\next
+
+%D Here is an example from \type {newlines-001.tex}:
+%D
+%D \starttyping
+%D \def\TestA#1%
+%D   {\writestatus{Test A}{#1}%
+%D    \ctxlua{str = [[#1]] print(str) context(str) io.savedata("temp.tmp",str)}}
+%D
+%D \def\TestB#1%
+%D   {\writestatus{Test B}{#1}%
+%D    \ctxlua{str = [[\detokenize{#1}]] print(str) context(str) io.savedata("temp.tmp",str)}}
+%D
+%D \def\TestC#1%
+%D   {\writestatus{Test C}{#1}%
+%D    \edef\temp{#1}%
+%D    \ctxlua{str = [[\detokenize\expandafter{\temp}]] print(str) context(str) io.savedata("temp.tmp",str)}%
+%D    \typefile{temp.tmp}}
+%D
+%D \TestA{Test\
+%D A}
+%D
+%D \TestB{Test\
+%D B}
+%D
+%D \TestC{Test\
+%D C}
+%D
+%D Test\
+%D D
+%D
+%D \section{Test\
+%D E}
+%D
+%D Test F\footnote{Note\
+%D F}
+%D \stoptyping
 
 % in tables we need:
 %
@@ -760,13 +866,15 @@
      \fi
    \else
      \normalexpanded{\processcommalistwithparameters[\scratchstringone]}\spac_narrower_initialize
-     \frozen\advanceby\leftskip \dimexpr\s_spac_narrower_left +\s_spac_narrower_middle\relax
-     \frozen\advanceby\rightskip\dimexpr\s_spac_narrower_right+\s_spac_narrower_middle\relax
+     \frozen\advanceby\leftskip {\s_spac_narrower_left +\s_spac_narrower_middle}%
+     \frozen\advanceby\rightskip{\s_spac_narrower_right+\s_spac_narrower_middle}%
    \fi
-   \seteffectivehsize}
+   \seteffectivehsize
+   \dostarttagged\t!narrower\currentnarrower}
 
 \permanent\protected\def\spac_narrower_stop
-  {\narrowerparameter\c!after
+  {\dostoptagged
+   \narrowerparameter\c!after
    \normalexpanded{%
       \endgroup
       \s_spac_narrower_left_last \the\leftskip \relax
@@ -832,8 +940,8 @@
 \aliased\let\stopnarrow\spac_narrower_stop
 
 \newdimension\d_spac_effective_hsize     \permanent\protected\def\effectivehsize    {\hsize}
-\newdimension\d_spac_effective_leftskip  \permanent\protected\def\effectiveleftskip {\dimexpr\leftskip \relax}
-\newdimension\d_spac_effective_rightskip \permanent\protected\def\effectiverightskip{\dimexpr\rightskip\relax}
+\newdimension\d_spac_effective_leftskip  \permanent\protected\def\effectiveleftskip {\leftskip}
+\newdimension\d_spac_effective_rightskip \permanent\protected\def\effectiverightskip{\rightskip}
 
 \permanent\protected\def\seteffectivehsize
   {\setlocalhsize
@@ -860,8 +968,8 @@
 \letcsname\??skipadaptionleft \v!standard\expandafter\endcsname\csname\??skipadaptionleft \v!yes\endcsname
 \letcsname\??skipadaptionright\v!standard\expandafter\endcsname\csname\??skipadaptionright\v!yes\endcsname
 
-\permanent\protected\def\dosetleftskipadaption #1{\leftskipadaption \ifcsname\??skipadaptionleft #1\endcsname\lastnamedcs\else#1\fi\relax}
-\permanent\protected\def\dosetrightskipadaption#1{\rightskipadaption\ifcsname\??skipadaptionright#1\endcsname\lastnamedcs\else#1\fi\relax}
+\permanent\protected\def\dosetleftskipadaption #1{\leftskipadaption \glueexpr\ifcsname\??skipadaptionleft #1\endcsname\lastnamedcs\else#1\fi\relax}
+\permanent\protected\def\dosetrightskipadaption#1{\rightskipadaption\glueexpr\ifcsname\??skipadaptionright#1\endcsname\lastnamedcs\else#1\fi\relax}
 
 \permanent\protected\def\doadaptleftskip #1{\normalexpanded{\dosetleftskipadaption {#1}}\frozen\advanceby\leftskip \leftskipadaption }
 \permanent\protected\def\doadaptrightskip#1{\normalexpanded{\dosetrightskipadaption{#1}}\frozen\advanceby\rightskip\rightskipadaption}
@@ -1278,9 +1386,9 @@
 \permanent\protected\def\interwordspacebefore{\wordboundary\zwnj\hskip\interwordspace\relax}
 \permanent\protected\def\interwordspaceafter {\hskip\interwordspace\relax\zwnj\wordboundary}
 
-\permanent\protected\def\interwordspacesbefore#1{\dofastloopcs{#1}\interwordspacebefore}
-\permanent\protected\def\interwordspacesafter #1{\dofastloopcs{#1}\interwordspaceafter}
-\permanent\protected\def\interwordspaces      #1{\wordboundary\zwnj\dofastloopcs{\numexpr#1+\minusone}\interwordspaceafter}
+\permanent\protected\def\interwordspacesbefore#1{\dofastloopcs{#1}\interwordspacebefore} % todo: native loop
+\permanent\protected\def\interwordspacesafter #1{\dofastloopcs{#1}\interwordspaceafter} % todo: native loop
+\permanent\protected\def\interwordspaces      #1{\wordboundary\zwnj\dofastloopcs{#1+\minusone}\interwordspaceafter}  % todo: native loop
 
 %D For mp:
 

@@ -7,9 +7,11 @@ if not modules then modules = { } end modules ['trac-vis'] = {
     license   = "see context related readme files"
 }
 
+-- We no longer have 'user' so we can use that flag.
+
 local node, nodes, attributes, tex = node, nodes, attributes, tex
 local type, tonumber, next, rawget = type, tonumber, next, rawget
-local gmatch, gsub = string.gmatch, string.gsub
+local gmatch, gsub, sub = string.gmatch, string.gsub, string.sub
 local formatters = string.formatters
 local round = math.round
 
@@ -45,7 +47,7 @@ local setoffsets          = nuts.setoffsets
 local getid               = nuts.getid
 local getfont             = nuts.getfont
 local getattr             = nuts.getattr
-local getsubtype          = nuts.getsubtype
+local getidsubtype        = nuts.getidsubtype
 local getbox              = nuts.getbox
 local getlist             = nuts.getlist
 local getprev             = nuts.getprev
@@ -57,12 +59,10 @@ local getpenalty          = nuts.getpenalty
 local getwidth            = nuts.getwidth
 local getdepth            = nuts.getdepth
 local getexpansion        = nuts.getexpansion
-local getstate            = nuts.getstate
 local getoffsets          = nuts.getoffsets
 local getindex            = nuts.getindex
 local getprop             = nuts.getprop
-
-local isglyph             = nuts.isglyph
+local getdiscpart         = nuts.getdiscpart
 
 local hpack_nodes         = nuts.hpack
 local vpack_nodes         = nuts.vpack
@@ -70,7 +70,6 @@ local copylist            = nuts.copylist
 local copy_node           = nuts.copy
 local insertnodebefore    = nuts.insertbefore
 local insertnodeafter     = nuts.insertafter
-local flushnodelist       = nuts.flushlist
 
 local hpack_string        = nuts.typesetters.tohpack
 
@@ -112,6 +111,7 @@ local stoptiming          = statistics.stoptiming
 local a_visual            <const> = attributes.private("visual")
 local a_filter            <const> = attributes.private("filter")
 local a_layer             <const> = attributes.private("viewerlayer")
+local a_tagged            <const> = attributes.private('tagged')
 
 local enableaction        = nodes.tasks.enableaction
 
@@ -156,37 +156,42 @@ local modes = {
     hglue         = 0x0000010,
     vpenalty      = 0x0000020,
     hpenalty      = 0x0000020,
+
+    toddler       = 0x0000200,
 }
 
 local filters = {
-    vglue    = 0x001,
-    hglue    = 0x002,
- -- mglue    = 0x004,
-    vkern    = 0x010,
-    hkern    = 0x020,
- -- mkern    = 0x040,
-    vpenalty = 0x100,
-    hpenalty = 0x200,
- -- mpenalty = 0x400,
+    vglue        = 0x0001,
+    hglue        = 0x0002,
+ -- mglue        = 0x0004,
+    vkern        = 0x0010,
+    hkern        = 0x0020,
+ -- mkern        = 0x0040,
+    vpenalty     = 0x0100,
+    hpenalty     = 0x0200,
+ -- mpenalty     = 0x0400,
+    toddler      = 0x1000,
+    continuation = 0x2000,
 }
 
 visualizers.modes   = modes
 visualizers.filters = filters
 
 local usedfont, exheight, emwidth
-local l_penalty, l_glue, l_kern, l_fontkern, l_hbox, l_vbox, l_vtop, l_strut, l_whatsit, l_glyph, l_user, l_math, l_marginkern, l_mathkern, l_mathshape, l_italic, l_origin, l_discretionary, l_expansion, l_line, l_space, l_depth,
-    l_dir, l_whatsit, l_mark, l_insert, l_boundary
+local
+ -- l_penalty, l_glue, l_kern,
+    l_h_penalty, l_h_kern, l_h_glue,
+    l_v_penalty, l_v_kern, l_v_glue,
+    l_hbox, l_vbox, l_vtop, l_origin, l_line,
+    l_depth, l_strut,
+    l_glyph, l_discretionary, l_expansion, l_fontkern, l_italic, l_marginkern, l_space,
+    l_math, l_mathkern, l_mathshape,
+    l_dir, l_whatsit,
+    l_mark, l_insert, l_boundary
+ -- l_user
 
 local enabled = false
 local layers  = { }
-
-local preset_boxes  = modes.hbox + modes.vbox + modes.vtop + modes.origin
-local preset_makeup = preset_boxes
-                    + modes.kern + modes.glue + modes.penalty + modes.boundary
-local preset_all    = preset_makeup
-                    + modes.fontkern + modes.marginkern + modes.mathkern
-                    + modes.whatsit + modes.glyph + modes.user + modes.math
-                    + modes.dir + modes.mathglue + modes.mark + modes.insert
 
 function visualizers.setfont(id)
     usedfont = id or current_font()
@@ -207,6 +212,8 @@ local function getusedfont()
     end
     return usedfont
 end
+
+local use_layers = true  directives.register("visualizers.layers", function(v) use_layers = v end)
 
 visualizers.getusedfont = getusedfont
 
@@ -235,14 +242,20 @@ local function initialize()
     l_hbox          = layers.hbox
     l_vbox          = layers.vbox
     l_vtop          = layers.vtop
-    l_glue          = layers.glue
-    l_kern          = layers.kern
-    l_penalty       = layers.penalty
+ -- l_glue          = layers.glue
+    l_v_glue        = layers.vglue
+    l_h_glue        = layers.hglue
+ -- l_kern          = layers.kern
+    l_v_kern        = layers.vkern
+    l_h_kern        = layers.hkern
+ -- l_penalty       = layers.penalty
+    l_v_penalty     = layers.vpenalty
+    l_h_penalty     = layers.hpenalty
     l_fontkern      = layers.fontkern
     l_strut         = layers.strut
     l_whatsit       = layers.whatsit
     l_glyph         = layers.glyph
-    l_user          = layers.user
+ -- l_user          = layers.user
     l_math          = layers.math
     l_italic        = layers.italic
     l_marginkern    = layers.marginkern
@@ -290,53 +303,65 @@ function visualizers.enable()
     end
 end
 
-local function setvisual(n,a,what,list)
-    if not n or n == "reset" then
-        return unsetvalue
-    elseif n == true or n == "makeup" then
-        if not a or a == 0 or a == unsetvalue then
-            a = preset_makeup
-        else
-            a = a | preset_makeup
-        end
-    elseif n == "boxes" then
-        if not a or a == 0 or a == unsetvalue then
-            a = preset_boxes
-        else
-            a = a | preset_boxes
-        end
-    elseif n == "all" then
-        if what == false then
+local setvisual  do
+
+    local preset_boxes  = modes.hbox + modes.vbox + modes.vtop + modes.origin
+    local preset_makeup = preset_boxes
+                        + modes.kern + modes.glue + modes.penalty + modes.boundary
+    local preset_all    = preset_makeup
+                        + modes.fontkern + modes.marginkern + modes.mathkern
+                        + modes.whatsit + modes.glyph + modes.user + modes.math
+                        + modes.dir + modes.mathglue + modes.mark + modes.insert
+
+    setvisual = function(n,a,what,list)
+        if not n or n == "reset" then
             return unsetvalue
-        elseif not a or a == 0 or a == unsetvalue then
-            a = preset_all
-        else
-            a = a | preset_all
-        end
-    elseif type(n) == "string" then
-        for s in gmatch(n,"[a-z]+") do
-            local m = modes[s]
-            if not m then
-                -- go on
-            elseif not a or a == 0 or a == unsetvalue then
-                a = m
+        elseif n == true or n == "makeup" then
+            if not a or a == 0 or a == unsetvalue then
+                a = preset_makeup
             else
-                a = a | m
+                a = a | preset_makeup
+            end
+        elseif n == "boxes" then
+            if not a or a == 0 or a == unsetvalue then
+                a = preset_boxes
+            else
+                a = a | preset_boxes
+            end
+        elseif n == "all" then
+            if what == false then
+                return unsetvalue
+            elseif not a or a == 0 or a == unsetvalue then
+                a = preset_all
+            else
+                a = a | preset_all
+            end
+        elseif type(n) == "string" then
+            for s in gmatch(n,"[a-z]+") do
+                local m = modes[s]
+                if not m then
+                    -- go on
+                elseif not a or a == 0 or a == unsetvalue then
+                    a = m
+                else
+                    a = a | m
+                end
+            end
+        elseif type(n) == "number" then
+            if not a or a == 0 or a == unsetvalue then
+                a = n
+            else
+                a = a | n
             end
         end
-    elseif type(n) == "number" then
         if not a or a == 0 or a == unsetvalue then
-            a = n
-        else
-            a = a | n
+            return unsetvalue
+        elseif not enabled then -- must happen at runtime (as we don't store layers yet)
+            enable()
         end
+        return a
     end
-    if not a or a == 0 or a == unsetvalue then
-        return unsetvalue
-    elseif not enabled then -- must happen at runtime (as we don't store layers yet)
-        enable()
-    end
-    return a
+
 end
 
 local function setfilter(n,a,what,list)
@@ -436,7 +461,9 @@ function visualizers.setvisual(n)
 end
 
 function visualizers.setlayer(n)
-    texsetattribute(a_layer,layers[n] or unsetvalue)
+    if use_layers then
+        texsetattribute(a_layer,layers[n] or unsetvalue)
+    end
 end
 
 local fraction = 10  do
@@ -472,6 +499,12 @@ end
 
 -- ... if okay it will replace the current hpack_string in node_typ
 
+local crappytaggingmode = false
+
+updaters.register("structures.tagging",function()
+    crappytaggingmode = true
+end)
+
 local function sometext(str,layer,color,textcolor,lap,variant)
     local text = hpack_string(str,usedfont)
     local size = getwidth(text)
@@ -495,9 +528,12 @@ local function sometext(str,layer,color,textcolor,lap,variant)
     if x or y then
         setoffsets(info,x,y)
     end
-    if layer then
+    if use_layers and layer then
         setattr(info,a_layer,layer)
     end
+--     if crappytaggingmode then
+--         setattr(info,a_tagged,0)
+--     end
     return info, size
 end
 
@@ -517,9 +553,12 @@ local function someblob(str,layer,color,textcolor,width)
     info = hpack_nodes(info)
     local width = getwidth(info)
     info = new_hlist(info)
-    if layer then
+    if use_layers and layer then
         setattr(info,a_layer,layer)
     end
+--     if crappytaggingmode then
+--         setattr(info,a_tagged,0)
+--     end
     return info, width
 end
 
@@ -529,10 +568,10 @@ function visualizers.registercache(name)
     return caches[name]
 end
 
-local fontkern, italickern, marginkern, mathkern do
+local fontkern, italiccorrection, marginkern, mathkern do
 
     local f_cache = caches["fontkern"]
-    local i_cache = caches["italickern"]
+    local i_cache = caches["italiccorrection"]
     local s_cache = caches["shapekern"]
     local m_cache = caches["marginkern"]
     local l_cache = caches["mathkern"]
@@ -558,7 +597,12 @@ local fontkern, italickern, marginkern, mathkern do
             settransparency(rule,color)
             setshift(text,-5 * exheight)
             info = new_hlist(setlink(rule,text))
-            setattr(info,a_layer,layer)
+            if use_layers and layer then
+                setattr(info,a_layer,layer)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             cache[kern] = info
         end
         head = insertnodebefore(head,current,copylist(info))
@@ -569,7 +613,7 @@ local fontkern, italickern, marginkern, mathkern do
         return somekern(head,current,f_cache,"trace:ds",l_fontkern)
     end
 
-    italickern = function(head,current)
+    italiccorrection = function(head,current)
         return somekern(head,current,i_cache,"trace:do",l_italic)
     end
 
@@ -591,8 +635,8 @@ local ruledglyphexpansion do
 
     local f_cache = caches["glyphexpansion"]
 
-    ruledglyphexpansion = function(head,current)
-        local extra = getexpansion(current)
+    ruledglyphexpansion = function(head,current,glyph)
+        local extra = getexpansion(glyph)
         if extra and extra ~= 0 then
             extra = extra / 1000
             local info = f_cache[extra]
@@ -610,7 +654,12 @@ local ruledglyphexpansion do
                 settransparency(rule,"trace:ds")
                 setshift(text,1.75 * exheight)
                 info = new_hlist(setlink(rule,text))
-                setattr(info,a_layer,l_expansion)
+                if use_layers then
+                    setattr(info,a_layer,l_expansion)
+                end
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
                 f_cache[extra] = info
             end
             head = insertnodebefore(head,current,copylist(info))
@@ -645,7 +694,12 @@ local kernexpansion do
                 settransparency(rule,"trace:ds")
                 setshift(text,3.5 * exheight)
                 info = new_hlist(setlink(rule,text))
-                setattr(info,a_layer,l_expansion)
+                if use_layers then
+                    setattr(info,a_layer,l_expansion)
+                end
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
                 f_cache[extra] = info
             end
             head = insertnodebefore(head,current,copylist(info))
@@ -659,23 +713,37 @@ local ruledmark do
 
     local set_code <const> = nodes.markcodes.set
 
-    local sm_cache = setmetatableindex(caches["setmark"], function(t,index)
-        local info = sometext(formatters["SM:%i"](index),usedfont,nil,"trace:w") -- whatsit
-        setattr(info,a_layer,l_mark)
-        t[index] = info
-        return info
-    end)
+    local sm_cache = caches["setmark"]
+    local rm_cache = caches["resetmark"]
 
-    local rm_cache = setmetatableindex(caches["resetmark"], function(t,index)
-        local info = sometext(formatters["RM:%i"](index),usedfont,nil,"trace:w") -- whatsit
-        setattr(info,a_layer,l_mark)
-        t[index] = info
-        return info
-    end)
-
-    ruledmark = function(head,current)
+    ruledmark = function(head,current,subtype)
         local index = getindex(current)
-        local info  = getsubtype(current) == set_code and sm_cache[index] or rm_cache[index]
+        local info
+        if subtype == set_code then
+            info = sm_cache[index]
+            if not info then
+                info = sometext(formatters["SM:%i"](index),usedfont,nil,"trace:w") -- whatsit
+                if use_layers then
+                    setattr(info,a_layer,l_mark)
+                end
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
+                sm_cache[index] = info
+            end
+        else
+            info = rm_cache[index]
+            if not info then
+                info = sometext(formatters["RM:%i"](index),usedfont,nil,"trace:w") -- whatsit
+                if use_layers then
+                    setattr(info,a_layer,l_mark)
+                end
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
+                rm_cache[index] = info
+            end
+        end
         head, current = insertnodeafter(head,current,copylist(info))
         return head, current
     end
@@ -684,14 +752,21 @@ end
 
 local ruledinsert do
 
-    local si_cache = setmetatableindex(caches["insert"], function(f,index)
-        local info = sometext(formatters["SI:%i"](index),usedfont,nil,"trace:w") -- whatsit
-        setattr(info,a_layer,l_insert)
-        si_cache[index] = info
-    end)
+    local si_cache = caches["insert"]
 
     ruledinsert = function(head,current)
-        local info = si_cache[getindex(current)]
+        local index = getindex(current)
+        local info  = si_cache[index]
+        if not info then
+                info = sometext(formatters["SI:%i"](index),usedfont,nil,"trace:w") -- whatsit
+            if use_layers then
+                setattr(info,a_layer,l_insert)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
+            si_cache[index] = info
+        end
         head, current = insertnodeafter(head,current,copylist(info))
         return head, current
     end
@@ -728,15 +803,19 @@ local ruledwhatsit do
         [whatsitcodes.setstate]       = "SET",   -- can't happen because these are added after visualizing
     }
 
-    ruledwhatsit = function(head,current)
-        local what = getsubtype(current)
-        local info = w_cache[what]
+    ruledwhatsit = function(head,current,subtype)
+        local info = w_cache[subtype]
         if info then
             -- print("hit whatsit")
         else
-            info = sometext(formatters["W:%s"](tags[what] or what),usedfont,nil,"trace:w")
-            setattr(info,a_layer,l_whatsit)
-            w_cache[what] = info
+            info = sometext(formatters["W:%s"](tags[subtype] or subtype),usedfont,nil,"trace:w")
+            if use_layers then
+                setattr(info,a_layer,l_whatsit)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
+            w_cache[subtype] = info
         end
         head, current = insertnodeafter(head,current,copylist(info))
         return head, current
@@ -756,15 +835,19 @@ local ruledboundary do
         [boundarycodes.word]       = "WRD",
     }
 
-    ruledboundary = function(head,current)
-        local what = getsubtype(current)
-        local info = b_cache[what]
+    ruledboundary = function(head,current,subtype)
+        local info = b_cache[subtype]
         if info then
             -- print("hit whatsit")
         else
-            info = sometext(formatters["B:%s"](tags[what] or what),usedfont,nil,"trace:w")
-            setattr(info,a_layer,l_boundary)
-            b_cache[what] = info
+            info = sometext(formatters["B:%s"](tags[subtype] or subtype),usedfont,nil,"trace:w")
+            if use_layers then
+                setattr(info,a_layer,l_boundary)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
+            b_cache[subtype] = info
         end
         head, current = insertnodeafter(head,current,copylist(info))
         return head, current
@@ -772,12 +855,63 @@ local ruledboundary do
 
 end
 
-local ruleddir, ruledpar do
+local ruledpar do
+
+    local parcodes        = nodes.parcodes
+    local directioncodes  = tex.directioncodes -- nodes.dirvalues
+
+    local l2r_code        <const> = directioncodes.l2r
+    local r2l_code        <const> = directioncodes.r2l
+
+    local hmodepar_code   <const> = parcodes.hmodepar
+    local vmodepar_code   <const> = parcodes.vmodepar
+    local localbox_code   <const> = parcodes.localbox
+    local parameter_code  <const> = parcodes.parameter
+    local localbreak_code <const> = parcodes.localbreak
+
+    local p_cache         = caches["par"]
+
+    local getdirection    = nuts.getdirection
+
+    ruledpar = function(head,current,subtype)
+        local what
+        if subtype == hmodepar_code or subtype == vmodepar_code then
+            what = getdirection(current) == r2l_code and "RLP" or "LRP"
+        elseif subtype == localbox_code then
+            what = "BOX"
+        elseif subtype == parameter_code then
+            what = "LOC"
+        elseif subtype == localbreak_code then
+            what = "BRK"
+        else
+            what = "???"
+        end
+        local info = p_cache[what]
+        if info then
+            -- print("hit par")
+        else
+            info = sometext(what,usedfont,nil,"trace:w")
+            if use_layers then
+                setattr(info,a_layer,l_dir)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
+            p_cache[what] = info
+        end
+        head, current = insertnodeafter(head,current,copylist(info))
+        return head, current
+    end
+
+end
+
+local ruleddir do
 
     local dircodes       = nodes.dircodes
-    local directioncodes = tex.directioncodes -- nodes.dirvalues
+    local directioncodes = tex.directioncodes
 
     local cancel_code    <const> = dircodes.cancel
+
     local l2r_code       <const> = directioncodes.l2r
     local r2l_code       <const> = directioncodes.r2l
 
@@ -785,42 +919,26 @@ local ruleddir, ruledpar do
 
     local getdirection   = nuts.getdirection
 
-    local tags = {
-        l2r    = "L2R",
-        r2l    = "R2L",
-        cancel = "CAN",
-        par    = "PAR",
-    }
-
-    ruledpar = function(head,current)
-        local what = "par" -- getsubtype(current)
-        local info = d_cache[what]
-        if info then
-            -- print("hit par")
-        else
-            info = sometext(formatters["L:%s"](what),usedfont,nil,"trace:w")
-            setattr(info,a_layer,l_dir)
-            d_cache[what] = info
-        end
-        head, current = insertnodeafter(head,current,copylist(info))
-        return head, current
-    end
-
-    ruleddir = function(head,current)
-        local what = getsubtype(current)
-        if what == cancel_code then
-            what = "cancel"
+    ruleddir = function(head,current,subtype)
+        local what
+        if subtype == cancel_code then
+            what = "CAN"
         elseif getdirection(current) == r2l_code then
-            what = "r2l"
+            what = "R2L"
         else
-            what = "l2r"
+            what = "L2R"
         end
         local info = d_cache[what]
         if info then
             -- print("hit dir")
         else
-            info = sometext(formatters["D:%s"](what),usedfont,nil,"trace:w")
-            setattr(info,a_layer,l_dir)
+            info = sometext(what,usedfont,nil,"trace:w")
+            if use_layers then
+                setattr(info,a_layer,l_dir)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             d_cache[what] = info
         end
         head, current = insertnodeafter(head,current,copylist(info))
@@ -829,25 +947,29 @@ local ruleddir, ruledpar do
 
 end
 
-local ruleduser do
-
-    local u_cache = caches["user"]
-
-    ruleduser = function(head,current)
-        local what = getsubtype(current)
-        local info = u_cache[what]
-        if info then
-            -- print("hit user")
-        else
-            info = sometext(formatters["U:%s"](what),usedfont)
-            setattr(info,a_layer,l_user)
-            u_cache[what] = info
-        end
-        head, current = insertnodeafter(head,current,copylist(info))
-        return head, current
-    end
-
-end
+-- local ruleduser do
+--
+--     local u_cache = caches["user"]
+--
+--     ruleduser = function(head,current,subtype)
+--         local info = u_cache[subtype]
+--         if info then
+--             -- print("hit user")
+--         else
+--             info = sometext(formatters["U:%s"](subtype),usedfont)
+--             if use_layers then
+--                 setattr(info,a_layer,l_user)
+--             end
+--             if crappytaggingmode then
+--                 setattr(info,a_tagged,0)
+--             end
+--             u_cache[subtype] = info
+--         end
+--         head, current = insertnodeafter(head,current,copylist(info))
+--         return head, current
+--     end
+--
+-- end
 
 local ruleddepth do
 
@@ -857,7 +979,12 @@ local ruleddepth do
             local rule = new_rule(wd,0,dp)
             setcolor(rule,"trace:o")
             settransparency(rule,"trace:g")
-            setattr(rule,a_layer,l_depth)
+            if use_layers then
+                setattr(rule,a_layer,l_depth)
+            end
+            if crappytaggingmode then
+                setattr(rule,a_tagged,0)
+            end
             setlist(current,setlink(rule,new_kern(-wd),getlist(current)))
         end
     end
@@ -879,8 +1006,13 @@ local ruledbox do
         local origin = hpack_nodes(rule)
         setcolor(rule,"trace:do")
         settransparency(rule,"trace:do")
-        setattr(rule,a_layer,l_origin)
-        setattr(origin,a_layer,l_origin)
+        if use_layers then
+            setattr(rule,a_layer,l_origin)
+            setattr(origin,a_layer,l_origin)
+        end
+        if crappytaggingmode then
+            setattr(origin,a_tagged,0)
+        end
         t[size] = origin
         return origin
     end)
@@ -890,13 +1022,12 @@ local ruledbox do
 --       local wd, ht, dh, shift = nuts.getlistdimensions(current) -- MAYBE
         local force_origin = wd == 0 or (dp + ht) == 0
         local shift = getshift(current)
--- print(getorientation(current,true))
         local orientation, xoffset, yoffset, w, h, d = getorientation(current) -- TODO
-if orientation and orientation ~= 0 and (h ~= 0 or d ~= 0) then
---     wd = w
-    ht = h
-    dp = d
-end
+        if orientation and orientation ~= 0 and (h ~= 0 or d ~= 0) then
+         -- wd = w
+            ht = h
+            dp = d
+        end
         local next = getnext(current)
         local prev = previous
         setboth(current)
@@ -910,6 +1041,9 @@ end
                 this = setlink(new_kern(-getwidth(text)),text)
                 setlisttransparency(this,"trace:s")
                 this = new_hlist(this)
+                if crappytaggingmode then
+                    setattr(this,a_tagged,0)
+                end
                 b_cache[what] = this
             end
         end
@@ -947,13 +1081,17 @@ end
                 dashed = 3*size,
             }
         end
+-- if crappytaggingmode then
+--     setattr(rest,a_tagged,0)
+-- end
         --
         local info = setlink(this and copylist(this) or nil,rest,more)
         --
         setlisttransparency(info,"trace:s")
         info = new_hlist(info) -- important
-        --
-        setattr(info,a_layer,layer)
+        if use_layers then
+            setattr(info,a_layer,layer)
+        end
         if vertical then
             if not force_origin and shift == 0 then
                 info = setlink(current,dp ~= 0 and new_kern(-dp) or nil,info)
@@ -994,6 +1132,9 @@ end
             end
             info = new_hlist(info,wd,ht,dp,shift)
         end
+--         if crappytaggingmode then
+--             setattr(info,a_tagged,0)
+--         end
 -- if orientation then
 --     setorientation(current,0,0)
 --     setorientation(info,orientation,xoffset,yoffset)
@@ -1022,16 +1163,34 @@ local ruledglyph do
  -- local ligature_code = 0x8000 + nodes.glyphcodes.ligature
 
     local getglyphdimensions  = nuts.getglyphdimensions
+    local isglyph             = nuts.isglyph
+    local getoptions          = nuts.getoptions
 
-    ruledglyph = function(head,current,previous) -- wrong for vertical glyphs
-        local wd, ht, dp = getglyphdimensions(current)
+    local istoddler_code      <const> = tex.glyphoptioncodes.istoddler
+    local iscontinuation_code <const> = tex.glyphoptioncodes.iscontinuation
+
+    ruledglyph = function(head,current,previous,glyph,toddler,continuation) -- wrong for vertical glyphs
+        if not glyph then
+            glyph = current
+        end
+        if toddler then
+            local options = getoptions(glyph)
+            if (options & istoddler_code) ~= istoddler_code then
+                return head, current
+            end
+        end
+if continuation then
+    local options = getoptions(glyph)
+    continuation = (options & iscontinuation_code) == iscontinuation_code
+end
+        local wd, ht, dp = getglyphdimensions(glyph)
         if wd ~= 0 then
             local next = getnext(current)
             local prev = previous
             setboth(current)
             local linewidth = emwidth/(2*fraction)
          -- local x_offset, y_offset, l_margin, r_margin, raise = getoffsets(current)
-            local c, f = isglyph(current)
+            local c, f = isglyph(glyph)
             local char = chardata[f][c]
             local info = (dp == 0 and outlinerule and outlinerule(wd,ht,dp,linewidth)) or userrule {
                 width  = wd,
@@ -1040,17 +1199,30 @@ local ruledglyph do
                 line   = linewidth,
                 type   = "box",
             }
-            if char and type(char.unicode) == "table" then -- hackery test
+            if toddler then
+                setlistcolor(info,"trace:g")
+                setlisttransparency(info,"trace:dg")
+            elseif continuation then
+                setlistcolor(info,"trace:b")
+                setlisttransparency(info,"trace:db")
+            elseif char and type(char.unicode) == "table" then -- hackery test
+                -- ligature
                 setlistcolor(info,"trace:s")
                 setlisttransparency(info,"trace:ds")
             else
+                -- regular
                 setlistcolor(info,"trace:o")
                 setlisttransparency(info,"trace:do")
             end
             info = new_hlist(info)
-            setattr(info,a_layer,l_glyph)
+            if use_layers then
+                setattr(info,a_layer,l_glyph)
+            end
             local info = setlink(current,new_kern(-wd),info)
             info = hpack_nodes(info)
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             setwidth(info,wd)
             if next then
                 setlink(info,next)
@@ -1115,7 +1287,8 @@ local ruledglue, ruledmathglue do
         [gluecodes.belowdisplayskip]      = "DB",
         [gluecodes.abovedisplayshortskip] = "SA",
         [gluecodes.belowdisplayshortskip] = "SB",
-        [gluecodes.topskip]               = "TS",
+        [gluecodes.topskip]               = "TO",
+        [gluecodes.bottomskip]            = "BO",
         [gluecodes.splittopskip]          = "ST",
         [tabskip_code]                    = "TB",
         [gluecodes.thinmuskip]            = "MS",
@@ -1158,76 +1331,21 @@ local ruledglue, ruledmathglue do
 
     local f_amount = formatters["%s:%0.3f"]
 
---     ruledglue = function(head,current,vertical,parent)
---         local subtype = getsubtype(current)
---         local width   = effectiveglue(current,parent)
---         local stag    = stags[subtype]
---         local amount  = f_amount(tags[subtype] or (vertical and "VS") or "HS",width*ptfactor) -- can be sped up
---         local info    = (vertical and g_cache_v or g_cache_h)[amount]
---         if subtype == intermathskip_code then
---             head = ruledmathglue(head, current)
---         end
---         if info then
---             -- print("glue hit")
---         else
---             if subtype == spaceskip_code or subtype == xspaceskip_code or subtype == zerospaceskip_code then
---                 info = sometext(amount,l_glue,"trace:y")
---             elseif subtype == userskip_code then
---                 if width > 0 then
---                     info = sometext(amount,l_glue,"trace:b")
---                 elseif width < 0 then
---                     info = sometext(amount,l_glue,"trace:r")
---                 else
---                     info = sometext(amount,l_glue,"trace:g")
---                 end
---             elseif subtype == tabskip_code then
---                 info = sometext(amount,l_glue,"trace:s")
---             elseif subtype == indentskip_code or subtype == correctionskip_code then
---                 info = sometext(amount,l_glue,"trace:s")
---             elseif subtype == leftskip_code then
---                 info = sometext(amount,l_glue,"trace:y",false,true,stag)
---             elseif subtype == rightskip_code then
---                 info = sometext(amount,l_glue,"trace:y",false,false,stag)
---             elseif subtype == lefthangskip_code then
---                 info = sometext(amount,l_glue,"trace:y",false,true,stag)
---             elseif subtype == righthangskip_code then
---                 info = sometext(amount,l_glue,"trace:y",false,false,stag)
---             elseif subtype == parfillleftskip_code then
---                 info = sometext(amount,l_glue,"trace:s",false,true,stag)
---             elseif subtype == parfillrightskip_code then
---                 info = sometext(amount,l_glue,"trace:s",false,false,stag)
---             elseif subtype == parinitleftskip_code then
---                 info = sometext(amount,l_glue,"trace:s",false,true,stag)
---             elseif subtype == parinitrightskip_code then
---                 info = sometext(amount,l_glue,"trace:s",false,false,stag)
---             else
---                 info = sometext(amount,l_glue,"trace:m")
---             end
---             (vertical and g_cache_v or g_cache_h)[amount] = info
---         end
---         info = copylist(info)
---         if vertical then
---             info = vpack_nodes(info)
---         end
---         head, current = insertnodebefore(head,current,info)
---         return head, getnext(current)
---     end
-
     local g_caches = { } for k, v in next, tags do g_caches[k] = caches[v] end
 
-    ruledglue = function(head,current,vertical,parent)
-        local subtype = getsubtype(current)
+    ruledglue = function(head,current,subtype,vertical,parent)
         local width   = effectiveglue(current,parent)
         local stag    = stags[subtype]
         local cache   = g_caches[subtype] or (vertical and g_cache_v) or g_cache_h
+        local amount  = f_amount(tags[subtype] or (vertical and "VS") or "HS",width*ptfactor)
         local info    = cache[amount]
         if subtype == intermathskip_code then
-            head = ruledmathglue(head, current)
+            head = ruledmathglue(head,current)
         end
         if info then
             -- print("glue hit")
         else
-            local amount = f_amount(tags[subtype] or (vertical and "VS") or "HS",width*ptfactor)
+            local l_glue = vertical and l_v_glue or l_h_glue
             if subtype == spaceskip_code or subtype == xspaceskip_code or subtype == zerospaceskip_code then
                 info = sometext(amount,l_glue,"trace:y")
             elseif subtype == userskip_code then
@@ -1261,6 +1379,9 @@ local ruledglue, ruledmathglue do
             else
                 info = sometext(amount,l_glue,"trace:m")
             end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             cache[amount] = info
         end
         info = copylist(info)
@@ -1277,26 +1398,34 @@ local ruledglue, ruledmathglue do
 
     local getoptions = nuts.getoptions
 
-    ruledspace = function(head,current,parent)
-        local subtype = getsubtype(current)
+    ruledspace = function(head,current,subtype,parent)
         local width = effectiveglue(current,parent)
         local info
         if subtype ~= spaceskip_code then
             info = g_cache_x[width]
             if not info then
                 info = someblob("XS",l_glue,"trace:m",nil,width)
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
                 g_cache_x[width] = info
             end
         elseif (getoptions(current) & 2) == 2 then
             info = g_cache_f[width]
             if not info then
                 info = someblob("SF",l_glue,"trace:c",nil,width)
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
                 g_cache_f[width] = info
             end
         else
             info = g_cache_s[width]
             if not info then
                 info = someblob("SP",l_glue,"trace:y",nil,width)
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
                 g_cache_s[width] = info
             end
         end
@@ -1314,7 +1443,7 @@ local ruledglue, ruledmathglue do
 
     local morehack = setmetatableindex(function(t,k)
         local v = mathematics.classnames[k] -- yet unknown
-        v = v and string.sub(v,1,3) or string.formatters["x%02x"](k)
+        v = v and sub(v,1,3) or formatters["x%02x"](k)
         t[k] = v
         return v
     end)
@@ -1365,7 +1494,12 @@ local ruledglue, ruledmathglue do
             settransparency(rule,color)
             setshift(text,(zero and 3.5 or 2)*exheight)
             info = new_hlist(setlink(rule,text))
-            setattr(info,a_layer,l_glue)
+            if use_layers then
+                setattr(info,a_layer,l_glue)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             if quad then
                 g_cache_qd[width] = info
             elseif fixed then
@@ -1390,12 +1524,16 @@ local ruledkern do
         local info  = cache[kern]
         if not info then
             local amount = formatters["%s:%0.3f"](vertical and "VK" or "HK",kern*ptfactor)
+            local l_kern = vertical and l_v_kern or l_h_kern
             if kern > 0 then
                 info = sometext(amount,l_kern,"trace:b")
             elseif kern < 0 then
                 info = sometext(amount,l_kern,"trace:r")
             else
                 info = sometext(amount,l_kern,"trace:g")
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
             end
             cache[kern] = info
         end
@@ -1418,12 +1556,14 @@ local ruledstrut do
     local rangedimensions = nuts.rangedimensions
     local a_mathaxis      <const> = attributes.private("mathaxis")
 
-    ruledstrut = function(head,current,parent)
+    ruledstrut = function(head,current,subtype,parent)
         if getwidth(current) == 0 then
-            if getsubtype(current) == strut_code  then
+            if subtype == strut_code  then
                 local w = strut_size
                 local a = getattr(current,a_mathaxis)
-                setattr(current,a_layer,l_strut)
+                if use_layers then
+                    setattr(current,a_layer,l_strut)
+                end
                 if a then
                     local p = getprev(current)
                     local b, e
@@ -1445,6 +1585,9 @@ local ruledstrut do
                     setwidth(current,w)
                     setcolor(current,"trace:ds")
                     settransparency(current,"trace:ds")
+                    if crappytaggingmode then
+                        setattr(current,a_tagged,0)
+                    end
                     head, current, rule = nuts.remove(head,current)
                     local kern = new_kern(-w)
                     if a == 2 then
@@ -1482,6 +1625,9 @@ local ruleditalic do
             else
                 info = sometext(amount,l_kern,"trace:g")
             end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             i_cache[kern] = info
         end
         info = copylist(info)
@@ -1492,6 +1638,9 @@ local ruleditalic do
 end
 
 local ruledmarginkern do
+
+    local leftmarginkern_code  <const> = nodes.kerncodes.leftmarginkern
+    local rightmarginkern_code <const> = nodes.kerncodes.rightmarginkern
 
     local l_cache = caches["leftmarginkern"]
     local r_cache = caches["rightmarginkern"]
@@ -1509,6 +1658,9 @@ local ruledmarginkern do
                 info = sometext(amount,l_marginkern,"trace:r")
             else
                 info = sometext(amount,l_marginkern,"trace:g")
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
             end
             cache[kern] = info
         end
@@ -1537,6 +1689,9 @@ local ruledmathkern do
             else
                 info = sometext(amount,l_mathkern,"trace:g")
             end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             cache[kern] = info
         end
         info = copylist(info)
@@ -1546,23 +1701,60 @@ local ruledmathkern do
 
 end
 
-local ruleddiscretionary do
+local ruleddiscretionary, ruledglyphdiscretionary do
 
     local d_cache = caches["discretionary"]
+    local g_cache = caches["glyphdiscretionary"]
 
-    ruleddiscretionary = function(head,current)
-        local d = d_cache[true]
-        if not the_discretionary then
+    local glyphdisccodes = tex.glyphdisccodes
+
+    ruleddiscretionary = function(head,current) -- untested as we wipe
+        local info = d_cache[true]
+        if not info then
             local rule = new_rule(4*emwidth/fraction,4*exheight,exheight)
             local kern = new_kern(-2*emwidth/fraction)
             setlink(kern,rule)
             setcolor(rule,"trace:dd")
             settransparency(rule,"trace:dd")
-            setattr(rule,a_layer,l_discretionary)
-            d = new_hlist(kern)
-            d_cache[true] = d
+            info = new_hlist(kern)
+            if use_layers then
+                setattr(info,a_layer,l_discretionary)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
+            d_cache[true] = info
         end
-        insertnodeafter(head,current,copylist(d))
+        insertnodeafter(head,current,copylist(info))
+     -- maybe: return head, getnext(current)
+        return head, current
+    end
+
+    ruledglyphdiscretionary = function(head,current,glyph)
+        local part, after, code = getdiscpart(glyph)
+-- print("part",part,"code",code)
+        if after ~= 0 then
+            local info = g_cache[after]
+            if not info then
+                local code = glyphdisccodes[after] or "?"
+                local kern = new_kern(-2*emwidth/fraction)
+                local rule = new_rule(4*emwidth/fraction,4*exheight,exheight)
+                local text, width = sometext(sub(code,1,1),l_discretionary,"trace:dd","trace:w",false,-2)
+                local back = new_kern(-width/2-2*emwidth/fraction)
+                setlink(kern,rule,back,text)
+                setcolor(rule,"trace:dd")
+                settransparency(rule,"trace:dd")
+                info = new_hlist(kern)
+                if use_layers then
+                    setattr(info,a_layer,l_discretionary)
+                end
+                if crappytaggingmode then
+                    setattr(info,a_tagged,0)
+                end
+                g_cache[after] = info
+            end
+            head = insertnodebefore(head,current,copylist(info))
+        end
         return head, current
     end
 
@@ -1577,6 +1769,9 @@ local ruledpenalty do
         ["MP:%s"] = caches["MP:%s"],
         ["VP:%s"] = caches["VP:%s"],
         ["HP:%s"] = caches["HP:%s"],
+        ["VP!%s"] = caches["VP:%s"],
+        ["HP!%s"] = caches["HP:%s"],
+     -- ["DP:%s"] = caches["DP:%s"], which ones: hyphen exhyphen word ...
     }
 
     local raisepenalties = false
@@ -1589,32 +1784,40 @@ local ruledpenalty do
 
     local getoptions   = nuts.getoptions
 
-    local mathforward  <const> = tex.penaltyoptioncodes.mathforward
-    local mathbackward <const> = tex.penaltyoptioncodes.mathbackward
+    local mathforward   <const> = tex.penaltyoptioncodes.mathforward
+    local mathbackward  <const> = tex.penaltyoptioncodes.mathbackward
+    local doubled       <const> = tex.penaltyoptioncodes.doubleused
 
-    ruledpenalty = function(head,current,vertical,subtype)
-        local penalty = getpenalty(current)
+    local vpenalty_code <const> = filters.vpenalty
+
+    ruledpenalty = function(head,current,vertical,subtype,f)
+        local double  = (getoptions(current) & doubled) ~= 0
+        local penalty = getpenalty(current,double)
         local ismath  = subtype == pre_penalty_code or subtype == post_penalty_code or subtype == true
         local amount
         if ismath then
-            local options  = getoptions(current)
-            local forward  = (options & mathforward) ~= 0
-            local backward = (options & mathbackward) ~= 0
-            if forward then
-                if backward then
-                    amount = "MP=%s"
-                else
-                    amount = "MP>%s"
-                end
-            elseif backward then
-                amount = "MP<%s"
+            if f and (f & vpenalty_code) == vpenalty_code then
+                return head, getnext(current)
             else
-                amount = "MP:%s"
+                local options  = getoptions(current)
+                local forward  = (options & mathforward) ~= 0
+                local backward = (options & mathbackward) ~= 0
+                if forward then
+                    if backward then
+                        amount = "MP=%s"
+                    else
+                        amount = "MP>%s"
+                    end
+                elseif backward then
+                    amount = "MP<%s"
+                else
+                    amount = "MP:%s"
+                end
             end
         elseif vertical then
-            amount = "VP:%s"
+            amount = double and "VP!%s" or "VP:%s"
         else
-            amount = "HP:%s"
+            amount = double and "HP!%s" or "HP:%s"
         end
         local cache = cachehash[amount]
         local info  = cache[penalty]
@@ -1622,6 +1825,7 @@ local ruledpenalty do
             -- print("penalty hit")
         else
             amount = formatters[amount](penalty)
+            local l_penalty = vertical and l_v_penalty or l_h_penalty
             if ismath then
                 info = sometext(amount,l_penalty,"trace:s")
             elseif penalty > 0 then
@@ -1630,6 +1834,9 @@ local ruledpenalty do
                 info = sometext(amount,l_penalty,"trace:r")
             else
                 info = sometext(amount,l_penalty,"trace:g")
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
             end
             cache[penalty] = info
         end
@@ -1652,23 +1859,26 @@ local ruledmath do
     local mathcodes = nodes.mathcodes
     local tags      = {
         [true] = {
-            math      = { "SM:?", caches["SM:?"] },
-            beginmath = { "SM:B", caches["SM:B"] },
-            endmath   = { "SM:E", caches["SM:E"] },
+            math            = { "SM:?", caches["SM:?"] },
+            beginmath       = { "SM:B", caches["SM:B"] },
+            endmath         = { "SM:E", caches["SM:E"] },
+            beginbrokenmath = { "SM:>", caches["SB:>"] },
+            endbrokenmath   = { "SM:<", caches["SB:<"] },
         },
         [false] = {
-            math      = { "M:?", caches["M:?"] },
-            beginmath = { "M:B", caches["M:B"] },
-            endmath   = { "M:E", caches["M:E"] },
+            math            = { "M:?", caches["M:?"] },
+            beginmath       = { "M:B", caches["M:B"] },
+            endmath         = { "M:E", caches["M:E"] },
+            beginbrokenmath = { "M:>", caches["M:>"] },
+            endbrokenmath   = { "M:<", caches["M:<"] },
         },
     }
 
     local getoptions = nuts.getoptions
     local shortmath  <const> = tex.mathoptioncodes.short
 
-    ruledmath = function(head,current)
-        local what  = getsubtype(current)
-        local mtag  = mathcodes[what]
+    ruledmath = function(head,current,subtype)
+        local mtag  = mathcodes[subtype]
         local skip  = getkern(current) + getwidth(current) -- surround
         local short = (getoptions(current) & shortmath) ~= 0
         local htag  = tags[short][mtag or "math"] or tags[false].math
@@ -1680,18 +1890,28 @@ local ruledmath do
         else
             local text, width = sometext(ttag,usedfont,nil,"trace:dr")
             local rule = new_rule(skip,-655360/fraction,2*655360/fraction)
-            local dist = mtag == "beginmath" and width or skip
+            local dist = (mtag == "beginmath" or mtag == "beginbrokenmath") and width or skip
             setcolor(rule,"trace:dr")
             settransparency(rule,"trace:dr")
-            setattr(rule,a_layer,l_math)
+            if use_layers then
+                setattr(rule,a_layer,l_math)
+            end
             info = new_hlist(setlink(new_glue(-skip),rule,new_glue(-dist),text))
-            setattr(info,a_layer,l_math)
+            if use_layers then
+                setattr(info,a_layer,l_math)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
+            if crappytaggingmode then
+                setattr(info,a_tagged,0)
+            end
             cache[skip] = info
         end
         local saved = current
         head, current = insertnodeafter(head,current,copylist(info))
         if getpenalty(saved) ~= 0 then
-            head, current = ruledpenalty(head,saved,false,true)
+            head, current = ruledpenalty(head,saved,false,true,getattr(saved,a_filter))
         end
         return head, current
     end
@@ -1707,7 +1927,7 @@ do
     local glue_code               <const> = nodecodes.glue
     local penalty_code            <const> = nodecodes.penalty
     local whatsit_code            <const> = nodecodes.whatsit
-    local user_code               <const> = nodecodes.user
+ -- local user_code               <const> = nodecodes.user
     local math_code               <const> = nodecodes.math
     local hlist_code              <const> = nodecodes.hlist
     local vlist_code              <const> = nodecodes.vlist
@@ -1720,7 +1940,7 @@ do
 
     local kerncodes               = nodes.kerncodes
     local fontkern_code           <const> = kerncodes.fontkern
-    local italickern_code         <const> = kerncodes.italiccorrection
+    local italiccorrection_code   <const> = kerncodes.italiccorrection
     local spacefontkern_code      <const> = kerncodes.spacefontkern
     local leftkern_code           <const> = kerncodes.leftcorrectionkern
     local rightkern_code          <const> = kerncodes.rightcorrectionkern
@@ -1734,10 +1954,10 @@ do
     ----- userkern_code           <const> = kerncodes.userkern
 
  -- local skipcodes               = nodes.skipcodes
-    local spaceskip_code          <const> = nodes.skipcodes.spaceskip
-    local xspaceskip_code         <const> = nodes.skipcodes.xspaceskip
-    local zerospaceskip_code      <const> = nodes.skipcodes.zerospaceskip
-    local intermathskip_code      <const> = nodes.skipcodes.intermathskip
+--     local spaceskip_code          <const> = nodes.skipcodes.spaceskip
+--     local xspaceskip_code         <const> = nodes.skipcodes.xspaceskip
+--     local zerospaceskip_code      <const> = nodes.skipcodes.zerospaceskip
+--     local intermathskip_code      <const> = nodes.skipcodes.intermathskip
 
  -- local listcodes               = nodes.listcodes
     local linelist_code           <const> = nodes.listcodes.line
@@ -1748,9 +1968,12 @@ do
 
     local getleader               = nuts.getleader
     local getdisc                 = nuts.getdisc
+    local getstate                = nuts.getstate
 
     local setleader               = nuts.setleader
     local setdisc                 = nuts.setdisc
+
+    local flushnodelist           = nuts.flushlist
 
  -- local cache
 
@@ -1766,7 +1989,7 @@ do
         local trace_whatsit         = false
         local trace_glyph           = false
         local trace_simple          = false
-        local trace_user            = false
+     -- local trace_user            = false
         local trace_math            = false
         local trace_mathkern        = false
         local trace_marginkern      = false
@@ -1792,17 +2015,24 @@ do
 
         -- too many locals so:
 
-        local vglue_code    <const> = filters.vglue
-        local hglue_code    <const> = filters.hglue
-        local vkern_code    <const> = filters.vkern
-        local hkern_code    <const> = filters.hkern
-        local vpenalty_code <const> = filters.vpenalty
-        local hpenalty_code <const> = filters.hpenalty
+        local vglue_code         <const> = filters.vglue
+        local hglue_code         <const> = filters.hglue
+        local vkern_code         <const> = filters.vkern
+        local hkern_code         <const> = filters.hkern
+        local vpenalty_code      <const> = filters.vpenalty
+        local hpenalty_code      <const> = filters.hpenalty
+        local toddler_code       <const> = filters.toddler
+        local continuation_code  <const> = filters.continuation
+
+        local spaceskip_code     <const> = nodes.skipcodes.spaceskip
+        local xspaceskip_code    <const> = nodes.skipcodes.xspaceskip
+        local zerospaceskip_code <const> = nodes.skipcodes.zerospaceskip
+        local intermathskip_code <const> = nodes.skipcodes.intermathskip
 
         while current do
-            local id = getid(current)
+            local id, subtype = getidsubtype(current)
             local a = forced or getattr(current,a_visual) or unsetvalue
-            local subtype, content
+            local content
             if a ~= attr then
                 prev_trace_fontkern  = trace_fontkern
                 prev_trace_italic    = trace_italic
@@ -1820,7 +2050,7 @@ do
                     trace_whatsit       = false
                     trace_glyph         = false
                     trace_simple        = false
-                    trace_user          = false
+                 -- trace_user          = false
                     trace_math          = false
                     trace_italic        = false
                     trace_origin        = false
@@ -1855,7 +2085,7 @@ do
                     trace_whatsit       = a & 0x0000100 ~= 0
                     trace_glyph         = a & 0x0000200 ~= 0
                     trace_simple        = a & 0x0000400 ~= 0
-                    trace_user          = a & 0x0000800 ~= 0
+                 -- trace_user          = a & 0x0000800 ~= 0
                     trace_math          = a & 0x0001000 ~= 0
                     trace_italic        = a & 0x0002000 ~= 0
                     trace_origin        = a & 0x0004000 ~= 0
@@ -1876,19 +2106,29 @@ do
             elseif a == unsetvalue then
                 goto list
             end
-         -- if trace_strut then
+         -- if use_layers and trace_strut then
          --     setattr(current,a_layer,l_strut)
          -- else
             if id == glyph_code then
+                local glyph = current
                 if trace_glyph then
-                    head, current = ruledglyph(head,current,previous)
+                    local f = getattr(current,a_filter)
+                    local t = f and (f & toddler_code) == toddler_code
+                    local c = f and (f & continuation_code) == continuation_code
+                    head, current = ruledglyph(head,current,previous,glyph,t,c)
                 end
                 if trace_expansion then
-                    head, current = ruledglyphexpansion(head,current)
+                    head, current = ruledglyphexpansion(head,current,glyph)
+                end
+                if trace_discretionary then
+                    head, current = ruledglyphdiscretionary(head,current,glyph)
                 end
             elseif id == disc_code then
+                -- these are gone already when we display them.
                 if trace_discretionary then
                     head, current = ruleddiscretionary(head,current)
+--                 elseif trace_penalty then
+--                     head, current = ruledpenalty(head,current,true,true)
                 end
                 local pre, post, replace = getdisc(current)
                 if pre then
@@ -1911,34 +2151,34 @@ do
                 goto list
             elseif id == rule_code then
                 if trace_strut then
-                    head, current = ruledstrut(head,current,parent)
+                    head, current = ruledstrut(head,current,subtype,parent)
                 end
             elseif id == whatsit_code then
                 if trace_whatsit then
-                    head, current = ruledwhatsit(head,current)
+                    head, current = ruledwhatsit(head,current,subtype)
                 end
-            elseif id == user_code then
-                if trace_user then
-                    head, current = ruleduser(head,current)
-                end
+         -- elseif id == user_code then
+         --     if trace_user then
+         --         head, current = ruleduser(head,current)
+         --     end
             elseif id == math_code then
                 local saved = current
                 if trace_math then
-                    head, current = ruledmath(head,current)
+                    head, current = ruledmath(head,current,subtype)
                 elseif trace_penalty then
-                    head, current = ruledpenalty(head,current,false,true)
+                    head, current = ruledpenalty(head,current,false,true,getattr(saved,a_filter))
                 end
             elseif id == dir_code then
                 if trace_dir then
-                    head, current = ruleddir(head,current)
+                    head, current = ruleddir(head,current,subtype)
                 end
             elseif id == par_code then
                 if trace_par then
-                    head, current = ruledpar(head,current)
+                    head, current = ruledpar(head,current,subtype)
                 end
             elseif id == mark_code then
                 if trace_mark then
-                    head, current = ruledmark(head,current)
+                    head, current = ruledmark(head,current,subtype)
                 end
             elseif id == insert_code then
                 if trace_insert then
@@ -1946,7 +2186,7 @@ do
                 end
             elseif id == boundary_code then
                 if trace_boundary then
-                    head, current = ruledboundary(head,current)
+                    head, current = ruledboundary(head,current,subtype)
                 end
             end
             goto next
@@ -1964,8 +2204,8 @@ do
                         end
                     end
                 end
-                subtype = getsubtype(current)
-                head, current = ruledpenalty(head,current,vertical,subtype)
+                -- todo: discretionary
+                head, current = ruledpenalty(head,current,vertical,subtype,f)
             end
           ::glue::
             content = getleader(current)
@@ -1984,12 +2224,11 @@ do
                         end
                     end
                 end
-                head, current = ruledglue(head,current,vertical,parent)
+                head, current = ruledglue(head,current,subtype,vertical,parent)
             else
-                subtype = getsubtype(current)
                 if subtype == spaceskip_code or subtype == xspaceskip_code or subtype == zerospaceskip_code then -- not yet all space
                     if trace_space then
-                        head, current = ruledspace(head,current,parent)
+                        head, current = ruledspace(head,current,subtype,parent)
                     end
                 elseif subtype == intermathskip_code then
                     if trace_math or trace_mathglue then
@@ -1999,7 +2238,6 @@ do
             end
             goto next
           ::kern::
-            subtype = getsubtype(current)
             if subtype == fontkern_code or subtype == spacefontkern_code then
                 if trace_fontkern or prev_trace_fontkern then
                     head, current = fontkern(head,current)
@@ -2007,9 +2245,9 @@ do
                 if trace_expansion or prev_trace_expansion then
                     head, current = kernexpansion(head,current)
                 end
-            elseif subtype == italickern_code or subtype == leftkern_code or subtype == rightkern_code then
+            elseif subtype == italiccorrection_code or subtype == leftkern_code or subtype == rightkern_code then
                 if trace_italic or prev_trace_italic then
-                    head, current = italickern(head,current)
+                    head, current = italiccorrection(head,current)
                 elseif trace_kern then
                     head, current = ruleditalic(head,current)
                 end
@@ -2062,7 +2300,7 @@ do
                 if trace_depth then
                     ruleddepth(current)
                 end
-                if trace_line and (getsubtype(current) == linelist_code or getsubtype(current) == rowlist_code) then
+                if trace_line and (subtype == linelist_code or subtype == rowlist_code) then
                     head, current = ruledbox(head,current,false,l_line,"L__",trace_simple,previous,trace_origin,parent)
                 elseif trace_hbox then
                     head, current = ruledbox(head,current,false,l_hbox,"H__",trace_simple,previous,trace_origin,parent)
@@ -2243,7 +2481,7 @@ end
 
 do
 
-    local function make(str,forecolor,rulecolor,layer,delta,extra)
+    local function make(str,textcolor,rulecolor,layer,delta,extra)
      -- if initialize then
      --     initialize()
      -- end
@@ -2272,7 +2510,12 @@ do
             end
             info = new_hlist(setlink(rule,text,extra))
         end
-        setattr(info,a_layer,layer)
+        if use_layers then
+            setattr(info,a_layer,layer)
+        end
+        if crappytaggingmode then
+            setattr(info,a_tagged,0,0)
+        end
         return info
     end
 

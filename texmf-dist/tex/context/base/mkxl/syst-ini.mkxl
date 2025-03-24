@@ -316,14 +316,14 @@
 \permanent\countdef\c_syst_max_allocated_mark      = 206 \c_syst_max_allocated_mark      =  1024 % max 10K in luametatex anyway
 
 \permanent\countdef\c_syst_min_allocated_attribute = 207 \c_syst_min_allocated_attribute =  1024 % 0-1023 : private
-\permanent\countdef\c_syst_max_allocated_attribute = 208 \c_syst_min_allocated_attribute = \directlua{tex.write(tex.magicconstants.max_attribute_register_index)} % 65535 % no allocator, managed differently
+\permanent\countdef\c_syst_max_allocated_attribute = 208 \c_syst_max_allocated_attribute = \directlua{tex.write(tex.magicconstants.max_attribute_register_index)}
 
-\permanent\countdef\c_syst_max_allocated_count     = 211 \c_syst_max_allocated_count     = \directlua{tex.write(tex.magicconstants.max_integer_register_index)}   % 65535 % is adapted later on
-\permanent\countdef\c_syst_max_allocated_dimen     = 212 \c_syst_max_allocated_dimen     = \directlua{tex.write(tex.magicconstants.max_dimension_register_index)} % idem
-\permanent\countdef\c_syst_max_allocated_skip      = 213 \c_syst_max_allocated_skip      = \directlua{tex.write(tex.magicconstants.max_glue_register_index)}      % idem
-\permanent\countdef\c_syst_max_allocated_muskip    = 214 \c_syst_max_allocated_muskip    = \directlua{tex.write(tex.magicconstants.max_muglue_register_index)}    % idem
-\permanent\countdef\c_syst_max_allocated_box       = 215 \c_syst_max_allocated_box       = \directlua{tex.write(tex.magicconstants.max_box_register_index)}       % idem
-\permanent\countdef\c_syst_max_allocated_toks      = 216 \c_syst_max_allocated_toks      = \directlua{tex.write(tex.magicconstants.max_toks_register_index)}      % idem
+\permanent\countdef\c_syst_max_allocated_count     = 211 \c_syst_max_allocated_count     = \directlua{tex.write(tex.magicconstants.max_integer_register_index)}
+\permanent\countdef\c_syst_max_allocated_dimen     = 212 \c_syst_max_allocated_dimen     = \directlua{tex.write(tex.magicconstants.max_dimension_register_index)}
+\permanent\countdef\c_syst_max_allocated_skip      = 213 \c_syst_max_allocated_skip      = \directlua{tex.write(tex.magicconstants.max_glue_register_index)}
+\permanent\countdef\c_syst_max_allocated_muskip    = 214 \c_syst_max_allocated_muskip    = \directlua{tex.write(tex.magicconstants.max_muglue_register_index)}
+\permanent\countdef\c_syst_max_allocated_box       = 215 \c_syst_max_allocated_box       = \directlua{tex.write(tex.magicconstants.max_box_register_index)}
+\permanent\countdef\c_syst_max_allocated_toks      = 216 \c_syst_max_allocated_toks      = \directlua{tex.write(tex.magicconstants.max_toks_register_index)}
 \permanent\countdef\c_syst_max_allocated_read      = 217 \c_syst_max_allocated_read      = \c_syst_max_allocated_iohandle
 \permanent\countdef\c_syst_max_allocated_write     = 218 \c_syst_max_allocated_write     = \c_syst_max_allocated_iohandle
 \permanent\countdef\c_syst_max_allocated_float     = 220 \c_syst_max_allocated_float     = \directlua{tex.write(tex.magicconstants.max_float_register_index or 0)}     % idem
@@ -339,6 +339,10 @@
 \permanent\countdef\c_syst_last_allocated_marks    = 229 \c_syst_last_allocated_marks    = \c_syst_min_allocated_mark
 \permanent\countdef\c_syst_last_allocated_float    = 230 \c_syst_last_allocated_float    = \c_syst_min_allocated_register
 
+\permanent\countdef\c_syst_min_allocated_mvl       = 231 \c_syst_min_allocated_mvl       = \directlua{tex.write(tex.magicconstants.min_mvl_index)}
+\permanent\countdef\c_syst_max_allocated_mvl       = 232 \c_syst_max_allocated_mvl       = \directlua{tex.write(tex.magicconstants.max_mvl_index)}
+\permanent\countdef\c_syst_last_allocated_mvl      = 233 \c_syst_last_allocated_mvl      = \c_syst_min_allocated_mvl
+
 \permanent\countdef\c_syst_min_counter_value       = 253 \c_syst_min_counter_value       = -"7FFFFFFF
 \permanent\countdef\c_syst_max_counter_value       = 254 \c_syst_max_counter_value       =  "7FFFFFFF
 
@@ -346,7 +350,8 @@
 \immutable\integerdef\plusone         1
 \immutable\integerdef\minusone       -1
 
-\immutable\integerdef\normalpagebox 255  % hardcoded in pdftex/xetex
+\immutable\integerdef\normalpagebox  255
+\immutable\integerdef\delayedpagebox 254
 
 \immutable\integerdef\statuswrite \minusone
 
@@ -387,16 +392,17 @@
 %D The allocators share a common helper macro. Marks might be changed to work in lower
 %D regions and we always assumes allocation.
 
-\permanent\protected\def\newcount {\syst_basics_allocate\c_syst_last_allocated_count \count \countdef  \c_syst_max_allocated_count}
-\permanent\protected\def\newdimen {\syst_basics_allocate\c_syst_last_allocated_dimen \dimen \dimendef  \c_syst_max_allocated_dimen}
-\permanent\protected\def\newskip  {\syst_basics_allocate\c_syst_last_allocated_skip  \skip  \skipdef   \c_syst_max_allocated_skip}
-\permanent\protected\def\newmuskip{\syst_basics_allocate\c_syst_last_allocated_muskip\muskip\muskipdef \c_syst_max_allocated_muskip}
-\permanent\protected\def\newbox   {\syst_basics_allocate\c_syst_last_allocated_box   \box   \integerdef\c_syst_max_allocated_box}
-\permanent\protected\def\newtoks  {\syst_basics_allocate\c_syst_last_allocated_toks  \toks  \toksdef   \c_syst_max_allocated_toks}
-\permanent\protected\def\newread  {\syst_basics_allocate\c_syst_last_allocated_read  \read  \integerdef\c_syst_max_allocated_read}
-\permanent\protected\def\newwrite {\syst_basics_allocate\c_syst_last_allocated_write \write \integerdef\c_syst_max_allocated_write}
-\permanent\protected\def\newmarks {\syst_basics_allocate\c_syst_last_allocated_marks \marks \integerdef\c_syst_max_allocated_mark}
-\permanent\protected\def\newfloat {\syst_basics_allocate\c_syst_last_allocated_float \float \floatdef  \c_syst_max_allocated_float}
+\permanent\protected\def\newcount {\syst_basics_allocate\c_syst_last_allocated_count \count   \countdef  \c_syst_max_allocated_count}
+\permanent\protected\def\newdimen {\syst_basics_allocate\c_syst_last_allocated_dimen \dimen   \dimendef  \c_syst_max_allocated_dimen}
+\permanent\protected\def\newskip  {\syst_basics_allocate\c_syst_last_allocated_skip  \skip    \skipdef   \c_syst_max_allocated_skip}
+\permanent\protected\def\newmuskip{\syst_basics_allocate\c_syst_last_allocated_muskip\muskip  \muskipdef \c_syst_max_allocated_muskip}
+\permanent\protected\def\newbox   {\syst_basics_allocate\c_syst_last_allocated_box   \box     \integerdef\c_syst_max_allocated_box}
+\permanent\protected\def\newtoks  {\syst_basics_allocate\c_syst_last_allocated_toks  \toks    \toksdef   \c_syst_max_allocated_toks}
+\permanent\protected\def\newread  {\syst_basics_allocate\c_syst_last_allocated_read  \read    \integerdef\c_syst_max_allocated_read}
+\permanent\protected\def\newwrite {\syst_basics_allocate\c_syst_last_allocated_write \write   \integerdef\c_syst_max_allocated_write}
+\permanent\protected\def\newmarks {\syst_basics_allocate\c_syst_last_allocated_marks \marks   \integerdef\c_syst_max_allocated_mark}
+\permanent\protected\def\newfloat {\syst_basics_allocate\c_syst_last_allocated_float \float   \floatdef  \c_syst_max_allocated_float}
+\permanent\protected\def\newmvl   {\syst_basics_allocate\c_syst_last_allocated_mvl   \flushmvl\integerdef\c_syst_max_allocated_mvl}
 
 \firstvalidlanguage \plusone % so zero is ignored in hyphenation, this might become the default
 
@@ -576,6 +582,9 @@
 \newinteger\scratchmx
 \newinteger\scratchmy
 
+\newinteger\scratchsx
+\newinteger\scratchsy
+
 \newinteger\scratchmin
 \newinteger\scratchmax
 
@@ -607,6 +616,8 @@
 
 %immutable\dimensiondef  \zeropoint     0pt
 \immutable\dimensiondef  \onepoint      1pt
+\immutable\dimensiondef  \twopoints     2pt
+\immutable\dimensiondef  \threepoints   3pt
 \immutable\dimensiondef  \halfapoint    0.5pt
 \immutable\dimensiondef  \maxdimen      16383.99999pt % 1073741823sp
 \immutable\dimensiondef  \onebasepoint  1bp
@@ -637,38 +648,60 @@
 %D but can use chardefs for positive ones. Actually, because we have plenty of counters we
 %D can also use counts for those.
 
-%immutable\integerdef\minusone              -1
-\immutable\integerdef\minustwo              -2
-%immutable\integerdef\zerocount              0
-%immutable\integerdef\plusone                1
-\immutable\integerdef\plustwo                2
-\immutable\integerdef\plusthree              3
-\immutable\integerdef\plusfour               4
-\immutable\integerdef\plusfive               5
-\immutable\integerdef\plussix                6
-\immutable\integerdef\plusseven              7
-\immutable\integerdef\pluseight              8
-\immutable\integerdef\plusnine               9
-\immutable\integerdef\plusten               10
-\immutable\integerdef\pluseleven            11
-\immutable\integerdef\plustwelve            12
-\immutable\integerdef\plussixteen           16
-\immutable\integerdef\plusfifty             50
-\immutable\integerdef\plushundred          100
-\immutable\integerdef\plusonehundred       100
-\immutable\integerdef\plustwohundred       200
-\immutable\integerdef\plusfivehundred      500
-\immutable\integerdef\pluscxxvii           127
-\immutable\integerdef\pluscxxviii          128
-\immutable\integerdef\pluscclv             255
-\immutable\integerdef\pluscclvi            256
-\immutable\integerdef\plusthousand        1000
-\immutable\integerdef\plustenthousand    10000
-\immutable\integerdef\plustwentythousand 20000
-\immutable\integerdef\medcard            32768
-\immutable\integerdef\maxcard            65536 % pdftex has less mathchars
-\immutable\integerdef\maxcardminusone    65535
-\immutable\integerdef\maxiterator       "FFFFF
+%immutable\integerdef\minusone                  -1
+\immutable\integerdef\minustwo                  -2
+%immutable\integerdef\zerocount                  0
+%immutable\integerdef\plusone                    1
+\immutable\integerdef\plustwo                    2  % also fitness value
+\immutable\integerdef\plusthree                  3
+\immutable\integerdef\plusfour                   4
+\immutable\integerdef\plusfive                   5
+\immutable\integerdef\plussix                    6
+\immutable\integerdef\plusseven                  7
+\immutable\integerdef\pluseight                  8
+\immutable\integerdef\plusnine                   9
+\immutable\integerdef\plusten                   10
+\immutable\integerdef\pluseleven                11
+\immutable\integerdef\plustwelve                12  % also fitness value
+\immutable\integerdef\plusthirteen              13
+\immutable\integerdef\plusfourteen              14
+\immutable\integerdef\plusfifteen               15
+\immutable\integerdef\plussixteen               16
+\immutable\integerdef\plustwentyfive            25
+\immutable\integerdef\plusfourtytwo             42  % also fitness value
+\immutable\integerdef\plusfifty                 50
+\immutable\integerdef\plusninetynine            99  % also fitness value
+\immutable\integerdef\plushundred              100
+\immutable\integerdef\plusonehundred           100
+\immutable\integerdef\plusonehundredtwentyfive 125
+\immutable\integerdef\plustwohundred           200
+\immutable\integerdef\plustwohundredfifty      250
+\immutable\integerdef\plusfivehundred          500
+\immutable\integerdef\pluscxxvii               127
+\immutable\integerdef\pluscxxviii              128
+\immutable\integerdef\pluscclv                 255
+\immutable\integerdef\pluscclvi                256
+\immutable\integerdef\plusthousand            1000
+\immutable\integerdef\plusonethousand         1000
+\immutable\integerdef\plustwothousand         2000
+\immutable\integerdef\plusthreethousand       3000
+\immutable\integerdef\plusfourthousand        4000
+\immutable\integerdef\plusfivethousand        5000
+\immutable\integerdef\plussixthousand         6000
+\immutable\integerdef\plusseventhousand       7000
+\immutable\integerdef\pluseightthousand       8000
+\immutable\integerdef\plusninethousand        9000
+\immutable\integerdef\plustenthousand        10000
+\immutable\integerdef\plustwentythousand     20000
+\immutable\integerdef\plusfifteenhundred      1500
+\immutable\integerdef\plustwentyfivehundred   2500
+\immutable\integerdef\plusfortyfivehundred    4500
+\immutable\integerdef\plusseventyfivehundred  7500
+
+\immutable\integerdef\medcard          32768
+\immutable\integerdef\maxcard          65536 % pdftex has less mathchars
+\immutable\integerdef\maxcardminusone  65535
+\immutable\integerdef\maxiterator     "FFFFF
 
 \immutable\integerdef\binaryshiftedten          1024
 \immutable\integerdef\binaryshiftedtwenty    1048576
@@ -693,7 +726,9 @@
 \permanent\def\emptyvbox{\normalvpack{}}   % no copy as we need to set attributes
 \permanent\def\emptyhbox{\normalhpack{}}   % no copy as we need to set attributes
 
-\aliased\let\leavevmode\unvoidbox % we prefer to use \dontleavehmode
+\aliased\let\dontleavehmode\quitvmode
+
+\aliased\let\leavevmode\unvoidbox % we prefer to use \dontleavehmode and never use this one
 
 %D \macros
 %D   {dontcomplain,lessboxtracing}
@@ -987,7 +1022,8 @@
 
 
 \aliased\let\newconditional\setfalse
-\aliased\let\ifconditional \ifcase
+%aliased\let\ifconditional \ifcase
+\aliased\let\ifconditional \ifzeronum   % permits \unless\ifconditional
 
 \permanent\protected\lettonothing\then % so that we can say: \ifnum1>2\then -)
 
@@ -1234,9 +1270,9 @@
 
 %D A few bonus macros:
 
-%permanent\def\modulonumber#1#2{\the\numexpr#2-((((#2+(#1/2))/#1)-1)*#1)\relax}
-\permanent\def\modulonumber#1#2{\the\numexpr#2-(#2:#1)*#1\relax}
-\permanent\def\dividenumber#1#2{\the\numexpr(#2-(#1/2))/#1\relax}
+%permanent\def\modulonumber#1#2{\tointeger{#2-((((#2+(#1/2))/#1)-1)*#1)}}
+\permanent\def\modulonumber#1#2{\tointeger {#2-(#2:#1)*#1}}
+\permanent\def\dividenumber#1#2{\tointeger{(#2-(#1/2))/#1}}
 
 %D These could be set at the \LUA\ end instead:
 
@@ -1622,8 +1658,8 @@
 
 %D We keep this for a while (suggested correction by KB):
 
-\ifdefined\linebreakcriterion   \aliased\let\linebreakcriterium  \linebreakcriterion   \fi
-\ifdefined\ignoredepthcriterion \aliased\let\ignoredepthcriterium\ignoredepthcriterion \fi
+\ifdefined\linebreakcriterion   \aliased\let\linebreakcriterium   \linebreakcriterion   \fi
+\ifdefined\ignoredepthcriterion \aliased\let\ignoredepthcriterium \ignoredepthcriterion \fi
 
 %D Special purpose:
 
@@ -1674,6 +1710,47 @@
 %D Because we use the variable class:
 
 \variablefam-\plustwo % obey class 7
+
+%D For now here:
+
+% \fitnessdemerits 5
+%     99          \plusone
+%     12          \plusone
+%     \zerocount  \plusone
+%     12          \plusone
+%     99          \plusone
+
+
+\pushoverloadmode
+
+%D We now group these penalties in specification sets. For practical purposes we no longer
+%D use the built in single penalties but map them onto the plurals. We also redefine the
+%D display math penalties but we never use these.
+
+\permanent\protected\untraced\def\widowpenalty       {\widowpenalties       \minusone} % once
+\permanent\protected\untraced\def\clubpenalty        {\clubpenalties        \minusone} % once
+\permanent\protected\untraced\def\displaywidowpenalty{\displaywidowpenalties\minusone} % once
+\permanent\protected\untraced\def\brokenpenalty      {\brokenpenalties      \minusone} % singular anyway
+\permanent\protected\untraced\def\orphanpenalty      {\orphanpenalties      \minusone} % once
+\permanent\protected\untraced\def\toddlerpenalty     {\toddlerpenalties     \minusone} % once
+\permanent\protected\untraced\def\interlinepenalty   {\interlinepenalties   \plusone } % repeats
+%permanent\protected\untraced\def\adjdemerits        {\adjacentdemerits     \minusone}
+
+\popoverloadmode
+
+%D See \type {mult-sys.mkxl} for an explanation of \type {\blankspace} definition. This one
+%D is more explanatory when ending (for instance) a keyword.
+
+\ifdefined\relaxedspace
+  % could be a primitive
+\else
+    \normalexpanded{\permanent\let\noexpand\relaxedspace=\space\space}
+\fi
+
+%D Only when testing non \CONTEXT\ usage:
+
+% \let\saved_reqno \eqno
+% \let\saved_leqno \leqno
 
 \protect \endinput
 

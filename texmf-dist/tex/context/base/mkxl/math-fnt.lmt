@@ -12,26 +12,28 @@ if not modules then modules = { } end modules ['math-fnt'] = {
 local round = math.round
 local setmetatableindex = table.setmetatableindex
 
-local nuts          = nodes.nuts
-local tonut         = nodes.tonut
-local tonode        = nodes.tonode
-local nodepool      = nuts.pool
+local nuts            = nodes.nuts
+local tonut           = nodes.tonut
+local tonode          = nodes.tonode
+local nodepool        = nuts.pool
 
-local vlist_code    <const> = nodes.nodecodes.vlist
+local vlist_code      <const> = nodes.nodecodes.vlist
 
-local new_hlist     = nodepool.hlist
-local new_vlist     = nodepool.vlist
------ new_glyph     = nodepool.glyph
-local new_glyph     = nuts.newmathglyph
+local new_hlist       = nodepool.hlist
+local new_vlist       = nodepool.vlist
+----- new_glyph       = nodepool.glyph
+local new_glyph       = nuts.newmathglyph
 
-local getattrlst    = nuts.getattributelist
-local setattrlst    = nuts.setattributelist
-local setwhd        = nuts.setwhd
-local getwhd        = nuts.getwhd
-local getid         = nuts.getid
+local getattrlst      = nuts.getattributelist
+local setattrlst      = nuts.setattributelist
+local setwhd          = nuts.setwhd
+local getwhd          = nuts.getwhd
+local getid           = nuts.getid
 
-local chardata      = fonts.hashes.characters
-local addcharacters = font.addcharacters
+local chardata        = fonts.hashes.characters
+local addcharacters   = font.addcharacters
+
+local texconditionals = tex.conditionals
 
 -- not yet ok for compact fonts .. needs checking .. or just make this non-compact only
 -- there's also an inaccuracy creeping in: \sqrt{\quad\blackrule[height=25pt,depth=25pt]}
@@ -57,10 +59,12 @@ local cache = setmetatableindex(function(t,width)
     return v
 end)
 
-local enabled = "vertical"  directives.register("math.extensibles", function(v) enabled = v end) -- default per 2022-08-25
+local enabled = "both"  directives.register("math.extensibles", function(v) enabled = v end) -- default per 2022-08-25
+
+-- updaters.register("tagging.state.enable", function() enabled = "both" end) -- for now
 
 local function register_extensible(font,char,style,att,box)
-    if enabled then
+    if enabled and texconditionals["c_math_extensibles"] then
         -- We don't share (yet)!
         local fontdata = chardata[font]
         local oldchar  = fontdata[char]
@@ -70,9 +74,6 @@ local function register_extensible(font,char,style,att,box)
             else
                 return
             end
-if not box then -- pending build bot
-    box = att
-end
             local bx = tonut(box)
             -- actually we don't want colors and such so if we do finalize we
             -- should be more selective:
@@ -81,9 +82,6 @@ end
     --         updaters.apply("tagging.state.enable")
 -- updaters.apply("tagging.state.disable")
             local id = getid(bx)
-if not att then -- pending build bot
-    att = getattrlst(box)
-end
             local al = tonut(att)
             local wd, ht, dp = getwhd(bx)
             local unicode = oldchar.unicode or char
@@ -108,7 +106,9 @@ end
             --
         --  local private = fonts.helpers.setboxdirectly(font,unicode,box) -- maybe cache in setboxdirectly
             local private = cache[wd][ht][dp][font][unicode]
-            if not private then
+            if private then
+nodes.flushlist(box)
+            else
                 private = fonts.helpers.setboxdirectly(font,unicode,box,true) -- expose=true so we get color
                 cache[wd][ht][dp][font][unicode] = private
             end

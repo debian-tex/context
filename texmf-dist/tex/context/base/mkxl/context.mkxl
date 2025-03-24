@@ -13,7 +13,9 @@
 
 % http://build.contextgarden.net/waterfall?tag=c/lua(meta)tex
 
-%D Welcome to context, pronounced as kontekst (rather dutch) and not as conτεχt.
+%D Welcome to context, pronounced as kontekst (rather dutch) and not as conτεχt. The
+%D (latin) \type{con} suggests that we mean \quote {with text} which is indeed what
+%D we had in mind.
 
 \catcode`\{=1 \catcode`\}=2 \catcode`\#=6
 
@@ -22,14 +24,14 @@
 %D the feature level. Starting with version 2004.8.30 the low level interface is
 %D english. Watch out and adapt your styles an modules.
 
-% \everypar{\writestatus{!!!!}{some spurious input in line \the\inputlineno}\wait}
+\everypar{\writestatus{!!!!}{some spurious input in line \the\inputlineno}\wait}
 
 %D The order of loading will change when all modules have been cleaned up and the
 %D dependencies are more consistent. Beware, the version number has to match \type
 %D {YYYY.MM.DD HH:MM} format.
 
 \immutable\edef\contextformat {\jobname}
-\immutable\edef\contextversion{2024.02.27 09:18}
+\immutable\edef\contextversion{2025.02.28 18:12}
 
 %overloadmode 1 % check frozen / warning
 %overloadmode 2 % check frozen / error
@@ -325,7 +327,8 @@
 %loadmarkfile{page-mul} % \usecolumns[old-multicolumns]
 \loadmkxlfile{page-mix}
 \loadmkxlfile{page-smp}
-\loadmkxlfile{page-cst}
+% \loadmkxlfile{page-cst}
+\loadmkxlfile{page-mvl}
 \loadmkxlfile{page-pcl} % new
 \loadmkxlfile{pack-lyr}
 \loadmkxlfile{pack-pos}
@@ -339,6 +342,8 @@
 \loadmkxlfile{typo-pag}
 \loadmkxlfile{typo-mar}
 \loadmkxlfile{typo-itm}
+\loadmkxlfile{typo-stc}
+\loadmkxlfile{typo-swp}
 
 \loadmkxlfile{buff-ini}
 \loadmkxlfile{buff-ver}
@@ -362,6 +367,7 @@
 \loadmklxfile{scrn-wid}
 \loadmklxfile{scrn-but}
 \loadmklxfile{scrn-bar}
+\loadmkxlfile{scrn-hlt}
 
 \loadmkxlfile{page-com} % optional (after scrn-pag)
 
@@ -450,6 +456,7 @@
 \loadmkxlfile{typo-rub}
 \loadmkxlfile{typo-fkr}
 \loadmkxlfile{typo-pnc}
+\loadmkxlfile{typo-bal}
 
 \loadmklxfile{type-ini}
 \loadmkxlfile{type-set}
@@ -498,8 +505,7 @@
 \loadmkxlfile{math-frc}
 \loadmkxlfile{math-mis}
 \loadmkxlfile{math-scr}
-\loadmkxlfile{math-int}
-\loadmkxlfile{math-dif}
+\loadmkxlfile{math-con}
 \loadmkxlfile{math-del}
 \loadmkxlfile{math-fen}
 \loadmkxlfile{math-lop}
@@ -511,6 +517,7 @@
 %loadmkxlfile{math-lan}
 \loadmkxlfile{math-toy}
 \loadmkxlfile{math-twk}
+\loadmkxlfile{math-mps}
 
 \loadmkxlfile{strc-mat}
 
@@ -595,6 +602,8 @@
 
 \loadmkxlfile{back-exp}
 
+\loadmkxlfile{grph-exp}
+
 \loadmkxlfile{back-imp-pdf}
 \loadmkxlfile{back-imp-mps}
 \loadmkxlfile{back-imp-lua}
@@ -645,6 +654,8 @@
 \to \everydump
 
 % \overloadmode\zerocount % for now
+
+% \ifcsname\endcsname\fi % make sure that we reset it
 
 \errorstopmode \dump \endinput
 

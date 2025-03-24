@@ -63,7 +63,7 @@
    \frozen\instance\letcsname           \e!stop \currentlines\endcsname \spac_lines_stop
 \to \everydefinelines
 
-\lettonothing\p_lines_option
+% \lettonothing\p_lines_option
 
 \let\spac_lines_break            \relax
 \let\spac_after_first_obeyed_line\relax
@@ -94,7 +94,7 @@
    \ifx\commalistelement\wildcardsymbol
      \hskip\d_spac_lines_indent
    \else
-     \scratchdimen\dimexpr\commalistelement\relax
+     \scratchdimen{\commalistelement}%
      \hskip
        \ifzeropt\scratchdimen
          \zeropoint
@@ -104,6 +104,17 @@
        \fi
    \fi
    \relax}
+
+%D \startbuffer
+%D \startlines[keeptogether=paragraph]
+%D test test
+%D test test
+%D test test
+%D test test
+%D \stoplines
+%D \stopbuffer
+%D
+%D \start \showmakeup[vpenalty] \getbuffer \stop
 
 \permanent\tolerant\protected\def\spac_lines_start[#1]%
   {\bgroup
@@ -115,16 +126,22 @@
   {\ifarguments\or
      \setupcurrentlines[#1]%
    \fi
-   \edef\p_lines_option{\linesparameter\c!option}%
-   \ifx\p_lines_option\v!packed
+%    \edef\p_lines_option{\linesparameter\c!option}%
+%    \ifx\p_lines_option\v!packed
+   \ifcstok{\linesparameter\c!option}\v!packed
      \let\spac_lines_break\nobreak
+     \c_spac_lines_as_paragraph\conditionalfalse
+   \orelse\ifcstok{\linesparameter\c!keeptogether}\v!paragraph
+     \let\spac_lines_break\relax
+     \c_spac_lines_as_paragraph\conditionaltrue
    \else
      \let\spac_lines_break\relax
+     \c_spac_lines_as_paragraph\conditionalfalse
    \fi
    \linesparameter\c!before
    \push_macro_checkindentation
    \whitespace
-   \dostarttaggedchained\t!lines\currentlines\??lines
+   \dostarttaggedchained\t!lines\currentlines\currentlines\??lines
    \begingroup
    \uselinesstyleandcolor\c!style\c!color
    \useindentingparameter\linesparameter
@@ -148,9 +165,8 @@
    \glet\spac_after_first_obeyed_line\spac_lines_after_first_obeyed_line_a
    \enforced\let\obeyedline\spac_lines_obeyed_line
    \activatespacehandler{\linesparameter\c!space}%
-   \dostarttagged\t!line\empty
+   \dostarttaggednodetail\t!line
    \ignorepars}
-
 
 % we could have states instead and handle option in there
 
@@ -166,11 +182,17 @@
    \spac_lines_indent
    \linesparameter\c!left}
 
+\newconditional \c_spac_lines_as_paragraph
+
 \def\spac_lines_obeyed_line
   {\ifdone\linesparameter\c!right\fi
    \dostoptagged % can be a dummy one as we don't look ahead
-   \par
-   \dostarttagged\t!line\empty
+   \ifconditional\c_spac_lines_as_paragraph
+     \parbreak
+   \else
+     \par
+   \fi
+   \dostarttaggednodetail\t!line
    \futurelet\nexttoken\spac_lines_between}
 
 \protected\def\spac_lines_stop

@@ -45,6 +45,7 @@
 
 \definesystemconstant {afrikaans}      \definesystemconstant {af}
 \definesystemconstant {albanian}       \definesystemconstant {sq}
+                                       \definesystemconstant {als}
 \definesystemconstant {armenian}       \definesystemconstant {hy}
                                        \definesystemconstant {hye}
                                        \definesystemconstant {hyw}
@@ -75,14 +76,18 @@
 \definesystemconstant {hindi}          \definesystemconstant {hi}
 \definesystemconstant {yiddish}        \definesystemconstant {yi}
 \definesystemconstant {hungarian}      \definesystemconstant {hu}
+\definesystemconstant {indonesian}     \definesystemconstant {id}
 \definesystemconstant {italian}        \definesystemconstant {it}
 \definesystemconstant {japanese}       \definesystemconstant {ja}
 \definesystemconstant {kannada}        \definesystemconstant {kn}
 \definesystemconstant {korean}         \definesystemconstant {kr}
 \definesystemconstant {latin}          \definesystemconstant {la}
 \definesystemconstant {lithuanian}     \definesystemconstant {lt}
+\definesystemconstant {malay}          \definesystemconstant {ms}
 \definesystemconstant {malayalam}      \definesystemconstant {ml}
 \definesystemconstant {macedonian}     \definesystemconstant {mk}
+\definesystemconstant {moldavian}      \definesystemconstant {mo}
+\definesystemconstant {montenegrin}    \definesystemconstant {cnr}
 \definesystemconstant {norwegian}      \definesystemconstant {no}
 \definesystemconstant {nynorsk}        \definesystemconstant {nn}
 \definesystemconstant {persian}        \definesystemconstant {pe}
@@ -120,6 +125,7 @@
 \definesystemconstant {ampersand}
 \definesystemconstant {anchor}
 \definesystemconstant {anchors}
+\definesystemconstant {apostrophe}
 \definesystemconstant {ascii}
 \definesystemconstant {attribute}
 \definesystemconstant {attr}
@@ -148,6 +154,7 @@
 \definesystemconstant {bs}
 \definesystemconstant {b}
 \definesystemconstant {callback}
+\definesystemconstant {callbacks}
 \definesystemconstant {calligraphy}
 \definesystemconstant {Calligraphy}
 \definesystemconstant {Caps}
@@ -177,6 +184,7 @@
 \definesystemconstant {compare}
 \definesystemconstant {complex}
 \definesystemconstant {container}
+\definesystemconstant {constant}
 \definesystemconstant {counter}
 \definesystemconstant {cramped}
 \definesystemconstant {current}
@@ -188,8 +196,10 @@
 \definesystemconstant {DefaultFont}
 \definesystemconstant {default}
 \definesystemconstant {depth}
+\definesystemconstant {descend}
 \definesystemconstant {designsize}
 \definesystemconstant {direction}
+\definesystemconstant {discardable}
 \definesystemconstant {display}
 \definesystemconstant {document}
 \definesystemconstant {dodo}
@@ -208,6 +218,7 @@
 \definesystemconstant {explicitrighthyphenchar}
 \definesystemconstant {extensions}
 \definesystemconstant {external}
+\definesystemconstant {symbolattr}
 \definesystemconstant {ex}
 \definesystemconstant {e}
 \definesystemconstant {factor}
@@ -226,6 +237,7 @@
 \definesystemconstant {float}
 \definesystemconstant {font}
 \definesystemconstant {forget}
+\definesystemconstant {forcedepth}
 \definesystemconstant {format}
 \definesystemconstant {fraktur}
 \definesystemconstant {fraktion}
@@ -245,9 +257,11 @@
 \definesystemconstant {hastitle}
 \definesystemconstant {head}
 \definesystemconstant {height}
+\definesystemconstant {hex}
 \definesystemconstant {hfactor}
 \definesystemconstant {hw}
 \definesystemconstant {hyphenmin}
+\definesystemconstant {identity}
 \definesystemconstant {implication}
 \definesystemconstant {indeed}
 \definesystemconstant {initializations}
@@ -317,6 +331,7 @@
 \definesystemconstant {nomath}
 \definesystemconstant {none}
 \definesystemconstant {nooverflow}
+\definesystemconstant {norule}
 \definesystemconstant {noskips}
 \definesystemconstant {normal}
 \definesystemconstant {Normal}
@@ -332,6 +347,7 @@
 \definesystemconstant {overlay}
 \definesystemconstant {pagefloat}
 \definesystemconstant {page}
+\definesystemconstant {pair}
 \definesystemconstant {paragraph}
 \definesystemconstant {parent}
 \definesystemconstant {patterns}
@@ -341,6 +357,7 @@
 \definesystemconstant {plus}
 \definesystemconstant {posit}
 %definesystemconstant {pt}
+\definesystemconstant {reflected}
 \definesystemconstant {realpage}
 \definesystemconstant {register}
 \definesystemconstant {Regular}
@@ -412,15 +429,18 @@
 \definesystemconstant {symbol}
 \definesystemconstant {system}
 \definesystemconstant {style}
+\definesystemconstant {swap}
 \definesystemconstant {text}
 \definesystemconstant {tex}
 \definesystemconstant {tf}
 \definesystemconstant {target}
+\definesystemconstant {thickness}
 \definesystemconstant {third}
 \definesystemconstant {topfloat}
 \definesystemconstant {top}
 \definesystemconstant {to}
 \definesystemconstant {traditional}
+\definesystemconstant {trial}
 \definesystemconstant {triple}
 \definesystemconstant {true}
 \definesystemconstant {tt}
@@ -433,6 +453,7 @@
 \definesystemconstant {Unicode}
 \definesystemconstant {unroll}
 \definesystemconstant {upright}
+\definesystemconstant {usecallback}
 \definesystemconstant {userdata}
 \definesystemconstant {userpage}
 \definesystemconstant {user}
@@ -450,6 +471,14 @@
 \definesystemconstant {yoffset}
 
 \definesystemconstant {syncpos}
+
+\definesystemconstant {tagging}
+
+\definesystemconstant {differentiald}
+\definesystemconstant {exponentiale}
+\definesystemconstant {imaginaryi}
+\definesystemconstant {imaginaryj}
+\definesystemconstant {constantpi}
 
 %D As the name of their define command states, the next set of constants is used in
 %D the message macro's.
@@ -476,6 +505,7 @@
 \definemessageconstant {references}
 \definemessageconstant {regimes}
 \definemessageconstant {structures}
+\definemessageconstant {columnset}
 \definemessageconstant {symbols}
 \definemessageconstant {system}
 \definemessageconstant {textblocks}

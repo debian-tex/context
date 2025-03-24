@@ -40,6 +40,9 @@
    \c!size=\zerocount,
    \c!left=\zerocount,
    \c!right=\zerocount,
+   \c!color=,
+   \c!textcolor=\mathdelimitedparameter\c!color,
+   \c!symbolcolor=\mathdelimitedparameter\c!color,
    \c!leftmargin=\zeropoint,
    \c!rightmargin=\zeropoint]
 
@@ -57,9 +60,14 @@
    \setupcurrentmathdelimited[#settings]%
    \math_delimited_alternative{%
      \begincsname\??mathwhateverstrut\mathdelimitedparameter\c!strut\endcsname
-     \scratchdimen\mathdelimitedparameter\c!leftmargin \relax\ifzeropt\scratchdimen\else\kern\scratchdimen\fi
+     \scratchdimen{\mathdelimitedparameter\c!leftmargin}%
+     \ifzeropt\scratchdimen\else\kern\scratchdimen\fi
+     \begingroup
+     \usemathdelimitedcolorparameter\c!textcolor
      #body%
-     \scratchdimen\mathdelimitedparameter\c!rightmargin\relax\ifzeropt\scratchdimen\else\kern\scratchdimen\fi
+     \endgroup
+     \scratchdimen{\mathdelimitedparameter\c!rightmargin}%
+     \ifzeropt\scratchdimen\else\kern\scratchdimen\fi
    }%
    \endgroup}
 
@@ -67,11 +75,12 @@
 
 \protected\def\math_delimited_common
   {\Udelimited
-     \s!height\dimexpr\mathdelimitedparameter\c!height+\mathdelimitedparameter\c!topoffset\relax
-     \s!depth \dimexpr\mathdelimitedparameter\c!depth+\mathdelimitedparameter\c!bottomoffset\relax
-     \s!source\numexpr\namedboxanchor{\mathdelimitedparameter\c!source}\relax
+     \usedcolorparameterattributes{\mathdelimitedparameter\c!symbolcolor}%
+     \s!height{\mathdelimitedparameter\c!height+\mathdelimitedparameter\c!topoffset}%
+     \s!depth {\mathdelimitedparameter\c!depth+\mathdelimitedparameter\c!bottomoffset}%
+     \s!source{\namedboxanchor{\mathdelimitedparameter\c!source}}%
      \s!style \normalmathstyle
-     \s!size  \numexpr\mathdelimitedparameter\c!size\relax
+     \s!size  {\mathdelimitedparameter\c!size}%
      \zerocount \mathdelimitedparameter\c!left
      \zerocount \mathdelimitedparameter\c!right
   \relax}
@@ -80,14 +89,13 @@
   {\math_delimited_common} % {#body}}
 
 \defcsname\??mathdelimitedalternative\v!normal\endcsname#body%
-  {\edef\p_color{\mathdelimitedparameter\c!color}%
-   \ifempty\p_color
-     \math_delimited_common{#body}% {} really needed as \rootdelimited expands first
-   \else
-     \pushcolor[\p_color]%
-     \math_delimited_common
-     {\popcolor#body}%
-   \fi}
+  {\edef\p_mathmeaning{\mathdelimitedparameter\c!mathmeaning}%
+   \ifempty\p_mathmeaning
+     \let\p_mathmeaning\currentmathdelimited
+   \fi
+   \dostarttagged\t!mdelimitedstack\p_mathmeaning
+   \math_delimited_common{#body}%
+   \dostoptagged}
 
 %integerdef\delimitedrightgraveuc    \privatecharactercode{delimited right grave}
 \integerdef\delimitedrightddotuc     \privatecharactercode{delimited right ddot}

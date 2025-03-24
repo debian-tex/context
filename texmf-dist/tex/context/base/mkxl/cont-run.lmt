@@ -209,6 +209,8 @@ directives.register("overloadmode", setoverloadmode)
 
 local function processjob()
 
+    local variables = interfaces.variables
+
     tokens.setters.macro("processjob","","permanent")
 
     environment.initializefilenames() -- todo: check if we really need to pre-prep the filename
@@ -223,18 +225,29 @@ local function processjob()
     -- silent
     -- batchmode
 
-if arguments.directives then
-    directives.enable(arguments.directives)
-end
+    if arguments.directives then
+        directives.enable(arguments.directives)
+    end
+    if arguments.experiments then
+        experiments.enable(arguments.experiments)
+    end
+
+    if arguments.exportimages then
+        arguments.synctex = false
+    end
 
     if arguments.nosynctex then
         luatex.synctex.setup {
-            state  = interfaces.variables.never,
+            state  = variables.never,
         }
     elseif arguments.synctex then
+        local state = arguments.synctex
+        if state == true then
+            state = variables.start
+        end
         luatex.synctex.setup {
-            state  = interfaces.variables.start,
-            method = interfaces.variables.max,
+            state  = state,
+            method = variables.max,
         }
     end
 
@@ -245,6 +258,14 @@ end
     end)
 
     setoverloadmode(arguments.overloadmode)
+
+    if arguments.nocompactfonts then
+        report_system()
+        report_system("compact font mode disabled")
+        report_system()
+    else
+        token.expandmacro("font_enable_compact_font_mode")
+    end
 
     if not filename or filename == "" then
         -- skip
@@ -315,6 +336,12 @@ end
         context.stoptext()
 
     else
+
+        if arguments.exportimages then
+            context.exportimages() -- maybe direct
+        elseif arguments.exportcontent then
+            context.exportcontent() -- maybe direct
+        end
 
      -- \writestatus{system}{processing as tex}
         -- We have a regular tex file so no \starttext yet as we can

@@ -9,6 +9,7 @@ if not modules then modules = { } end modules ['mlib-lmp'] = {
 -- path relates stuff ... todo: use a stack (or numeric index to list)
 
 local type, tonumber, tostring = type, tonumber, tostring
+local setmetatable, setmetatableindex = setmetatable, table.setmetatableindex
 local find, match = string.find, string.match
 local insert, remove, sort = table.insert, table.remove, table.sort
 
@@ -263,31 +264,33 @@ end
 
 do
 
-    local hashes = table.setmetatableindex("table")
+    local hashes = setmetatableindex("table")
 
     -- There is no need to 'new' a hash in which case one can use any reasonable
-    -- tag. The registry aproach is mkiv compatible.
+    -- tag. The registry aproach is mkiv compatible and not used in mkxl (lmtx).
 
-    local registery = { }
-
- -- registerdirect("lmt_hash_new", function()
- --  -- local name  = scanstring()
- --     local name  = scanwhatever()
- --     hashes[name] = { }
- -- end)
+    local registry = { }
+    local count    = 0
 
     registerdirect("lmt_hash_new", function()
-        for i=1,#registry + 1 do
-            if not registry[i] then
-                registry[i] = { }
-                injectwhatever(i)
+        local slot = false
+        for i=1,count do
+            if registry[i] then
+                slot = i
+                break
             end
         end
+        if not slot then
+            count = count + 1
+            slot  = count
+        end
+        registry[slot] = true
+        hashes[slot] = nil
+        injectwhatever(slot)
     end)
 
     registerdirect("lmt_hash_dispose", function()
-     -- local name  = scanstring()
-        local name  = scanwhatever()
+        local name = scanwhatever()
         hashes[name] = nil
         -- when new'd
         if registry[name] then
@@ -295,19 +298,20 @@ do
         end
     end)
 
+    registerdirect("lmt_hash_reset", function()
+        local name = scanwhatever()
+        hashes[name] = nil
+    end)
+
     registerdirect("lmt_hash_in", function()
-     -- local name  = scanstring()
-        local name  = scanwhatever()
-     -- local key   = scanstring()
-        local key   = scanwhatever()
-        local hash  = hashes[name]
+        local name = scanwhatever()
+        local key  = scanwhatever()
+        local hash = hashes[name]
         injectwhatever(hash and hash[key] and true or false)
     end)
 
     registerdirect("lmt_hash_to", function()
-     -- local name  = scanstring()
         local name  = scanwhatever()
-     -- local key   = scanstring()
         local key   = scanwhatever()
         local value = scanwhatever()
         local hash  = hashes[name]
@@ -388,9 +392,11 @@ do
     registerscript("setglobaltoks",  function() settoks ("global",scanwhatever(),scanstring()) end)
 
     local utfnum = utf.byte
+    local utfchr = utf.char
     local utflen = utf.len
     local utfsub = utf.sub
 
+    registerdirect("utfchr", function() return utfchr(scannumeric()) end)
     registerdirect("utfnum", function() return utfnum(scanstring()) end)
     registerdirect("utflen", function() return utflen(scanstring()) end)
 
@@ -639,6 +645,64 @@ do
 
     registerdirect("repeatablerandom", function()
         return repeatable(scanstring())
+    end)
+
+end
+
+do
+
+    local hascurvature = metapost.hascurvature
+
+    registerdirect("hascurvature",
+        function()
+            local p = scanpath()    -- pathsegment
+            local t = scannumeric() -- tolerance
+            local l = p[1]
+            local r = p[#p]
+            injectboolean(l and r and hascurvature (
+                {
+                    x_coord = l[1], y_coord = l[2],
+                    left_x  = l[3], left_y  = l[4],
+                    right_x = l[5], right_y = l[6],
+                }, {
+                    x_coord = r[1], y_coord = r[2],
+                    left_x  = r[3], left_y  = r[4],
+                    right_x = r[5], right_y = r[6],
+                },
+                t
+            ) or false)
+        end
+    )
+
+end
+
+do
+
+    local defaults = {
+        noplugins = false
+    }
+
+    local backendoptions = setmetatableindex(function(t,k) local v = setmetatable({},defaults) t[k] = v return v end)
+
+    function metapost.resetbackendoptions(mpx)
+        backendoptions[mpx] = setmetatable({},defaults)
+    end
+
+    function metapost.getbackendoption(mpx,name)
+        return backendoptions[mpx][name]
+    end
+
+    registerdirect("setbackendoption",
+        function()
+            backendoptions[metapost.currentmpx()][scanstring()] = true
+        end
+    )
+end
+
+do
+
+    registerdirect("namedstacking", function()
+        injectnumeric(typesetters.stacking.getindex(scanstring()))
     end)
 
 end

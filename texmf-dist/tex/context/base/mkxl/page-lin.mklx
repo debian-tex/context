@@ -289,17 +289,17 @@
    \ifhmode \else
      \ifx\p_location\v!text
        \ifdim\leftskip>\zeropoint \else
-         \advanceby\leftskip\linenumberingparameter\c!margin
+         \advanceby\leftskip{\linenumberingparameter\c!margin}%
          \c_page_lines_auto_narrow\conditionaltrue
        \fi
      \orelse\ifx\p_location\v!begin
        \ifdim\leftskip>\zeropoint \else
-         \advanceby\leftskip\linenumberingparameter\c!margin
+         \advanceby\leftskip{\linenumberingparameter\c!margin}%
          \c_page_lines_auto_narrow\conditionaltrue
        \fi
      \orelse\ifx\p_location\v!end
        \ifdim\leftskip>\zeropoint \else
-         \advanceby\rightskip\linenumberingparameter\c!margin
+         \advanceby\rightskip{\linenumberingparameter\c!margin}%
          \c_page_lines_auto_narrow\conditionaltrue
        \fi
      \fi
@@ -368,7 +368,7 @@
      \cdef\currentlinenumbering{#tag}%
      \def\linenumber{#linenumber}% unsafe
      \d_page_lines_line_width#width\scaledpoint\relax
-     \d_page_lines_distance\linenumberingparameter\c!distance\relax
+     \d_page_lines_distance{\linenumberingparameter\c!distance}%
      \edef\p_align{\linenumberingparameter\c!align}%
      \edef\p_location{\linenumberingparameter\c!location}%
      \ifcase#dir\relax
@@ -414,7 +414,7 @@
    \ifx\p_width\v!margin
      \d_page_lines_width#width%
    \else
-     \d_page_lines_width\p_width
+     \d_page_lines_width{\p_width}%
    \fi
    \relax
    \ifdim\d_page_lines_width>\zeropoint
@@ -443,30 +443,30 @@
 % \def\dodollap{\hbox to \zeropoint{\normalhss\box\nextbox}\endgroup}
 
 \def\page_line_handle_left#align#width#distance%
-  {\dostarttagged\t!linenumber\empty
+  {\dostarttaggednodetail\t!linenumber
    \llap
      {\page_lines_number_inject#align#width%
-      \dostarttagged\t!ignore\empty
-      \kern\dimexpr
+      \dostarttaggednodetail\t!ignore
+      \kern{%
         #distance+\d_page_lines_distance
         \ifconditional\c_page_lines_dir_left_to_right\else+\d_page_lines_line_width\fi
-      \relax
+      }%
       \expand\everylinenumber
       \hss
       \dostoptagged}%
    \dostoptagged}
 
 \def\page_line_handle_right#align#width#distance%
-  {\dostarttagged\t!linenumber\empty
+  {\dostarttaggednodetail\t!linenumber
    \rlap
-     {\dostarttagged\t!ignore\empty
-      \kern\dimexpr
+     {\dostarttaggednodetail\t!ignore
+      \kern{%
         #distance+\d_page_lines_distance
         \ifconditional\c_page_lines_dir_left_to_right+\d_page_lines_line_width\fi
-      \relax
+      }%
       \dostoptagged
       \page_lines_number_inject#align#width%
-      \dostarttagged\t!ignore\empty
+      \dostarttaggednodetail\t!ignore
       \expand\everylinenumber
       \hss
       \dostoptagged}%

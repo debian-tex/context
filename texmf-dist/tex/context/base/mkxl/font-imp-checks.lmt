@@ -8,8 +8,8 @@ if not modules then modules = { } end modules ['font-imp-checks'] = {
 
 if not context then return end
 
-local function initialize(tfmdata,value)
-    if value then
+local function manipulate(tfmdata,key,value)
+    if key and value then
         local characters = tfmdata.characters
         if not characters[0x2012] then
             local data = characters[0x2013]
@@ -22,19 +22,20 @@ local function initialize(tfmdata,value)
                     copy.effect = {
                         extend = width/copy.width
                     }
+                    copy.unicode = 0x2012
                     copy.width = width
                 end
             end
         end
-   end
+    end
 end
 
 fonts.handlers.otf.features.register {
     name        = "checkmissing",
     description = "checkmissing",
     manipulators = {
-        base = initialize,
-        node = initialize,
+        base = manipulate,
+        node = manipulate,
     }
 }
 

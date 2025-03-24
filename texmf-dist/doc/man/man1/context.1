@@ -1,4 +1,4 @@
-.TH "mtx-context" "1" "01-01-2024" "version 1.05" "ConTeXt Process Management"
+.TH "mtx-context" "1" "01-01-2025" "version 1.05" "ConTeXt Process Management"
 .SH NAME
  mtx-context - ConTeXt Process Management
 .SH SYNOPSIS
@@ -128,6 +128,9 @@ run without stopping and do not show messages on the console
 .B --nonstopmode
 run without stopping
 .TP
+.B --nocompactfonts
+revert to less efficient (traditional) font scaling
+.TP
 .B --nosynctex
 never initializes synctex (for production runs)
 .TP
@@ -135,7 +138,7 @@ never initializes synctex (for production runs)
 run with synctex enabled (better use \setupsynctex[state=start])
 .TP
 .B --nodates
-omit runtime dates in pdf file (optional value: a number (this 1970 offset time) or string "YYYY-MM-DD HH:MM")
+omit runtime dates in pdf file (optional value: a number (1970 offset) or string "YYYY-MM-DD HH:MM")
 .TP
 .B --nocompression
 forcefully turns off compression in the backend
@@ -209,6 +212,9 @@ use an additional password for opening the document
 .TP
 .B --permissions
 list of: print, modify, extract, add, fillin, assemble, quality
+.TP
+.B --wtpdf
+add an wtpdf conformance blob but best check first if it applies
 .SH OPTIONS: SPECIAL
 .TP
 .B --pdftex

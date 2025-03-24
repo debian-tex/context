@@ -148,7 +148,7 @@ function constructors.aftercopyingcharacters(target,original)
     -- can be used for additional tweaking
 end
 
-function constructors.beforepassingfonttotex(tfmdata)
+function constructors.beforepassingfonttotex(target,tfmdata)
     -- can be used for additional tweaking
 end
 
@@ -454,7 +454,6 @@ function constructors.scale(tfmdata,specification)
     targetparameters.mode         = mode
     targetparameters.width        = width
     --
-    --
     local hasquality       = parameters.expansion or parameters.protrusion
     local hasitalics       = properties.hasitalics
     local useditalicangle  = properties.useditalicangle or properties.italicangle or 0
@@ -572,10 +571,24 @@ function constructors.scale(tfmdata,specification)
         targetparameters.scriptscale       = scriptscale
         targetparameters.scriptscriptscale = scriptscriptscale
 
+--         local scriptxscale       = parameters.scriptxscale
+--         local scriptyscale       = parameters.scriptyscale
+--         local scriptscriptxscale = parameters.scriptscriptxscale
+--         local scriptscriptyscale = parameters.scriptscriptyscale
+
+--         targetparameters.scriptxscale       = scriptxscale
+--         targetparameters.scriptyscale       = scriptyscale
+--         targetparameters.scriptscriptxscale = scriptscriptxscale
+--         targetparameters.scriptscriptyscale = scriptscriptyscale
+
+--         target.scriptxscale       = scriptxscale
+--         target.scriptyscale       = scriptyscale
+--         target.scriptscriptxscale = scriptscriptxscale
+--         target.scriptscriptyscale = scriptscriptyscale
+
         local mathcontrol = properties.mathcontrol
         targetproperties.mathcontrol = mathcontrol
         target.mathcontrol = mathcontrol
-
     else
         properties.hasmath    = false
         target.nomath         = true
@@ -602,7 +615,7 @@ function constructors.scale(tfmdata,specification)
             if c and c ~= unicode then
                 local cc = changed[c]
                 if cc then
-                    while cc do
+                    while cc and cc ~= unicode and c ~= cc do -- bidi symbol swap catch
                         c = cc
                         cc = changed[c]
                     end
@@ -843,6 +856,8 @@ function constructors.scale(tfmdata,specification)
     --
     constructors.aftercopyingcharacters(target,tfmdata)
     --
+    constructors.beforepassingfonttotex(target,tfmdata) -- mayeb move into aftercopyingcharacters
+    --
     constructors.trytosharefont(target,tfmdata)
     --
     -- catch inconsistencies (for now)
@@ -878,13 +893,13 @@ function constructors.finalize(tfmdata)
         return nil
     end
     --
-    if not parameters.expansion then
-        parameters.expansion = {
-            stretch = tfmdata.stretch or 0,
-            shrink  = tfmdata.shrink  or 0,
-            step    = tfmdata.step    or 0,
-        }
-    end
+ -- if not parameters.expansion then
+ --     parameters.expansion = {
+ --         stretch = tfmdata.stretch or 0,
+ --         shrink  = tfmdata.shrink  or 0,
+ --         step    = tfmdata.step    or 0,
+ --     }
+ -- end
     --
     if not parameters.size then
         parameters.size = tfmdata.size
@@ -979,9 +994,9 @@ function constructors.finalize(tfmdata)
     tfmdata.designsize       = nil
     --
     tfmdata.size             = nil
-    tfmdata.stretch          = nil
-    tfmdata.shrink           = nil
-    tfmdata.step             = nil
+ -- tfmdata.stretch          = nil
+ -- tfmdata.shrink           = nil
+ -- tfmdata.step             = nil
     tfmdata.slant            = nil
     tfmdata.extend           = nil
     tfmdata.squeeze          = nil

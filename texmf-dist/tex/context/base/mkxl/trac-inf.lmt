@@ -13,7 +13,7 @@ if not modules then modules = { } end modules ['trac-inf'] = {
 
 local type, tonumber, select = type, tonumber, select
 local format, lower, find, gsub, rep = string.format, string.lower, string.find, string.gsub, string.rep
-local concat = table.concat
+local concat, sortedhash = table.concat, table.sortedhash
 local clock  = os.gettimeofday or os.clock -- should go in environment
 
 local setmetatableindex = table.setmetatableindex
@@ -188,8 +188,8 @@ function statistics.show()
          -- local hash = lua.gethashchars()
             local mask = load([[τεχ = 1]]) and "utf" or "ascii"
          -- return format("engine: %s %s, used memory: %s, hash chars: min(%i,40), symbol mask: %s (%s)",
-            return format("engine: %s %s, used memory: %s, symbol mask: %s (%s)",
-                "lua", LUAVERSION, statistics.memused(), mask, mask == "utf" and "τεχ" or "tex")
+            return format("engine: lua %s, format %s, used memory: %s, symbol mask: %s (%s)",
+                LUAVERSION, LUAFORMAT, statistics.memused(), mask, mask == "utf" and "τεχ" or "tex")
         end)
         register("runtime",statistics.runtime)
         logs.newline() -- initial newline
@@ -266,7 +266,7 @@ local report = logs.reporter("system")
 
 local list   = {
     "string", "pool", "hash", "lookup", "node", "token",
-    "buffer", "input", "file", "nest", "parameter", "save", "font", "language", "mark", "insert",
+    "buffer", "input", "file", "nest", "parameter", "save", "font", "language", "mark", "insert", "mvl",
  -- "extra", "sparse",
 }
 
@@ -313,68 +313,131 @@ function statistics.showusage(when)
     else
         finished = true
     end
-    local s = status.list()
-    local c = status.getcallbackstate() -- status.callbacks
-    local m = mplib.getcallbackstate()
+    local s = status  .list()
+    local c = status  .getcallbackstate() -- status.callbacks
+    local m = mplib   .getcallbackstate()
     local b = backends.getcallbackstate()
-    --
-    local estatus = s.expandstate
-    local tstatus = s.texstate
-    local lstatus = s.luastate
-    local rstatus = s.readstate
-    --
-    local pstatus = logs.private.getpagetiming()
-    --
-    local iocode  = status.iocodes[rstatus.iocode]
-    --
-    local mpinstances, mpmemory = metapost.getstatistics(true)
-    --
-    report("")
-    if when == "finish" then
-        report("status after finishing run")
-    else
-        report("status after shipping out page %s",tex.getcount("realpageno"))
-    end
-    show(s, { "max", "min", "set", "stp", false, "mem", "all", false, "ini", "ptr", "top" })
-    report("  current input type    : %s", iocode)
-    if iocode == "file" then
-        report("  current file name     : %s", rstatus.filename or "")
-        report("  current line number   : %s", rstatus.linenumber)
-    end
-    report("")
-    report("  approximate memory    : %s (%s MB)", tstatus.approximate, tstatus.approximate // 1048576)
-    report("")
-    report("  expansion depth       : min: %s, max: %s, set: %s, top: %s", estatus.min, estatus.max, estatus.set, estatus.top)
-    report("")
-    report("  luabytecode registers : %s", lstatus.bytecodes)
-    report("  luabytecode bytes     : %s (%s MB)", lstatus.bytecodebytes, lstatus.bytecodebytes // 1048576)
-    report("  luastate bytes now    : %s (%s MB)", lstatus.statebytes,    lstatus.statebytes    // 1048576)
-    report("  luastate bytes max    : %s (%s MB)", lstatus.statebytesmax, lstatus.statebytesmax // 1048576)
-    report("")
-    report("  file callbacks        : %s", c.file)
-    report("  saved callbacks       : %s", c.saved)
-    report("  direct callbacks      : %s", c.direct)
-    report("  function callbacks    : %s", c["function"])
-    report("  value callbacks       : %s", c.value)
-    report("  message callbacks     : %s", c.message)
-    report("  bytecode callbacks    : %s", c.bytecode)
-    report("")
-    report("  mp instances          : %s", mpinstances)
-    report("  mp estimated memory   : %s (%s MB)", mpmemory, mpmemory // 1048576)
-    report("  mp file callbacks     : %s", m.file)
-    report("  mp text callbacks     : %s", m.text)
-    report("  mp script callbacks   : %s", m.script)
-    report("  mp log callbacks      : %s", m.log)
-    report("")
-    report("  total callbacks       : %s", c.count)
-    report("  mp total callbacks    : %s", m.count)
-    report("  backend callbacks     : %s", b.count)
-    report("")
-    if pstatus then
-        report("  page numbers          : realpage %s, userpage %s, subpage %s",pstatus.page.real,pstatus.page.user,pstatus.page.sub)
-        report("  page timing           : total %0.03f, page %0.03f, average %0.03f",pstatus.time.elapsed,pstatus.time.page,pstatus.time.average)
+    local l = status  .getlinebreakstate()
+    local p = status  .getbalancestate()
+    local h = status  .gethyphenationstate()
+    do
+        --
+        local estatus = s.expandstate
+        local tstatus = s.texstate
+        local lstatus = s.luastate
+        local rstatus = s.readstate
+        --
+        local pstatus = logs.private.getpagetiming()
+        --
+        local iocode  = status.iocodes[rstatus.iocode]
+        --
+        local mpinstances, mpmemory = metapost.getstatistics(true)
+        --
+        report("")
+        if when == "finish" then
+            report("status after finishing run")
+        else
+            report("status after shipping out page %s",tex.getcount("realpageno"))
+        end
+        show(s, { "max", "min", "set", "stp", false, "mem", "itm", "ext", "all", false, "ini", "ptr", "top" })
+        report("  current input type    : %s", iocode)
+        if iocode == "file" then
+            report("  current file name     : %s", rstatus.filename or "")
+            report("  current line number   : %s", rstatus.linenumber)
+        end
+        report("")
+        report("  approximate memory    : %s (%s MB)", tstatus.approximate, tstatus.approximate // 1048576)
+        report("")
+        report("  expansion depth       : min: %s, max: %s, set: %s, top: %s", estatus.min, estatus.max, estatus.set, estatus.top)
+        report("")
+        report("  luabytecode registers : %s", lstatus.bytecodes)
+        report("  luabytecode bytes     : %s (%s MB)", lstatus.bytecodebytes, lstatus.bytecodebytes // 1048576)
+        report("  luastate bytes now    : %s (%s MB)", lstatus.statebytes,    lstatus.statebytes    // 1048576)
+        report("  luastate bytes max    : %s (%s MB)", lstatus.statebytesmax, lstatus.statebytesmax // 1048576)
+        report("")
+        report("  file callbacks        : %s", c.file)
+        report("  saved callbacks       : %s", c.saved)
+        report("  direct callbacks      : %s", c.direct)
+        report("  function callbacks    : %s", c["function"])
+        report("  value callbacks       : %s", c.value)
+        report("  message callbacks     : %s", c.message)
+        report("  bytecode callbacks    : %s", c.bytecode)
+        report("")
+        report("  mp instances          : %s", mpinstances)
+        report("  mp estimated memory   : %s (%s MB)", mpmemory, mpmemory // 1048576)
+        report("  mp file callbacks     : %s", m.file)
+        report("  mp text callbacks     : %s", m.text)
+        report("  mp script callbacks   : %s", m.script)
+        report("  mp log callbacks      : %s", m.log)
+        report("")
+        report("  total callbacks       : %s", c.count)
+        report("  mp total callbacks    : %s", m.count)
+        report("  backend callbacks     : %s", b.count)
         report("")
     end
+    do
+        local done = false
+        local round = math.round
+        local n_calls = 0
+        local n_first = 0
+        local n_second = 0
+        local n_final = 0
+        local n_specification = 0
+        local n_sub = 0
+        for k, v in sortedhash(l) do
+            if type(v) == "table" then
+                local calls = v.calls or 0
+                if v.calls > 0 then
+                    local calls, first, second, final, specification, sub = v.calls, v.first, v.second, v.final, v.specification,v.sub
+                    if not done then
+                        report("  linebreak statistics  : context      calls     first    second     final  passonly   subpass")
+                        report("")
+                        done = true
+                    end
+                    report("  linebreak statistics  : %-8s  %8i  %8i  %8i  %8i  %8i  %8i",k,calls,first,second,final,specification,sub)
+                    n_calls = n_calls + calls
+                    n_first = n_first+ first
+                    n_second = n_second + second
+                    n_final = n_final + final
+                    n_specification = n_specification + specification
+                    n_sub = n_sub + sub
+                end
+            end
+        end
+        if done then
+            report("")
+            report("  linebreak statistics  :           %8i  %8i  %8i  %8i  %8i  %8i",n_calls,n_first,n_second,n_final,n_specification,n_sub)
+        end
+    end
+    do
+        if p.calls > 0 then
+            report("")
+            for k, v in table.sortedhash(p) do
+                if v ~= 0 then
+                    report("  balance state         : %-14s  %7i",k,v)
+                end
+            end
+        end
+    end
+    do
+     -- if h.checked > 0 then
+            report("")
+            for k, v in table.sortedhash(h) do
+                if v ~= 0 then
+                    report("  hyphenation state     : %-10s  %7i",k,v)
+                    done = true
+                end
+            end
+     -- end
+    end
+    do
+        if pstatus then
+            report("")
+            report("  page numbers          : realpage %s, userpage %s, subpage %s",pstatus.page.real,pstatus.page.user,pstatus.page.sub)
+            report("  page timing           : total %0.03f, page %0.03f, average %0.03f",pstatus.time.elapsed,pstatus.time.page,pstatus.time.average)
+        end
+    end
+    report("")
 end
 
 trackers.register("system.usage", function(v)

@@ -28,45 +28,42 @@ tokens.values   = utilities.storage.allocate(table.swapped(values, values))
 tokens.commands = utilities.storage.allocate(table.swapped(commands,commands))
 tokens.cache    = utilities.storage.allocate()
 
-local scantoks            = token.scantoks
-local scanstring          = token.scanstring
-local scanargument        = token.scanargument
-local scandelimited       = token.scandelimited
-local scantokenlist       = token.scantokenlist
-local scaninteger         = token.scaninteger
-local scancardinal        = token.scancardinal
-local scancode            = token.scancode
-local scantokencode       = token.scantokencode
-local scandimen           = token.scandimen
-local scanglue            = token.scanglue
-local scanskip            = token.scanskip
-local scankeyword         = token.scankeyword
-local scankeywordcs       = token.scankeywordcs
-local scantoken           = token.scantoken
-local scanbox             = token.scanbox
-local scanword            = token.scanword
-local scanletters         = token.scanletters
-local scankey             = token.scankey
-local scanvalue           = token.scanvalue
-local scanchar            = token.scanchar
-local scancsname          = token.scancsname
-local scannextchar        = token.scannextchar
-local scanposit           = token.scanposit
-local scanreal            = token.scanreal
-local scanfloat           = token.scanfloat
-local scanluanumber       = token.scanluanumber
-local scanluainteger      = token.scanluainteger
-local scanluacardinal     = token.scanluacardinal
-local scanintegerargument = token.scanintegerargument
-local scandimenargument   = token.scandimenargument
-local scandetokened       = token.scandetokened
-local scantokenstring     = token.scantokenstring
+local scantoks              = token.scantoks
+local scanstring            = token.scanstring
+local scanargument          = token.scanargument
+local scandelimited         = token.scandelimited
+local scantokenlist         = token.scantokenlist
+local scaninteger           = token.scaninteger
+local scandimension         = token.scandimension
+local scancardinal          = token.scancardinal
+local scancode              = token.scancode
+local scantokencode         = token.scantokencode
+local scanglue              = token.scanglue
+local scanskip              = token.scanskip
+local scankeyword           = token.scankeyword
+local scankeywordcs         = token.scankeywordcs
+local scantoken             = token.scantoken
+local scanbox               = token.scanbox
+local scanword              = token.scanword
+local scanletters           = token.scanletters
+local scankey               = token.scankey
+local scanvalue             = token.scanvalue
+local scanchar              = token.scanchar
+local scancsname            = token.scancsname
+local scannextchar          = token.scannextchar
+local scanposit             = token.scanposit
+local scanreal              = token.scanreal
+local scanfloat             = token.scanfloat
+local scanluanumber         = token.scanluanumber
+local scanluainteger        = token.scanluainteger
+local scanluacardinal       = token.scanluacardinal
+local scandetokened         = token.scandetokened
+local scantokenstring       = token.scantokenstring
 
 local scannumber          = token.scannumber
 local scanboolean         = token.scanboolean
 
 local setmacro     = token.setmacro
-local setchar      = token.setchar
 local setlua       = token.setlua
 
 local createtoken  = token.create
@@ -159,8 +156,8 @@ tokens.scanners = { -- these expand
     hbox            = function() return scanbox("hbox") end,
     vbox            = function() return scanbox("vbox") end,
     vtop            = function() return scanbox("vtop") end,
-    dimen           = scandimen,
-    dimension       = scandimen,
+    dimen           = scandimension, -- kind of obsolete
+    dimension       = scandimension,
     glue            = scanglue,
     gluevalues      = function() return scanglue(false,false,true) end,
     gluespec        = scanskip,
@@ -209,8 +206,11 @@ tokens.scanners = { -- these expand
 
     ischar          = token.isnextchar,
 
-    integerargument = scanintegerargument,
-    dimenargument   = scandimenargument,
+    -- obsolete
+
+    dimen             =                                scandimension,
+    integerargument   = token.scanintegerargument   or scaninteger,
+    dimensionargument = token.scandimensionargument or scandimension,
 }
 
 tokens.getters = { -- these don't expand
@@ -229,7 +229,7 @@ tokens.getters = { -- these don't expand
 
 tokens.setters = {
     macro = setmacro,
-    char  = setchar,
+    char  = tex.chardef,
     lua   = setlua,
     count = tex.setcount,
     dimen = tex.setdimen,
@@ -287,7 +287,8 @@ if setinspector then -- can best be true
                     permanent  = t.permanent,
                     noaligned  = t.noaligned,
                     instance   = t.instance,
-                    immutable  = t.imutable,
+                    mutable    = t.mutable,
+                    immutable  = t.immutable,
                     user       = t.user,
                 }
             end
@@ -327,8 +328,8 @@ token.scan_cmdchr_expanded  = token.scancmdchrexpanded
 token.scan_keyword          = token.scankeyword
 token.scan_keyword_cs       = token.scankeywordcs
 token.scan_integer          = token.scaninteger
-token.scan_integer_argument = token.scanintegerargument
-token.scan_dimen_argument   = token.scandimenargument
+-----.scan_integer_argument = token.scanintegerargument
+-----.scan_dimen_argument   = token.scandimenargument
 token.scan_cardinal         = token.scancardinal
 token.scan_float            = token.scanfloat
 token.scan_real             = token.scanreal
@@ -384,14 +385,13 @@ token.get_fields            = token.getfields
 token.set_macro             = token.setmacro
 token.undefine_macro        = token.undefinemacro
 token.expand_macro          = token.expandmacro
-token.set_char              = token.setchar
 token.set_lua               = token.setlua
 token.set_integer           = token.setinteger
 token.get_integer           = token.getinteger
 token.set_dimension         = token.setdimension
 token.get_dimension         = token.getdimension
 token.gobble_integer        = token.gobbleinteger
-token.gobble_dimen          = token.gobbledimen
+token.gobble_dimension      = token.gobbledimension
 token.future_expand         = token.futureexpand
 token.push_macro            = token.pushmacro
 token.pop_macro             = token.popmacro

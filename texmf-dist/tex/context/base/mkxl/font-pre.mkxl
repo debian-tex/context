@@ -54,13 +54,18 @@
 %D \ruledhbox{0}\par
 %D \stoptyping
 
+%D We wipe math from text fonts, just to be sure, but in some cases like koeieletters and
+%D euler we can't do that, so there we have to disable it (in the typescript).
+
 \definefontfeature
   [always]
   [mode=node,    % we had 'auto', but let's try 'node' for a while and see what the impact is
    script=auto,  % on speed; 'base' just doesn't play well with dynamics; some day we can even
    autoscript=position,
    autolanguage=position,
-   textcontrol=collapsehyphens,
+   wipemath=yes, % for instance needed for dejavu
+   textcontrol={collapsehyphens,replaceapostrophe},
+ % compoundhyphen=yes,
    checkmissing=yes,
    kern=yes,     % consider skipping the base passes when no base mode is used
    mark=yes,
@@ -423,7 +428,9 @@
    compactmath=yes,
    flattenaccents=yes,
  % mathgaps=yes,
+   wipemath=no,
    mathexpansion=math,
+%    checkmissing=yes,
    language=dflt,
    script=math]
 
@@ -437,6 +444,7 @@
 
 \definefontfeature[virtualmath]       [mathematics]
 
+\definefontfeature[math]              [mathematics] [ssty=no]
 \definefontfeature[math-text]         [mathematics] [ssty=no]
 \definefontfeature[math-script]       [mathematics] [ssty=1]
 \definefontfeature[math-scriptscript] [mathematics] [ssty=2]
@@ -508,6 +516,15 @@
 \definefontfeature
   [boldened]
   [boldened-30]
+
+%D Handy too:
+
+\definefontscriptset % just an example
+  [mixed]
+  [dflt,latn,cyrl,grek]
+
+% \definefontfeature[default][default][script=mixed]
+% \definefontfeature[default][default][kern=always]
 
 %D Emoji etc:
 

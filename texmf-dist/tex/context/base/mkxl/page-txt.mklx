@@ -1,5 +1,4 @@
 % macros=mkvi
-% macros=mkvi
 
 %D \module
 %D   [       file=page-txt, % copied from main-001,
@@ -78,7 +77,7 @@
 \definelayoutelement[\v!footer:\v!edge]  [\v!footer][\c!lefttext=,\c!middletext=,\c!righttext=]
 \definelayoutelement[\v!bottom:\v!edge]  [\v!bottom][\c!lefttext=,\c!middletext=,\c!righttext=]
 
-\permanent\tolerant\protected\def\setuplayouttext[#vertical]#spacer[#horizontal]#spacer[#S#settings]%
+\permanent\tolerant\protected\def\setuplayouttext[#S#vertical]#spacer[#S#horizontal]#spacer[#S#settings]%
   {\ifnum\lastarguments>\plustwo
      \setuplayoutelement[#vertical:#horizontal][#settings]%
    \else
@@ -178,7 +177,7 @@
 
 \mutable\lettonothing\currentlayoutelementstate
 
-\permanent\tolerant\protected\def\setuptexts[#vertical]#spacer[#horizontal]#spacer[#S#a]#spacer[#S#b]#spacer[#S#c]#spacer[#S#d]%
+\permanent\tolerant\protected\def\setuptexts[#S#vertical]#spacer[#S#horizontal]#spacer[#S#a]#spacer[#S#b]#spacer[#S#c]#spacer[#S#d]%
   {\ifarguments
      % there is always one
    \or
@@ -281,7 +280,7 @@
    \ifcase\c_page_layouts_element_state_n
      \edef\textlinestatus{\namedlayoutelementparameter#vertical\c!state}%
    \else
-     \xdefcsname\namedlayoutelementhash#vertical\c!n\endcsname{\the\numexpr\c_page_layouts_element_state_n+\minusone}%
+     \xdefcsname\namedlayoutelementhash#vertical\c!n\endcsname{\tointeger{\c_page_layouts_element_state_n+\minusone}}%
      \let\textlinestatus\v!stop
    \fi}
 
@@ -390,7 +389,7 @@
 
 % \settext[header][text][middle][xxx][yyy]
 
-\permanent\tolerant\protected\def\settextcontent[#vertical]#spacer[#horizontal]#spacer[#S#one]#spacer[#S#two]#spacer[#S#three]% header text middle text/text
+\permanent\tolerant\protected\def\settextcontent[#S#vertical]#spacer[#S#horizontal]#spacer[#S#one]#spacer[#S#two]#spacer[#S#three]% header text middle text/text
   {\ifarguments\or\or\or % 3
      \defcsname\namedlayoutelementhash{#vertical:#horizontal}\c!middletext\endcsname
        {\page_layouts_process_element_double{#one}{#one}}%
@@ -406,7 +405,7 @@
 
 %D This will be redefined, so no \type {\frozen} here!
 
-\permanent\tolerant\protected\def\resettextcontent[#vertical]#spacer[#horizontal]#spacer[#S#tag]% header text middle
+\permanent\tolerant\protected\def\resettextcontent[#S#vertical]#spacer[#S#horizontal]#spacer[#S#tag]% header text middle
   {\ifarguments\or\or % 2
      \cdef\currentlayoutelement{#vertical:#horizontal}%
      \resetlayoutelementparameter\c!lefttext
@@ -715,7 +714,7 @@
 %D \chapter{tweede} \dorecurse{20}{\input tufte \relax}
 %D \stoptyping
 
-\permanent\tolerant\protected\def\definetext[#tag]#spacer[#vertical]#spacer[#horizontal]#spacer[#S#a]#spacer[#S#b]#spacer[#S#c]#spacer[#S#d]%
+\permanent\tolerant\protected\def\definetext[#S#tag]#spacer[#S#vertical]#spacer[#S#horizontal]#spacer[#S#a]#spacer[#S#b]#spacer[#S#c]#spacer[#S#d]%
   {\ifnum\lastarguments<\plusfour
      \defcsname\namedlayoutelementhash            {#vertical}#tag\endcsname{\setuptexts[#vertical][#horizontal]\relax}% 1, 2, 3
    \orelse\ifarguments\or\or\or\or
@@ -833,26 +832,24 @@
 \def\page_layouts_place_page_number_left % historic
   {\begingroup
    \setbox\scratchbox\hbox{\ignorespaces\layoutelementparameter\c!marginedgetext\removeunwantedspaces}%
-   \ifzeropt\wd\scratchbox\else
-     \edef\p_strc_pagenumbers_width{\directpagenumberingparameter\c!width}%
-     \ifempty\p_strc_pagenumbers_width
-       \box\scratchbox\tfskip
-     \else
-       \hpack to \p_strc_pagenumbers_width{\box\scratchbox\hss}%
-     \fi
+   \ifzeropt\wd\scratchbox
+     % nothing
+   \orelse\ifchkdimexpr\directpagenumberingparameter\c!width\or
+     \hpack to \lastchkdimension{\box\scratchbox\hss}%
+   \else
+     \box\scratchbox\tfskip
    \fi
    \endgroup}
 
 \def\page_layouts_place_page_number_right % historic
   {\begingroup
    \setbox\scratchbox\hbox{\ignorespaces\layoutelementparameter\c!marginedgetext\removeunwantedspaces}%
-   \ifzeropt\wd\scratchbox\else
-     \edef\p_strc_pagenumbers_width{\directpagenumberingparameter\c!width}%
-     \ifempty\p_strc_pagenumbers_width
-       \tfskip\box\scratchbox
-     \else
-       \hpack to \p_strc_pagenumbers_width{\hss\box\scratchbox}%
-     \fi
+   \ifzeropt\wd\scratchbox
+     % nothing
+   \orelse\ifchkdimexpr\directpagenumberingparameter\c!width\or
+     \hpack to \lastchkdimension{\hss\box\scratchbox}%
+   \else
+     \tfskip\box\scratchbox
    \fi
    \endgroup}
 
@@ -861,7 +858,9 @@
 \newbox\b_page_layouts_element
 
 \def\page_layouts_insert_elements
-  {\ifcase\pageornamentstate
+  {\ifexporting
+     % forget about it
+   \orelse\ifcase\pageornamentstate
      \page_layouts_place_elements_indeed % we could have a special flag for always ignored
    \fi}
 
@@ -871,19 +870,19 @@
       \calculatereducedvsizes
       \page_layouts_swap_margins\v!text
       \offinterlineskip
-      \vkern\dimexpr-\topheight-\topdistance\relax
+      \vkern{-\topheight-\topdistance}%
       \the\toptextcontent
-      \vkern\dimexpr\topheight+\topdistance\relax
+      \vkern{\topheight+\topdistance}%
       \the\headertextcontent
-      \vkern\dimexpr\headerheight+\headerdistance+\textdistance\relax
+      \vkern{\headerheight+\headerdistance+\textdistance}%
       \anch_positions_place_anchors
-      \vkern\dimexpr-\textdistance-\textheight\relax
+      \vkern{-\textdistance-\textheight}%
       \the\texttextcontent
       \vkern\textheight
       \expand\everyendoftextbody
       \vkern\footerdistance
       \the\footertextcontent
-      \vkern\dimexpr\footerheight+\bottomdistance\relax
+      \vkern{\footerheight+\bottomdistance}%
       \the\bottomtextcontent
       \vkern\bottomheight
       \vfilll}%
@@ -904,22 +903,22 @@
   {\edef\p_limitstretch{\layoutparameter\c!limitstretch}%
    \ifx\p_limitstretch\v!yes
      \d_page_box_stretch_criterium\zeropoint
-     \settrue\c_page_box_check_stretch
+     \c_page_box_check_stretch\conditionaltrue
    \orelse\ifx\p_limitstretch\v!auto
      % safeguard for depth without limit set
      \ifnum\bottomraggednessmode=\plusthree
-       \d_page_box_stretch_criterium2\lineheight
-       \settrue\c_page_box_check_stretch
+       \d_page_box_stretch_criterium2\lineheight % 2 is hardcoded
+       \c_page_box_check_stretch\conditionaltrue
      \else
        \d_page_box_stretch_criterium\maxdimen
-       \setfalse\c_page_box_check_stretch
+       \c_page_box_check_stretch\conditionalfalse
      \fi
    \orelse\ifchkdimension\p_limitstretch\or
      \d_page_box_stretch_criterium\p_limitstretch\relax
-     \settrue\c_page_box_check_stretch
+     \c_page_box_check_stretch\conditionaltrue
    \else
      \d_page_box_stretch_criterium\maxdimen
-     \setfalse\c_page_box_check_stretch
+     \c_page_box_check_stretch\conditionalfalse
    \fi
    \ifconditional\c_page_box_check_stretch
      \boxfixstretch\d_page_box_stretch_criterium#1\relax
@@ -956,7 +955,7 @@
       \calculatereducedvsizes
       \calculatehsizes
       \page_layouts_swap_margins\v!page
-      \vkern\dimexpr\headerheight+\headerdistance+\textdistance\relax
+      \vkern{\headerheight+\headerdistance+\textdistance}%
       \dontleavehmode
       \hpack to \makeupwidth
         {\begingroup
@@ -964,11 +963,11 @@
            \goleftonpage
            \ifdim\leftedgewidth>\zeropoint
              \the\leftedgetextcontent
-             \kern\dimexpr\leftedgewidth+\leftedgedistance\relax
+             \kern{\leftedgewidth+\leftedgedistance}%
            \fi
            \ifdim\leftmarginwidth>\zeropoint
              \the\leftmargintextcontent
-             \kern\dimexpr\leftmarginwidth+\leftmargindistance\relax
+             \kern{\leftmarginwidth+\leftmargindistance}%
            \fi
          \endgroup
          \page_apply_postprocessors_page{#2}%
@@ -1024,7 +1023,7 @@
 
 \def\page_scale_text_box_register_box#1%
   {\scratchheight\boxrepack#1%
-   \scratchdimen\dimexpr\textheight-\scratchheight\relax
+   \scratchdimen{\textheight-\scratchheight}%
    \global\expandafter\dimensiondef\csname\??vzdistance\the\mofcolumns\endcsname
      \ifabsdim\scratchdimen>\c_page_scale_lines\lineheight
        \zeropoint
@@ -1037,7 +1036,7 @@
    \fi}
 
 \def\page_scale_text_box_register_page
-  {\scratchdimen\dimexpr\textheight-\pagelastheight\relax % not \pagegoal as that includes footnotes
+  {\scratchdimen{\textheight-\pagelastheight}% not \pagegoal as that includes footnotes
    \global\expandafter\dimensiondef\csname\??vzdistance\the\mofcolumns\endcsname
      \ifabsdim\scratchdimen>\c_page_scale_lines\lineheight
        \zeropoint
@@ -1060,11 +1059,14 @@
    \fi}
 
 \def\page_scale_text_box_indeed#1%
-  {\scratchdimen \dimexpr\textheight-\scratchdistance\relax
+  {\scratchdimen{\textheight-\scratchdistance}%
    \scratchheight\ht#1%
    \scratchdepth \dp#1%
    \scratchwidth \wd#1%
    \scratchfloat \floatexpr\textheight/\scratchdistance\relax
+   %
+   \f_anch_extra_y_scale\scratchfloat % first attempt
+   %
    \setbox#1\vpack\bgroup
      \hpack\bgroup
        \normalexpanded{\scale

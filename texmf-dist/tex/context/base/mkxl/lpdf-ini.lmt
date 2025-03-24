@@ -55,6 +55,10 @@ if not modules then modules = { } end modules ['lpdf-ini'] = {
 
 -- Comment: beware of "too many locals" problem here.
 
+-- Is there a way to prevent Acrobat to pop up this "Ask AI assistent" bar ... why
+-- should I want an summary of an image or even a text. Should we assume stupid human
+-- readers from now on? I really never longed for a summary.
+
 local setmetatable, getmetatable, type, next, tostring, tonumber, rawset = setmetatable, getmetatable, type, next, tostring, tonumber, rawset
 local concat = table.concat
 local char, byte, format, sub, tohex = string.char, string.byte, string.format, string.sub, string.tohex
@@ -183,57 +187,93 @@ do
 
     function lpdf.getpos() return pdfgetpos() end
 
-    -- local function transform(llx,lly,urx,ury,rx,sx,sy,ry)
-    --     local x1 = llx * rx + lly * sy
-    --     local y1 = llx * sx + lly * ry
-    --     local x2 = llx * rx + ury * sy
-    --     local y2 = llx * sx + ury * ry
-    --     local x3 = urx * rx + lly * sy
-    --     local y3 = urx * sx + lly * ry
-    --     local x4 = urx * rx + ury * sy
-    --     local y4 = urx * sx + ury * ry
-    --     llx = min(x1,x2,x3,x4);
-    --     lly = min(y1,y2,y3,y4);
-    --     urx = max(x1,x2,x3,x4);
-    --     ury = max(y1,y2,y3,y4);
-    --     return llx, lly, urx, ury
-    -- end
-    --
-    -- function lpdf.transform(llx,lly,urx,ury) -- not yet used so unchecked
-    --     if pdfhasmatrix() then
-    --         local sx, rx, ry, sy = pdfgetmatrix()
-    --         local w, h = urx - llx, ury - lly
-    --         return llx, lly, llx + sy*w - ry*h, lly + sx*h - rx*w
-    --      -- return transform(llx,lly,urx,ury,sx,rx,ry,sy)
-    --     else
-    --         return llx, lly, urx, ury
-    --     end
-    -- end
+    local function corners(llx,lly,urx,ury,rx,sx,sy,ry)
+        return
+            llx * rx + lly * sy, llx * sx + lly * ry,
+            urx * rx + lly * sy, urx * sx + lly * ry,
+            urx * rx + ury * sy, urx * sx + ury * ry,
+            llx * rx + ury * sy, llx * sx + ury * ry
+    end
 
-    -- funny values for tx and ty
+    local function bounds(llx,lly,urx,ury,rx,sx,sy,ry)
+        local x1 = llx * rx + lly * sy
+        local y1 = llx * sx + lly * ry
+        local x2 = urx * rx + lly * sy
+        local y2 = urx * sx + lly * ry
+        local x3 = urx * rx + ury * sy
+        local y3 = urx * sx + ury * ry
+        local x4 = llx * rx + ury * sy
+        local y4 = llx * sx + ury * ry
+        llx = min(x1,x2,x3,x4)
+        lly = min(y1,y2,y3,y4)
+        urx = max(x1,x2,x3,x4)
+        ury = max(y1,y2,y3,y4)
+        return llx, lly, urx, ury
+    end
+
+ -- function lpdf.transform(llx,lly,urx,ury) -- not yet used so unchecked
+ --     if pdfhasmatrix() then
+ --         local sx, rx, ry, sy = pdfgetmatrix()
+ --         return bounds(llx,lly,urx,ury,sx,rx,ry,sy)
+ --     else
+ --         return llx, lly, urx, ury
+ --     end
+ -- end
 
     function lpdf.rectangle(width,height,depth,offset)
         local tx, ty = pdfgetpos()
         if offset then
-            tx     = tx     -   offset
-            ty     = ty     +   offset
+            tx     = tx     -   offset -- hm, not transformed
+            ty     = ty     +   offset -- hm, not transformed
             width  = width  + 2*offset
             height = height +   offset
             depth  = depth  +   offset
         end
         if pdfhasmatrix() then
             local rx, sx, sy, ry = pdfgetmatrix()
+            local llx, lly, urx, ury = bounds(0,-depth,width,height,rx,sx,sy,ry)
+            tx = tx + sx * height
+            ty = ty - rx * height + height
             return
-                factor *  tx,
-                factor * (ty - ry*depth  + sx*width),
-                factor * (tx + rx*width  - sy*height),
-                factor * (ty + ry*height - sx*width)
+                factor * (tx + llx),
+                factor * (ty + lly),
+                factor * (tx + urx),
+                factor * (ty + ury)
         else
             return
-                factor *  tx,
-                factor * (ty - depth),
-                factor * (tx + width),
-                factor * (ty + height)
+                factor *  tx,          -- llx
+                factor * (ty - depth), -- lly
+                factor * (tx + width), -- urx
+                factor * (ty + height) -- ury
+        end
+    end
+
+    function lpdf.quads(zero,width,height,depth,offset,noscale)
+        local tx, ty = pdfgetpos()
+        if offset then
+            tx     = tx     -   offset -- hm, not transformed
+            ty     = ty     +   offset -- hm, not transformed
+            width  = width  + 2*offset
+            height = height +   offset
+            depth  = depth  +   offset
+        end
+        if pdfhasmatrix() then
+            local rx, sx, sy, ry = pdfgetmatrix()
+            local x1, y1, x2, y2, x3, y3, x4, y4 = corners(zero,-depth,width,height,rx,sx,sy,ry)
+            tx = tx + sx * height
+            ty = ty - rx * height + height
+            return
+                factor * (tx + x1), factor * (ty + y1),
+                factor * (tx + x2), factor * (ty + y2),
+                factor * (tx + x3), factor * (ty + y3),
+                factor * (tx + x4), factor * (ty + y4),
+                zero
+        else
+            local llx = factor *  tx
+            local lly = factor * (ty - depth)
+            local urx = factor * (tx + width)
+            local ury = factor * (ty + height)
+            return llx, lly, urx, lly, urx, ury, llx, ury, 0
         end
     end
 
@@ -356,53 +396,86 @@ do
 
     lpegpatterns.pdffromeight = unescape
 
-    local u_pattern = lpegpatterns.utfbom_16_be * lpegpatterns.utf16_to_utf8_be -- official
-                    + lpegpatterns.utfbom_16_le * lpegpatterns.utf16_to_utf8_le -- we've seen these
+--     local u_pattern = lpegpatterns.utfbom_16_be * lpegpatterns.utf16_to_utf8_be -- official
+--                     + lpegpatterns.utfbom_16_le * lpegpatterns.utf16_to_utf8_le -- we've seen these
 
-    local h_pattern = lpegpatterns.hextobytes
+--     local h_pattern = lpegpatterns.hextobytes
 
-    local zero = S(" \n\r\t") + P("\\ ")
-    local one  = C(4)
-    local two  = P("d") * R("89","af") * C(2) * C(4)
+--     local zero = S(" \n\r\t") + P("\\ ")
+--     local one  = C(4)
+--     local two  = P("d") * R("89","af") * C(2) * C(4)
 
-    local x_pattern = P { "start",
-        start     = V("wrapped") + V("unwrapped") + V("original"),
-        original  = Cs(P(1)^0),
-        wrapped   = P("<") * V("unwrapped") * P(">") * P(-1),
-        unwrapped = P("feff")
-                  * Cs( (
-                        zero  / ""
-                      + two   / function(a,b)
-                                    a = (hextointeger(a) - 0xD800) * 1024
-                                    b = (hextointeger(b) - 0xDC00)
-                                    return utfchar(a+b)
-                                end
-                      + one   / function(a)
-                                    return utfchar(hextointeger(a))
-                                end
-                    )^1 ) * P(-1)
-    }
+--     local x_pattern = P { "start",
+--         start     = V("wrapped") + V("unwrapped") + V("original"),
+--         original  = Cs(P(1)^0),
+--         wrapped   = P("<") * V("unwrapped") * P(">") * P(-1),
+--         unwrapped = P("feff")
+--                   * Cs( (
+--                         zero  / ""
+--                       + two   / function(a,b)
+--                                     a = (hextointeger(a) - 0xD800) * 1024
+--                                     b = (hextointeger(b) - 0xDC00)
+--                                     return utfchar(a+b)
+--                                 end
+--                       + one   / function(a)
+--                                     return utfchar(hextointeger(a))
+--                                 end
+--                     )^1 ) * P(-1)
+--                   + P("fffe")
+--                   * Cs( (
+--                         zero  / ""
+--                       + two   / function(b,a)
+--                                     a = (hextointeger(a) - 0xD800) * 1024
+--                                     b = (hextointeger(b) - 0xDC00)
+--                                     return utfchar(a+b)
+--                                 end
+--                       + one   / function(a)
+--                                     return utfchar(hextointeger(a))
+--                                 end
+--                     )^1 ) * P(-1)
+--     }
 
-    function lpdf.frombytes(s,hex)
+--     function lpdf.frombytes(s,ishex,isutf)
+--         if not s or s == "" then
+--             return ""
+--         elseif ishex then
+--             local x = lpegmatch(x_pattern,s)
+--             if x then
+--                 return x
+--             end
+--             local h = lpegmatch(h_pattern,s)
+--             if h then
+--                 return h
+--             end
+--         else
+--             local u = lpegmatch(u_pattern,s)
+--             if u then
+--                 return u
+--             end
+--         end
+--         return lpegmatch(unescape,s)
+--     end
+
+    local encodingvalues = pdfe.getencodingvalues()
+
+    encodingvalues = table.swapped(encodingvalues,encodingvalues)
+
+    lpdf.encodingvalues = encodingvalues
+
+    local utf16flags  = encodingvalues.utf16be | encodingvalues.utf16le
+    local utf16toutf8 = string.utf16toutf8
+
+    function lpdf.frombytes(s,flags)
         if not s or s == "" then
             return ""
-        end
-        if hex then
-            local x = lpegmatch(x_pattern,s)
-            if x then
-                return x
-            end
-            local h = lpegmatch(h_pattern,s)
-            if h then
-                return h
-            end
+        elseif flags & utf16flags ~= 0 then
+-- print("original",s)
+-- print("utf8    ",utf16toutf8(s))
+            return utf16toutf8(s)
         else
-            local u = lpegmatch(u_pattern,s)
-            if u then
-                return u
-            end
+-- print("original",s)
+            return s
         end
-        return lpegmatch(unescape,s)
     end
 
     lpdf.tosixteen   = tosixteen
@@ -612,7 +685,8 @@ local tostring_l = function(t)
     elseif t[2] then
         return "<" .. s .. ">"
     else
-        return "(" .. s .. ")"
+        -- we could convert to hex
+        return toeight(s)
     end
 end
 
@@ -640,8 +714,12 @@ local function add_to_d(t,v)
             t.__extra__ = v
         end
     elseif k == "table" then
-        for k, v in next, v do
-            t[k] = v
+        for kk, vv in next, v do
+            local tkk = rawget(t,kk)
+            if tkk and tostring(tkk) ~= tostring(vv) then
+                report_objects("duplicate key %a with different values",kk)
+            end
+            t[kk] = vv
         end
     end
     return t
@@ -826,6 +904,44 @@ lpdf.reference   = pdfreference
 lpdf.verbose     = pdfverbose
 lpdf.literal     = pdfliteral
 
+
+do
+
+    local options = {
+     -- unknown  = 0x0001, -- bit  1
+     -- unknown  = 0x0002, -- bit  2
+        print    = 0x0004, -- bit  3
+        modify   = 0x0008, -- bit  4
+        extract  = 0x0010, -- bit  5
+        add      = 0x0020, -- bit  6
+     -- unknown  = 0x0040, -- bit  7
+     -- unknown  = 0x0080, -- bit  8
+        fillin   = 0x0100, -- bit  9
+        access   = 0x0200, -- bit 10
+        assemble = 0x0400, -- bit 11
+        quality  = 0x0800, -- bit 12
+     -- unknown  = 0x1000, -- bit 13
+     -- unknown  = 0x2000, -- bit 14
+     -- unknown  = 0x4000, -- bit 15
+     -- unknown  = 0x8000, -- bit 16
+    }
+
+    lpdf.permissions = options
+
+    function lpdf.topermissions(permissions)
+        if permissions and permissions > 0 then
+            local t = { }
+            for k, v in next, options do
+                if permissions & v ~= 0 then
+                    t[k] = true
+                end
+            end
+            return t
+        end
+    end
+
+end
+
 if not callbacks then return lpdf end
 
 -- three priority levels, default=2
@@ -981,9 +1097,51 @@ do
         end
     end
 
+    local userdata = nil
+
+    function lpdf.setuserdata(key,value)
+        if not userdata then
+            userdata = pdfdictionary()
+        end
+        userdata[key] = pdfunicode(tostring(value))
+    end
+
     function lpdf.getcatalog()
         if checkcatalog() then
             catalog.Type = pdfconstant("Catalog")
+            -- A bit fuzzy and useless. Has to be a direct one (makes one wonder about what drives
+            -- these demands, like limitations in certain aplications).
+            catalog.Extensions = pdfdictionary {
+                Type = pdfconstant("Extensions"),
+                LMTX = pdfdictionary {
+                    BaseVersion    = pdfconstant("2.0"),
+                    ExtensionLevel = 1,
+                }
+            }
+            local statistics = pdfdictionary {
+                FontRegistries = lpdf.noffontregistries(),
+            }
+            if next(statistics) then
+                -- we use this as fast way to check if we have to check for fonts
+                -- and can use the fast path
+                statistics.Type = pdfconstant("Statistics")
+                catalog.LMTX_Statistics = pdfreference(pdfimmediateobject(tostring(statistics)))
+            end
+            --
+            local labels = structures.pages.getlabels()
+            if labels and next(labels) then
+                for k, v in next, labels do
+                    if type(v) == "table" then
+                        labels[k] = pdfarray(v)
+                    end
+                end
+                labels = pdfdictionary {
+                    Type   = pdfconstant("Pages"),
+                    Labels = pdfdictionary(labels),
+                }
+                catalog.LMTX_Pages = pdfreference(pdfimmediateobject(tostring(labels)))
+            end
+            --
             return pdfreference(pdfimmediateobject(tostring(catalog)))
         end
     end
@@ -1008,13 +1166,14 @@ do
         end
     end
 
-    local names = pdfdictionary {
-     -- Type = pdfconstant("Names")
-    }
+    local names = pdfdictionary {}
 
     local function flushnames()
         if next(names) and not environment.initex then
-            names.Type = pdfconstant("Names")
+         -- The type used to be present when we started with pdf but at some point disappeared from
+         -- the specification, so let's ditch it. The Type key is kind of weird anyway as sometimes
+         -- it is mandate and sometimes not.
+         -- names.Type = pdfconstant("Names")
             trace_flush("names")
             lpdf.addtocatalog("Names",pdfreference(pdfimmediateobject(tostring(names))))
         end
@@ -1245,12 +1404,34 @@ if implement then
     local f_actual_text_b_not = formatters["/Span << /ActualText <feff%s> >> BDC"]
     local f_actual_text       = formatters["/Span <</ActualText %s >> BDC"]
 
+    local f_alternative_text  = formatters["/Span <</Alt %s >> BDC"]
+
     local s_actual_text_e     <const> = "EMC ET"
     local s_actual_text_e_not <const> = "EMC"
 
     local context   = context
     local pdfdirect = nodes.pool.directliteral -- we can use nuts.write deep down
     local tounicode = fonts.mappings.tounicode
+
+    -- These convert the string:
+
+    function codeinjections.startactualtext(str)
+        return f_actual_text(tosixteen(str))
+    end
+
+    function codeinjections.stopactualtext()
+        return s_actual_text_e_not
+    end
+
+    function codeinjections.startalternativetext(str)
+        return f_alternative_text(tosixteen(str))
+    end
+
+    function codeinjections.stopalternativetext()
+        return s_actual_text_e_not
+    end
+
+    -- These assume a unicode number of already converted one without bom.
 
     function codeinjections.unicodetoactualtext(unicode,pdfcode)
         return f_actual_text_p(type(unicode) == "string" and unicode or tounicode(unicode),pdfcode)
@@ -1287,6 +1468,21 @@ if implement then
         end
     }
 
+    implement {
+        name      = "startalternativetext",
+        arguments = "string",
+        actions   = function(str)
+            context(pdfdirect(f_alternative_text(tosixteen(str))))
+        end
+    }
+
+    implement {
+        name      = "stopalternativetext",
+        actions   = function()
+            context(pdfdirect("EMC"))
+        end
+    }
+
     local setstate  = nodes.nuts.pool.setstate
 
     function nodeinjections.startalternate(str)
@@ -1297,6 +1493,13 @@ if implement then
         return setstate("EMC")
     end
 
+    implement {
+        name      = "pdfsetuserdata",
+        arguments = "2 strings",
+        protected = true,
+        public    = true,
+        actions   = lpdf.setuserdata
+    }
 
 end
 
@@ -1379,37 +1582,48 @@ end
 
 do
 
-    -- This is obsolete but old viewers might still use it as directive for what to
-    -- send to a postscript printer.
+    -- This is obsolete but old viewers might still use it as directive for what to send to a
+    -- postscript printer. The bad is that even 2.0 validation can bark about it missing but
+    -- maybe we should no longer care abotu that.
 
-    local a_procset, d_procset
+    local a_procset = nil
+    local d_procset = nil
+    local include   = false
 
     lpdf.registerinitializer(function()
         a_procset = nil
         d_procset = nil
     end)
 
+    function lpdf.setincludeprocset(v)
+        include = v
+    end
+
     function lpdf.procset(dict)
-        if not a_procset then
-            a_procset = pdfarray {
-                pdfconstant("PDF"),
-                pdfconstant("Text"),
-                pdfconstant("ImageB"),
-                pdfconstant("ImageC"),
-                pdfconstant("ImageI"),
-            }
-            a_procset = pdfreference(pdfimmediateobject(tostring(a_procset)))
-        end
-        if dict then
-            if not d_procset then
-                d_procset = pdfdictionary {
-                    ProcSet = a_procset
-                }
-                d_procset = pdfreference(pdfimmediateobject(tostring(d_procset)))
-            end
-            return d_procset
+        if not include or lpdf.majorversion() > 1 then
+            return nil
         else
-            return a_procset
+            if not a_procset then
+                a_procset = pdfarray {
+                    pdfconstant("PDF"),
+                    pdfconstant("Text"),
+                    pdfconstant("ImageB"),
+                    pdfconstant("ImageC"),
+                    pdfconstant("ImageI"),
+                }
+                a_procset = pdfreference(pdfimmediateobject(tostring(a_procset)))
+            end
+            if dict then
+                if not d_procset then
+                    d_procset = pdfdictionary {
+                        ProcSet = a_procset
+                    }
+                    d_procset = pdfreference(pdfimmediateobject(tostring(d_procset)))
+                end
+                return d_procset
+            else
+                return a_procset
+            end
         end
     end
 

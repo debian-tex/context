@@ -6,6 +6,14 @@
 
 \startchapter[title={Shade}]
 
+\startsection[title={Shading operators}]
+
+{\em see \METAFUN\ manual.}
+
+\stopsection
+
+\startsection[title={Shading interface.}]
+
 {\em This interface is still experimental!}
 
 Shading is complex. We go from one color to another on a continuum either linear
@@ -225,6 +233,85 @@ draw lmt_shade [
 \LL
 \stoptabulate
 
+\stopsection
+
+\startsection[title=Patterns]
+
+\setupexternalfigure[location={default,global,local}]
+
+Instead using a shade one can use a pattern which is basically a fill with a repeated
+image. Here are some examples:
+
+\startbuffer
+\startMPcode
+draw
+    (
+        (fulldiamond xscaled 8cm yscaled 5cm randomizedcontrols 10mm) && reverse
+        (fulldiamond xscaled 6cm yscaled 3cm randomizedcontrols 10mm) && cycle
+    )
+    withpattern image (fill fullcircle scaled 2mm withcolor "darkyellow" ;)
+;
+\stopMPcode
+\stopbuffer
+
+\typebuffer[option=TEX]
+
+The \type {image} macro produces a picture that is then used for the filling:
+
+\startlinecorrection \getbuffer \stoplinecorrection
+
+That image can also be an (external) figure:
+
+\startbuffer
+\startMPcode
+draw
+    (
+        (fullcircle xscaled 8cm yscaled 4cm randomizedcontrols 5mm) && reverse
+        (fullcircle xscaled 6cm yscaled 2cm randomizedcontrols 5mm) && cycle
+    )
+    withpattern image (draw figure "hacker.jpg" ;)
+    withpatternscale (1/10,1/20)
+;
+\stopMPcode
+\stopbuffer
+
+Of course one needs to find a suitable image for this, but here we just use one of
+the test figures:
+
+\startlinecorrection \getbuffer \stoplinecorrection
+
+\typebuffer[option=TEX]
+
+\stopsection
+
+\startsection[title=Luminance]
+
+{\em Todo: groups and such.}
+
+\stopsection
+
 \stopchapter
 
 \stopcomponent
+
+%    fill unittriangle rotated 90 xyscaled (200,100)
+%        withshademethod "linear"
+%        withshadecenteronefraction (0,1)
+%        withshadecentertwofraction (0,0)
+%        withshadestep (
+%            withshadefraction 0
+%            withshadecolors (green, green)
+%        )
+%        withshadestep (
+%            withshadefraction 0.75
+%            withshadecolors (blue, green)
+%        )
+%        withshadestep (
+%            withshadefraction 0.25
+%            withshadecolors (green, blue)
+%        )
+%        withshadestep (
+%            withshadefraction 1
+%            withshadecolors (green, red)
+%        )
+%     ;

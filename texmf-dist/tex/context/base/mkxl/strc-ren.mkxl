@@ -119,15 +119,20 @@
    \setheadmarking
    \strc_sectioning_reset_head_number_content
    \ifconditional\c_strc_sectioning_empty
-     \setbox\b_strc_rendering_head\hpack \headreferenceattributes to \zeropoint{\strut}%
+     \setbox\b_strc_rendering_head\hpack \headreferenceattributes to \zeropoint\bgroup
+\strc_rendering_initialize_interaction % moved here
+       \strut
+     \egroup
    \else
      \docheckheadreference
-     \setbox\b_strc_rendering_head\hbox \headreferenceattributes
-       {\spac_grids_set_local_snapping{\headparameter\c!internalgrid}%
-        \strc_sectioning_reset_head_number_content
-        \useheadstyleparameter\c!style
-        \setinlineheadreferenceattributes
-        \strc_rendering_inject_text}%
+     \setbox\b_strc_rendering_head\hbox \headreferenceattributes\bgroup
+\strc_rendering_initialize_interaction % moved here
+       \spac_grids_set_local_snapping{\headparameter\c!internalgrid}%
+       \strc_sectioning_reset_head_number_content
+       \useheadstyleparameter\c!style
+       \setinlineheadreferenceattributes
+       \strc_rendering_inject_text
+     \egroup
    \fi
    \strc_rendering_stop_placement}
 
@@ -140,14 +145,19 @@
      \strc_sectioning_reset_head_number_content
    \fi
    \ifconditional\c_strc_sectioning_empty
-     \setbox\b_strc_rendering_head\hpack \headreferenceattributes to \zeropoint{\strut}%
+     \setbox\b_strc_rendering_head\hpack \headreferenceattributes to \zeropoint\bgroup
+\strc_rendering_initialize_interaction % moved here
+       \strut
+     \egroup
    \else % = needed
      \docheckheadreference
-     \setbox\b_strc_rendering_head\hbox \headreferenceattributes
-       {\spac_grids_set_local_snapping{\headparameter\c!internalgrid}%
-        \useheadstyleparameter\c!style
-        \setinlineheadreferenceattributes
-        \strc_rendering_inject_number_and_text}%
+     \setbox\b_strc_rendering_head\hbox \headreferenceattributes\bgroup
+\strc_rendering_initialize_interaction % moved here
+       \spac_grids_set_local_snapping{\headparameter\c!internalgrid}%
+       \useheadstyleparameter\c!style
+       \setinlineheadreferenceattributes
+       \strc_rendering_inject_number_and_text
+     \egroup
    \fi
    \strc_rendering_stop_placement}
 
@@ -198,8 +208,11 @@
    \strut
    \ignorespaces}
 
+% maybe more needs to be moved inide the box
+
 \def\strc_rendering_start_placement
-  {\bgroup
+  {\headparameter\c!beforehead
+   \bgroup
    \setsystemmode\currenthead
    \strc_rendering_initialize_alternatives
    \strc_rendering_initialize_dimensions
@@ -219,15 +232,13 @@
    \inhibitmargindata\conditionalfalse % brrrr is set in forgetall
    \dontcomplain
    \postponenotes
-   \strc_rendering_initialize_interaction
+ % \strc_rendering_initialize_interaction % moved (otherwise can interfere with pagebody)
    % delayed:
    \enforced\let\localheadsetup  \strc_rendering_initialize_spacing  % historic name, kept around because some styles use it
    \enforced\let\headsetupspacing\strc_rendering_initialize_spacing} % official name
 
 \def\strc_rendering_initialize_interaction
-  {\resetinteractionparameter\c!style
-   \resetinteractionparameter\c!color
-   \resetinteractionparameter\c!contrastcolor}
+  {\resetinteractionstyleandcolor}
 
 % \setuphead[chapter]         [style=\bfd,after=,hang=line] % fit broad 2
 % \setuphead[section]         [style=\bfc,after=,hang=line]
@@ -263,9 +274,9 @@
    \openlineheight\d_strc_rendering_local_lineheight
    \d_strc_rendering_hang_height\htdp\b_strc_rendering_head
    \getnoflines\d_strc_rendering_hang_height
-   \normalexpanded{\endgroup\n_strc_rendering_hang_lines\the\numexpr\noflines-\plusone\relax}% brrr
+   \normalexpanded{\endgroup\n_strc_rendering_hang_lines\tointeger{\noflines-\plusone}\relax}% brrr
    \setbox\b_strc_rendering_head\hpack{\lower\n_strc_rendering_hang_lines\d_strc_rendering_hang_height\box\b_strc_rendering_head}%
-   \d_strc_rendering_hang_height\dimexpr\htdp\b_strc_rendering_head-\d_strc_rendering_local_height+\strutdp\relax
+   \d_strc_rendering_hang_height{\htdp\b_strc_rendering_head-\d_strc_rendering_local_height+\strutdp}%
    \ht\b_strc_rendering_head\strutht
    \dp\b_strc_rendering_head\strutdp
    \d_strc_rendering_local_depth\strutdp}
@@ -292,7 +303,7 @@
 
 \defcsname\??headplacementcheckhang\s!unknown\endcsname
   {\strc_rendering_check_hang
-   \n_strc_rendering_hang_lines\numexpr\headparameter\c!hang-\plusone\relax}
+   \n_strc_rendering_hang_lines{(\headparameter\c!hang)-\plusone}}
 
 \def\strc_rendering_initialize_line_hang
    {\ifconditional\headisdisplay
@@ -337,7 +348,8 @@
      \strc_rendering_initialize_line_hang
      % kind of special, we want to snap heads also according to local specs local
      \setbox\b_strc_rendering_head\hbox
-       {\hskip\dimexpr\d_strc_rendering_local_leftoffset+\headparameter\c!margin\relax
+%        {\hskip{\d_strc_rendering_local_leftoffset+(\headparameter\c!margin)}%
+       {\hskip\glueexpr\d_strc_rendering_local_leftoffset+(\headparameter\c!margin)\relax
         \box\b_strc_rendering_head
         \getheadsyncs % a latelua why not in the box
         }%
@@ -371,7 +383,7 @@
      \ifconditional\headissomewhere
        \strc_sectioning_stay_on_this_line % test case: alternative=margintext and \startparagraph ..
      \else
-      %\hskip\headnumberdistance\s!plus\headnumberdistance\s!minus.25\dimexpr\headnumberdistance\relax
+      %\hskip\headnumberdistance\s!plus\headnumberdistance\s!minus.25{\headnumberdistance}%
        \hskip\headtextdistance\relax
        \strc_sectioning_inject_continuous_signal
      \fi
@@ -396,7 +408,9 @@
    \else
      \ignoreparskip
      \doindentation
-   \fi}
+   \fi
+   % this can interfere with the above but is just there for symmetry
+   \headparameter\c!afterhead}
 
 % nice testcase
 %
@@ -493,18 +507,18 @@
      \global\headissomewhere\conditionalfalse % global
    \orelse\ifx\currentheadrenderingalternative\v!somewhere
      \global\headisdisplay\conditionalfalse   % global
-     \global\headissomewhere\conditionaltrue % global
+     \global\headissomewhere\conditionaltrue  % global
    \else
-     \global\headisdisplay\conditionaltrue   % global
+     \global\headisdisplay\conditionaltrue    % global
      \global\headissomewhere\conditionalfalse % global
    \fi}
 
 \protected\def\strc_rendering_initialize_dimensions
-  {\headwidth         \headparameter\c!width       \relax  % \zeropoint == unset
-   \headnumberwidth   \headparameter\c!numberwidth \relax  % \zeropoint == unset
-   \headnumberdistance\headparameter\c!distance    \relax
-   \headtextdistance  \headparameter\c!textdistance\relax
-   \headtextwidth     \headparameter\c!textwidth   \relax} % \zeropoint == unset
+  {\headwidth         {\headparameter\c!width       }% % \zeropoint == unset
+   \headnumberwidth   {\headparameter\c!numberwidth }% % \zeropoint == unset
+   \headnumberdistance{\headparameter\c!distance    }%
+   \headtextdistance  \glueexpr\headparameter\c!textdistance\relax
+   \headtextwidth     {\headparameter\c!textwidth   }} % \zeropoint == unset
 
 \permanent\protected\def\headtextcontent
   {\begingroup
@@ -614,11 +628,11 @@
             \ifzeropt\headwidth \else
                 \ifzeropt\headnumberwidth
                     \ifzeropt\headtextwidth \else
-                        \headnumberwidth\dimexpr\headwidth-\headtextwidth\relax
+                        \headnumberwidth{\headwidth-\headtextwidth}%
                     \fi
                 \else
                     \ifzeropt\headtextwidth
-                        \headtextwidth\dimexpr\headwidth-\headnumberwidth\relax
+                        \headtextwidth{\headwidth-\headnumberwidth}%
                     \fi
                 \fi
                 \hsize\headwidth
@@ -627,9 +641,9 @@
                 \headnumberdistance\zeropoint
             \fi
             \setbox\scratchbox\hbox \ifzeropt\headnumberwidth\else to \headnumberwidth\fi{\headnumbercontent}
-            \scratchdimen\dimexpr\wd\scratchbox+\headnumberdistance\relax
+            \scratchdimen{\wd\scratchbox+\headnumberdistance}%
             \ifzeropt\headtextwidth \else
-                \hsize\dimexpr\scratchdimen+\headtextwidth\relax
+                \hsize{\scratchdimen+\headtextwidth}%
             \fi
             \hangindent\scratchdimen
             \hangafter \plusone
@@ -674,7 +688,8 @@
                         } {
                             \scratchdistance\rightmargindistance
                         }
-                        \hskip\dimexpr\d_strc_rendering_local_leftoffset+\scratchdistance\relax
+%                         \hskip{\d_strc_rendering_local_leftoffset+\scratchdistance}%
+                        \hskip\glueexpr\d_strc_rendering_local_leftoffset+\scratchdistance\relax
                     }
                 }
             \else

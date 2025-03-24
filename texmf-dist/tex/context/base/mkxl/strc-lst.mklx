@@ -90,8 +90,7 @@
   {\useliststyleandcolor#style#color%
    % how about style
    \ifempty\currentcolorparameter \else
-     \resetinteractionparameter\c!color
-     \resetinteractionparameter\c!contrastcolor
+     \resetinteractioncolor
    \fi}
 
 \permanent\protected\def\doifelselist#tag% can also move to \installcommandhandler
@@ -368,9 +367,9 @@
 \mutable\def\currentlistmethod         {entry} % typesetting
 \mutable\def\currentlistindex          {0}     % typesetting (maybe also a real counter)
 
-\permanent\protected\def\savedlistnumber        #1#2{\clf_savedlistnumber        {#1}\numexpr#2\relax}
-\permanent\protected\def\savedlisttitle         #1#2{\clf_savedlisttitle         {#1}\numexpr#2\relax}
-\permanent\protected\def\savedlistprefixednumber#1#2{\clf_savedlistprefixednumber{#1}\numexpr#2\relax}
+\permanent\protected\def\savedlistnumber        #1#2{\clf_savedlistnumber        {#1}{#2}}
+\permanent\protected\def\savedlisttitle         #1#2{\clf_savedlisttitle         {#1}{#2}}
+\permanent\protected\def\savedlistprefixednumber#1#2{\clf_savedlistprefixednumber{#1}{#2}}
 
 \newconditional\c_lists_show_realpage
 
@@ -383,22 +382,22 @@
 \def\strc_lists_process_pagenumber#1%
   {\begincsname\??listpagenumber#1\endcsname}
 
-\permanent\def\structurelistexternal
-  {\clf_listexternal\numexpr\currentlistindex\relax}
+\permanent\def\strc_lists_structurelistexternal{\clf_listexternal{\currentlistindex}}
+\permanent\def\strc_lists_structurelistlocation{\clf_listlocation{\currentlistindex}}
 
-\permanent\def\structurelistlocation
-  {\clf_listlocation\numexpr\currentlistindex\relax}
+\aliased\let\structurelistexternal\strc_lists_structurelistexternal
+\aliased\let\structurelistlocation\strc_lists_structurelistlocation
 
 \permanent\def\structurelistrawnumber#1%
-  {\clf_rawlistnumber\numexpr\currentlistindex\relax{#1}}
+  {\clf_rawlistnumber{\currentlistindex}{#1}}
 
 \permanent\def\structurelistrealpagenumber
-  {\clf_listrealpage{\currentlist}\numexpr\currentlistindex\relax}
+  {\clf_listrealpage{\currentlist}{\currentlistindex}}
 
 \permanent\protected\def\structurelistpagenumber
-  {\dostarttagged\t!listpage\empty
+  {\dostarttaggednodetail\t!listpage
    \ifconditional\c_lists_show_realpage
-     \clf_listrealpage{\currentlist}\numexpr\currentlistindex\relax
+     \clf_listrealpage{\currentlist}{\currentlistindex}%
    \else
      \clf_listprefixedpage
        {\currentlist}%
@@ -435,21 +434,21 @@
 \permanent\def\rawstructurelistsecond{\rawstructurelistuservariable\s!second} % s! % was \protected
 
 \permanent\protected\def\doifelsestructurelisthaspage
-  {\clf_doifelselisthaspage{\currentlist}\numexpr\currentlistindex\relax}
+  {\clf_doifelselisthaspage{\currentlist}{\currentlistindex}}
 
 \permanent\protected\def\doifelsestructurelisthasnumber
-  {\clf_doifelselisthasnumber{\currentlist}\numexpr\currentlistindex\relax}
+  {\clf_doifelselisthasnumber{\currentlist}{\currentlistindex}}
 
 \aliased\let\doifstructurelisthaspageelse  \doifelsestructurelisthaspage
 \aliased\let\doifstructurelisthasnumberelse\doifelsestructurelisthasnumber
 
 \permanent\protected\def\structurelistgenerictitle
-  {\dostarttagged\t!listcontent\empty
+  {\dostarttaggednodetail\t!listcontent
    \clf_listtitle{\currentlist}\currentlistindex\relax
    \dostoptagged}
 
 \permanent\protected\def\structurelistgenericnumber % tricky, we need to delay tagging as we have nested lua calls
-  {\dostarttagged\t!listtag\empty
+  {\dostarttaggednodetail\t!listtag
    \clf_listprefixednumber
      {\currentlist}%
      \currentlistindex
@@ -476,7 +475,7 @@
 % TODO: pass extra tag name (contents, figures, bibliography ...)
 
 \protected\def\strc_lists_place_current#list#criterium#reference#extras#order#levels% beware, not a user command
-  {\dostarttaggedchained\t!list\empty\??list
+  {\dostarttaggedchained\t!list\empty\empty\??list
    \clf_processlist
         names     {#list}
         criterium {#criterium}
@@ -953,6 +952,9 @@
    \c_lists_show_page\conditionalfalse
    \c_lists_show_realpage\conditionalfalse
    \c_lists_show_number\conditionalfalse
+   % these can be reset in publ ini but we need them for e.g. lists in menus
+   \enforced\let\structurelistexternal\strc_lists_structurelistexternal
+   \enforced\let\structurelistlocation\strc_lists_structurelistlocation
 \to \t_lists_every_renderingcleanup
 
 \lettonothing\m_strc_list_alternative % combined
@@ -1059,22 +1061,22 @@
     \endgraf % are we grouped?
     \typo_injectors_check_list
   % \advanceby % yes or no ... \rightskip is also honored
-    \leftskip\listparameter\c!margin % after \endgraf !
+    \leftskip{\listparameter\c!margin}\relax % after \endgraf !
     \listparameter\c!before
     \endgraf
     \edef\p_width{\listparameter\c!width}
-    \scratchdistance\listparameter\c!distance\relax
+    \scratchdistance{\listparameter\c!distance}%
     \ifx\p_width\v!fit
         \scratchwidth\zeropoint
     \orelse\ifconditional\c_lists_has_number
-        \scratchwidth\p_width
+        \scratchwidth{\p_width}%
     \else
         \edef\p_aligntitle{\listparameter\c!aligntitle}
         \ifx\p_aligntitle\v!yes
             \scratchwidth\zeropoint
             \scratchdistance\zeropoint
         \else
-            \scratchwidth\p_width
+            \scratchwidth{\p_width}%
         \fi
     \fi
     \noindent % otherwise annotations are mirrored up
@@ -1089,9 +1091,6 @@
             \ifconditional\c_lists_has_number
                 \ifconditional\c_lists_show_number
                   \setbox\b_strc_lists_number
-%                    \hbox
-%                      \strc_lists_get_reference_attribute\v!number
-%                      \ifdim\scratchwidth>\zeropoint to \scratchwidth \fi
                     \simplealignedboxplus
                         \scratchwidth
                         {\listparameter\c!numberalign}
@@ -1099,7 +1098,6 @@
                         {
                             \strc_lists_set_style_color\c!numberstyle\c!numbercolor\v!number
                             \listparameter\c!numbercommand\currentlistsymbol
-%                             \hfill
                         }
                 \else
                     \setbox\b_strc_lists_number\emptyhbox
@@ -1112,7 +1110,7 @@
             \ifconditional\c_lists_has_page
                 \ifconditional\c_lists_show_page
                     \setbox\b_strc_lists_page\hpack {
-                        \scratchdimen\listalternativeparameter\c!width
+                        \scratchdimen{\listalternativeparameter\c!width}%
                         \hbox \strc_lists_get_reference_attribute\v!pagenumber \ifdim\scratchdimen>\zeropoint to \scratchdimen\fi {
                             \hfill
                             \strc_lists_set_style_color\c!pagestyle\c!pagecolor\v!pagenumber
@@ -1133,11 +1131,11 @@
                     % we have leftskip so we'd better just skip back instead of messing
                     % with hang*
                     \edef\p_hang{\listparameter\c!hang}
-                    \hangindent\dimexpr\wd\b_strc_lists_number+\scratchdistance\relax
+                    \hangindent{\wd\b_strc_lists_number+\scratchdistance}%
                     \hangafter\ifx\p_hang\v!no\zerocount\else\plusone\fi
-                    \scratchdimen\listalternativeparameter\c!distance\relax
+                    \scratchdimen{\listalternativeparameter\c!distance}%
                     \ifzeropt\wd\b_strc_lists_page\orelse\ifdim\scratchdimen>\zeropoint\relax
-                        \rightskip\scratchdimen\s!plus\listalternativeparameter\c!stretch\relax
+                        \rightskip\scratchdimen\s!plus{\listalternativeparameter\c!stretch}\relax
                         \parfillskip-\rightskip
                     \fi
                 \else
@@ -1203,7 +1201,7 @@
 
 \startsetups[\??listrenderings:d]
     \ifvmode
-        \advanceby\leftskip\listparameter\c!margin
+        \advanceby\leftskip{\listparameter\c!margin}%
     \fi
     \begingroup
     \ifvmode
@@ -1258,7 +1256,7 @@
         \fi
     \fi
     \endgroup
-    \scratchdistance\listparameter\c!distance\relax
+    \scratchdistance{\listparameter\c!distance}%
     \ifdim\scratchdistance<\emwidth
         \hskip\emwidth\s!plus\emwidth\s!minus.25\emwidth\relax
     \else
@@ -1274,8 +1272,10 @@
     \typo_injectors_mark_list
     \hbox \strc_lists_get_reference_attribute\v!all \strc_lists_get_destination_attribute {
         \letlistparameter  \c!depth\zeropoint
+        \edef\m_lists_color{\listparameter\c!color}% otherwise we get no color when we have no interaction
         \resetlistparameter\c!color
         \inheritedlistframed {
+            \letlistparameter\c!color\m_lists_color
             \letinteractionparameter\c!strut\v!no % still needed?
             \strc_lists_set_style_color\c!style\c!color\v!all
             \expand\t_lists_every_renderingtext
@@ -1386,26 +1386,16 @@
     \edef\p_width{\listparameter\c!width}%
     \edef\p_distance{\listparameter\c!distance}% we are nice for bib users
     \edef\p_margin{\listparameter\c!margin}% we are nice for bib users
-    \ifx\p_distance\v!none
-        \scratchdistance\zeropoint
-    \else
-        \scratchdistance\p_distance
-    \fi
-    \ifx\p_margin\v!none
-        \scratchoffset\zeropoint
-    \else
-        \scratchoffset\p_margin
-    \fi
+    \scratchdistance\ifx\p_distance\v!none\zeropoint\else{\p_distance}\fi
+    \scratchoffset  \ifx\p_margin  \v!none\zeropoint\else{\p_margin  }\fi
+% \scratchdistance\ifcstok{\listparameter\c!distance}\v!none\zeropoint\else{\lastnamedcs}\fi
+% \scratchoffset  \ifcstok{\listparameter\c!margin  }\v!none\zeropoint\else{\lastnamedcs}\fi
     \ifx\p_width\v!fit
         \scratchwidth\zeropoint
         \leftskip\scratchoffset
     \else
-        \scratchwidth\p_width
-        \ifzeropt\scratchoffset
-            \leftskip\dimexpr\scratchwidth+\scratchdistance\relax
-        \else
-            \leftskip\scratchoffset
-        \fi
+        \scratchwidth{\p_width}%
+        \leftskip\ifzeropt\scratchoffset{\scratchwidth+\scratchdistance}\else\scratchoffset\fi\relax
     \fi
     \usealignparameter\listparameter
     \hskip-\leftskip
@@ -1601,8 +1591,7 @@
        \setlocationcolor
      \fi
  % \else
- %   \resetinteractionparameter\c!color
- %   \resetinteractionparameter\c!contrastcolor
+ %   \resetinteractioncolor
    \fi}
 
 \let\strc_lists_set_style_color\strc_lists_set_style_color_normal

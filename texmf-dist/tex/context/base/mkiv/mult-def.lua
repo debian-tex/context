@@ -237,7 +237,7 @@ return {
    ["fr"]="enmargegauche",
    ["it"]="atleftmargin",
    ["nl"]="oplinkermarge",
-   ["pe"]="درحاشیه‌چپ",
+ --["pe"]="درحاشیه‌چپ",  -- in/at clash
    ["ro"]="atleftmargin",
   },
   ["atpage"]={
@@ -257,7 +257,7 @@ return {
    ["fr"]="enmargedroite",
    ["it"]="atrightmargin",
    ["nl"]="oprechtermarge",
-   ["pe"]="درحاشیه‌راست",
+ --["pe"]="درحاشیه‌راست",  -- in/at clash
    ["ro"]="atrightmargin",
   },
   ["background"]={
@@ -2241,7 +2241,7 @@ return {
    ["fr"]="dansmargegauche",
    ["it"]="inmarginesinistro",
    ["nl"]="inlinkermarge",
-   ["pe"]="درحاشیه‌چپ",
+ --["pe"]="درحاشیه‌چپ",  -- in/at clash
    ["ro"]="inmargineastanga",
   },
   ["inline"]={
@@ -2361,7 +2361,7 @@ return {
    ["fr"]="dansmargedroite",
    ["it"]="inmarginedestro",
    ["nl"]="inrechtermarge",
-   ["pe"]="درحاشیه‌راست",
+ --["pe"]="درحاشیه‌راست",  -- in/at clash
    ["ro"]="inmargineadreapta",
   },
   ["installlanguage"]={
@@ -8517,9 +8517,6 @@ return {
    ["pe"]="تصحیح‌عمق",
    ["ro"]="corectieadancime",
   },
-  ["differentiald"]={
-    ["en"]="differentiald",
-  },
   ["direction"]={
    ["cs"]="smer",
    ["de"]="richtung",
@@ -10130,6 +10127,9 @@ return {
   ["middleclass"]={
    ["en"]="middleclass",
   },
+  ["mathconstants"]={
+   ["en"]="mathconstants",
+  },
   ["mathlimits"]={
    ["en"]="mathlimits",
    ["fr"]="limitesmath",
@@ -10143,6 +10143,9 @@ return {
   },
   ["mathdenominatorstyle"]={
    ["en"]="mathdenominatorstyle",
+  },
+  ["mathematics"]={
+   ["en"]="mathematics",
   },
   ["max"]={
    ["cs"]="max",
@@ -11042,6 +11045,9 @@ return {
    ["pe"]="بگذارایست",
    ["ro"]="punestopper",
   },
+  ["plugin"]={
+   ["en"]="plugin",
+  },
   ["position"]={
    ["cs"]="position",
    ["de"]="position",
@@ -11556,6 +11562,14 @@ return {
    ["pe"]="دوران",
    ["ro"]="rotatie",
   },
+  ["rowdistance"]={
+   ["en"]="rowdistance",
+   ["nl"]="rijafstand",
+  },
+  ["rows"]={
+   ["en"]="rows",
+   ["nl"]="rijen",
+  },
   ["rule"]={
    ["cs"]="linka",
    ["de"]="linie",
@@ -11737,6 +11751,16 @@ return {
   },
   ["setups"]={
    ["en"]="setups",
+  },
+  ["sheet"]={
+   ["cs"]="sheet",
+   ["de"]="sheet",
+   ["en"]="sheet",
+   ["fr"]="feuille",
+   ["it"]="sheet",
+   ["nl"]="sheet",
+   ["pe"]="ورقه",
+   ["ro"]="sheet",
   },
   ["shrink"]={
    ["en"]="shrink",
@@ -12213,6 +12237,9 @@ return {
    ["nl"]="symbool",
    ["pe"]="نماد",
    ["ro"]="simbol",
+  },
+  ["symbolcolor"]={
+   ["en"]="symbolcolor",
   },
   ["symbolcommand"]={
    ["en"]="symbolcommand",
@@ -12830,6 +12857,9 @@ return {
    ["nl"]="breedte",
    ["pe"]="عرض",
    ["ro"]="latime",
+  },
+  ["weight"]={
+   ["en"]="weight",
   },
   ["words"]={
    ["en"]="words",
@@ -14791,7 +14821,7 @@ return {
    ["fr"]="enmargegauche",
    ["it"]="atleftmargin",
    ["nl"]="oplinkermarge",
-   ["pe"]="درحاشیه‌چپ",
+ --["pe"]="درحاشیه‌چپ",  -- in/at clash
    ["ro"]="atleftmargin",
   },
   ["atmargin"]={
@@ -14821,7 +14851,7 @@ return {
    ["fr"]="enmargedroite",
    ["it"]="atrightmargin",
    ["nl"]="oprechtermarge",
-   ["pe"]="درحاشیه‌راست",
+ --["pe"]="درحاشیه‌راست",  -- in/at clash
    ["ro"]="atrightmargin",
   },
   ["attachment"]={
@@ -14868,6 +14898,9 @@ return {
    ["pe"]="پیشگفتارخودکار",
    ["ro"]="autointro",
   },
+  ["axis"]={
+   ["en"]="axis",
+  },
   ["back"]={
    ["cs"]="zpet",
    ["de"]="zurueck",
@@ -14877,6 +14910,9 @@ return {
    ["nl"]="terug",
    ["pe"]="پشت",
    ["ro"]="inapot",
+  },
+  ["backgroundbar"]={
+   ["en"]="backgroundbar",
   },
   ["background"]={
    ["cs"]="pozadi",
@@ -15248,6 +15284,16 @@ return {
   ["cite"]={
    ["en"]="cite",
    ["fr"]="cite",
+  },
+  ["clip"]={
+   ["cs"]="orez",
+   ["de"]="ausschnitt",
+   ["en"]="clip",
+   ["fr"]="decouper",
+   ["it"]="clip",
+   ["nl"]="clip",
+   ["pe"]="گیره",
+   ["ro"]="clip",
   },
   ["closed"]={
    ["en"]="closed",
@@ -17445,6 +17491,10 @@ return {
    ["nl"]="geenhz",
    ["pe"]="nohz",
    ["ro"]="nohz",
+  },
+  ["nointro"]={
+   ["en"]="nointro",
+   ["nl"]="nointro",
   },
   ["noline"]={
    ["en"]="noline",

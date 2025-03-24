@@ -41,27 +41,30 @@ return {
                     tweak = "addmirrors",
                 },
                 {
+                    tweak = "addcomposites",
+                },
+                {
                     tweak   = "replacealphabets",
                     list    = {
                         {
                             source   = { first = 0x003B1 }, -- upright alpha
-                            filename = "texgyrebonummath-companion.otf",
+                            filename = "texgyrebonummathcompanion-regular.otf",
                         },
                         {
                             source   = { first = 0x1D6FC }, -- italic alpha
-                            filename = "texgyrebonummath-companion.otf",
+                            filename = "texgyrebonummathcompanion-regular.otf",
                         },
                         {
                             source   = { first = 0x1D6C2 }, -- bold upright alpha
-                            filename = "texgyrebonummath-companion.otf",
+                            filename = "texgyrebonummathcompanion-regular.otf",
                         },
                         {
                             source   = { first = 0x1D736 }, -- bold italic alpha
-                            filename = "texgyrebonummath-companion.otf",
+                            filename = "texgyrebonummathcompanion-regular.otf",
                         },
                         {
                             source   = { first = 0x02980 }, -- triplebar
-                            filename = "TeXGyreBonumMath-Companion.otf",
+                            filename = "texgyrebonummathcompanion-regular.otf",
                         },
                     },
                 },
@@ -79,6 +82,9 @@ return {
                 presets.wipeitalics          { },
                 {
                     tweak = "checkaccents",
+                },
+                {
+                    tweak = "wipecues",
                 },
                 {
                     -- We need to check these, are the tweaks necessary or not?

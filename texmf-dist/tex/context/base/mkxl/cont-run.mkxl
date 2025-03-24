@@ -18,7 +18,8 @@
 % \enabletrackers[system.synctex.visualize]
 % \enabletrackers[system.synctex.xml]
 % \enabledirectives[system.synctex.details]
-% \setupsynctex[state=start]
+% \setupsynctex[state=start]  % works in most cases (old libs)
+% \setupsynctex[state=repeat] % in case the lib is new
 
 \unprotect
 
@@ -42,6 +43,9 @@
       state  {\p_state}%
       method {\dummyparameter\c!method}%
    \relax
+   \ifx\p_state\v!repeat
+     \let\p_state\v!start
+   \fi
    \ifx\p_state\v!start
      % when public implementor, use conditional
      \enforced\glet\synctexpause   \clf_synctexpause
@@ -63,5 +67,35 @@
    \stopTEXpage
    \stoptext
    \endinput}
+
+%D Control (this might become nicer):
+
+\newtoks\t_syst_every_export_images
+\newtoks\t_syst_every_export_content
+
+\permanent\protected\def\exportimages {\expand\t_syst_every_export_images}
+\permanent\protected\def\exportcontent{\expand\t_syst_every_export_content}
+
+\appendtoks
+    \setupbackend[\c!export=\v!yes]%
+    \enabledirectives[export.images]%
+    \enablemode[exportimages]%
+    \collectexported
+    \usemodule[export-todo]%
+\to \t_syst_every_export_images
+
+\appendtoks
+    \setupbackend[\c!export=\v!yes]%
+    \usemodule[export-todo]%
+\to \t_syst_every_export_content
+
+% \appendtoks
+%     \ifcstok{\backendparameter\c!export}\v!yes
+%       \doifmode {exportimages} {%
+%          \enabledirectives[export.images]%
+%          \collectexported
+%       }%
+%     \fi
+% \to \everysetupbackend
 
 \protect \endinput

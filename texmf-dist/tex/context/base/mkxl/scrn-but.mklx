@@ -132,7 +132,7 @@
 
 \permanent\tolerant\protected\def\overlaybutton[#1]#;#=%
   {\iflocation
-     \gotobox{\overlayfakebox}[#1]%
+     \gotobox{\overlayfakebox}[#1#2]%
    \fi}
 
 %D The renderers:
@@ -442,18 +442,14 @@
    \d_scrn_menu_offset_right \ifchkdimension\interactionmenuparameter\c!rightoffset \or\lastchkdimension\else\zeropoint\fi
    \d_scrn_menu_offset_top   \ifchkdimension\interactionmenuparameter\c!topoffset   \or\lastchkdimension\else\zeropoint\fi
    \d_scrn_menu_offset_bottom\ifchkdimension\interactionmenuparameter\c!bottomoffset\or\lastchkdimension\else\zeropoint\fi
-   \d_scrn_menu_asked_width  \interactionmenuparameter\c!maxwidth
-   \d_scrn_menu_asked_height \interactionmenuparameter\c!maxheight
-   \d_scrn_menu_used_width\dimexpr
-     \d_scrn_menu_asked_width  + \d_scrn_menu_offset_left + \d_scrn_menu_offset_right
-   \relax
-   \d_scrn_menu_used_height\dimexpr
-     \d_scrn_menu_asked_height + \d_scrn_menu_offset_top  + \d_scrn_menu_offset_bottom
-   \relax}
+   \d_scrn_menu_asked_width  {\interactionmenuparameter\c!maxwidth}%
+   \d_scrn_menu_asked_height {\interactionmenuparameter\c!maxheight}%
+   \d_scrn_menu_used_width   {\d_scrn_menu_asked_width+\d_scrn_menu_offset_left+\d_scrn_menu_offset_right}%
+   \d_scrn_menu_used_height  {\d_scrn_menu_asked_height+\d_scrn_menu_offset_top+\d_scrn_menu_offset_bottom}}
 
 \def\scrn_menu_set_final
-  {\d_scrn_menu_final_width \namedinteractionmenuparameter\currentinteractionmenulocation\c!maxwidth
-   \d_scrn_menu_final_height\namedinteractionmenuparameter\currentinteractionmenulocation\c!maxheight}
+  {\d_scrn_menu_final_width {\namedinteractionmenuparameter\currentinteractionmenulocation\c!maxwidth}%
+   \d_scrn_menu_final_height{\namedinteractionmenuparameter\currentinteractionmenulocation\c!maxheight}}
 
 \def\scrn_menu_apply_final
   {\ifconditional\c_scrn_menu_zerodimensions
@@ -509,6 +505,9 @@
 
 \def\scrn_menu_insert_indeed#location%
   {\begingroup
+   \dotagdocumentpush
+  %\strc_tags_horrible_start % test
+   \dostarttaggednodetail\t!navigationmenu
    \xdef\currentinteractionmenulocation{#location}%
    \scrn_menu_set_final
    \ifcase\d_scrn_menu_final_width \orelse \ifcase\d_scrn_menu_final_height \else
@@ -518,6 +517,9 @@
      \expand\everysetmenucommands
      \csname\??menupacker\namedinteractionmenuparameter\currentinteractionmenulocation\c!alternative\endcsname
    \fi
+   \dostoptagged
+   \dotagdocumentpop
+  %\strc_tags_horrible_stop % test
    \endgroup}
 
 %D This calls: % can be \c!command for vertical/horizontal

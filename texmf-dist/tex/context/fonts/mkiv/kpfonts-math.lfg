@@ -28,7 +28,7 @@ return {
             aftercopying = {
                 {
                     tweak    = "version",
-                    expected = "Version 0.40",
+                    expected = "Version 0.61",
                 },
                 {
                     tweak = "checkaccents",
@@ -64,6 +64,9 @@ return {
                 },
                 {
                     tweak = "addmirrors",
+                },
+                {
+                    tweak = "addcomposites",
                 },
                 {
                     -- kpfonts have calligraphic at private slots

@@ -12,7 +12,8 @@ if not modules then modules = { } end modules ['toks-scn'] = {
 
 -- todo: more \let's at the tex end
 
-local type, next, tostring, tonumber = type, next, tostring, tonumber
+local type, next, tostring, tonumber, load = type, next, tostring, tonumber, load
+local dump = string.dump
 
 local formatters          = string.formatters
 local concat              = table.concat
@@ -30,6 +31,7 @@ local scaninteger         = scanners.integer
 local scancardinal        = scanners.cardinal
 local scannumber          = scanners.number
 local scanfloat           = scanners.float
+local scanposit           = scanners.posit
 local scankeyword         = scanners.keyword
 local scankeywordcs       = scanners.keywordcs
 local scanword            = scanners.word
@@ -37,13 +39,11 @@ local scanletters         = scanners.letters
 local scankey             = scanners.key
 local scancode            = scanners.code
 local scanboolean         = scanners.boolean
-local scandimen           = scanners.dimen
+local scandimension       = scanners.dimension
 local scanglue            = scanners.glue
 local scangluevalues      = scanners.gluevalues
 local scangluespec        = scanners.gluespec
 local scancsname          = scanners.csname
-local scanintegerargument = scanners.integerargument
-local scandimenargument   = scanners.dimenargument
 local scandetokened       = scanners.detokened
 
 local todimen             = number.todimen
@@ -162,11 +162,11 @@ function scanners.whd()
     local width, height, depth
     while true do
         if scankeyword("width") then
-            width = scandimen()
+            width = scandimension()
         elseif scankeyword("height") then
-            height = scandimen()
+            height = scandimension()
         elseif scankeyword("depth") then
-            depth = scandimen()
+            depth = scandimension()
         else
             break
         end
@@ -214,6 +214,15 @@ scanners.bracketedasis   = scanbracketedasis
 scanners.argumentasis    = scanargumentasis
 scanners.csnameunchecked = scancsnameunchecked
 
+local scanlua = function()
+    local s = load("return " .. scanstring())
+    if s then
+        return s()
+    end
+end
+
+scanners.lua = scanlua
+
 --------.detokenize      = function() return scanners.tokenstring(false) end -- needs testing
 
 local shortcuts = {
@@ -233,6 +242,7 @@ local shortcuts = {
     scancardinal        = scancardinal,
     scannumber          = scannumber,
     scanfloat           = scanfloat,
+    scanposit           = scanposit,
     scantable           = scantable, -- not directly useable
     scankeyword         = scankeyword,
     scankeywordcs       = scankeywordcs,
@@ -244,8 +254,7 @@ local shortcuts = {
     scanglue            = scanglue, -- list
     scangluespec        = scangluespec,
     scangluevalues      = scangluevalues,
-    scandimen           = scandimen,
-    scandimension       = scandimen,
+    scandimension       = scandimension,
     scanbox             = scanners.box,
     scanhbox            = scanners.hbox,
     scanvbox            = scanners.vbox,
@@ -261,9 +270,8 @@ local shortcuts = {
     scanoptional        = scanoptional,
     scanbracketedasis   = scanbracketedasis,
     scanargumentasis    = scanargumentasis,
-    scanintegerargument = scanintegerargument,
-    scandimenargument   = scandimenargument,
     scandetokened       = scandetokened,
+    scanlua             = scanlua,
     todimen             = todimen,
     tonumber            = tonumber,
     tostring            = tostring,
@@ -271,12 +279,15 @@ local shortcuts = {
     inspect             = inspect,
     report              = report_scan,
     posit               = posit,
+
+    -- obsolete:
+
+    scandimen             = scandimension,
+    scanintegerargument   = scanners.integerargument,
+    scandimensionargument = scanners.dimensionargument,
 }
 
 tokens.shortcuts = shortcuts
-
-local load = load
-local dump = string.dump
 
 local function loadstripped(code)
      return load(code,nil,nil,shortcuts)

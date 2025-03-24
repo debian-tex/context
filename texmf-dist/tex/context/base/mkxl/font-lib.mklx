@@ -54,7 +54,7 @@
 \registerctxluafile{font-otl}{autosuffix}
 \registerctxluafile{font-oto}{autosuffix}
 \registerctxluafile{font-otj}{autosuffix}
-\registerctxluafile{font-oup}{}
+\registerctxluafile{font-oup}{autosuffix}
 \registerctxluafile{font-ota}{autosuffix}
 \registerctxluafile{font-ots}{autosuffix}
 \registerctxluafile{font-otd}{autosuffix}
@@ -129,6 +129,7 @@
 \registerctxluafile{font-imp-scripts}{autosuffix}
 \registerctxluafile{font-imp-sanitize}{autosuffix} % fixes for indic fonts
 \registerctxluafile{font-imp-digits}{autosuffix}
+\registerctxluafile{font-imp-compound}{autosuffix}
 
 \registerctxluafile{font-imp-tracing}{autosuffix} % comes last!
 
@@ -162,10 +163,10 @@
 
 \permanent          \def\dolookupfontbyspec     #1{\clf_fontlookupinitialize{#1}}
 \permanent          \def\dolookupnoffound         {\clf_fontlookupnoffound}
-\permanent          \def\dolookupgetkeyofindex#1#2{\clf_fontlookupgetkeyofindex{#1}\numexpr#2\relax}
+\permanent          \def\dolookupgetkeyofindex#1#2{\clf_fontlookupgetkeyofindex{#1}{#2}}
 \permanent          \def\dolookupgetkey         #1{\clf_fontlookupgetkey{#1}}
 \permanent          \def\cleanfontname          #1{\clf_cleanfontname{#1}}
-\permanent\protected\def\setfontofid            #1{\clf_setfontofid\numexpr#1\relax}
+\permanent\protected\def\setfontofid            #1{\clf_setfontofid{#1}}
 
 %D I have to put it someplace, so here:
 %D

@@ -77,8 +77,7 @@
       \bgroup
       \inheritedfittingpageframed
       \bgroup
-      \pack_framed_initialize
-      \gobblespacetokens}
+      \ignorepars}
 
 \protected\def\page_fitting_stop_normal % todo: figure out why a small mp image gets shifted
   {\removeunwantedspaces
@@ -107,7 +106,9 @@
      \wd\b_page_fitting\onepoint
    \fi
    \d_page_fitting_width \wd\b_page_fitting
-   \d_page_fitting_height\ht\b_page_fitting
+ % \d_page_fitting_height\ht\b_page_fitting
+   % a change if plan ...
+   \d_page_fitting_height\htdp\b_page_fitting
    \startlocallayout % hm, we change the papersize so we still need it
    \enforced\let\checkcurrentlayout\relax % else interference with odd/even layout
    \processaction
@@ -116,6 +117,12 @@
       \s!unknown=>\let\scratchstringone\commalistelement,
       \s!default=>\def\scratchstringone{fittingpage}]%
    \normalexpanded{\setuppapersize[fittingpage][\scratchstringone]}%
+   %
+   \edef\p_label{\fittingpageparameter\c!label}%
+   \ifempty\p_label\else
+     \normalexpanded{\setuppagenumber[\c!label=\p_label]}%
+   \fi
+   %
    \startmakeup[fittingpage]%
      \box\b_page_fitting
    \stopmakeup

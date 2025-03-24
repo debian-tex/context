@@ -209,7 +209,9 @@
    \page_backgrounds_check_background}
 
 \permanent\def\doifelsesomebackground#1%
-  {\ifcsname\??layoutbackgrounds#1\endcsname
+  {\ifexporting
+     \expandafter\secondoftwoarguments
+  \orelse\ifcsname\??layoutbackgrounds#1\endcsname
      \expandafter\firstoftwoarguments
    \else
      \expandafter\secondoftwoarguments
@@ -218,7 +220,9 @@
 \aliased\let\doifsomebackgroundelse\doifelsesomebackground
 
 \permanent\def\doifsomebackground#1%
-  {\ifcsname\??layoutbackgrounds#1\endcsname
+  {\ifexporting
+     \expandafter\gobbleoneargument
+   \orelse\ifcsname\??layoutbackgrounds#1\endcsname
      \expandafter\firstofoneargument
    \else
      \expandafter\gobbleoneargument
@@ -228,7 +232,9 @@
 %D that all normal frame and overlay features can be used.
 
 \def\page_backgrounds_add_to_box#1% area
-  {\ifcsname\??layoutbackgrounds#1\endcsname
+  {\ifexporting
+     \expandafter\gobblefourarguments
+   \orelse\ifcsname\??layoutbackgrounds#1\endcsname
      \expandafter\page_backgrounds_add_to_box_indeed
    \else
      \expandafter\gobblefourarguments
@@ -423,7 +429,7 @@
       \calculatereducedvsizes
       \offinterlineskip
       \ifdim\topheight>\zeropoint
-        \kern\dimexpr-\topheight-\topdistance\relax
+        \kern{-\topheight-\topdistance}%
         \page_backgrounds_set_box_row\v!top\topheight
         \kern\topdistance
       \fi
@@ -552,8 +558,8 @@
    \edef\p_page_backgrounds_offset{\namedframedparameter{\??layoutbackgrounds\v!page}\c!offset}%
    \edef\p_page_backgrounds_depth {\namedframedparameter{\??layoutbackgrounds\v!page}\c!depth }%
    \edef\p_page_backgrounds_state {\namedframedparameter{\??layoutbackgrounds       }\c!state }%
-   \global\d_page_backgrounds_offset\ifempty\p_offset\zeropoint\else\p_page_backgrounds_offset\fi
-   \global\d_page_backgrounds_depth \ifempty\p_depth \zeropoint\else\p_page_backgrounds_depth \fi
+   \global\d_page_backgrounds_offset\ifempty\p_offset\zeropoint\else{\p_page_backgrounds_offset}\fi
+   \global\d_page_backgrounds_depth \ifempty\p_depth \zeropoint\else{\p_page_backgrounds_depth }\fi
    \global\pagebackgroundoffset\d_page_backgrounds_offset\relax
    \global\pagebackgrounddepth \d_page_backgrounds_depth \relax
    \ifx\p_page_backgrounds_state\v!stop
@@ -679,6 +685,10 @@
 \setupbackgrounds
   [\v!hidden]
   [\c!background=\hiddenbackgroundlist]
+
+% \setupbackgrounds
+%   [\v!hidden]
+%   [\c!depth=\ifnum\bottomraggednessmode=\plusthree\strutdp\else\zeropoint\fi]
 
 %D Because we haven't really set up backgrounds yet, we set the main efficiency
 %D switch to false.

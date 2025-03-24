@@ -206,9 +206,7 @@
 \newconditional\c_strc_itemgroups_symbol
 \newconditional\c_strc_itemgroups_overlay
 
-% 0 = before/after
-% 1 = between unless before
-% 2 = between (auto)
+% 0=before/after 1=auto 2=inbetween (default)
 
 \newconstant   \c_strc_itemgroups_spacing_mode   \c_strc_itemgroups_spacing_mode\plustwo
 \newconditional\c_strc_itemgroups_auto_concat    \c_strc_itemgroups_auto_concat \conditionaltrue
@@ -250,11 +248,17 @@
 \mutable\lettonothing \currentitemgroupsegments
 
 \def\strc_itemgroups_register_status
-  {\clf_registeritemgroup{\currentparentitemgroup}\c_strc_itemgroups_nesting\c_strc_itemgroups_n_of_items\dimexpr\itemgroupparameter\c!maxwidth\relax}
+  {\clf_registeritemgroup{\currentparentitemgroup}\c_strc_itemgroups_nesting\c_strc_itemgroups_n_of_items{\itemgroupparameter\c!maxwidth}}
 
 \def\strc_itemgroups_check_n_of_items % we could do this at the lua end and save a call (i.e. will be dimen and counter)
   {\clf_analyzeitemgroup{\currentparentitemgroup}\c_strc_itemgroups_nesting\relax
    \edef\currentnofitems{\the\c_strc_itemgroups_max_items}}
+
+\permanent\protected\def\upcomingnofitems#1%
+  {\the\numexpr
+     \clf_analyzeupcomingitemgroup{#1}{\c_strc_itemgroups_nesting+\plusone}%
+     \c_strc_itemgroups_max_items
+   \relax}
 
 % todo: \dodosetreference -> \strc_counters_register_component (to be checked)
 
@@ -456,8 +460,11 @@
 \defcsname\??itemgroupkeyword\v!unpacked\endcsname
   {\strc_itemgroups_process_set_option_unpack}
 
+\defcsname\??itemgroupkeyword\v!nointro\endcsname
+  {\c_strc_itemgroups_intro\conditionalfalse}
+
 \defcsname\??itemgroupkeyword\v!intro\endcsname
-  {\c_strc_itemgroups_intro\conditionaltrue} % here? not set to false
+  {\c_strc_itemgroups_intro\conditionaltrue}
 
 \defcsname\??itemgroupkeyword\v!autointro\endcsname
   {\c_strc_itemgroups_auto_intro\conditionaltrue}
@@ -646,7 +653,7 @@
 \ifdefined\dotagsetitem      \else \aliased\let\dotagsetitem     \gobbleoneargument \fi
 
 \def\strc_itemgroups_tag_start_group
-  {\dostarttaggedchained\t!itemgroup\currentparentitemgroup\??itemgroup
+  {\dostarttaggedchained\t!itemgroup\currentparentitemgroup\currentitemgroup\??itemgroup
    \dotagsetitemgroup}
 
 \def\strc_itemgroups_tag_stop_group
@@ -900,11 +907,11 @@
      \d_strc_itemgroups_list_width\itemgroupparameter\c!step\relax
      \ifzeropt\d_strc_itemgroups_list_width \d_strc_itemgroups_list_width=.5em\fi
      \multiplyby\d_strc_itemgroups_list_width \itemgroupparameter\c!factor
-     \advanceby\d_strc_itemgroups_list_width\itemgroupparameter\c!width\relax
+     \advanceby\d_strc_itemgroups_list_width{\itemgroupparameter\c!width}%
    \else
-     \d_strc_itemgroups_list_width\itemgroupparameter\c!width\relax
+     \d_strc_itemgroups_list_width{\itemgroupparameter\c!width}%
    \fi
-   \advanceby\d_strc_itemgroups_list_width\itemgroupparameter\c!distance\relax
+   \advanceby\d_strc_itemgroups_list_width{\itemgroupparameter\c!distance}%
    \let\currentitemgroup\m_strc_itemgroups_saved}
 
 \lettonothing\p_itemgroups_options
@@ -1018,7 +1025,7 @@
    \ifnum\c_strc_itemgroups_nesting>\zerocount
      \c_strc_itemgroups_first\conditionaltrue
      \ifconditional\c_strc_itemgroups_continue \else
-       \strc_counters_restart_sub\v_strc_itemgroups_counter\currentitemlevel{\numexpr\itemgroupparameter\c!start-\plusone\relax}%
+       \strc_counters_restart_sub\v_strc_itemgroups_counter\currentitemlevel{(\itemgroupparameter\c!start)-\plusone}%
      \fi
    \fi
    \ifempty\strc_itemgroups_used_symbol
@@ -1064,7 +1071,7 @@
      \edef\currentitemgroupconversionset{\currentitemgroupconversionset,\currentitemgroupsymbol}%
      \edef\currentitemgroupsegments     {\m_strc_itemgroups_repeat_start:\currentitemlevel}%
    \fi
-   \d_strc_itemgroups_asked_width\itemgroupparameter\c!width\relax
+   \d_strc_itemgroups_asked_width{\itemgroupparameter\c!width}%
    \startcollectitems}
 
 \let\startcollectitems\relax
@@ -1167,7 +1174,16 @@
      \ifcase\c_strc_itemgroups_spacing_mode
        \strc_itemgroups_after_command
      \or
-       \strc_itemgroups_after_command
+       % was \strc_itemgroups_after_command
+      %\ifempty\strc_itemgroups_after_command % here it's unset
+       \ifempty{\directitemgroupparameter\c!after}%
+         \strc_itemgroups_inbetween_command
+       \else
+         \strc_itemgroups_after_command
+       \fi
+     \else
+       % was nothing
+       \strc_itemgroups_inbetween_command
      \fi
      \dontrechecknextindentation
    \fi
@@ -1175,7 +1191,7 @@
    \iftrialtypesetting
      \strc_counters_restore\v_strc_itemgroups_counter % could happen in LUA
    \fi
-\globalpopmacro\c_strc_itemgroups_n_of_items
+   \globalpopmacro\c_strc_itemgroups_n_of_items
    \global\advanceby\c_strc_itemgroups_nesting\minusone
    \xdef\currentitemlevel{\the\c_strc_itemgroups_nesting}%
   %\ifconditional\c_strc_itemgroups_text
@@ -1216,11 +1232,12 @@
 
 \def\strc_itemgroups_start_item_first_two
   {\ifconditional\c_strc_itemgroups_paragraph\else
-     \c_strc_itemgroups_prev_level\numexpr\c_strc_itemgroups_nesting-\plusone\relax
+     \c_strc_itemgroups_prev_level{\c_strc_itemgroups_nesting-\plusone}%
      \ifcase\c_strc_itemgroups_spacing_mode
        \strc_itemgroups_before_command
      \or
-       \ifempty\strc_itemgroups_before_command % should possibly expand to empty
+      %\ifempty\strc_itemgroups_before_command % should possibly expand to empty
+      \ifempty{\directitemgroupparameter\c!before}%
          \strc_itemgroups_inbetween_command
        \else
          \strc_itemgroups_before_command
@@ -1239,7 +1256,7 @@
        % WS: make the distance between items customizable, think about better default values -> see itemize-1.tex
        \strc_itemgroups_set_text_item_distance% HH: moved out and made configurable (sort of)
        \removeunwantedspaces
-       \ifnum\numexpr\c_strc_itemgroups_n_of_items+\plusone\relax=\c_strc_itemgroups_max_items
+       \ifnum{\c_strc_itemgroups_n_of_items+\plusone}=\c_strc_itemgroups_max_items
          \itemgroupparameter\c!lasttextseparator
        \else
          \itemgroupparameter\c!textseparator
@@ -1300,9 +1317,9 @@
      \spac_overlay_lines % see spac-ver.mkvi ... a typical potential problem
      \c_strc_itemgroups_concat\conditionalfalse
    \fi
-   \dostarttagged\t!item\empty
+   \dostarttaggednodetail\t!item
   % \dotagsetitem\empty
-   \dostarttagged\t!itemtag\empty
+   \dostarttaggednodetail\t!itemtag
    \strc_itemgroups_insert_item
    \dostoptagged
    \ifconditional\c_strc_itemgroups_pack
@@ -1311,7 +1328,7 @@
    \itemgroupparameter\c!inner % will become obsolete (better use setups)
    \strc_itemgroups_margin_symbol
    \let\strc_itemgroups_margin_symbol\relax
-   \dostarttagged\t!itemcontent\empty
+   \dostarttaggednodetail\t!itemcontent
    \begstrut % \strut
    \nobreak                            % else problems with intext items
    \seteffectivehsize % NEW !
@@ -1360,7 +1377,7 @@
 \protected\def\strc_itemgroups_start_head_indeed
   {\c_strc_itemgroups_head\conditionaltrue
    \dotagsetitem\s!head% % weird place
-   \dostarttagged\t!itemhead\empty
+   \dostarttaggednodetail\t!itemhead
    \useitemgroupstyleandcolor\c!headstyle\c!headcolor
    \ignorepars} % \ignorespaces
 
@@ -1383,7 +1400,7 @@
   \fi}
 
 \protected\def\strc_itemgroups_head_body_indeed
-  {\dostarttagged\t!itembody\empty
+  {\dostarttaggednodetail\t!itembody
    \noindentation
    \ignorepars} % \ignorespaces
 
@@ -1423,20 +1440,20 @@
 \protected\def\strc_itemgroups_start_edge#text%
   {\strc_itemgroups_start_symbol
      {\strc_itemgroups_calculate_list_width\c_strc_itemgroups_nesting
-      \dostarttagged\t!ignore\empty % for the moment, maybe an attribute
+      \dostarttaggednodetail\t!ignore % for the moment, maybe an attribute
       \hbox to \d_strc_itemgroups_list_width
-        {#text\hskip\itemgroupparameter\c!distance}%
+        {#text\hskip{\itemgroupparameter\c!distance}}%
       \dostoptagged}}
 
 \protected\def\strc_itemgroups_start_margin#text%
   {\def\strc_itemgroups_margin_symbol % brrr
-     {\dostarttagged\t!ignore\empty % for the moment, maybe an attribute
+     {\dostarttaggednodetail\t!ignore % for the moment, maybe an attribute
       \llap
         {\begingroup
          \useitemgroupstyleandcolor\c!marstyle\c!marcolor
          #text% keep em/ex local
          \endgroup
-         \hskip\dimexpr\leftskip+\leftmargindistance\relax}%
+         \hskip{\leftskip+\leftmargindistance}}%
       \dostoptagged}%
    \startitemgroupitem
    \dotagsetitem\s!margin}
@@ -1550,7 +1567,7 @@
 
 \def\strc_itemgroups_optimize_breaks
   {\ifcase\c_strc_itemgroups_column_depth
-     \ifconditional\c_strc_itemgroups_optimize  % loose
+     \ifcase\c_strc_itemgroups_optimize  % loose
      \or \strc_itemgroups_optimize_breaks_both  % tight
      \or \strc_itemgroups_optimize_breaks_both  % verytight
      \or \strc_itemgroups_optimize_breaks_first % tight:first
@@ -1560,7 +1577,7 @@
 
 \def\strc_itemgroups_handle_text_item
   {\scratchdimen\wd\b_strc_itemgroups
-   \advanceby \scratchdimen \itemgroupparameter\c!distance\relax
+   \advanceby\scratchdimen{\itemgroupparameter\c!distance}%
    \ifdim\scratchdimen>\d_strc_itemgroups_list_width
      \advanceby\scratchdimen -\d_strc_itemgroups_list_width
    \else
@@ -1574,19 +1591,19 @@
      {\dontcomplain
       \hbox to \d_strc_itemgroups_list_width
         {\ifconditional\c_strc_itemgroups_sub
-           \dostarttagged\t!ignore\empty
+           \dostarttaggednodetail\t!ignore
            \llap{+\enspace}%
            \dostoptagged
          \fi
          \strc_itemgroups_left_sym_filler
          \box\b_strc_itemgroups % can already have a forced widt, only factor handled here
          \hfil
-         \hskip\itemgroupparameter\c!distance}}}
+         \hskip{\itemgroupparameter\c!distance}}}}
 
 \def\strc_itemgroups_handle_lapped_item_negative
   {\llap
      {\ifconditional\c_strc_itemgroups_sub
-        \dostarttagged\t!ignore\empty
+        \dostarttaggednodetail\t!ignore
         \llap{+\enspace}%
         \dostoptagged
       \fi
@@ -1596,7 +1613,7 @@
 \def\strc_itemgroups_handle_groups_text_item
   {\hbox
      {\ifconditional\c_strc_itemgroups_sub
-        \dostarttagged\t!ignore\empty
+        \dostarttaggednodetail\t!ignore
         +\enspace
         \dostoptagged
       \fi
@@ -1610,7 +1627,7 @@
 \def\strc_itemgroups_handle_groups_inline_item
   {\hbox to \d_strc_itemgroups_list_width
      {\ifconditional\c_strc_itemgroups_sub
-        \dostarttagged\t!ignore\empty
+        \dostarttaggednodetail\t!ignore
         \llap{+\enspace}%
         \dostoptagged
       \fi
@@ -1649,22 +1666,22 @@
    \c_strc_itemgroups_symbol\conditionalfalse}
 
 \def\strc_itemgroups_make_fitting_box
-  {\ifdim\wd\b_strc_itemgroups>\itemgroupparameter\c!maxwidth\relax
+  {\ifdim\wd\b_strc_itemgroups>{\itemgroupparameter\c!maxwidth}%
      \normalexpanded{\global\setitemgroupparameter{\c!maxwidth}{\the\wd\b_strc_itemgroups}}%
    \fi
    \ifdim\d_strc_itemgroups_max_width>\zeropoint
      \setbox\b_strc_itemgroups\simplealignedbox
-       {\dimexpr\d_strc_itemgroups_max_width+\itemgroupparameter\c!distance\relax}%
+       {{\d_strc_itemgroups_max_width+(\itemgroupparameter\c!distance)}}%
        {\itemgroupparameter\c!itemalign}%
-       {\box\b_strc_itemgroups\hskip\itemgroupparameter\c!distance}%
+       {\box\b_strc_itemgroups\hskip{\itemgroupparameter\c!distance}}%
    \fi}
 
 \def\strc_itemgroups_make_aligned_box
   {\ifempty{\itemgroupparameter\c!itemalign}\else
      \setbox\b_strc_itemgroups\simplealignedbox
-       {\dimexpr\d_strc_itemgroups_asked_width+\itemgroupparameter\c!distance\relax}%
+       {{\d_strc_itemgroups_asked_width+(\itemgroupparameter\c!distance)}}%
        {\itemgroupparameter\c!itemalign}%
-       {\box\b_strc_itemgroups\hskip\itemgroupparameter\c!distance}%
+       {\box\b_strc_itemgroups\hskip{\itemgroupparameter\c!distance}}%
    \fi}
 
 \def\strc_itemgroups_make_destination_box
@@ -1675,6 +1692,7 @@
 \def\strc_itemgroups_check_indenting
   {\c_strc_itemgroups_indented_first\conditionalfalse
    \ifempty\m_strc_itemgroups_indenting \else
+     % we'd like to use \useindentingparameter\itemgroupparameter but ...
      \normalexpanded{\setupindenting[\v!reset,\v!yes,\m_strc_itemgroups_indenting]}%
      \ifconditional\c_spac_indentation_indent_first % better is to have a mode
        \ifcstok{\itemgroupparameter\c!alignsymbol}\v!yes\else
@@ -1936,7 +1954,7 @@
      \fi
    \fi
    \noindent % no \dontleavehmode
-   \hbox to \dimexpr\availablehsize/\scratchcounter\relax{\m_strc_itemgroups_collected\hss}%
+   \hbox to {\availablehsize/\scratchcounter}{\m_strc_itemgroups_collected\hss}%
    \endgroup}
 
 \def\strc_itemgroups_collected_flush_indeed
@@ -2072,18 +2090,15 @@
 
 \def\strc_itemgroups_table_end_row
   {\NR
-   \ifzerodim\d_strc_itemgroups_inbetween_table\orelse\ifnum
-     \numexpression
-       \c_strc_itemgroups_n_of_items/\c_strc_itemgroups_columns
-     \relax<\numexpression
-       \c_strc_itemgroups_max_items /\c_strc_itemgroups_columns
-     \relax
+   \ifzerodim\d_strc_itemgroups_inbetween_table\orelse\ifnum % todo
+     \numexpr\c_strc_itemgroups_n_of_items/\c_strc_itemgroups_columns\relax
+    <\numexpr\c_strc_itemgroups_max_items /\c_strc_itemgroups_columns\relax
         \noalign{\m_strc_itemgroups_inbetween}%
       % \TB[\the\d_strc_itemgroups_inbetween_table]%
    \fi}
 
 \noaligned\def\strc_itemgroups_table_end
-  {\ifcase\numexpression\c_strc_itemgroups_n_of_items mod \c_strc_itemgroups_columns\relax
+  {\ifcase{\c_strc_itemgroups_n_of_items mod \c_strc_itemgroups_columns}%
      \expandafter\strc_itemgroups_table_end_row
    \fi}
 
@@ -2091,7 +2106,7 @@
   {\iftrialtypesetting\orelse\ifcase\c_tabl_tabulate_column\else
      \beginlocalcontrol % horrible hack to prevens crcr issues
      \expandafter\endlocalcontrol\expandedloop
-       \numexpr\c_tabl_tabulate_column+\plusone\relax
+       {\c_tabl_tabulate_column+\plusone}%
        \c_tabl_tabulate_nofcolumns
        \plusone
        {\startignoreditem\strut\stopignoreditem}%
@@ -2133,15 +2148,15 @@
    %
    % horrible ... we have \dividebydsize\textwidth{1em}{3}
    %
-   \scratchdistance\itemgroupparameter\c!columndistance
-   \d_strc_itemgroups_column_distance\dimexpr\leftskip+\rightskip\relax
+   \scratchdistance{\itemgroupparameter\c!columndistance}%
+   \d_strc_itemgroups_column_distance{\leftskip+\rightskip}%
    \d_strc_itemgroups_column_width\hsize
    \c_strc_itemgroups_no_par\conditionaltrue % blocks a par that interferes with tagging
    \advanceby\d_strc_itemgroups_column_width   -\c_strc_itemgroups_columns\d_strc_itemgroups_column_distance
    \divideby \d_strc_itemgroups_column_width    \c_strc_itemgroups_columns
    \advanceby\d_strc_itemgroups_column_distance \scratchdistance
    \advanceby\d_strc_itemgroups_column_width   -\scratchdistance
-   \advanceby\d_strc_itemgroups_column_width    \dimexpr\scratchdistance/\c_strc_itemgroups_columns\relax
+   \advanceby\d_strc_itemgroups_column_width    {\scratchdistance/\c_strc_itemgroups_columns}%
    %
    \c_strc_itemgroups_optimize\zerocount % otherwise we inject vertical breaks between struts
    % inlining confusses the verbose name parser

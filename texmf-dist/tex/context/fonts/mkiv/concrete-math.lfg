@@ -40,6 +40,9 @@ return {
                 presets.moveintegrals        { factor = 1.5 },
                 presets.wipeitalics          { },
                 {
+                    tweak = "addcomposites",
+                },
+                {
                     tweak = "checkaccents",
                 },
                 {
@@ -86,6 +89,9 @@ return {
                 },
                 {
                     tweak = "flattenaccents",
+                },
+                {
+                    tweak = "accentdimensions",
                 },
                 {
                     tweak   = "radicaldegreeanchors",

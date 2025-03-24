@@ -224,7 +224,7 @@
 \def\mlib_stop_group#1#2#3#4#5#6% some day this might happen elsewhere
   {\egroup
    \setbox\scratchbox\hpack{\kern\onebasepoint\box\scratchbox}% weird correction
-   \wd\scratchbox \dimexpr#5\onebasepoint-#3\onebasepoint+2\onebasepoint\relax
+   \wd\scratchbox {#5\onebasepoint-#3\onebasepoint+2\onebasepoint}%
    \ht\scratchbox #6\onebasepoint
    \dp\scratchbox-#4\onebasepoint
    \setbox\scratchbox\hpack\bgroup
@@ -264,8 +264,8 @@
         \dowithnextbox{%
           \boxxoffset\nextbox-#2\onebasepoint
           \boxyoffset\nextbox-#3\onebasepoint
-          \wd\nextbox\dimexpr#4\onebasepoint-#2\onebasepoint\relax
-          \ht\nextbox\dimexpr#5\onebasepoint-#3\onebasepoint\relax
+          \wd\nextbox{#4\onebasepoint-#2\onebasepoint}%
+          \ht\nextbox{#5\onebasepoint-#3\onebasepoint}%
           \box\nextbox}%
         \hpack\bgroup}
 
@@ -276,17 +276,13 @@
 \permanent\protected\def\MPLIBstartgetpattern#1#2#3#4#5#6%
   {\setbox\nextbox\hpack\bgroup
      \applypattern
-       [\c!name=mp-pattern-#1,
-%       \c!width=2\dimexpr#4\onebasepoint-#2\onebasepoint\relax,
-        \c!width=\dimexpr#4\onebasepoint-#2\onebasepoint\relax,
-%       \c!height=2\dimexpr#5\onebasepoint-#3\onebasepoint\relax]%
-        \c!height=\dimexpr#5\onebasepoint-#3\onebasepoint\relax]%
+       [\c!name=mp-pattern-#1,%
+        \c!width={#4\onebasepoint-#2\onebasepoint},%
+        \c!height={#5\onebasepoint-#3\onebasepoint}]%
     \hss
    \egroup
- % \boxyoffset\nextbox -.5\dimexpr#5\onebasepoint-#3\onebasepoint\relax
-   \boxyoffset\nextbox \dimexpr#3\onebasepoint\relax
- % \boxxoffset\nextbox -.5\dimexpr#4\onebasepoint-#2\onebasepoint\relax
-   \boxxoffset\nextbox \dimexpr#2\onebasepoint\relax
+   \boxyoffset\nextbox{#3\onebasepoint}%
+   \boxxoffset\nextbox{#2\onebasepoint}%
    \ht\nextbox\zeropoint
    \wd\nextbox\zeropoint
    \dp\nextbox\zeropoint
@@ -296,13 +292,22 @@
 
 % For now here ... will be cleaned up and become macro calls instead:
 
-\newtoks\mptexttoks
 \newbox \mptextbox
+
+\newtoks\mptexttoks
 \newtoks\mpoutlinetoks
 \newtoks\mpgraphictexttoks
 
-\mptexttoks       {\global\setbox\mptextbox\hbox{\clf_mptexttoks}}
-\mpoutlinetoks    {\global\setbox\mptextbox\vbox{\clf_mpoutlinetoks}}
-\mpgraphictexttoks{\global\setbox\mptextbox\vbox{\clf_mpgraphictexttoks}}
+\newtoks\mpeveryoutlinefont
+
+\appendtoks
+    \c_math_extensibles\conditionalfalse
+    \setupmathfractions[\c!rule=\v!yes]%
+    \setupmathradical  [\c!rule=\v!yes]%
+\to \mpeveryoutlinefont
+
+\mptexttoks       {\global\setbox\mptextbox\hbox{\expand\mpeveryoutlinefont\relax\clf_mptexttoks}}
+\mpoutlinetoks    {\global\setbox\mptextbox\vbox{\expand\mpeveryoutlinefont\relax\clf_mpoutlinetoks}}
+\mpgraphictexttoks{\global\setbox\mptextbox\vbox{\expand\mpeveryoutlinefont\relax\clf_mpgraphictexttoks}}
 
 \protect \endinput

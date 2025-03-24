@@ -4,8 +4,11 @@ local lpegmatch = lpeg.match
 
 local context = context
 
-local moduledata   = moduledata or { }
+local moduledata   = moduledata        or { }
 moduledata.engine  = moduledata.engine or { }
+moduledata.mplib   = moduledata.mplib  or { }
+moduledata.pdfe    = moduledata.pdfe   or { }
+moduledata.node    = moduledata.node   or { }
 
 local primitives   = token.getprimitives()
 local commandnames = tokens.commands
@@ -111,7 +114,7 @@ local s_family        = "family"
 local s_rule          = "rule"
 local s_glyph         = "glyph"
 local s_todo          = "TODO"
-
+local s_specification = [==[tokens\relax]==]
 local s_expression    = [==[tokens\relax]==]
 local s_conditional   = [==[\if...]==]
 local s_tokens_or     = [==[tokens\or]==]
@@ -128,6 +131,8 @@ local r_integer       = { "", s_integer }
 local r_muglue        = { "", s_muglue }
 local r_toks          = { "", s_toks }
 local r_tokens        = { "", c_tokens }
+
+local f_see           = string.formatters["see \\type{\\%s}"]
 
 local function setdefaultresult(syntax, value)
     local default = { }
@@ -238,6 +243,7 @@ syntax.beginparagraph = newsyntax {
     indent       = false,
     noindent     = false,
     parattribute = sequence(s_integer,o_equal,s_integer),
+    paroptions   = sequence(o_equal,s_integer),
     quitvmode    = false,
     snapshotpar  = s_cardinal,
     undent       = false,
@@ -255,13 +261,15 @@ result.beginparagraph = newresult {
 }
 
 syntax.boundary = newsyntax {
+    balanceboundary    = sequence(o_equal,s_integer,s_integer),
     boundary           = sequence(o_equal,s_integer),
     noboundary         = false,
-    mathboundary       = sequence(o_equal,s_integer),
+    mathboundary       = sequence(o_equal,s_integer,optional(s_integer)),
     optionalboundary   = sequence(o_equal,s_integer), -- linebreak optionals
     pageboundary       = sequence(o_equal,s_integer),
     protrusionboundary = sequence(o_equal,s_integer),
     wordboundary       = false,
+    luaboundary        = sequence(o_equal,s_integer,s_integer),
 }
 
 syntax.caseshift = newsyntax {
@@ -271,6 +279,7 @@ syntax.caseshift = newsyntax {
 
 syntax.catcodetable = newsyntax {
     initcatcodetable = s_integer,
+    restorecatcodetable = s_integer,
     savecatcodetable = s_integer,
 }
 
@@ -308,6 +317,7 @@ syntax.combinetoks = newsyntax {
 result.convert = newresult {
     tocharacter       = { s_integer, c_tokens },
     csactive          = { s_token, c_tokens },
+    csnamestring      = { "", c_tokens },
     csstring          = { s_token, c_tokens },
     detokened         = { choice(s_cs,s_tokens,s_toks,s_tok), c_tokens },
     detokenized       = { s_tokens, c_tokens },
@@ -315,6 +325,7 @@ result.convert = newresult {
     expanded          = { s_tokens, c_tokens },
     fontname          = { s_font, c_tokens },
     fontspecifiedname = { s_font, c_tokens },
+    fontidentifier    = { s_font, c_tokens },
     formatname        = { "", c_tokens },
     jobname           = { "", c_tokens },
     luabytecode       = { s_integer, c_tokens },
@@ -330,8 +341,6 @@ result.convert = newresult {
     number            = { s_integer, c_tokens },
     romannumeral      = { s_integer, c_tokens },
     semiexpanded      = { s_tokens, c_tokens },
-    futureexpandis    = { s_todo },
-    futureexpandisap  = { s_todo },
     string            = { s_token, c_tokens },
     todimension       = { s_dimension, c_tokens },
     tohexadecimal     = { s_integer, c_tokens },
@@ -369,6 +378,7 @@ result.definecharcode = newresult {
     Umathcode = { s_integer, s_integer }, -- todo
     amcode    = { s_integer, s_integer },
     catcode   = { s_integer, s_integer },
+    cccode    = { s_integer, s_integer },
     delcode   = { s_integer, s_integer }, -- todo
     hccode    = { s_integer, s_integer },
     hmcode    = { s_integer, s_integer },
@@ -412,6 +422,7 @@ syntax.discretionary = newsyntax {
         optional(keyword("nobreak")),
         optional(keyword("options"),s_integer),
         optional(keyword("class"),s_integer),
+        optional(keyword("standalone")),
         sequence(s_tokens,s_tokens,s_tokens)
     ),
     explicitdiscretionary   = false,
@@ -437,7 +448,8 @@ syntax.endlocal = newsyntax {
 }
 
 syntax.endparagraph = newsyntax {
-    par = false,
+    par           = false,
+    localbreakpar = false,
 }
 
 syntax.endtemplate = newsyntax {
@@ -446,6 +458,7 @@ syntax.endtemplate = newsyntax {
     crcr         = false,
     noalign      = s_tokens,
     omit         = false,
+    realign      = sequence(s_tokens,s_tokens),
     span         = false,
 }
 
@@ -468,12 +481,16 @@ syntax.expandafter = newsyntax {
     futureexpand            = sequence(s_token,s_token,s_token),
     futureexpandafterspaces = sequence(s_token,s_token,s_token),
     futureexpandafterpars   = sequence(s_token,s_token,s_token),
+    futureexpandis          = s_todo,
+    futureexpandisap        = s_todo,
     semiexpand              = s_token,
     unless                  = false,
 }
 
 syntax.explicitspace = newsyntax {
-    [" "] = false,
+    [" "]         = false,
+    explicitspace = false,
+
 }
 
 syntax.getmark = newsyntax {
@@ -494,6 +511,7 @@ syntax.halign = newsyntax {
     halign = sequence(
         optional(sequence(keyword("attr"),s_integer,s_integer)),
         optional(sequence(keyword("callback"),s_integer)),
+        optional(sequence(keyword("callbacks"),s_integer)),
         optional(keyword("discard")),
         optional(keyword("noskips")),
         optional(keyword("reverse")),
@@ -523,34 +541,33 @@ result.hyphenation = newresult {
     -- TODO
 }
 
-do
+local common_rule = sequence(
+    optional(sequence(keyword("attr"),s_integer,o_equal,s_integer)),
+    optional(sequence(keyword("width"),s_dimension)),
+    optional(sequence(keyword("height"),s_dimension)),
+    optional(sequence(keyword("depth"),s_dimension)),
+    optional(sequence(keyword("xoffset"),s_dimension)),
+    optional(sequence(keyword("yoffset"),s_dimension))
+)
 
-    local vrule = sequence(
-        optional(sequence(keyword("attr"),s_integer,o_equal,s_integer)),
-        optional(sequence(keyword("width"),s_dimension)),
-        optional(sequence(keyword("height"),s_dimension)),
-        optional(sequence(keyword("depth"),s_dimension)),
-        optional(sequence(keyword("left"),s_dimension)),
-        optional(sequence(keyword("right"),s_dimension)),
-        optional(sequence(keyword("top"),s_dimension)),
-        optional(sequence(keyword("bottom"),s_dimension)),
-        optional(sequence(keyword("xoffset"),s_dimension)),
-        optional(sequence(keyword("yoffset"),s_dimension))
-    )
+local normal_rule = sequence(common_rule,
+    optional(sequence(keyword("left"),s_dimension)),
+    optional(sequence(keyword("right"),s_dimension)),
+    optional(sequence(keyword("top"),s_dimension)),
+    optional(sequence(keyword("bottom"),s_dimension))
+)
 
-    local rule = sequence(vrule,sequence(
-        optional(sequence(keyword("font"),s_integer)),
-        optional(sequence(keyword("fam"),s_integer)),
-        optional(sequence(keyword("char"),s_integer))
-    ))
+local strut_rule = sequence(common_rule,sequence(
+    optional(sequence(keyword("font"),s_integer)),
+    optional(sequence(keyword("fam"),s_integer)),
+    optional(sequence(keyword("char"),s_integer))
+))
 
-    syntax.hrule = newsyntax {
-        nohrule      = rule,
-        virtualhrule = vrule,
-        hrule        = rule,
-    }
-
-end
+syntax.hrule = newsyntax {
+    nohrule      = normal_rule,
+    virtualhrule = normal_rule,
+    hrule        = normal_rule,
+}
 
 syntax.hskip = newsyntax {
     hfil    = false,
@@ -579,11 +596,14 @@ syntax.iftest = newsyntax {
     ifcat           = s_token,
     ifchkdim        = s_tokens_or,
     ifchkdimension  = s_tokens_or,
+    ifchkdimexpr    = s_tokens_or,
     ifchknum        = s_tokens_or,
     ifchknumber     = s_tokens_or,
+    ifchknumexpr    = s_tokens_or,
     ifcmpdim        = sequence(s_dimension,s_dimension),
     ifcmpnum        = sequence(s_integer,s_integer),
     ifcondition     = s_conditional,
+    ifcramped       = false,
     ifcsname        = s_tokens_endcs,
     ifcstok         = s_tokens_relax,
     ifdefined       = s_token,
@@ -609,6 +629,7 @@ syntax.iftest = newsyntax {
     ifintervalfloat = sequence(s_integer,s_integer,s_integer),
     ifintervalnum   = sequence(s_float,s_float,s_float),
     iflastnamedcs   = false,
+    iflist          = s_boxreference,
     ifmathparameter = s_integer,
     ifmathstyle     = s_mathstyle,
     ifmmode         = false,
@@ -663,6 +684,10 @@ syntax.insert = newsyntax {
 }
 
 result.internaldimension = {
+    balanceemergencyshrink   = r_dimension, -- reserved
+    balanceemergencystretch  = r_dimension,
+    balancelineheight        = r_dimension, -- reserved
+    balancevsize             = r_dimension,
     boxmaxdepth              = r_dimension,
     delimitershortfall       = r_dimension,
     displayindent            = r_dimension,
@@ -686,6 +711,7 @@ result.internaldimension = {
     pxdimen                  = r_dimension,
     scriptspace              = r_dimension,
     shortinlinemaththreshold = r_dimension,
+    splitextraheight         = r_dimension,
     splitmaxdepth            = r_dimension,
     tabsize                  = r_dimension,
     vfuzz                    = r_dimension,
@@ -699,8 +725,11 @@ result.internalglue = {
     abovedisplayskip      = r_glue,
     additionalpageskip    = r_glue,
     baselineskip          = r_glue,
+    balancebottomskip     = r_glue,
+    balancetopskip        = r_glue,
     belowdisplayshortskip = r_glue,
     belowdisplayskip      = r_glue,
+    bottomskip            = r_glue, -- reserved
     emergencyleftskip     = r_glue,
     emergencyrightskip    = r_glue,
     initialpageskip       = r_glue,
@@ -736,7 +765,14 @@ result.internalinteger = {
     automatichyphenpenalty   = r_integer,
     automigrationmode        = r_integer,
     autoparagraphmode        = r_integer,
+    balanceadjdemerits       = r_integer,
+    balancebreakpasses       = r_integer,
+    balancechecks            = r_integer,
+    balancelooseness         = r_integer,
+    balancepenalty           = r_integer,
+    balancetolerance         = r_integer,
     binoppenalty             = r_integer,
+    boxlimitmode             = r_integer,
     brokenpenalty            = r_integer,
     catcodetable             = r_integer,
     clubpenalty              = r_integer,
@@ -748,10 +784,12 @@ result.internalinteger = {
     displaywidowpenalty      = r_integer,
     doubleadjdemerits        = r_integer,
     doublehyphendemerits     = r_integer,
+    doublepenaltymode        = r_integer,
     endlinechar              = r_integer,
     errorcontextlines        = r_integer,
     escapechar               = r_integer,
     eufactor                 = r_integer,
+    etexexprmode             = r_integer,
     exceptionpenalty         = r_integer,
     exhyphenchar             = r_integer,
     exhyphenpenalty          = r_integer,
@@ -775,6 +813,7 @@ result.internalinteger = {
     glyphweight              = r_integer,
     hangafter                = r_integer,
     hbadness                 = r_integer,
+    hbadnessmode             = r_integer,
     holdinginserts           = r_integer,
     holdingmigrations        = r_integer,
     hyphenationmode          = r_integer,
@@ -783,6 +822,8 @@ result.internalinteger = {
     language                 = r_integer,
     lastlinefit              = r_integer,
     lefthyphenmin            = r_integer,
+    lefttwindemerits         = r_integer,
+    linebreakchecks          = r_integer,
     linebreakcriterion       = r_integer,
     linebreakoptional        = r_integer,
     linebreakpasses          = r_integer,
@@ -827,8 +868,8 @@ result.internalinteger = {
     newlinechar              = r_integer,
     normalizelinemode        = r_integer,
     normalizeparmode         = r_integer,
+    nooutputboxerror         = r_integer,
     nospaces                 = r_integer,
-    orphanpenalty            = r_integer,
     outputbox                = r_integer,
     outputpenalty            = r_integer,
     overloadmode             = r_integer,
@@ -849,8 +890,12 @@ result.internalinteger = {
     protrudechars            = r_integer,
     relpenalty               = r_integer,
     righthyphenmin           = r_integer,
+    righttwindemerits        = r_integer,
     savinghyphcodes          = r_integer,
     savingvdiscards          = r_integer,
+    scriptspaceafterfactor   = r_integer,
+    scriptspacebeforefactor  = r_integer,
+    scriptspacebetweenfactor = r_integer,
     setfontid                = r_integer,
     setlanguage              = r_integer,
     shapingpenaltiesmode     = r_integer,
@@ -860,7 +905,9 @@ result.internalinteger = {
     showboxdepth             = r_integer,
     shownodedetails          = r_integer,
     singlelinepenalty        = r_integer,
+    spacechar                = r_integer,
     spacefactormode          = r_integer,
+    spacefactoroverload      = r_integer,
     spacefactorshrinklimit   = r_integer,
     spacefactorstretchlimit  = r_integer,
     supmarkmode              = r_integer,
@@ -870,8 +917,10 @@ result.internalinteger = {
     tracingadjusts           = r_integer,
     tracingalignments        = r_integer,
     tracingassigns           = r_integer,
+    tracingbalancing         = r_integer,
     tracingcommands          = r_integer,
     tracingexpressions       = r_integer,
+    tracingfitness           = r_integer,
     tracingfullboxes         = r_integer,
     tracinggroups            = r_integer,
     tracinghyphenation       = r_integer,
@@ -879,13 +928,17 @@ result.internalinteger = {
     tracinginserts           = r_integer,
     tracinglevels            = r_integer,
     tracinglists             = r_integer,
+    tracingloners            = r_integer,
+    tracinglooseness         = r_integer,
     tracinglostchars         = r_integer,
     tracingmacros            = r_integer,
     tracingmarks             = r_integer,
     tracingmath              = r_integer,
+    tracingmvl               = r_integer,
     tracingnesting           = r_integer,
     tracingnodes             = r_integer,
     tracingonline            = r_integer,
+    tracingorphans           = r_integer,
     tracingoutput            = r_integer,
     tracingpages             = r_integer,
     tracingparagraphs        = r_integer,
@@ -893,9 +946,12 @@ result.internalinteger = {
     tracingpenalties         = r_integer,
     tracingrestores          = r_integer,
     tracingstats             = r_integer,
+    tracingtoddlers          = r_integer,
     uchyph                   = r_integer,
     variablefam              = r_integer,
     vbadness                 = r_integer,
+    vbadnessmode             = r_integer,
+    vsplitchecks             = r_integer,
     widowpenalty             = r_integer,
     year                     = r_integer,
 }
@@ -931,10 +987,11 @@ result.internaltoks = {
 syntax.internaltoks = setsyntaxfromresult(result.internaltoks)
 
 syntax.italiccorrection = newsyntax {
-    ["/"]            = false,
-    italiccorrection = false,
-    leftcorrection   = false,
-    rightcorrection  = false,
+    ["/"]                    = false,
+    explicititaliccorrection = false,
+    forcedleftcorrection     = false,
+    forcedrightcorrection    = false,
+    italiccorrection         = false,
 }
 
 syntax.kern = newsyntax {
@@ -947,7 +1004,13 @@ syntax.leader = newsyntax {
     cleaders = sequence(choice(s_box,s_rule,s_glyph),s_glue),
     gleaders = sequence(choice(s_box,s_rule,s_glyph),s_glue),
     leaders  = sequence(choice(s_box,s_rule,s_glyph),s_glue),
-    uleaders = sequence(optional(sequence(keyword("callback"), s_integer)),choice(s_box,s_rule,s_glyph),s_glue),
+    uleaders = sequence(
+        optional(sequence(keyword("callback"),s_integer)),
+        optional(keyword("line")),
+        optional(keyword("nobreak")),
+        choice(s_box,s_rule,s_glyph),
+        s_glue
+    ),
     xleaders = sequence(choice(s_box,s_rule,s_glyph),s_glue),
 }
 
@@ -974,9 +1037,10 @@ syntax.let = newsyntax {
 }
 
 syntax.localbox = newsyntax {
-    localleftbox   = s_box,
-    localmiddlebox = s_box,
-    localrightbox  = s_box,
+    localleftbox    = s_box,
+    localmiddlebox  = s_box,
+    localrightbox   = s_box,
+    resetlocalboxes = false,
 }
 
 syntax.luafunctioncall = newsyntax {
@@ -999,7 +1063,7 @@ do
         optional(sequence(keyword("adapt"),s_scale)),
         optional(sequence(keyword("attr"),s_integer,s_integer)),
         optional(sequence(keyword("anchor"),s_integer)),
-        optional(sequence(keyword("axis"),s_integer)),
+        optional(sequence(keyword("axis"),s_integer)),          -- axis and noaxis
         optional(sequence(keyword("shift"),s_dimension)),
         optional(sequence(keyword("spread"),s_dimension)),
         optional(sequence(keyword("source"),s_integer)),
@@ -1014,7 +1078,9 @@ do
         optional(keyword("retain")),
         optional(keyword("container")),
         optional(keyword("mathtext")),
+     -- optional(keyword("discarded")),
         optional(sequence(keyword("class"),s_integer)),
+        optional(keyword("swap")),
         s_tokens
     )
 
@@ -1024,6 +1090,7 @@ do
         dbox              = make,
         dpack             = make,
         dsplit            = split,
+        flushmvl          = s_integer,
         hbox              = make,
         hpack             = make,
         insertbox         = s_integer,
@@ -1034,6 +1101,35 @@ do
         localrightboxbox  = false,
         tpack             = make,
         tsplit            = split,
+        vbalance          = sequence(
+            optional(keyword("exactly")),
+            optional(keyword("additional")),
+            optional(keyword("trial")),
+            s_boxreference
+        ),
+        vbalancedbox      = s_boxreference,
+        vbalancedtop      = s_boxreference,
+        vbalancedinsert   = sequence(
+            s_boxreference,
+            optional(keyword("index")),
+            optional(keyword("descend")),
+            s_integer
+        ),
+        vbalanceddiscard  = sequence(
+            s_boxreference,
+            optional(keyword("descend")),
+            optional(keyword("remove"))
+        ),
+        vbalanceddeinsert  = sequence(
+            s_boxreference,
+            optional(keyword("descend")),
+            optional(keyword("forceheight")),
+            optional(keyword("forcedepth"))
+        ),
+        vbalancedreinsert  = sequence(
+            s_boxreference,
+            optional(keyword("descend"))
+        ),
         vbox              = make,
         vpack             = make,
         vsplit            = split,
@@ -1072,6 +1168,7 @@ syntax.mathcharnumber = newsyntax {
     mathclass      = s_integer,
     mathdictionary = sequence(s_integer,s_mathchar),
     mathchar       = s_integer,
+    nomathchar     = false,
 }
 
 syntax.mathchoice = newsyntax {
@@ -1169,7 +1266,8 @@ do
         optional(sequence(keyword("hfactor"),s_integer)),
         optional(sequence(keyword("vfactor"),s_integer)),
         optional(keyword("font")),
-        optional(sequence(keyword("thickness"),s_dimension))
+        optional(sequence(keyword("thickness"),s_dimension)),
+        optional(keyword("usecallback"))
     )
 
     -- needs checking
@@ -1229,7 +1327,8 @@ do
         optional(keyword("left")),
         optional(keyword("middle")),
         optional(keyword("right")),
-        optional(keyword("nooverflow"))
+        optional(keyword("nooverflow")),
+        optional(keyword("usecallback"))
     )
 
     syntax.mathradical = newsyntax {
@@ -1248,21 +1347,22 @@ do
 end
 
 syntax.mathscript = newsyntax {
+    indexedsubprescript   = s_mathtokens,
+    indexedsubscript      = s_mathtokens,
+    indexedsuperprescript = s_mathtokens,
+    indexedsuperscript    = s_mathtokens,
+    noatomruling          = false,
+    nonscript             = false,
+    noscript              = false,
     nosubprescript        = false,
     nosubscript           = false,
     nosuperprescript      = false,
     nosuperscript         = false,
     primescript           = s_mathtokens,
-    shiftedsubprescript   = s_mathtokens,
-    shiftedsubscript      = s_mathtokens,
-    shiftedsuperprescript = s_mathtokens,
-    shiftedsuperscript    = s_mathtokens,
     subprescript          = s_mathtokens,
     subscript             = s_mathtokens,
     superprescript        = s_mathtokens,
     superscript           = s_mathtokens,
-    noatomruling          = false,
-    nonscript             = false,
 }
 
 syntax.mathshiftcs = newsyntax {
@@ -1290,6 +1390,7 @@ syntax.mathstyle = newsyntax {
     crampedscriptscriptstyle = false,
     crampedscriptstyle       = false,
     crampedtextstyle         = false,
+    currentlysetmathstyle    = false,
     displaystyle             = false,
     scaledmathstyle          = s_integer,
     scriptscriptstyle        = false,
@@ -1314,6 +1415,16 @@ syntax.mkern = newsyntax {
 syntax.mskip = newsyntax {
     mathatomskip = s_muglue,
     mskip        = s_muglue,
+}
+
+syntax.mvl = newsyntax {
+    beginmvl = sequence(
+        optional(sequence(keyword("index"),s_integer)),
+        optional(sequence(keyword("options"),s_integer)),
+        optional(sequence(keyword("prevdepth"),s_dimension)),
+        optional(s_integer)
+    ),
+    endmvl   = s_integer,
 }
 
 syntax.noexpand = newsyntax {
@@ -1417,13 +1528,17 @@ syntax.boxproperty = newsyntax {
     boxfreeze      = sequence(s_boxreference,o_equal,s_integer),
     boxfinalize    = sequence(s_boxreference,o_equal,s_integer),
     boxgeometry    = sequence(s_boxreference,o_equal,s_integer),
+    boxinserts     = sequence(s_boxreference,o_equal,s_integer),
+    boxlimit       = s_boxreference,
     boxlimitate    = sequence(s_boxreference,o_equal,s_integer),
+    boxmigrate     = sequence(s_boxreference,o_equal,s_integer),
     boxorientation = sequence(s_boxreference,o_equal,s_integer),
     boxrepack      = s_boxreference,
     boxshift       = sequence(s_boxreference,o_equal,s_dimension),
     boxshrink      = s_boxreference,
     boxsource      = sequence(s_boxreference,o_equal,s_integer),
     boxstretch     = s_boxreference,
+    boxsubtype     = s_boxreference,
     boxtarget      = sequence(s_boxreference,o_equal,s_integer),
     boxtotal       = s_boxreference,
     boxvadjust     = sequence(s_boxreference,s_tokens), -- todo: pre/post etc
@@ -1582,15 +1697,12 @@ do
         Umathoverdelimitervgap              = dimension,
         Umathoverlayaccentvariant           = variant,
         Umathoverlinevariant                = variant,
-        Umathpresubshiftdistance            = dimension,
-        Umathpresupshiftdistance            = dimension,
         Umathprimeraise                     = dimension,
         Umathprimeraisecomposed             = dimension,
         Umathprimeshiftdrop                 = dimension,
         Umathprimeshiftup                   = dimension,
         Umathprimespaceafter                = dimension,
         Umathprimevariant                   = variant,
-        Umathprimewidth                     = dimension,
         Umathquad                           = dimension,
         Umathradicaldegreeafter             = dimension,
         Umathradicaldegreebefore            = dimension,
@@ -1608,20 +1720,21 @@ do
         Umathskewedfractionvgap             = dimension,
         Umathspaceafterscript               = dimension,
         Umathspacebeforescript              = dimension,
+        Umathspacebetweenscript             = dimension,
         Umathstackdenomdown                 = dimension,
         Umathstacknumup                     = dimension,
         Umathstackvariant                   = variant,
         Umathstackvgap                      = dimension,
+        Umathsubscriptsnap                  = dimension,
         Umathsubscriptvariant               = variant,
-        Umathsubshiftdistance               = dimension,
         Umathsubshiftdown                   = dimension,
         Umathsubshiftdrop                   = dimension,
         Umathsubsupshiftdown                = dimension,
         Umathsubsupvgap                     = dimension,
         Umathsubtopmax                      = dimension,
         Umathsupbottommin                   = dimension,
+        Umathsuperscriptsnap                = dimension,
         Umathsuperscriptvariant             = dimension,
-        Umathsupshiftdistance               = dimension,
         Umathsupshiftdrop                   = dimension,
         Umathsupshiftup                     = dimension,
         Umathsupsubbottommax                = dimension,
@@ -1691,9 +1804,12 @@ do
         insertmultiplier     = { s_integer, s_integer },
         insertpenalties      = r_integer,
         insertpenalty        = { s_integer, s_integer },
+        insertshrink         = { s_integer, s_dimension },
         insertstorage        = { s_integer, s_integer },
         insertstoring        = r_integer,
+        insertstretch        = { s_integer, s_dimension },
         insertwidth          = { s_integer, s_dimension },
+        mvlcurrentlyactive   = r_integer,
         pagedepth            = r_dimension,
         pageexcess           = r_dimension,
         pagefilllstretch     = r_dimension,
@@ -1705,6 +1821,7 @@ do
         pagelastfilllstretch = r_dimension,
         pagelastfillstretch  = r_dimension,
         pagelastfilstretch   = r_dimension,
+        pagelastfistretch    = r_dimension,
         pagelastheight       = r_dimension,
         pagelastshrink       = r_dimension,
         pagelaststretch      = r_dimension,
@@ -1712,176 +1829,261 @@ do
         pagestretch          = r_dimension,
         pagetotal            = r_dimension,
         pagevsize            = r_dimension,
+        splitlastdepth       = r_dimension,
+        splitlastheight      = r_dimension,
+        splitlastshrink      = r_dimension,
+        splitlaststretch     = r_dimension,
     }
 
     syntax.pageproperty = setsyntaxfromresult(result.pageproperty)
 
 end
 
+local s_adjacentdemerits <const> = "<adjacentdemerits>"
+local s_fitnessclasses   <const> = "<fitnessclasses>"
+local s_orphanclasses    <const> = "<orphanpenalties>"
+local s_toddlerpenalties <const> = "<toddlerpenalties>"
+
 syntax.specification = newsyntax {
+    adjacentdemerits      = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
+    balancepasses         = sequence(
+                                optional(keyword("options"),s_integer),
+                                repeated(
+                                    optional(keyword("next")),
+                                    optional(keyword("quit")),
+                                 -- optional(keyword("skip")),
+                                    optional(sequence(keyword("adjdemerits"),s_integer)),
+                                    optional(sequence(keyword("classes"),s_integer)),
+                                    optional(sequence(keyword("demerits"),s_integer)),
+                                    optional(sequence(keyword("emergencyfactor"),s_integer)),
+                                    optional(sequence(keyword("emergencypercentage"),s_dimension)),
+                                    optional(sequence(keyword("emergencystretch"),s_dimension)),
+                                 -- optional(sequence(keyword("emergencyshrink"),s_dimension)),
+                                    optional(sequence(keyword("fitnessclasses"),s_fitnessclasses)),
+                                    optional(sequence(keyword("identifier"),s_integer)),
+                                    optional(sequence(keyword("ifemergencystretch"),s_integer)),
+                                    optional(sequence(keyword("iflooseness"),s_integer)),
+                                    optional(sequence(keyword("looseness"),s_integer)),
+                                    optional(sequence(keyword("threshold"),s_dimension)),
+                                    optional(sequence(keyword("tolerance"),s_integer)),
+                                    optional(sequence(keyword("pagebreakchecks"),s_integer)),
+                                    optional(sequence(keyword("pagepenalty"),s_integer))
+                                )
+                            ),
+    balanceshape          = sequence(
+                                optional(keyword("options"),s_integer),
+                                repeated(
+                                    optional(keyword("next")),
+                                    optional(sequence(keyword("index"),s_integer)),
+                                    optional(sequence(keyword("identifier"),s_integer)),
+                                    optional(sequence(keyword("height"),s_dimension)),
+                                    optional(sequence(keyword("top"),s_glue)),
+                                    optional(sequence(keyword("bottom"),s_glue)),
+                                    optional(sequence(keyword("options"),s_integer))
+                                )
+                            ),
+    brokenpenalties       = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     clubpenalties         = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     displaywidowpenalties = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
+    finalbalancepenalties = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
+    fitnessclasses        = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     interlinepenalties    = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     mathbackwardpenalties = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     mathforwardpenalties  = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     orphanpenalties       = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
+    toddlerpenalties      = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
     parpasses             = sequence(
                                 optional(keyword("options"),s_integer),
                                 repeated(
+                                    optional(keyword("next")),
+                                    optional(keyword("quit")),
+                                    optional(keyword("skip")),
                                     optional(sequence(keyword("adjdemerits"),s_integer)),
+                                    optional(sequence(keyword("adjacentdemerits"),s_adjacentdemerits)),
                                     optional(sequence(keyword("adjustspacing"),s_integer)),
-                                    optional(sequence(keyword("adjustspacingstep"),s_integer)),
                                     optional(sequence(keyword("adjustspacingshrink"),s_integer)),
+                                    optional(sequence(keyword("adjustspacingstep"),s_integer)),
                                     optional(sequence(keyword("adjustspacingstretch"),s_integer)),
-                                    optional(sequence(keyword("badness"),s_integer)),
-                                    optional(sequence(keyword("classes"),s_integer)),
+                                 -- optional(sequence(keyword("badness"),s_integer)),
                                     optional(sequence(keyword("callback"),s_integer)),
+                                    optional(sequence(keyword("classes"),s_integer)),
+                                    optional(sequence(keyword("demerits"),s_integer)),
                                     optional(sequence(keyword("doubleadjdemerits"),s_integer)),
                                     optional(sequence(keyword("doublehyphendemerits"),s_integer)),
+                                    optional(sequence(keyword("emergencyfactor"),s_integer)),
+                                    optional(sequence(keyword("emergencyleftextra"),s_integer)),
+                                    optional(sequence(keyword("emergencypercentage"),s_dimension)),
+                                    optional(sequence(keyword("emergencyrightextra"),s_integer)),
                                     optional(sequence(keyword("emergencystretch"),s_dimension)),
+                                    optional(sequence(keyword("emergencywidthextra"),s_integer)),
                                     optional(sequence(keyword("extrahyphenpenalty"),s_integer)),
                                     optional(sequence(keyword("finalhyphendemerits"),s_integer)),
+                                    optional(sequence(keyword("fitnessclasses"),s_fitnessclasses)),
+                                    optional(sequence(keyword("hyphenation"),s_integer)),
                                     optional(sequence(keyword("identifier"),s_integer)),
                                     optional(sequence(keyword("ifadjustspacing"),s_integer)),
-                                    optional(sequence(keyword("looseness"),s_integer)),
+                                    optional(sequence(keyword("ifemergencystretch"),s_integer)),
+                                    optional(sequence(keyword("ifglue"),s_integer)),
+                                    optional(sequence(keyword("iflooseness"),s_integer)),
+                                    optional(sequence(keyword("ifmath"),s_integer)),
+                                    optional(sequence(keyword("iftext"),s_integer)),
+                                    optional(sequence(keyword("lefttwindemerits"),s_integer)),
+                                    optional(sequence(keyword("linebreakchecks"),s_integer)),
                                     optional(sequence(keyword("linebreakcriterium"),s_integer)),
                                     optional(sequence(keyword("linebreakoptional"),s_integer)),
                                     optional(sequence(keyword("linepenalty"),s_integer)),
-                                    optional(keyword("next")),
-                                    optional(sequence(keyword("orphanpenalty"),s_integer)),
-                                    optional(keyword("quit")),
-                                    optional(keyword("skip")),
+                                    optional(sequence(keyword("looseness"),s_integer)),
+                                    optional(sequence(keyword("mathpenaltyfactor"),s_integer)),
+                                    optional(sequence(keyword("orphanpenalties"),s_orphanpenalties)),
+                                    optional(sequence(keyword("toddlerpenalties"),s_toddlerpenalties)),
+                                    optional(sequence(keyword("righttwindemerits"),s_integer)),
                                     optional(sequence(keyword("threshold"),s_dimension)),
-                                    optional(sequence(keyword("tolerance"),s_integer))
+                                    optional(sequence(keyword("tolerance"),s_integer)),
+                                    optional(sequence(keyword("unlessmath"),s_integer))
                                 )
                             ),
+    parpassesexception    = f_see("parpasses"),
     parshape              = sequence(optional(keyword("options"),s_integer),s_integer,repeated(sequence(s_dimension,s_dimension))),
     widowpenalties        = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
+
+ -- dimen                 = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_integer)),
+ -- count                 = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_dimension)),
+ -- float                 = sequence(optional(keyword("options"),s_integer),s_integer,repeated(s_float)),
 }
 
 result.specification = setdefaultresult(syntax.specification, r_integer)
 
 syntax.shorthanddef = newsyntax {
-    Umathchardef  = sequence(s_cs,s_integer),
-    Umathdictdef  = sequence(s_cs,s_integer,s_integer),
-    attributedef  = sequence(s_cs,s_integer),
-    chardef       = sequence(s_cs,s_integer),
-    countdef      = sequence(s_cs,s_integer),
-    dimendef      = sequence(s_cs,s_integer),
-    dimensiondef  = sequence(s_cs,s_integer),
-    floatdef      = sequence(s_cs,s_integer),
-    fontspecdef   = sequence(s_cs,s_font),
-    gluespecdef   = sequence(s_cs,s_integer),
-    integerdef    = sequence(s_cs,s_integer),
-    luadef        = sequence(s_cs,s_integer),
-    mathchardef   = sequence(s_cs,s_integer),
-    mugluespecdef = sequence(s_cs,s_integer),
-    muskipdef     = sequence(s_cs,s_integer),
-    parameterdef  = sequence(s_cs,s_integer),
-    positdef      = sequence(s_cs,s_integer),
-    skipdef       = sequence(s_cs,s_integer),
-    toksdef       = sequence(s_cs,s_integer),
+    Umathchardef     = sequence(s_cs,s_integer),
+    Umathdictdef     = sequence(s_cs,s_integer,s_integer),
+    attributedef     = sequence(s_cs,s_integer),
+    chardef          = sequence(s_cs,s_integer),
+    countdef         = sequence(s_cs,s_integer),
+    dimendef         = sequence(s_cs,s_integer),
+    dimensiondef     = sequence(s_cs,s_integer),
+    floatdef         = sequence(s_cs,s_integer),
+    fontspecdef      = sequence(s_cs,s_font),
+    gluespecdef      = sequence(s_cs,s_integer),
+    integerdef       = sequence(s_cs,s_integer),
+    luadef           = sequence(s_cs,s_integer),
+    mathchardef      = sequence(s_cs,s_integer),
+    mugluespecdef    = sequence(s_cs,s_integer),
+    muskipdef        = sequence(s_cs,s_integer),
+    parameterdef     = sequence(s_cs,s_integer),
+    positdef         = sequence(s_cs,s_integer),
+    skipdef          = sequence(s_cs,s_integer),
+    specificationdef = sequence(s_cs,s_specification),
+    toksdef          = sequence(s_cs,s_integer),
 }
 
 result.someitem = newresult {
-    mathcharclass          = { s_integer, s_integer },
-    mathcharfam            = { s_integer, s_integer },
-    mathcharslot           = { s_integer, s_integer },
-    badness                = { "", s_integer },
-    currentgrouplevel      = { "", s_integer },
-    currentgrouptype       = { "", s_integer },
-    currentifbranch        = { "", s_integer },
-    currentiflevel         = { "", s_integer },
-    currentiftype          = { "", s_integer },
-    currentloopiterator    = { "", s_integer },
-    currentloopnesting     = { "", s_integer },
-    currentstacksize       = { "", s_integer },
-    dimexpr                = { s_expression, s_dimension },
-    dimexpression          = { s_expression, s_dimension },
-    floatexpr              = { s_expression, s_float },
-    fontcharba             = { s_fontchar, s_dimension },
-    fontchardp             = { s_fontchar, s_dimension },
-    fontcharht             = { s_fontchar, s_dimension },
-    fontcharic             = { s_fontchar, s_dimension },
-    fontcharta             = { s_fontchar, s_dimension },
-    fontcharwd             = { s_fontchar, s_dimension },
-    fontid                 = { s_font, s_integer },
-    fontmathcontrol        = { s_font, s_integer },
-    fontspecid             = { s_font, s_integer },
-    fontspecifiedsize      = { s_font, s_integer },
-    fontspecscale          = { s_font, s_integer },
-    fontspecslant          = { s_font, s_integer },
-    fontspecxscale         = { s_font, s_integer },
-    fontspecyscale         = { s_font, s_integer },
-    fontspecweight         = { s_font, s_integer },
-    fonttextcontrol        = { s_font, s_integer },
-    glueexpr               = { s_expression, s_glue },
-    glueshrink             = { s_glue, s_dimension },
-    glueshrinkorder        = { s_glue, s_dimension },
-    gluestretch            = { s_glue, s_integer},
-    gluestretchorder       = { s_glue, s_integer},
-    gluetomu               = { s_glue, s_glue },
-    glyphxscaled           = { "", s_integer },
-    glyphyscaled           = { "", s_integer },
-    indexofcharacter       = { s_integer, s_integer },
-    indexofregister        = { s_integer, s_integer },
-    inputlineno            = { "",s_integer },
-    insertprogress         = { s_integer, s_dimension },-- check
-    lastarguments          = { "", s_integer },
-    lastatomclass          = { "", s_integer },
-    lastboundary           = { "", s_integer },
-    lastchkdimension       = { "", s_dimension },
-    lastchknumber          = { "", s_integer },
-    lastkern               = { "", s_dimension },
-    lastleftclass          = { "", s_integer },
-    lastloopiterator       = { "", s_integer },
-    lastnodesubtype        = { "", s_integer },
-    lastnodetype           = { "", s_integer },
-    lastpageextra          = { "", s_dimension },
-    lastparcontext         = { "", s_integer },
-    lastpenalty            = { "", s_integer },
-    lastrightclass         = { "", s_integer },
-    lastskip               = { "", s_glue },
-    leftmarginkern         = { "", s_dimension }, -- check
-    luatexrevision         = { "", s_tokens },
-    luatexversion          = { "", s_tokens },
-    mathatomglue           = { "", s_glue },
-    mathmainstyle          = { "", s_integer },
-    mathscale              = { "", s_integer },
-    mathstackstyle         = { "", s_integer },
-    mathstyle              = { "", s_integer },
-    mathstylefontid        = { "", s_integer },
-    muexpr                 = { s_expression, s_muglue },
-    mutoglue               = { s_muglue, s_glue },
-    nestedloopiterator     = { "", s_integer },
-    numericscale           = { s_number, s_integer },
-    numericscaled          = { s_number, s_integer },
-    numexpr                = { s_expression, s_integer },
-    numexpression          = { s_expression, s_integer },
-    overshoot              = { "", s_dimension },
-    parametercount         = { "", s_integer },
-    parameterindex         = { "", s_integer },
-    parshapedimen          = { s_integer, s_dimension },
-    parshapeindent         = { s_integer, s_dimension },
-    parshapelength         = { "", s_dimension },
-    previousloopiterator   = { "", s_integer },
-    rightmarginkern        = { "", s_dimension }, -- check
-    scaledemwidth          = { s_font, s_dimension },
-    scaledexheight         = { s_font, s_dimension },
-    scaledextraspace       = { s_font, s_dimension },
-    scaledfontcharba       = { s_fontchar, s_dimension },
-    scaledfontchardp       = { s_fontchar, s_dimension },
-    scaledfontcharht       = { s_fontchar, s_dimension },
-    scaledfontcharic       = { s_fontchar, s_dimension },
-    scaledfontcharta       = { s_fontchar, s_dimension },
-    scaledfontcharwd       = { s_fontchar, s_dimension },
-    scaledinterwordshrink  = { s_font, s_dimension },
-    scaledinterwordspace   = { s_font, s_dimension },
-    scaledinterwordstretch = { s_font, s_dimension },
-    scaledmathaxis         = { s_mathstyle, s_dimension },
-    scaledmathemwidth      = { s_mathstyle, s_dimension },
-    scaledmathexheight     = { s_mathstyle, s_dimension },
-    scaledslantperpoint    = { s_font, s_dimension },
+    mathcharclass           = { s_integer, s_integer },
+    mathcharfam             = { s_integer, s_integer },
+    mathcharslot            = { s_integer, s_integer },
+    badness                 = { "", s_integer   },
+    balanceshapebottomspace = { s_integer, s_dimension },
+    balanceshapetopspace    = { s_integer, s_dimension },
+    balanceshapevsize       = { s_integer, s_dimension },
+    currentgrouplevel       = { "", s_integer },
+    currentgrouptype        = { "", s_integer },
+    currentifbranch         = { "", s_integer },
+    currentiflevel          = { "", s_integer },
+    currentiftype           = { "", s_integer },
+    currentloopiterator     = { "", s_integer },
+    currentloopnesting      = { "", s_integer },
+    currentstacksize        = { "", s_integer },
+    dimexpr                 = { s_expression, s_dimension },
+    dimexpression           = { s_expression, s_dimension },
+    floatexpr               = { s_expression, s_float },
+    fontcharba              = { s_fontchar, s_dimension },
+    fontchardp              = { s_fontchar, s_dimension },
+    fontcharht              = { s_fontchar, s_dimension },
+    fontcharic              = { s_fontchar, s_dimension },
+    fontcharta              = { s_fontchar, s_dimension },
+    fontcharwd              = { s_fontchar, s_dimension },
+    fontid                  = { s_font, s_integer },
+    fontmathcontrol         = { s_font, s_integer },
+    fontspecid              = { s_font, s_integer },
+    fontspecifiedsize       = { s_font, s_integer },
+    fontspecscale           = { s_font, s_integer },
+    fontspecslant           = { s_font, s_integer },
+    fontspecxscale          = { s_font, s_integer },
+    fontspecyscale          = { s_font, s_integer },
+    fontspecweight          = { s_font, s_integer },
+    fonttextcontrol         = { s_font, s_integer },
+    glueexpr                = { s_expression, s_glue },
+    glueshrink              = { s_glue, s_dimension },
+    glueshrinkorder         = { s_glue, s_dimension },
+    gluestretch             = { s_glue, s_integer},
+    gluestretchorder        = { s_glue, s_integer},
+    gluetomu                = { s_glue, s_glue },
+    glyphxscaled            = { "", s_integer },
+    glyphyscaled            = { "", s_integer },
+    indexofcharacter        = { s_integer, s_integer },
+    indexofregister         = { s_integer, s_integer },
+    inputlineno             = { "",s_integer },
+    insertprogress          = { s_integer, s_dimension },-- check
+    lastarguments           = { "", s_integer },
+    lastatomclass           = { "", s_integer },
+    lastboundary            = { "", s_integer },
+    lastchkdimension        = { "", s_dimension },
+    lastchknumber           = { "", s_integer },
+    lastkern                = { "", s_dimension },
+    lastleftclass           = { "", s_integer },
+    lastloopiterator        = { "", s_integer },
+    lastnodesubtype         = { "", s_integer },
+    lastnodetype            = { "", s_integer },
+    lastpageextra           = { "", s_dimension },
+    lastparcontext          = { "", s_integer },
+    lastpartrigger          = { "", s_integer },
+    lastpenalty             = { "", s_integer },
+    lastrightclass          = { "", s_integer },
+    lastskip                = { "", s_glue },
+    leftmarginkern          = { "", s_dimension }, -- check
+    luametatexmajorversion  = { "", s_integer },
+    luametatexminorversion  = { "", s_integer },
+    luametatexrelease       = { "", s_integer },
+    luatexrevision          = { "", s_integer },
+    luatexversion           = { "", s_integer },
+    mathatomglue            = { "", s_glue },
+    mathmainstyle           = { "", s_integer },
+    mathparentstyle         = { "", s_integer },
+    mathscale               = { "", s_integer },
+    mathstackstyle          = { "", s_integer },
+    mathstyle               = { "", s_integer },
+    mathstylefontid         = { "", s_integer },
+    muexpr                  = { s_expression, s_muglue },
+    mutoglue                = { s_muglue, s_glue },
+    nestedloopiterator      = { "", s_integer },
+    numericscale            = { s_number, s_integer },
+    numericscaled           = { s_number, s_integer },
+    numexpr                 = { s_expression, s_integer },
+    numexpression           = { s_expression, s_integer },
+    overshoot               = { "", s_dimension },
+    parametercount          = { "", s_integer },
+    parameterindex          = { "", s_integer },
+    parshapedimen           = { s_integer, s_dimension },
+    parshapeindent          = { s_integer, s_dimension },
+    parshapelength          = { "", s_dimension },
+    parshapewidth           = { "", s_dimension },
+    previousloopiterator    = { "", s_integer },
+    rightmarginkern         = { "", s_dimension }, -- check
+    scaledemwidth           = { s_font, s_dimension },
+    scaledexheight          = { s_font, s_dimension },
+    scaledextraspace        = { s_font, s_dimension },
+    scaledfontcharba        = { s_fontchar, s_dimension },
+    scaledfontchardp        = { s_fontchar, s_dimension },
+    scaledfontcharht        = { s_fontchar, s_dimension },
+    scaledfontcharic        = { s_fontchar, s_dimension },
+    scaledfontcharta        = { s_fontchar, s_dimension },
+    scaledfontcharwd        = { s_fontchar, s_dimension },
+    scaledinterwordshrink   = { s_font, s_dimension },
+    scaledinterwordspace    = { s_font, s_dimension },
+    scaledinterwordstretch  = { s_font, s_dimension },
+    scaledmathaxis          = { s_mathstyle, s_dimension },
+    scaledmathemwidth       = { s_mathstyle, s_dimension },
+    scaledmathexheight      = { s_mathstyle, s_dimension },
+    scaledslantperpoint     = { s_font, s_dimension },
 }
 
 syntax.someitem = setsyntaxfromresult(result.someitem)
@@ -1903,13 +2105,14 @@ syntax.unhbox = newsyntax {
 }
 
 syntax.unvbox = newsyntax {
-    insertunbox   = s_integer,
-    insertuncopy  = s_integer,
-    pagediscards  = false,
-    splitdiscards = false,
-    unvbox        = s_integer,
-    unvcopy       = s_integer,
-    unvpack       = s_integer,
+    copysplitdiscards = false,
+    insertunbox       = s_integer,
+    insertuncopy      = s_integer,
+    pagediscards      = false,
+    splitdiscards     = false,
+    unvbox            = s_integer,
+    unvcopy           = s_integer,
+    unvpack           = s_integer,
 }
 
 syntax.vadjust = newsyntax {
@@ -1940,10 +2143,10 @@ syntax.vmove = newsyntax {
 }
 
 syntax.vrule = newsyntax {
-    novrule      = syntax.hrule.hrule,
-    srule        = syntax.hrule.hrule,
-    virtualvrule = syntax.hrule.virtualhrule,
-    vrule        = syntax.hrule.hrule,
+    novrule      = normal_rule,
+    srule        = strut_rule,
+    virtualvrule = normal_rule,
+    vrule        = normal_rule,
 }
 
 syntax.vskip = newsyntax {
@@ -1955,14 +2158,15 @@ syntax.vskip = newsyntax {
 }
 
 syntax.xray = newsyntax {
-    show       = s_token,
-    showbox    = s_boxreference,
-    showgroups = false,
-    showifs    = false,
-    showlists  = false,
-    showstack  = false,
-    showthe    = s_quantity,
-    showtokens = s_tokens,
+    show          = s_token,
+    showbox       = s_boxreference,
+    showcodestack = false,
+    showgroups    = false,
+    showifs       = false,
+    showlists     = false,
+    showstack     = false,
+    showthe       = s_quantity,
+    showtokens    = s_tokens,
 }
 
 -- so far
@@ -2148,8 +2352,16 @@ end
 
 do
 
-    function moduledata.engine.codes(name)
-        local t = type(name) == "table" and name or tex[name]
+    local context = context
+
+    local ctx_NC, ctx_NR = context.NC, context.NR
+    local ctx_starttabulate, ctx_stoptabulate = context.starttabulate, context.stoptabulate
+
+    function moduledata.engine.codes(name,...)
+        local t = (type(name) == "table" and name) or tex[name]
+        if type(t) == "function" then
+            t = t(...)
+        end
         if t then
             local l = { }
             for k, v in table.sortedhash(t) do
@@ -2158,18 +2370,79 @@ do
                 end
             end
             local m = l[#l]
-            local f = (m > 0xFFFF and "0x%08X") or (m > 0x00FF and "0x%04X") or "0x%02X"
-            context.starttabulate { "|lT|l|" }
+            local f = (m > 0x00FFFFFF and "0x%08X") or (m > 0x000FFFF and "0x%06X") or (m > 0x00FF and "0x%04X") or "0x%02X"
+            ctx_starttabulate { "|lT|l|" }
             for i=1,#l do
                 local li = l[i]
-                context.NC()
-                context(f,li)
-                context.NC()
-                context(t[li])
-                context.NC()
-                context.NR()
+                ctx_NC() context(f,li)
+                ctx_NC() context(t[li])
+                ctx_NC() ctx_NR()
             end
-            context.stoptabulate()
+            ctx_stoptabulate()
+        else
+            context("there is no function tex.%s",name)
+        end
+    end
+
+    function moduledata.mplib.codes(what)
+        local f = mplib[what]
+        if f then
+            local t = f()
+            if t then
+                ctx_starttabulate { "|lT|l|" }
+                if #t > 0 then
+                    for i=0,#t do
+                        ctx_NC() context(i)
+                        ctx_NC() context(t[i])
+                        ctx_NC() ctx_NR()
+                    end
+                else
+                    for k, v in table.sortedhash(t) do
+                        ctx_NC() context(k)
+                        ctx_NC() context(v)
+                        ctx_NC() ctx_NR()
+                    end
+                end
+                ctx_stoptabulate()
+            end
+        else
+            context("there is no function mplib.%s",what)
+        end
+    end
+
+    function moduledata.pdfe.codes(what)
+        local f = pdfe[what]
+        if f then
+            local t = f()
+            if t then
+                ctx_starttabulate { "|lT|l|" }
+                for k, v in table.sortedhash(t) do
+                    ctx_NC() context(k)
+                    ctx_NC() context(v)
+                    ctx_NC() ctx_NR()
+                end
+                ctx_stoptabulate()
+            end
+        else
+            context("there is no function pdfe.%s",what)
+        end
+    end
+
+    function moduledata.node.codes(what,...)
+        local f = node[what]
+        if f then
+            local t = f(...)
+            if t then
+                ctx_starttabulate { "|lT|l|" }
+                for k, v in table.sortedhash(t) do
+                    ctx_NC() context(k)
+                    ctx_NC() context(v)
+                    ctx_NC() ctx_NR()
+                end
+                ctx_stoptabulate()
+            end
+        else
+            context("there is no function node.%s",what)
         end
     end
 

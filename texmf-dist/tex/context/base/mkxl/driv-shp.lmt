@@ -45,7 +45,6 @@ local getshift           = nuts.getshift
 local getreplace         = nuts.getreplace
 local setreplace         = nuts.setreplace
 local getfont            = nuts.getfont
-local getxscale          = nuts.getxscale
 local getboth            = nuts.getboth
 
 local getglyphdimensions = nuts.getglyphdimensions
@@ -267,7 +266,7 @@ local flush_character, flush_space  do
 
         -- we assume resolved fonts: id mandate but maybe also size
 
-        local function flushchar(fnt,chr,csx,csy) -- can't be moved out of the function due to binding locals
+        local function flushchar(fnt,chr,csx,csy,slnt) -- can't be moved out of the function due to binding locals
             if fnt then                           -- to the function variables etc etc ... kind of messy
                 local nest = char ~= chr or font ~= fnt
                 if fnt == 0 then
@@ -285,7 +284,7 @@ local flush_character, flush_space  do
                 end
                 -- here no current!
              -- return flushcharacter(false,pos_h,pos_v,pos_r,fnt,chr,nil,csx,csy,factor,sx,sy,slant,weight)
-                return flush_character(false,fnt,chr,factor,nest,pos_h,pos_v,pos_r,csx,csy,slant,weight)
+                return flush_character(false,fnt,chr,factor,nest,pos_h,pos_v,pos_r,csx,csy,slnt or slant,weight)
             else
                 return 0
             end
@@ -379,12 +378,13 @@ local flush_character, flush_space  do
                 elseif command == "offset" then
                     local c = packet[4]
                     if c then
-                        local ph  = pos_h
-                        local pv  = pos_v
-                        local csx = packet[5]
-                        local csy = packet[6] or csx
-                        local h   = packet[2]
-                        local v   = packet[3]
+                        local ph   = pos_h
+                        local pv   = pos_v
+                        local csx  = packet[5]
+                        local csy  = packet[6] or csx
+                        local h    = packet[2]
+                        local v    = packet[3]
+                        local slnt = packet[7] or false
                         if h and h ~= 0 then
                             if factor ~= 0 then
                                 h = h + h * factor / refactored -- expansion
@@ -394,7 +394,7 @@ local flush_character, flush_space  do
                         if v and v ~= 0 then
                             pos_v = pos_v + v * sy
                         end
-                        flushchar(fnt,c,csx,csy)
+                        flushchar(fnt,c,csx,csy,slnt)
                         pos_h = ph
                         pos_v = pv
                     end
@@ -583,7 +583,7 @@ local flush_character, flush_space  do
 
     local onetimemessage -- could be defined later (todo: make plug for this)
 
-    flush_character = function(current,font,char,factor,vfcommands,pos_h,pos_v,pos_r,csx,csy)
+    flush_character = function(current,font,char,factor,vfcommands,pos_h,pos_v,pos_r,csx,csy,slnt)
 
         if font ~= lastfont then
             lastfont       = font
@@ -631,10 +631,10 @@ local flush_character, flush_space  do
             if orientation and (orientation == 1 or orientation == 3) then
                 -- we can get weird charactersbox tracing here
                 pushorientation(orientation,pos_h,pos_v)
-                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slant,weight)
+                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slnt or slant,weight)
                 poporientation(orientation,pos_h,pos_v)
             else
-                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slant,weight)
+                flushcharacter(current,pos_h,pos_v,pos_r,font,char,data,csx,csy,factor,sx,sy,slnt or slant,weight)
             end
         end
         return width, height, depth
@@ -701,22 +701,23 @@ local function reset_anchors()
     anchors = { }
 end
 
-interfaces.implement {
-    name      = "registeranchorbox",
-    public    = true,
-    protected = true,
-    arguments = { "integer", "integer", "box" },
-    actions   = function(anchor,where,box)
-        box = tonut(box)
-        insert(where < 0 and befores[anchor] or afters[anchor],box)
-        stored = true
-    end
-}
-
 local hlist_out, vlist_out  do
 
     local finalize  = nodes.handlers.finalizelist
     local flushnode = nuts.flushnode
+
+    interfaces.implement {
+        name      = "registeranchorbox",
+        public    = true,
+        protected = true,
+        arguments = { "integer", "integer", "box" },
+        actions   = function(anchor,where,box)
+            box = tonut(box)
+            insert(where < 0 and befores[anchor] or afters[anchor],box)
+            finalize(box,false)
+            stored = true
+        end
+    }
 
     local function flushstored(current,source,before)
         local t = before and befores or afters
@@ -726,7 +727,8 @@ local hlist_out, vlist_out  do
                 local si = s[i]
                 if si then
                     local box = si -- si[1]
-                    finalize(box) -- tricky: we might need to group
+                    -- tagging needs it to be earlier
+                 -- finalize(box,false)
                     if getid(box) == vlist_code then
                         vlist_out(current,box)
                     else
@@ -848,6 +850,24 @@ local hlist_out, vlist_out  do
 
     local eps <const> = 10
 
+    local function handle_except(except)
+        while except do
+            local h  = pos_h
+            local v  = pos_v
+            local r  = pos_r
+            local id = getid(except)
+         -- if id == vlist_code then
+         --     vlist_out(except,except)
+         -- elseif id == hlist_code then
+                hlist_out(except,except)
+         -- end
+            pos_h  = h
+            pos_v  = v
+            pos_r  = r
+            except = getnext(except)
+        end
+    end
+
     hlist_out = function(this_box,current)
         local ref_h = pos_h
         local ref_v = pos_v
@@ -934,7 +954,7 @@ local hlist_out, vlist_out  do
                                     end
                                     cur_h = cur_h + gluewidth
                                 end
-                            elseif (id == hlist_code or id == vlist_code or id == glyph_code) and gluewidth > 0 then
+                            elseif gluewidth > 0 and (id == hlist_code or id == vlist_code or id == glyph_code) then
                                 local width, height, depth = getwhd(leader)
                                 -- no need for //
                                 if width > 0 then
@@ -1049,24 +1069,14 @@ local hlist_out, vlist_out  do
                     else
                         if tospace and (subtype == spaceskip_code or subtype == xspaceskip_code) then
                          -- kind of tricky because because we can have a different sx sy
---                             local xscale = getxscale(current) or 1
---                             flush_character(false,getfont(current),32,false,true,pos_h,pos_v,pos_r,xscale,1)
---                             local xscale = 1
-flush_space(current)
+                            flush_space(current)
                         end
                         cur_h = cur_h + gluewidth
                     end
                 end
             elseif id == hlist_code or id == vlist_code then
---                 local width, height, depth = getwhd(current)
---                 local list = getlist(current)
---                 if list then
---                     local boxdir = getdirection(current) or lefttoright_code
---                     local shift  = getshift(current)
-                local width, height, depth, shift, list = getlistdimensions(current)
+                local width, height, depth, shift, list, except = getlistdimensions(current)
                 if list then
---                     local boxdir = getdirection(current) or lefttoright_code
---                     local geometry, hasoffset, hasorientation, hasanchor = getgeometry(current,true)
                     local geometry, hasoffset, hasorientation, hasanchor, boxdir = getgeometry(current,true)
                     local anchor, source, target, targetdata, s_anchor, t_anchor
                     local anc_h, anc_v
@@ -1192,6 +1202,9 @@ flush_space(current)
                     if source and stored then
                         flushstored(current,source,true)
                     end
+                    if except then
+                        handle_except(except)
+                    end
                     if id == vlist_code then
                         vlist_out(current,list)
                     else
@@ -1207,21 +1220,21 @@ flush_space(current)
                 cur_h = cur_h + width
             elseif id == kern_code then
                 -- when we use getkerndimension we get rounded values
-                if true then
+             -- if true then
                     local kern = getkerndimension(current)
                     if kern ~= 0 then
                         cur_h = cur_h + kern
                     end
-                else
-                   local kern, factor = getkern(current,true)
-                   if kern ~= 0 then
-                       if factor ~= 0 then
-                           cur_h = cur_h + (1.0 + factor/1000000.0) * kern
-                       else
-                           cur_h = cur_h + kern
-                       end
-                   end
-                end
+             -- else
+             --    local kern, factor = getkern(current,true)
+             --    if kern ~= 0 then
+             --        if factor ~= 0 then
+             --            cur_h = cur_h + (1.0 + factor/1000000.0) * kern
+             --        else
+             --            cur_h = cur_h + kern
+             --        end
+             --    end
+             -- end
             elseif id == rule_code then
                 local width, height, depth, virtual = getruledimensions(current)
                 if width > 0 then
@@ -1478,15 +1491,8 @@ flush_space(current)
                     end
                 end
             elseif id == hlist_code or id == vlist_code then
---                 local width, height, depth = getwhd(current)
---                 local list = getlist(current)
---                 if list then
---                     local boxdir = getdirection(current) or lefttoright_code
---                     local shift = getshift(current)
-                local width, height, depth, shift, list = getlistdimensions(current)
+                local width, height, depth, shift, list, except = getlistdimensions(current)
                 if list then
---                     local boxdir = getdirection(current) or lefttoright_code
---                     local geometry, hasoffset, hasorientation, hasanchor = getgeometry(current,true)
                     local geometry, hasoffset, hasorientation, hasanchor, boxdir = getgeometry(current,true)
                     local anchor, source, target, targetdata, s_anchor, t_anchor
                     local usedorientation = false
@@ -1592,8 +1598,6 @@ flush_space(current)
                     goto process
                   ::posdone::
                     if anchor and anchor > 0 then
---                         pos_h, pos_v = applyanchor(anchor,true,t_anchor,pos_h,pos_v,targetdata[3],targetdata[4],targetdata[5])
---                         pos_h, pos_v = applyanchor(anchor,false,s_anchor,pos_h,pos_v,width,height,depth)
                         pos_h, pos_v = applyanchor(t_anchor,true, pos_h,pos_v,targetdata[3],targetdata[4],targetdata[5])
                         pos_h, pos_v = applyanchor(s_anchor,false,pos_h,pos_v,width,height,depth)
                     end
@@ -1618,6 +1622,9 @@ flush_space(current)
                     end
                     if source and stored then
                         flushstored(current,source,true)
+                    end
+                    if except then
+                        handle_except(except)
                     end
                     if id == vlist_code then
                         vlist_out(current,list)
