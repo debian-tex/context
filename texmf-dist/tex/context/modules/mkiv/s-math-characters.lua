@@ -112,6 +112,7 @@ function moduledata.math.characters.showlist(specification)
     local gaps         = mathematics.gaps
     local sorted       = { }
     if type(list) == "string" then
+        -- also accept list
         local b = blocks[list]
         if b then
             sorted = { }
@@ -247,8 +248,7 @@ if method == "manual" then
                             context.NC() if k ~= "" then context.tex(k) end
                             context.NC() context.ex(v)
                             context.NC() if doit then context(description) end
-                            context.NC()
-                            context.NR()
+                            context.NC() context.NR()
                             doit = false
                         end
                     else
@@ -258,8 +258,7 @@ if method == "manual" then
                         context.NC() if mathname then context.tex(mathname) end
                         context.NC() context("ordinary")
                         context.NC() context(lower(description))
-                        context.NC()
-                        context.NR()
+                        context.NC() context.NR()
                     end
                 end
             end

@@ -44,6 +44,12 @@ return {
                     tweak = "checkaccents",
                 },
                 {
+                    tweak = "wipecues",
+                },
+                {
+                    tweak = "addcomposites",
+                },
+                {
                     tweak = "kerns",
                     list  = {
                         ["0x7D.parts.top"]      = { topright = -0.25                      }, -- right brace top

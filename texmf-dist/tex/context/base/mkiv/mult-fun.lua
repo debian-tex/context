@@ -64,13 +64,14 @@ return {
         "paired", "tripled",
         "unitcircle", "fulldiamond", "unitdiamond", "fullsquare", "unittriangle", "fulltriangle",
         "unitoctagon", "fulloctagon", "unithexagon", "fullhexagon",
+        "arc",
      -- "halfcircle", "quartercircle",
         "llcircle", "lrcircle", "urcircle", "ulcircle",
         "tcircle", "bcircle", "lcircle", "rcircle",
         "lltriangle", "lrtriangle", "urtriangle", "ultriangle",
         "uptriangle", "downtriangle", "lefttriangle", "righttriangle", "triangle",
-        "smoothed", "cornered", "superellipsed", "randomized", "randomizedcontrols", "squeezed", "enlonged", "shortened",
-        "punked", "curved", "unspiked", "simplified", "blownup", "stretched",
+        "smoothed", "cornered", "superellipsed", "randomized", "randomizedcontrols", "randomrotatedcontrols",
+        "squeezed", "enlonged", "shortened", "punked", "curved", "unspiked", "simplified", "blownup", "stretched",
         "enlarged", "leftenlarged", "topenlarged", "rightenlarged", "bottomenlarged",
         "crossed", "laddered", "randomshifted", "interpolated", "perpendicular", "paralleled", "cutends", "peepholed",
         "llenlarged", "lrenlarged", "urenlarged", "ulenlarged",
@@ -91,9 +92,12 @@ return {
         "withshadecenter", "withshadedirection", "withshaderadius", "withshadetransform", "withshadecenterone", "withshadecentertwo",
         "withshadestep", "withshadefraction", "withshadeorigin", "shownshadevector", "shownshadeorigin",
         "shownshadedirection", "shownshadecenter",
+        "registerluminositygroup", "applyluminositygroup", "luminositygroup", "luminosityshade",
         "cmyk", "spotcolor", "multitonecolor", "namedcolor",
         "drawfill", "undrawfill",
         "inverted", "uncolored", "softened", "grayed", "greyed",
+        "dashing", "starring",
+        "sortedpath", "uniquepath", "hascurvature",
         "onlayer",
         "along",
         "graphictext", "loadfigure", "externalfigure", "figure", "register",
@@ -109,6 +113,8 @@ return {
         "autoalign",
         "transparent", "withtransparency", "withopacity",
         "property", "properties", "withproperties",
+        "namedstacking", "withnamedstacking",
+        "withannotation",
         "asgroup",
         "withpattern", "withpatternscale", "withpatternfloat",
         "infont", -- redefined using textext
@@ -200,6 +206,7 @@ return {
         "positionwhd", "positionpage", "positionregion", "positionbox", "positionx", "positiony",
         "positionanchor", "positioninregion", "positionatanchor",
         "positioncolumnbox", "overlaycolumnbox", "positioncolumnatx",
+        "positioninregion", "positionpar",
         --
         "getposboxes", "getmultipars",
         "getpospage", "getposparagraph", "getposcolumn", "getposregion",
@@ -214,9 +221,9 @@ return {
         --
         "inpath", "pointof", "leftof", "rightof",
         --
-        "utfnum", "utflen", "utfsub",
+        "utfchr", "utfnum", "utflen", "utfsub",
         --
-        "newhash", "disposehash", "inhash", "tohash", "fromhash",
+        "newhash", "disposehash", "resethash", "inhash", "tohash", "fromhash",
         --
         "isarray", "prefix", "isobject",
         --
@@ -244,5 +251,11 @@ return {
         --
         "xshifted",
         "yshifted",
+        --
+        "reducedpath", "reducedenvelope", "enveloped", "hasreducedcurvature",
+        --
+        "totalarea",
+        --
+        "penstroked", "nepstroke",
     },
 }

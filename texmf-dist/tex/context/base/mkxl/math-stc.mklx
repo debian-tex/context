@@ -14,6 +14,8 @@
 
 \writestatus{loading}{ConTeXt Math Macros / Stackers}
 
+% todo mathmeaning like fractions
+
 \unprotect
 
 % is subtype for tagged needed: dosettagproperty only used here .. maybe for tagged pdf?
@@ -92,9 +94,10 @@
 %D tagging code.
 
 \def\math_stackers_fallback
-  {\mathstylehbox to \scratchwidth{\usemathstackerscolorparameter\c!color
+  {\mathstylehbox to \scratchwidth{% no \bgroup ... \egroup
+     \usemathstackerscolorparameter\c!color
      \hss
-     \hskip\mathstackersparameter\c!topoffset\relax % for manual italic correction
+     \hskip{\mathstackersparameter\c!topoffset}% for manual italic correction
    % \ifcsname\??mathextensiblefallbacks\the\scratchunicode\endcsname
    %   \lastnamedcs
    % \else
@@ -103,9 +106,24 @@
      \hss}}
 
 \def\math_stackers_regular
-  {\mathstylehbox{\usemathstackerscolorparameter\c!color
+  {\mathstylehbox{%
      \hskip\d_math_stackers_offset_l
+     \ifcstok{\mathstackersparameter\c!plugin}\v!mp
+       \edef\p_mp{\mathstackersparameter\c!mp}%
+       \ifempty\p_mp\else
+         \clf_set_extensible_data
+             mp      {\p_mp}
+             unicode \scratchunicode
+          \relax
+       \fi
+     \else
+       \lettonothing\p_mp
+     \fi
      \Uhextensible
+       \usedsymbolcolorparameterattributes{\mathstackersparameter\c!symbolcolor}%
+       \ifempty\p_mp\else
+         \s!usecallback\relaxedspace
+       \fi
        middle
        \ifcstok{\mathstackersparameter\c!stretch}\v!yes
          stretch
@@ -113,7 +131,7 @@
        \ifcstok{\mathstackersparameter\c!shrink}\v!yes
          shrink
        \fi
-       width \dimexpr\scratchwidth-\d_math_stackers_offset_l-\d_math_stackers_offset_r\relax
+       width {\scratchwidth-\d_math_stackers_offset_l-\d_math_stackers_offset_r}%
        \zerocount\scratchunicode
      \relax
      \hskip\d_math_stackers_offset_r
@@ -153,9 +171,9 @@
 \def\math_stackers_skip_indeed#amount%
   {\filledhboxk{\strut\hskip#amount}}
 
-\lettonothing\math_stackers_start_tagged_mid
-\lettonothing\math_stackers_start_tagged_top
-\lettonothing\math_stackers_start_tagged_bot
+\let         \math_stackers_start_tagged_mid\gobbleoneargument
+\let         \math_stackers_start_tagged_top\gobbleoneargument
+\let         \math_stackers_start_tagged_bot\gobbleoneargument
 \lettonothing\math_stackers_stop_tagged
 
 \def\math_stackers_unicode{\ifcase\scratchunicode\else\the\scratchunicode\fi}
@@ -170,10 +188,10 @@
    \scratchrightoffset\zeropoint}
 
 \appendtoks
-    \def\math_stackers_start_tagged_mid{\dostarttagged\t!mstackermid{\math_stackers_unicode}\hbox\bgroup}%
-    \def\math_stackers_start_tagged_top{\dostarttagged\t!mstackertop{\math_stackers_unicode}\hbox\bgroup}%
-    \def\math_stackers_start_tagged_bot{\dostarttagged\t!mstackerbot{\math_stackers_unicode}\hbox\bgroup}%
-    \def\math_stackers_stop_tagged     {\egroup\dostoptagged}%
+    \def\math_stackers_start_tagged_mid#1{\dostarttagged\t!mstackermid{#1}\hbox\bgroup}%
+    \def\math_stackers_start_tagged_top#1{\dostarttagged\t!mstackertop{#1}\hbox\bgroup}%
+    \def\math_stackers_start_tagged_bot#1{\dostarttagged\t!mstackerbot{#1}\hbox\bgroup}%
+    \def\math_stackers_stop_tagged       {\egroup\dostoptagged}%
 \to \everysetuptagging
 
 %D We define a full featured command handler.
@@ -198,7 +216,8 @@
    \c!minwidth=.25\mathemwidth, % \iota
    \c!order=\v!normal,
    \c!strut=,
-   \c!color=, % todo: when I need it
+   \c!color=,
+   \c!symbolcolor=\mathstackersparameter\c!color,
    \c!topcommand=,
    \c!middlecommand=,
    \c!bottomcommand=,
@@ -266,25 +285,32 @@
    \c!mpdepth=\mathchardp\scratchunicode,
    \c!mpoffset=.25\mathexheight]
 
+% for now we do this:
+
+\setupmathstackers
+  [\c!mp=\ifcstok{\mathstackersparameter\c!plugin}\v!mp simplefun::math:default\else math:stacker:\the\scratchunicode\fi]
+
+% so far
+
 \defcsname\??mathstackersalternative\v!mp\endcsname
   {\normalexpanded{\math_stackers_mp_box
-     {\the\dimexpr\mathstackersparameter\c!mpheight}%
-     {\the\dimexpr\mathstackersparameter\c!mpdepth}%
-     {\the\dimexpr\mathstackersparameter\c!mpoffset}%
-     {\the\dimexpr\triggeredmathstyleparameter\Umathfractionrule}%
-     {\the\dimexpr\triggeredmathstyleparameter\Umathaxis}%
-     {\the\mathexheight}%
-     {\the\mathemwidth}%
+     {\todimension{\mathstackersparameter\c!mpheight}}%
+     {\todimension{\mathstackersparameter\c!mpdepth}}%
+     {\todimension{\mathstackersparameter\c!mpoffset}}%
+     {\todimension{\triggeredmathstyleparameter\Umathfractionrule}}%
+     {\todimension{\triggeredmathstyleparameter\Umathaxis}}%
+     {\todimension\mathexheight}%
+     {\todimension\mathemwidth}%
    }}
 
 \protected\def\math_stackers_mp_box#1#2#3#4#5#6#7%
   {\hpack\bgroup %  todo: add code key + tag
    % we can speed up \mathexheight expansion a bit
    \d_overlay_width    \scratchwidth
-   \d_overlay_height   #1\relax
-   \d_overlay_depth    #2\relax
-   \d_overlay_offset   #3\relax
-   \d_overlay_linewidth#4\relax
+   \d_overlay_height   {#1}%
+   \d_overlay_depth    {#2}%
+   \d_overlay_offset   {#3}%
+   \d_overlay_linewidth{#4}%
    \edef\overlaylinecolor{\mathstackersparameter\c!color}%
    \edef\p_mp{\mathstackersparameter\c!mp}%
    \uniqueMPgraphic{\p_mp}{axis=#5,ex=#6,em=#7}%
@@ -292,8 +318,8 @@
 
 \def\math_stackers_check_unicode#codepoint%
   {\scratchunicode#codepoint\relax
-   \scratchhoffset\mathstackersparameter\c!hoffset\relax
-   \scratchvoffset\mathstackersparameter\c!voffset\relax
+   \scratchhoffset{\mathstackersparameter\c!hoffset}%
+   \scratchvoffset{\mathstackersparameter\c!voffset}%
    \scratchcounter\mathhorizontalcode\fam\scratchunicode\relax % also sets \leftscratchoffset and \rightscratchoffset
    \ifx\p_offset\v!max
      % heads/tails + hoffset
@@ -318,12 +344,12 @@
    \scratchdepth \dp\scratchboxthree
    \scratchtopoffset   \scratchheight
    \scratchbottomoffset\scratchdepth
-   \scratchdimen\mathstackersparameter\c!minheight\relax
+   \scratchdimen{\mathstackersparameter\c!minheight}%
    \ifdim\scratchheight<\scratchdimen
      \scratchheight\scratchdimen
      \ht\scratchboxthree\scratchheight
    \fi
-   \scratchdimen\mathstackersparameter\c!mindepth\relax
+   \scratchdimen{\mathstackersparameter\c!mindepth}%
    \ifdim\scratchdepth<\scratchdimen
      \scratchdepth\scratchdimen
      \dp\scratchboxthree\scratchdepth
@@ -360,6 +386,7 @@
    \fi}
 
 \protected\def\math_stackers_triplet#method#category#codepoint#toptext#bottomtext%
+ %{\math_stackers_start_group{#category}%
   {\begingroup
    \cdef\currentmathstackers{#category}%
    \mathstackersparameter\c!left\relax
@@ -410,12 +437,14 @@
         \ifempty\m_math_stackers_text_middle
           \setbox\scratchboxthree\emptyhbox
         \else
-          \setmathtextbox\scratchboxthree\hbox{\math_stackers_middletext}%
+          \dostarttaggednodetail\t!mstackermid
+            \setmathtextbox\scratchboxthree\hbox{\math_stackers_middletext}%
+          \dostoptagged
         \fi
         \math_stackers_get_max_width
       \fi
       %
-      \scratchdimen\mathstackersparameter\c!minwidth\relax
+      \scratchdimen{\mathstackersparameter\c!minwidth}%
       \ifdim\scratchwidth<\scratchdimen
          \scratchwidth\scratchdimen
       \fi
@@ -471,30 +500,32 @@
         \fi
       \fi
       % base
-      \math_stackers_start_tagged_mid
+      \math_stackers_start_tagged_mid\math_stackers_unicode
         \math_stackers_middle\bgroup
           \box\scratchboxthree
         \egroup
       \math_stackers_stop_tagged
       % under
       \ifdim\htdp\scratchboxtwo>\zeropoint
-        \math_stackers_start_tagged_bot
+        \math_stackers_start_tagged_bot\empty
           \scratchoffset\scratchvoffset
           \kern-\scratchwidth
           \math_stackers_bottom\bgroup
-            \lower\dimexpr\ht\scratchboxtwo+\scratchdepth+\scratchoffset+\scratchbottomoffset\relax
-            \box\scratchboxtwo
+            \lower{%
+              \ht\scratchboxtwo+\scratchdepth+\scratchoffset+\scratchbottomoffset
+            }\box\scratchboxtwo
           \egroup
         \math_stackers_stop_tagged
       \fi
       % over
       \ifdim\htdp\scratchboxone>\zeropoint
-        \math_stackers_start_tagged_top
+        \math_stackers_start_tagged_top\empty
           \scratchoffset\scratchvoffset
           \kern-\scratchwidth
           \math_stackers_top\bgroup
-            \raise\dimexpr\dp\scratchboxone+\scratchheight+\scratchoffset+\scratchtopoffset\relax
-            \box\scratchboxone
+            \raise{%
+              \dp\scratchboxone+\scratchheight+\scratchoffset+\scratchtopoffset
+            }\box\scratchboxone
           \egroup
         \math_stackers_stop_tagged
       \fi
@@ -573,6 +604,41 @@
 
 \setupmathstackers[lt=\zeropoint,rt=\zeropoint,lb=\zeropoint,rb=\zeropoint]
 
+\newbox\b_math_stackers_top_text
+\newbox\b_math_stackers_bottom_text
+
+\def\math_stackers_double_reset_texts
+  {\global\setbox\b_math_stackers_top_text   \emptybox
+   \global\setbox\b_math_stackers_bottom_text\emptybox}
+
+\def\math_stackers_double_set_toptext
+  {\edef\math_stackers_toptext{\mathstackersparameter\c!top}%
+   \ifempty\math_stackers_toptext\else
+     \global\setbox\b_math_stackers_top_text\hbox to \scratchwidth\bgroup
+       \usemathstackersstyleandcolor\c!topstyle\c!topcolor
+       \spac_align_simple{\mathstackersparameter\c!topalign}\math_stackers_toptext
+      \hskip\d_math_stackers_offset_l\relax
+     \egroup
+   \fi}
+
+\def\math_stackers_double_set_bottomtext
+  {\edef\math_stackers_bottomtext{\mathstackersparameter\c!bottom}%
+   \ifempty\math_stackers_bottomtext\else
+     \global\setbox\b_math_stackers_bottom_text\hbox to \scratchwidth\bgroup
+       \usemathstackersstyleandcolor\c!bottomstyle\c!bottomcolor
+       \hskip\d_math_stackers_offset_l\relax
+       \spac_align_simple{\mathstackersparameter\c!bottomalign}\math_stackers_bottomtext
+     \egroup
+   \fi}
+
+\def\math_stackers_double_flush_texts
+  {\ifvoid\b_math_stackers_top_text\else
+     \superscript{\box\b_math_stackers_top_text}%
+   \fi
+   \ifvoid\b_math_stackers_bottom_text\else
+     \subscript{\box\b_math_stackers_bottom_text}%
+   \fi}
+
 \tolerant\protected\def\math_stackers_make_double#top#bottom#category#codepoint#codeextra#spacer[#S#settings]#:#*#text%
   {\math_stackers_start_group{#category}%
    \c_math_stackers_top      #top\relax
@@ -588,14 +654,18 @@
      {\math_stackers_reset_variables
       \edef\m_math_stackers_text_middle{#text}%
       \math_stackers_check_unicode\c_math_stackers_codepoint
+      \let\math_stackers_unicode_two\math_stackers_unicode
+      \let\math_stackers_unicode_one\empty
       \ifempty\math_stackers_middle
         \setbox\scratchboxthree\emptyhbox
       \else
+        \dostarttagged\t!mstackermid\empty
         \setmathtextbox\scratchboxthree\hbox{\math_stackers_middletext}%
+        \dostoptagged
       \fi
       \scratchwidth\wd\scratchboxthree
       %
-      \scratchdimen\mathstackersparameter\c!minwidth\relax
+      \scratchdimen{\mathstackersparameter\c!minwidth}%
       \ifdim\scratchwidth<\scratchdimen
          \scratchwidth\scratchdimen
       \fi
@@ -610,7 +680,7 @@
         \d_math_stackers_offset_r\mathstackersparameter{rb}%
       \else
         \d_math_stackers_offset_l\mathstackersparameter{lt}%
-        \d_math_stackers_offset_r\mathstackersparameter{rt}%
+        \d_math_stackers_offset_r\mathstackersparameter{rt}% or rb ?
       \fi
       %
       \setbox\scratchboxtwo\csname\??mathstackersalternative\p_alternative\endcsname
@@ -621,6 +691,8 @@
         \d_math_stackers_offset_l\mathstackersparameter{lb}%
         \d_math_stackers_offset_r\mathstackersparameter{rb}%
         \setbox\scratchboxone\csname\??mathstackersalternative\p_alternative\endcsname
+        \math_stackers_check_unicode\c_math_stackers_extracode
+        \let\math_stackers_unicode_one\math_stackers_unicode
       \fi
       %
       \math_stackers_normalize_three
@@ -641,49 +713,49 @@
         \fi
       \fi
       % base
-      \math_stackers_start_tagged_mid
+    % \math_stackers_start_tagged_mid\math_stackers_unicode
         \math_stackers_middle\bgroup
           \box\scratchboxthree
         \egroup
-      \math_stackers_stop_tagged
+    % \math_stackers_stop_tagged
+      %
+\math_stackers_double_reset_texts
       %
       \ifdim\htdp\scratchboxtwo>\zeropoint
         \ifcase\c_math_stackers_bottom\else
           \kern-\scratchwidth
           % under
-          \math_stackers_start_tagged_bot
+          \math_stackers_start_tagged_bot{\ifcase\c_math_stackers_top\math_stackers_unicode_two\else\math_stackers_unicode_one\fi}%
             \math_stackers_bottom\bgroup
-              \lower\dimexpr
+              \lower{%
                  \scratchdepth
                 +\ht\ifcase\c_math_stackers_top\scratchboxtwo\else\scratchboxone\fi
-                +\mathstackersparameter\c!distance % was \c!voffset
-              \relax
-              \ifcase\c_math_stackers_top
-                \box\scratchboxtwo
-              \else
-                \box\scratchboxone
-              \fi
+                +(\mathstackersparameter\c!distance)% was \c!voffset
+              }\box\ifcase\c_math_stackers_top\scratchboxtwo\else\scratchboxone\fi
             \egroup
           \math_stackers_stop_tagged
+\math_stackers_double_set_toptext
         \fi
         \ifcase\c_math_stackers_top\else
           \kern-\scratchwidth
           % over
-          \math_stackers_start_tagged_top
+          \math_stackers_start_tagged_top\math_stackers_unicode_two
             \math_stackers_top\bgroup
-              \raise\dimexpr
+              \raise{%
                  \scratchheight
                 +\dp\scratchboxtwo % new
-                +\mathstackersparameter\c!distance % was \c!voffset
-              \relax
-              \box\scratchboxtwo
+                +(\mathstackersparameter\c!distance)% was \c!voffset
+              }\box\scratchboxtwo
             \egroup
           \math_stackers_stop_tagged
+\math_stackers_double_set_bottomtext
         \fi
       \fi}%
   \dostoptagged
   \mathstackersparameter\c!right\relax
-  \math_stackers_stop_group}
+  \math_stackers_stop_group
+\math_stackers_double_flush_texts
+   }
 
 \permanent\tolerant\protected\def\definemathoverextensible[#1]#*[#2]#*[#3]%
   {\ifparameter#3\or
@@ -774,7 +846,9 @@
       \ifempty\math_stackers_middle
         \setbox\scratchboxthree\emptyhbox
       \else
+        \dostarttagged\t!mstackermid{\math_stackers_unicode}%
         \setmathtextbox\scratchboxthree\hbox{\math_stackers_middletext}%
+        \dostoptagged
       \fi
       %
       \ifcase#where\relax
@@ -817,60 +891,54 @@
       % analysis: is this still ok here?
       \dosettagproperty\s!subtype\t!munderover
       % base
-      \math_stackers_start_tagged_mid
-        \math_stackers_middle\bgroup
-          \box\scratchboxthree
-        \egroup
-      \math_stackers_stop_tagged
+      \math_stackers_middle\bgroup
+        \box\scratchboxthree
+      \egroup
       %
       \setbox\scratchboxtwo\csname\??mathstackersalternative\p_alternative\endcsname
       \kern-\scratchwidth
       \ifcase#where\relax
         % under
-        \math_stackers_start_tagged_bot
+        \math_stackers_start_tagged_bot\empty
           \math_stackers_bottom\bgroup
-            \lower\dimexpr
+            \lower{%
               \scratchdepth
              +\ht\scratchboxtwo
-             +\mathstackersparameter\c!distance
-            \relax
-            \box\scratchboxtwo % accent
+             +(\mathstackersparameter\c!distance)%
+            }\box\scratchboxtwo % accent
           \egroup
         \math_stackers_stop_tagged
         \kern-\scratchwidth
         % over
-        \math_stackers_start_tagged_top
+        \math_stackers_start_tagged_top\empty
           \math_stackers_top\bgroup
-            \raise\dimexpr
+            \raise{%
                \scratchheight
               +\dp\scratchboxone
-              +\mathstackersparameter\c!voffset
-            \relax
-            \box\scratchboxone % toptext
+              +(\mathstackersparameter\c!voffset)%
+            }\box\scratchboxone % toptext
           \egroup
         \math_stackers_stop_tagged
       \else
         % under
-        \math_stackers_start_tagged_bot
+        \math_stackers_start_tagged_bot\empty
           \math_stackers_bottom\bgroup
-            \lower\dimexpr
+            \lower{%
                \scratchdepth
               +\ht\scratchboxone
-              +\mathstackersparameter\c!voffset
-            \relax
-            \box\scratchboxone % bottext
+              +(\mathstackersparameter\c!voffset)%
+            }\box\scratchboxone % bottext
           \egroup
         \math_stackers_stop_tagged
         \kern-\scratchwidth
         % over
-        \math_stackers_start_tagged_top
+        \math_stackers_start_tagged_top\empty
           \math_stackers_top\bgroup
-            \raise\dimexpr
+            \raise{%
                \scratchheight
               +\dp\scratchboxtwo % new
-              +\mathstackersparameter\c!distance
-            \relax
-            \box\scratchboxtwo % accent
+              +(\mathstackersparameter\c!distance)%
+            }\box\scratchboxtwo % accent
           \egroup
         \math_stackers_stop_tagged
       \fi
@@ -1342,10 +1410,10 @@
    \scratchunicode#codepoint\relax
    \scratchclass\mathcodechecked{\mathstackersparameter\c!mathclass}\relax
    \ifconditional\indisplaymath\ifcase\scratchcounter\orelse\ifnum\lastatomclass=\mathbegincode
-     \scratchdistance\dimexpr
+     \scratchdistance{%
        \fontcharwd\mathstylefont\mathstyle\scratchcounter
       -\fontcharwd\mathstylefont\mathstyle\scratchunicode
-     \relax
+     }%
    \fi\fi
    \math_atom_by_parameter\mathstackersparameter
      {\usemathstackerscolorparameter\c!color

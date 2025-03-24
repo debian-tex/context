@@ -340,11 +340,11 @@ do -- this will move to its own module
 
                 local preroll = specification.preroll
                 if preroll then
-                    metapost.simple(instance,"begingroup;",true,true)
+                    metapost.simple("simplefun","begingroup;",true,true)
                     metapost.setparameterset("mpsfont",specification)
                     metapost.simple("simplefun",preroll)
                     metapost.setparameterset("mpsfont")
-                    metapost.simple(instance,"endgroup;",true,true)
+                    metapost.simple("simplefun","endgroup;",true,true)
                 end
 
                 for i=1,#categories do
@@ -384,9 +384,13 @@ do -- this will move to its own module
                             local ht = shape.height or defaultheight
                             local dp = shape.depth  or defaultdepth
                             local bb = shape.boundingbox
-                            local uc = shape.tounicode
-                            if uc then
-                                uc = round(uc) -- brrr can be 123.0
+                            local uc = shape.tounicode -- brrr can be 123.0
+                            if type(uc) == "table" then
+                                for i=1,#uc do
+                                    uc[i] = round(uc[i])
+                                end
+                            elseif uc then
+                                uc = round(uc)
                             end
                             if bb then
                                 for i=1,4 do bb[i] = scale * bb[i] end
@@ -585,9 +589,10 @@ local initializesvg  do
             if not hash then
                 return
             end
-            local shapes  = nil
-            local method  = nil
-            local enforce = attributes.colors.model == "cmyk"
+            local shapes   = nil
+            local method   = nil
+            local fixdepth = value == "fixdepth"
+            local enforce  = attributes.colors.model == "cmyk"
             if cached and not enforce then
              -- we need a different hash than for mkiv, so we append:
                 local pdfhash   = hash .. "-svg"
@@ -604,8 +609,9 @@ local initializesvg  do
                         timestamp = timestamp,
                     })
                 end
-                shapes = pdfshapes
-                method = "pdf"
+                shapes   = pdfshapes
+                method   = "pdf"
+                fixdepth = true -- needed for svg
             else
                 local mpsfile   = containers.read(otf.mpscache,hash)
                 local mpsshapes = mpsfile and mpsfile.mpsshapes
@@ -627,7 +633,7 @@ local initializesvg  do
                 method = "mps"
             end
             if shapes then
-                shapes.fixdepth = value == "fixdepth"
+                shapes.fixdepth = fixdepth
                 fonts.dropins.clone(method,tfmdata,shapes)
             end
             return true

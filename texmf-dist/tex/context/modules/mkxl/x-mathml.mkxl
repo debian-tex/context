@@ -1194,7 +1194,7 @@
 \startxmlsetups mml:approx     \xmlsetup{#1}{mml:relation} \stopxmlsetups
 \startxmlsetups mml:factorof   \xmlsetup{#1}{mml:relation} \stopxmlsetups
 
-%D This needs to be adapted and can nwo use the alignhere mechanism:
+%D This needs to be adapted and can now use the alignhere mechanism:
 
 \startxmlsetups mml:relation
     \edef\mmlapplyaction{\xmlfilter{#1}{/*/tag()}}
@@ -2145,7 +2145,7 @@
 \stopxmlsetups
 
 \startxmlsetups mml:mroot
-   \root{\mmlsecond{#1}}\of{\mmlfirst{#1}}
+   \root[{\mmlsecond{#1}}]{\mmlfirst{#1}}
 \stopxmlsetups
 
 \setupMMLappearance[scripts][\c!alternative=\v!a] % {} rond base
@@ -2262,7 +2262,7 @@
 \stopxmlsetups
 
 \starttexdefinition mmllimopover #1
-    \mmlbasetoken\normalsuperscript{\mmlfencedsecond{#1}}
+    \remapmathoperator{\mmlbasetoken}\normalsuperscript{\mmlfencedsecond{#1}}
 \stoptexdefinition
 
 % munder
@@ -2296,7 +2296,7 @@
 \stopxmlsetups
 
 \starttexdefinition mmllimopunder #1
-    \mmlbasetoken\normalsubscript{\mmlfencedsecond{#1}}
+    \remapmathoperator{\mmlbasetoken}\normalsubscript{\mmlfencedsecond{#1}}
 \stoptexdefinition
 
 % munderover
@@ -2366,7 +2366,7 @@
 \stopxmlsetups
 
 \starttexdefinition mmllimopunderover #1
-    \mmlbasetoken\normalsuperscript{\mmlfencedthird{#1}}\normalsubscript{\mmlfencedsecond{#1}}
+    \remapmathoperator{\mmlbasetoken}\normalsuperscript{\mmlfencedthird{#1}}\normalsubscript{\mmlfencedsecond{#1}}
 \stoptexdefinition
 
 % tables (mml:mtable, mml:mtr, mml:mlabledtr, mml:mtd)

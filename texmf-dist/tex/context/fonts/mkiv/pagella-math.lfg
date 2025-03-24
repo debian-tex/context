@@ -14,7 +14,7 @@ return {
     mathematics = {
         parameters = {
             AccentTopShiftUp                  =   10,
-            FlattenedAccentTopShiftUp         =   10,
+            FlattenedAccentTopShiftUp         =   20,
             AccentBaseDepth                   =   80,
             DelimiterPercent                  =   85,
             DelimiterShortfall                =  400,
@@ -79,6 +79,9 @@ return {
                     tweak = "addmirrors",
                 },
                 {
+                    tweak = "addcomposites",
+                },
+                {
                     tweak   = "fixoldschool",
                     feature = "euleroverpagella",
                 },
@@ -87,7 +90,7 @@ return {
                     list    = {
                         {
                             source   = { first = 0x02980 }, -- triplebar
-                            filename = "TeXGyrePagellaMath-Companion.otf",
+                            filename = "texgyrepagellamathcompanion-regular.otf",
                         },
                     },
                 },
@@ -107,7 +110,7 @@ return {
                     tweak = "checkaccents",
                 },
                 {
-                    tweak = "wipeweirdones",
+                    tweak = "wipecues",
                 },
                 {
                     tweak   = "parameters",

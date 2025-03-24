@@ -34,12 +34,11 @@ if not modules then modules = { } end modules ['lpdf-lmt'] = {
 -- also optimize and extend.
 
 local type, next, unpack, tonumber, rawget = type, next, unpack, tonumber, rawget
-local char, rep, find = string.char, string.rep, string.find
-local formatters, splitupstring = string.formatters, string.splitup
+local char, rep, find, gsub = string.char, string.rep, string.find, string.gsub
+local formatters = string.formatters
 local concat, sortedhash = table.concat, table.sortedhash
 local setmetatableindex = table.setmetatableindex
 local loaddata = io.loaddata
-local ceil = math.ceil
 
 local bpfactor       <const> = number.dimenfactors.bp
 
@@ -53,6 +52,7 @@ local pdfdictionary          = lpdf.dictionary
 local pdfarray               = lpdf.array
 local pdfconstant            = lpdf.constant
 local pdfliteral             = lpdf.literal -- not to be confused with a whatsit!
+local pdfunicode             = lpdf.unicode
 
 local pdfreserveobject       -- forward reference
 local pdfpagereference       -- forward reference
@@ -101,7 +101,7 @@ local function compressdata(data,size)
     local comp  = zlibcompresssize(data,guess,3)
  -- if comp then
  --     report()
- --     report("size %i, guess %i, result %i => %s / %s",size,guess,#comp,guess>=#comp and "hit" or "miss")
+ --     report("size %i, guess %i, result %i => %s",size,guess,#comp,guess>=#comp and "hit" or "miss")
  --     report()
  -- end
     return comp
@@ -532,6 +532,13 @@ local function pdf_goto_fontmode()
 end
 
 -- characters
+
+-- we could actually do this:
+--
+-- -- effactor (expand) -> into glyphxscale
+-- -- extend            -> into glyphxscale
+-- -- squeeze           -> into glyphyscale
+
 do
 
     local round = math.round
@@ -641,6 +648,9 @@ do
             else
              -- we could check if effects have changed but effects use unique tables; for
              -- now they win over font effects (only used in math)
+tmrx             = 1
+tmry             = 1
+-- tmsy             = effect.slant   or fontparameters.slantfactor   or slant or 0
             end
         else
             -- These are the font specific effects and the scales are part of the main
@@ -722,14 +732,7 @@ do
                 need_mode = 2
             end
             need_width = need_width * 2
-need_width = need_width * tmrx
--- if hshift then
---     hshift = hshift  * tmrx
--- end
-        end
-
-        if current_weight > 0 then
---             hshift  = (hshift or 0) + current_weight
+            need_width = need_width * tmrx
         end
 
     end
@@ -737,6 +740,7 @@ need_width = need_width * tmrx
     local f_width = formatters["%.6N w"]
     local f_mode  = formatters["%i Tr"]        -- can be hash
     local f_font  = formatters["/F%i 10 Tf"]
+    local f_skip  = formatters["%.2N"]
 
     local s_width = "0 w"
     local s_mode  = "0 Tr"
@@ -785,8 +789,6 @@ need_width = need_width * tmrx
      -- cur_tmrx = tmrx
     end
 
-    ----- f_skip = formatters["%.2N"]
-
     -- I will redo this mess ... we no longer have the mkiv pdf generator that we used in
     -- luatex (a precursor to lmtx and also for comparison) but only in lmtx now so ...
     -- time to move on I guess.
@@ -813,7 +815,7 @@ need_width = need_width * tmrx
             csy = 1
         end
         if     sx ~= current_sx -- was: f_x_scale
-            or sy ~= current_sy -- was: f_x_scale
+            or sy ~= current_sy -- was: f_y_scale
             or need_tf
             or font ~= current_font
          -- or current_pdf ~= f_pdf_cur
@@ -828,9 +830,7 @@ need_width = need_width * tmrx
      -- elseif mode == "page" then
      --     pdf_goto_textmode()
      --     set_font()
-        elseif current_factor ~= factor
-         -- or cur_tmrx ~= tmrx
-        then
+        elseif current_factor ~= factor then -- or cur_tmrx ~= tmrx
             -- check if this happens and when
             setup_fontparameters(font,factor,sx,sy,slant,weight,effect)
             need_tm = true
@@ -875,8 +875,10 @@ need_width = need_width * tmrx
                     if mode == "char" then
                         end_charmode()
                     end
-                    b = b + 1 ; buffer[b] = round(d) -- or f_skip(d)
--- print(d,buffer[b])
+                    -- ok for text with not too long words where spaces synchronize
+                 -- b = b + 1 ; buffer[b] = round(d) -- or f_skip(d)
+                    -- better for extensibles and incredible long words
+                    b = b + 1 ; buffer[b] = f_skip(d)
                 end
                 tj_position = tj_position - tj_delta
              -- tj_position = tj_position - tj_delta * tmef_f_x_scale
@@ -1228,7 +1230,7 @@ end
 local flushedxforms  = { } -- actually box resources but can also be direct
 local localconverter = nil -- will be set
 
-local flushimage  do
+do
 
     local tonut             = nodes.tonut
     local tonode            = nuts.tonode
@@ -1270,6 +1272,7 @@ local flushimage  do
     local f_fm = formatters["/Fm%d Do"]
     local f_im = formatters["/Im%d Do"]
     local f_gr = formatters["/Gp%d Do"]
+    local f_st = formatters["/Gs%d gs"]
 
     local s_b <const> = "q"
     local s_e <const> = "Q"
@@ -1285,8 +1288,8 @@ local flushimage  do
     local f_x   = formatters["[] 0 d 0 J %.6N w %.6N %.6N %.6N %.6N re S"]
     local f_y   = formatters["[] 0 d 0 J %.6N w %.6N %.6N %.6N %.6N re S %.6N 0 m %.6N 0 l S"]
 
-    local f_v_d = formatters["[%.6N %.6N] 0 d 0 J %.6N w 0 0 m %.6N 0 l S"]
-    local f_h_d = formatters["[%.6N %.6N] 0 d 0 J %.6N w 0 0 m 0 %.6N l S"]
+ -- local f_v_d = formatters["[%.6N %.6N] 0 d 0 J %.6N w 0 0 m %.6N 0 l S"]
+ -- local f_h_d = formatters["[%.6N %.6N] 0 d 0 J %.6N w 0 0 m 0 %.6N l S"]
 
     local f_d_h = formatters["[%.6N %.6N] 0 d 0 J %.6N w 0 %.6N m %.6N %.6N l S"]
     local f_d_v = formatters["[%.6N %.6N] 0 d 0 J %.6N w %.6N 0 m %.6N %.6N l S"]
@@ -1316,7 +1319,9 @@ local flushimage  do
         local list      = tonut(type(box) == "number" and tex.takebox(box) or box)
         --
         if resources == true then
-            resources = pdfcollectedresources()
+            resources = pdfcollectedresources {
+                serialize = false,
+            }
         end
         --
         local width, height, depth = getwhd(list)
@@ -1431,7 +1436,7 @@ local flushimage  do
     local img_pdf        = imagetypes.pdf
     local img_stream     = imagetypes.stream
 
-    local one_bp = 65536 * bpfactor
+    local one_bp <const> = 65536 * bpfactor
 
     local imageresources, n = { }, 0
 
@@ -1448,29 +1453,71 @@ local flushimage  do
     -- specific whatsit ... but not now. We could hash them if needed when
     -- we use lot sof them in mp ... but not now.
 
-          usedxgroups = { }
-    local groups      = 0
-    local group       = nil
+    usedxgroups = { }
 
-    local flushgroup = function(content,bbox)
-        if not group then
-            group = pdfdictionary {
-                Type = pdfconstant("Group"),
-                S    = pdfconstant("Transparency"),
+    local flushgroup do
+
+        local groups = 0
+        local group  = nil
+        local states = 0
+        local names  = { }
+
+        flushgroup = function(content,bbox,detail)
+            if not group then
+                group = pdfdictionary {
+                    Type = pdfconstant("Group"),
+                    S    = pdfconstant("Transparency"),
+                }
+            end
+            local wrapper = pdfdictionary {
+                Type      = pdf_xobject,
+                Subtype   = pdf_form,
+                FormType  = 1,
+                Group     = group,
+                BBox      = pdfarray(bbox),
+                Resources = lpdf.collectedresources {
+                    serialize = false
+                }, -- what if empty
             }
+            local objnum = pdfflushstreamobject(content,wrapper,false) -- why not compressed ?
+            groups = groups + 1
+            usedxgroups[groups] = objnum
+            local kind = detail and detail.type == "luminosity"
+            local result = f_gr(groups)
+            if not detail then
+                -- nothing special
+            elseif detail.type == "luminosity" then
+                local action = detail.action
+                if action == "register" then
+                    local state = pdfdictionary {
+                        Type  = pdfconstant("ExtGState"),
+                        AIS   = false,
+                        CA    = 1,
+                        ca    = 1,
+                        SMask = pdfdictionary {
+                            G    = pdfreference(objnum),
+                            S    = pdfconstant("Luminosity"),
+                            Type = pdfconstant("Mask"),
+                        }
+                    }
+                    states = states + 1
+                    lpdf.adddocumentextgstate("Gs" .. states,pdfreference(pdfflushobject(state)))
+                    names[detail.name or "default"] = f_st(states)
+                    return
+                elseif action == "apply" then
+                    local name  = detail.name or "default"
+                    local delay = names[name]
+                    if delay then
+                        result = delay .. " " .. result
+                        names[name] = nil
+                    end
+                else
+                    -- error
+                end
+            end
+            return result
         end
-        local wrapper = pdfdictionary {
-            Type      = pdf_xobject,
-            Subtype   = pdf_form,
-            FormType  = 1,
-            Group     = group,
-            BBox      = pdfarray(bbox),
-            Resources = lpdf.collectedresources { serialize = false },
-        }
-        local objnum = pdfflushstreamobject(content,wrapper,false) -- why not compressed ?
-        groups = groups + 1
-        usedxgroups[groups] = objnum
-        return f_gr(groups)
+
     end
 
     flushers.group  = flushgroup
@@ -1583,7 +1630,7 @@ local flushimage  do
         b = b + 1 ; buffer[b] = s_e
     end
 
-    flushimage = function(index,width,height,depth,pos_h,pos_v)
+    flushers.flushimage = function(index,width,height,depth,pos_h,pos_v)
 
         -- used in vf characters
 
@@ -1617,8 +1664,6 @@ local flushimage  do
         b = b + 1 ; buffer[b] = f_im(index)
         b = b + 1 ; buffer[b] = s_e
     end
-
-    flushers.image = flushimage
 
     -- For the moment we need this hack because the engine checks the 'image'
     -- command in virtual fonts (so we use lua instead).
@@ -1678,8 +1723,8 @@ local flushimage  do
             end
         elseif on ~= 0 and off ~= 0 then -- and subtype ~= strutrule_code
             local options    = getoptions(current)
-            local horizontal = (options & horizontal_rule) == 1
-            local vertical   = (options & vertical_rule  ) == 1
+            local horizontal = (options & horizontal_rule) ~= 0
+            local vertical   = (options & vertical_rule  ) ~= 0
             if not horizontal and not vertical then
                 horizontal = true -- and no check for running, see autorule in tabulate
             elseif not running then
@@ -2090,24 +2135,7 @@ do
         return sub(k,1,32)
     end
 
-    local options = {
-     -- unknown  = 0x0001, -- bit  1
-     -- unknown  = 0x0002, -- bit  2
-        print    = 0x0004, -- bit  3
-        modify   = 0x0008, -- bit  4
-        extract  = 0x0010, -- bit  5
-        add      = 0x0020, -- bit  6
-     -- unknown  = 0x0040, -- bit  7
-     -- unknown  = 0x0080, -- bit  8
-        fillin   = 0x0100, -- bit  9
-        access   = 0x0200, -- bit 10
-        assemble = 0x0400, -- bit 11
-        quality  = 0x0800, -- bit 12
-     -- unknown  = 0x1000, -- bit 13
-     -- unknown  = 0x2000, -- bit 14
-     -- unknown  = 0x4000, -- bit 15
-     -- unknown  = 0x8000, -- bit 16
-    }
+    local options = lpdf.permissions -- or { }
 
     -- 1111 0000 1100 0011
 
@@ -2213,6 +2241,9 @@ do
                 encryptobject = function(obj)
                     if obj then
                         if type(obj) == "table" then
+                            -- We could just loop over the table and encrypt strings
+                            -- before we serialize but we gain little and we can get
+                            -- already serialized objects anyway (mostly anyway).
                             obj = obj()
                         end
                         return lpegmatch(objectparser,obj) or obj
@@ -2303,11 +2334,15 @@ end
 
 local finalize  do
 
+    local ceil  = math.ceil
+    local floor = math.floor
+
     local f_font  = formatters["F%d"]
 
     local f_form  = formatters["Fm%d"]
     local f_group = formatters["Gp%d"]
     local f_image = formatters["Im%d"]
+    local f_state = formatters["Gs%d"]
 
     local function checkedbox(mediabox,otherbox,what)
         if otherbox and #mediabox == 4 and #otherbox == 4 then
@@ -2322,6 +2357,34 @@ local finalize  do
         end
         return otherbox
     end
+
+    -- The Resources dictionary always was optional but for some reason (maybe because some
+    -- application bark on it not being present, which makes bugs into a feature) it now is
+    -- (per addendum to the standard). First it was only for version 2, but in the end also
+    -- version 1 has been affected. Of course that makes older documents that just omit an
+    -- empty one officially invalid. However, because often the procset was there anyway,
+    -- changes are low, but as that one is also obsolete, one only gets an issue when that
+    -- one is left out too. In the end it means that we always need to add a bogus resource
+    -- in order to satisfy 'strict' checkers (one can argue that deprecated features should
+    -- be reported as such, and not as error).
+
+    local dummy = false
+
+    local function checkedresources()
+        if dummy == false then
+         -- if majorversion > 1 then
+                dummy = pdfsharedobject(pdfdictionary {
+                 -- LMTX_Comment = pdfunicode("mandate resource dictionary cf 2.0+ specification")
+                    LMTX_Comment = pdfunicode("mandate resource dictionary cf 'latest' specification")
+                } )
+         -- else
+         --     dummy = nil
+         -- end
+        end
+        return dummy
+    end
+
+    lpdf.checkedresources = checkedresources
 
     finalize = function(driver,details)
 
@@ -2382,7 +2445,7 @@ local finalize  do
 
             pageresources.Font    = fonts
             pageresources.XObject = xforms
-            pageresources.ProcSet = lpdf.procset()
+         -- pageresources.ProcSet = lpdf.procset()
 
             local bbox = pdfarray {
                 boundingbox[1] * bpfactor,
@@ -2395,9 +2458,6 @@ local finalize  do
 
             pageattributes.Type      = pdf_page
             pageattributes.Contents  = contentsobj and pdfreference(contentsobj) or nil
-            pageattributes.Resources = pageresources
-         -- pageattributes.Resources = pdfreference(pdfflushobject(pageresources))
-         -- pageattributes.MediaBox  = bbox
             pageattributes.MediaBox  = pdfsharedobject(bbox)
             pageattributes.Parent    = nil -- precalculate
             pageattributes.Group     = nil -- todo
@@ -2424,13 +2484,14 @@ local finalize  do
 
             end
 
+            pageattributes.Resources = next(pageresources) and pdfsharedobject(pageresources) or checkedresources()
+
         else
 
             local xformtype  = specification.type or 0
             local margin     = specification.margin or 0
             local attributes = specification.attributes or ""
             local resources  = specification.resources or ""
-
             local wrapper    = nil
 
             if xformtype == 0 then
@@ -2450,16 +2511,12 @@ local finalize  do
                 }
             end
             if xformtype == 0 or xformtype == 1 or xformtype == 3 then
---                 wrapper.BBox = pdfarray {
---                     -margin * bpfactor,
---                     -margin * bpfactor,
---                     (boundingbox[3] + margin) * bpfactor,
---                     (boundingbox[4] + margin) * bpfactor,
+                margin = 1
                 wrapper.BBox = pdfarray {
-                    -ceil(                  margin  * bpfactor),
-                    -ceil(                  margin  * bpfactor),
-                     ceil((boundingbox[3] + margin) * bpfactor),
-                     ceil((boundingbox[4] + margin) * bpfactor),
+                     floor(boundingbox[1] * bpfactor) - margin,
+                     floor(boundingbox[2] * bpfactor) - margin,
+                     ceil (boundingbox[3] * bpfactor) + margin,
+                     ceil (boundingbox[4] * bpfactor) + margin,
                 }
             end
             if xformtype == 0 or xformtype == 2 or xformtype == 3 then
@@ -2473,7 +2530,7 @@ local finalize  do
                 patterns = false
             end
 
-            local boxresources   = lpdf.collectedresources {
+            local boxresources = lpdf.collectedresources {
                 patterns  = patterns,
                 serialize = false,
             }
@@ -2490,8 +2547,9 @@ local finalize  do
                 wrapper = wrapper + attributes
             end
 
-            wrapper.Resources = next(boxresources) and boxresources or nil
-            wrapper.ProcSet   = lpdf.procset()
+        --  wrapper.Resources = next(boxresources) and boxresources or nil
+            wrapper.Resources = next(boxresources) and boxresources or checkedresources()
+        --  wrapper.ProcSet   = lpdf.procset()
 
             pdfflushstreamobject(content,wrapper,true,specification.objnum)
 
@@ -2577,9 +2635,14 @@ do
 
     function lpdf.setcompression(level,objectlevel,freeze)
         if not frozen then
-            compress     = level       and level       ~= 0 and true or false
-            objectstream = objectlevel and objectlevel ~= 0 and true or false
-            frozen       = freeze
+            compress = level and level ~= 0 and true or false
+         -- if next(objects) or next(streams) or nofobjects > 0 then -- too strict as we have one alreay
+            if next(streams) then
+                -- no way
+            else
+                objectstream = objectlevel and objectlevel ~= 0 and true or false
+            end
+            frozen = freeze
         end
     end
 
@@ -2852,17 +2915,36 @@ do
 
 end
 
-local pages = table.setmetatableindex(function(t,k)
-    local v = pdfreserveobject()
-    t[k] = v
-    return v
-end)
+local preallocated = false -- true will not preallocate
 
-pdfgetpagereference = function(n)
-    return pages[n]
+local pages  do
+
+    local texgetcount = tex.getcount
+
+    pages = table.setmetatableindex(function(t,k)
+        if not preallocated then
+            local n = structures.counters.record("realpage")["last"]
+            for i=1,n do
+                t[i] = pdfreserveobject()
+            end
+            preallocated = true
+            if k <= n then
+                return t[k]
+            end
+        end
+        local v = pdfreserveobject()
+        t[k] = v
+        return v
+    end)
+
+    pdfgetpagereference = function(n)
+        return pages[n]
+    end
+
+    lpdf.getpagereference = pdfgetpagereference
+
 end
 
-lpdf.getpagereference = pdfgetpagereference
 
 local function flushnormalobj(data,n)
     if not n then
@@ -2917,6 +2999,14 @@ local flushstreamobj, streamstatus do
         }
     end
 
+    local function updatelength(d,size)
+        -- qpdf wants + 1 but acrobat crashes
+        d = gsub(d,"/Length %s*%d+%s*",        "/Length " .. size .. " ")
+        -- this can happen when we copy
+        d = gsub(d,"(/Length %d+ )%d+ R%s*", "%1")
+        return d
+    end
+
     flushstreamobj = function(data,n,dict,comp,nolength)
         if not data then
             report("no data for %S",dict)
@@ -2933,17 +3023,21 @@ local flushstreamobj, streamstatus do
         if encryptobject then
             dict = encryptobject(dict)
         end
+        if dict == "" then
+            dict = nil
+        end
+        -- level is output nesting level
         if level == 0 then
             local b = nil
             local e = s_stream_e
             if nolength then
-                -- probleem: we need to adapt length!
                 b = f_stream_b_d_r(n,dict) -- raw object, already treated
                 if encryptstream then
-                    print("check length")
+                 -- print("check length, case 2")
                     data = encryptstream(data)
                     size = #data
                 end
+                b = updatelength(b,size)
                 uncompressed = uncompressed + 1
             else
                 if comp then
@@ -2980,9 +3074,11 @@ local flushstreamobj, streamstatus do
         else
             if nolength then
                 if encryptstream then
-                    print("check length")
+                 -- print("check length, case 1")
                     data = encryptstream(data)
+                    size = #data
                 end
+                dict = updatelength(dict,size)
                 data = f_stream_d_r(n,dict,data) -- raw object, already treated
                 uncompressed = uncompressed + 1
             else
@@ -3057,7 +3153,7 @@ pdfimmediateobject = function(a,b,c,d)
             if filename then
                 data = loaddata(filename) or ""
             end
-        elseif kind == "raw"then
+        elseif kind == "raw" then
             if filename then
                 data = loaddata(filename) or ""
             end
@@ -3158,6 +3254,10 @@ local openfile, closefile  do
             }
         end
         --
+        if not preallocated then
+            local dummy = pages[1]
+        end
+        --
         if inmemory then
             local n = 0
             f = { }
@@ -3237,7 +3337,7 @@ local openfile, closefile  do
             if encryptstream then
                 objectstream = false
             end
-            local catalog    = lpdf.getcatalog()
+            local catalog = lpdf.getcatalog()
             objectstream = os
             --
             local info       = lpdf.getinfo()
@@ -3433,7 +3533,10 @@ local openfile, closefile  do
                 for i=1,nofobjects do
                     local o = objects[i]
                     if o then
-                        objects[i] = f_used(o)
+-- if o < 0 then
+--     o = -o
+-- end
+                       objects[i] = f_used(o)
                     end
                 end
                 for i=nofobjects,1,-1 do
@@ -3670,7 +3773,7 @@ do
             statistics.register("result saved in file", function()
                 local status = streamstatus()
                 local outputfilename = environment.outputfilename or environment.jobname or tex.jobname or "<unset>"
-                outputfilename = string.gsub(outputfilename,"^%./+","") -- todo: make/use a helper
+                outputfilename = gsub(outputfilename,"^%./+","") -- todo: make/use a helper
                 return string.format(
                     "%s.pdf, compresslevel %s, objectcompresslevel %s, %i streams, %i uncompressed, %i compressed, %i not compressed, threshold %i",
                     outputfilename,

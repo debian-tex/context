@@ -35,7 +35,7 @@ local next, type, unpack, rawget = next, type, unpack, rawget
 local char, byte, gsub, sub, match, rep, gmatch, find = string.char, string.byte, string.gsub, string.sub, string.match, string.rep, string.gmatch, string.find
 local formatters, format = string.formatters, string.format
 local concat, sortedhash, sortedkeys, sort, count = table.concat, table.sortedhash, table.sortedkeys, table.sort, table.count
-local utfchar = utf.char
+local utfchar, utfsplit = utf.char, utf.split
 local random, round, max, abs, ceiling = math.random, math.round, math.max, math.abs, math.ceiling
 local setmetatableindex = table.setmetatableindex
 
@@ -44,6 +44,7 @@ local pdfdictionary        = lpdf.dictionary
 local pdfarray             = lpdf.array
 local pdfconstant          = lpdf.constant
 local pdfstring            = lpdf.string
+local pdfunicode           = lpdf.unicode
 local pdfreference         = lpdf.reference
 
 local pdfreserveobject     = lpdf.reserveobject
@@ -129,8 +130,6 @@ do
     local f_mapping_2 = formatters["<%02X> <%s>"]
     local f_mapping_4 = formatters["<%04X> <%s>"]
 
-    local tounicode = fonts.mappings.tounicode
-
 local tounicode_template <const> = [[
 %%!PS-Adobe-3.0 Resource-CMap
 %%%%DocumentNeededResources: ProcSet (CIDInit)
@@ -164,30 +163,62 @@ end
 %%%%EndResource
 %%%%EOF]]
 
-    tounicodedictionary = function(details,indices,maxindex,name,wide)
-        local mapping = { }
-        local length  = 0
-        if maxindex > 0 then
-            local f_mapping = wide and f_mapping_4 or f_mapping_2
-            for index=1,maxindex do
-                local data = indices[index]
-                if data then
-                    length = length + 1
-                    local unicode = data.unicode
-                    if unicode then
-                        unicode = tounicode(unicode)
-                    else
-                        unicode = "FFFD" -- wide only
+    local nounicode  do
+
+        -- The "nounicode" feature is dedicated to companies, organizations and individuals that make a
+        -- living from roaming data without consent (or blackmail by license). One is forced to *look*
+        -- at the content, not just scrape it.
+        --
+        -- \enabledirectives[backend.pdf.nounicode=❌] % =✅ | =noai | =nopilot | =justread | =...
+
+        local tounicode       = fonts.mappings.tounicode
+        local tounicodestring = tounicode
+        local random          = math.random
+        local is_nothing      = characters.is_nothing
+        local categories      = characters.categories
+
+        directives.register("backend.pdf.nounicode", function(v)
+            tounicodestring = tounicode
+            nounicode       = false
+            if type(v) == "string" then
+                local t = utfsplit(v)
+                local n = #t
+                if n > 0 then
+                    for i=1,n do
+                        t[i] = tounicode(t[i])
                     end
-                    mapping[length] = f_mapping(index,unicode)
+                    tounicodestring = function(u)
+                        if is_nothing[categories[u]] then
+                            return tounicode(u)
+                        else
+                            return t[random(1,n)]
+                        end
+                    end
+                    nounicode = v
                 end
             end
+        end)
+
+        tounicodedictionary = function(details,indices,maxindex,name,wide)
+            local mapping = { }
+            local length  = 0
+            if maxindex > 0 then
+                local f_mapping = wide and f_mapping_4 or f_mapping_2
+                for index=1,maxindex do
+                    local data = indices[index]
+                    if data then
+                        length = length + 1
+                        mapping[length] = f_mapping(index,tounicodestring(data.unicode))
+                    end
+                end
+            end
+            local name  = gsub(name,"%+","-") -- like luatex does
+            local first = wide and "0000" or "00"
+            local last  = wide and "FFFF" or "FF"
+            local blob  = format(tounicode_template,name,name,name,name,name,first,last,length,concat(mapping,"\n"))
+            return blob
         end
-        local name  = gsub(name,"%+","-") -- like luatex does
-        local first = wide and "0000" or "00"
-        local last  = wide and "FFFF" or "FF"
-        local blob  = format(tounicode_template,name,name,name,name,name,first,last,length,concat(mapping,"\n"))
-        return blob
+
     end
 
     widtharray = function(details,indices,maxindex,units,correction)
@@ -230,11 +261,16 @@ end
     end
 
     local includebackmap = true
+    local nofregistries  = 0
 
     directives.register("backend.pdf.includebackmap", function(v)
  -- directives.register("backend.pdf.lmtxregistry", function(v)
         includebackmap = v
     end)
+
+    function lpdf.noffontregistries()
+        return nofregistries > 0 and nofregistries or nil
+    end
 
     lmtxregistry = function(details,include,blobs,minindex,maxindex)
         if includebackmap and maxindex > 0 then
@@ -285,6 +321,7 @@ end
                             if subfont == 1 then
                                 subfont = nil
                             end
+                            nofregistries = nofregistries + 1
                             return pdfreference(pdfflushobject(pdfdictionary {
                                 IndexMap   = pdfreference(pdfflushobject(backmap)) or nil,
                                 StreamHash = streamhash or nil,
@@ -295,6 +332,7 @@ end
                                 Version    = fontheader.fontversion,
                                 GlyphCount = #streams + (streams[0] and 1 or 0),
                                 FontMode   = fonts.mode(),
+                                NoUnicode  = nounicode and pdfunicode(nounicode) or nil,
                             } ))
                         end
                     end
@@ -349,12 +387,13 @@ end
         return resolved, include, minindex, maxindex
     end
 
-    includecidset = true  -- nicer for standard checking
+    includecidset = false -- nicer for standard checking
     forcecidset   = false -- for private testing only
 
     function lpdf.setincludecidset(v)
-        -- incredible ... it's obselete, no viewer needs it so why still this crap
-        -- so in the end it had to be introduced again
+        -- incredible ... it's obselete, no viewer needs it but then validators (depending on verison
+        -- and parser used) require it ... so in the end it had to be introduced again but now we just
+        -- ditch it in versions > 1 and ignore warnings (basically obsolete should not invalidate)
         includecidset = v
     end
 
@@ -399,7 +438,9 @@ end
     lpdf.tocidset = tocidset
 
     tocidsetdictionary = function(indices,min,max)
-        if includecidset or forcecidset then
+        if lpdf.majorversion() > 1 then
+            return nil
+        elseif includecidset or forcecidset then
             local b = tocidset(indices,min,max,true)
             return pdfreference(pdfflushstreamobject(b))
         end
@@ -947,7 +988,7 @@ do
         local fontbbox    = pdfarray { unpack(metabbox) }
         local ascender    = metadata.ascender
         local descender   = metadata.descender
---         local averagewidth= metadata.averagewidth
+     -- local averagewidth= metadata.averagewidth
         local capheight   = metadata.capheight or fontbbox[4]
         local stemv       = metadata.weightclass
         local italicangle = metadata.italicangle
@@ -973,7 +1014,7 @@ do
             BaseFont       = basefont,
             FontDescriptor = pdfreference(reserved),
             W              = pdfreference(pdfflushobject(widths)),
-            LMTXRegistry   = registry or nil,
+            LMTX_Registry  = registry or nil,
             CIDToGIDMap    = pdfconstant("Identity"),
             CIDSystemInfo  = pdfdictionary {
                 Registry   = pdfstring("Adobe"),
@@ -985,21 +1026,21 @@ do
             pdfreference(pdfflushobject(child)),
         }
         local descriptor = pdfdictionary {
-            Type        = pdfconstant("FontDescriptor"),
-            FontName    = basefont,
-            Flags       = 4,
-            FontBBox    = fontbbox,
--- FontMatrix = pdfarray { 0.001, 0, 0, 0.001, 0, 0 },
-            Ascent      = scale(ascender),
-            Descent     = scale(descender),
--- AvgWidth = scale(averagewidth),
-            ItalicAngle = round(italicangle or 0),
-            CapHeight   = scale(capheight),
-            StemV       = scale(stemv),
-            XHeight     = scale(xheight),
-            FontFile2   = pdfreference(pdfflushstreamobject(fontdata)),
-            CIDSet      = tocidset, -- no longer needed but verifyers want it
-            Metadata    = sharedmetadata[fontmeta] or nil,
+            Type          = pdfconstant("FontDescriptor"),
+            FontName      = basefont,
+            Flags         = 4,
+            FontBBox      = fontbbox,
+         -- FontMatrix    = pdfarray { 0.001, 0, 0, 0.001, 0, 0 },
+            Ascent        = scale(ascender),
+            Descent       = scale(descender),
+         -- AvgWidth      = scale(averagewidth),
+            ItalicAngle   = round(italicangle or 0),
+            CapHeight     = scale(capheight),
+            StemV         = scale(stemv),
+            XHeight       = scale(xheight),
+            FontFile2     = pdfreference(pdfflushstreamobject(fontdata)),
+            CIDSet        = tocidset, -- no longer needed but verifyers want it
+            LMTX_Metadata = sharedmetadata[fontmeta] or nil,
         }
         local parent = pdfdictionary {
             Type            = pdfconstant("Font"),
@@ -1703,7 +1744,7 @@ do
             BaseFont       = basefont,
             FontDescriptor = pdfreference(reserved),
             W              = pdfreference(pdfflushobject(widths)),
-            LMTXRegistry   = registry or nil,
+            LMTX_Registry  = registry or nil,
             CIDSystemInfo  = pdfdictionary {
                 Registry   = pdfstring("Adobe"),
                 Ordering   = pdfstring("Identity"),
@@ -1717,21 +1758,21 @@ do
             Subtype = pdfconstant("CIDFontType0C"),
         }
         local descriptor = pdfdictionary {
-            Type        = pdfconstant("FontDescriptor"),
-            FontName    = basefont,
-            Flags       = 4,
-            FontBBox    = fontbbox,
-         -- FontMatrix  = pdfarray { 0.001, 0, 0, 0.001, 0, 0 },
-            Ascent      = scale(ascender),
-            Descent     = scale(descender),
-         -- AvgWidth    = scale(averagewidth),
-            ItalicAngle = round(italicangle or 0),
-            CapHeight   = scale(capheight),
-            StemV       = scale(stemv),
-            XHeight     = scale(xheight),
-            CIDSet      = tocidset,
-            FontFile3   = pdfreference(pdfflushstreamobject(fontdata,fontstream())),
-            Metadata    = sharedmetadata[fontmeta] or nil,
+            Type          = pdfconstant("FontDescriptor"),
+            FontName      = basefont,
+            Flags         = 4,
+            FontBBox      = fontbbox,
+         -- FontMatrix    = pdfarray { 0.001, 0, 0, 0.001, 0, 0 },
+            Ascent        = scale(ascender),
+            Descent       = scale(descender),
+         -- AvgWidth      = scale(averagewidth),
+            ItalicAngle   = round(italicangle or 0),
+            CapHeight     = scale(capheight),
+            StemV         = scale(stemv),
+            XHeight       = scale(xheight),
+            CIDSet        = tocidset,
+            FontFile3     = pdfreference(pdfflushstreamobject(fontdata,fontstream())),
+            LMTX_Metadata = sharedmetadata[fontmeta] or nil,
         }
         local parent = pdfdictionary {
             Type            = pdfconstant("Font"),
@@ -1908,17 +1949,22 @@ do
 
         local f_glyph      = formatters["G%d"]
         local f_char       = formatters["BT /V%d 1 Tf [<%04X>] TJ ET"]
-        local f_width      = formatters["%.6N 0 d0"]
+        local f_width      = formatters["%N 0 d0"]
         local f_index      = formatters["I%d"]
-        local f_image_xy   = formatters["%.6N 0 d0 1 0 0 1 %.6N %.6N cm /%s Do"]
+        local f_image_xy   = formatters["%N 0 d0 1 0 0 1 %N %N cm /%s Do"]
         local f_image_c    = formatters["/%s Do"]
-        local f_image_c_xy = formatters["%.6N 0 0 %.6N %.6N %.6N cm /%s Do"]
-        local f_image_w    = formatters["%.6N 0 d0 %s"]
-        local f_image_d    = formatters["%.6N 0 d0 1 0 0 1 0 %.6N cm /%s Do"]
-        local f_stream     = formatters["%.6N 0 d0 %s"]
-        local f_stream_c   = formatters["%.6N 0 0 0 0 0 d1 %s"] -- last four bbox
-        local f_stream_d   = formatters["%.6N 0 d0 1 0 0 1 0 %.6N cm %s"]
-     -- local f_stream_s   = formatters["%.6N 0 0 %.6N 0 0 cm /%s Do"]
+        local f_image_c_xy = formatters["%N 0 0 %N %N %N cm /%s Do"]
+        local f_image_w    = formatters["%N 0 d0 %s"]
+        ----- f_image_d    = formatters["%N 0 d0 1 0 0 1 0 %N cm /%s Do"]
+        local f_stream     = formatters["%N 0 d0 %s"]
+        local f_stream_c   = formatters["%N 0 0 0 0 0 d1 %s"] -- last four bbox
+local f_stream_cc   = formatters["%N 0 %N %N %N %N d1 %s"] -- last four bbox
+        local f_stream_d   = formatters["%N 0 d0 1 0 0 1 0 %N cm %s"]
+     -- local f_stream_s   = formatters["%N 0 0 %N 0 0 cm /%s Do"]
+
+        local f_image_xy   = formatters["%N 0 d0 1 0 0 1 %N %N cm /Artifact BMC /%s Do EMC"]
+        local f_image_c    = formatters["/Artifact BMC /%s Do EMC"]
+        local f_image_c_xy = formatters["%N 0 0 %N %N %N cm /Artifact BMC /%s Do EMC"]
 
         -- A type 3 font has at most 256 characters and Acrobat also wants a zero slot
         -- to be filled. We can share a mandate zero slot character. We also need to
@@ -2102,17 +2148,18 @@ do
             local function boxtopdf(image,data) -- image == glyph
                 nofglyphs    = nofglyphs + 1
                 local scale  = units / scale -- e.g. 1000 / 12
-                local width  = (data.width or 0) * bpfactor * scale
-                local depth  = - (data.depth or 0) * bpfactor * scale
+                local width  = (data.width  or 0) * bpfactor * scale
+                local height = (data.height or 0) * bpfactor * scale
+                local depth  = (data.depth  or 0) * bpfactor * scale
                 local name   = f_glyph(nofglyphs)
-                local stream = f_image_c_xy(scale,scale,0,depth,name)
+                local stream = f_image_c_xy(scale,scale,0,-depth,name)
                 image.embedded_name      = name
                 image.embedded_stream    = stream
                 image.embedded_reference = pdfreference(image.objnum)
                 xforms[name] = image.embedded_reference
+                -- We need a matching width for validation!
                 if image.expose then
-                    -- support color etc
-                    return stream, width
+                    return f_stream_cc(width,-10,-depth-10,width+10,height+10,stream), width
                 else
                     return f_image_w(width,stream), width
                 end
@@ -2383,6 +2430,7 @@ do
             local differences = pdfarray()
             local charprocs   = pdfdictionary()
             local basefont    = pdfconstant(basefontname)
+            local fontbbox    = nil -- { 0, 0, 0, 0 }
             local d           = 0
             local w           = 0
             local forcenotdef = minindex > 0
@@ -2404,12 +2452,23 @@ do
             for i=1,maxindex-minindex+1 do
                 widths[i] = 0
             end
+            local wd = 0
+            local ht = 0
+            local dp = 0
             for index, data in sortedhash(indices) do
                 local name  = f_index(index)
                 local glyph = glyphs[include[index]]
                 if glyph then
                     local stream, width = glyphtopdf(glyph,data)
                     if stream then
+                        if type(glyph) == "table" then
+                            local gwd = glyph.width  or 0
+                            local ght = glyph.height or 0
+                            local gdp = glyph.depth  or 0
+                            if gwd > wd then wd = gwd end
+                            if ght > ht then ht = ght end
+                            if gdp > dp then dp = gdp end
+                        end
                         if index - 1 ~= lastindex then
                             d = d + 1 differences[d] = index
                         end
@@ -2422,11 +2481,14 @@ do
                     report_fonts("missing glyph %i in type3 font %a",index,basefontname)
                 end
             end
-            if not fontbbox then
+         -- if not fontbbox then
                 -- The specification permits zero values and these are actually also more
                 -- robust as then there are no assumptions and no accuracy is needed.
-                fontbbox = pdfarray { 0, 0, 0, 0 }
-            end
+                    fontbbox = pdfarray { 0, 0, 0, 0 }
+                -- This is okay according to the standard but okular (and old printers)
+                -- need a bbox, so let's see where this fails.
+--                     fontbbox = pdfarray { -20, -dp*bpfactor - 20, wd*bpfactor + 20, ht*bpfactor + 20 }
+         -- end
             local encoding = pdfdictionary {
                 Type        = pdfconstant("Encoding"),
                 Differences = differences,

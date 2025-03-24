@@ -26,7 +26,7 @@ local mergehashes = utilities.parsers.mergehashes
 local formatters = string.formatters
 local basename = file.basename
 
-local utfchar, utfbyte = utf.char, utf.byte
+local utfchar, utfbyte, utfsplit = utf.char, utf.byte, utf.split
 local round = math.round
 
 local context, commands = context, commands
@@ -128,16 +128,19 @@ specifiers.contextsetups  = specifiers.contextsetups  or { }
 specifiers.contextnumbers = specifiers.contextnumbers or { }
 specifiers.contextmerged  = specifiers.contextmerged  or { }
 specifiers.synonyms       = specifiers.synonyms       or { }
+specifiers.scriptsets     = specifiers.scriptsets     or { }
 
-local setups   = specifiers.contextsetups
-local numbers  = specifiers.contextnumbers
-local merged   = specifiers.contextmerged
-local synonyms = specifiers.synonyms
+local setups      = specifiers.contextsetups
+local numbers     = specifiers.contextnumbers
+local merged      = specifiers.contextmerged
+local synonyms    = specifiers.synonyms
+local scriptsets  = specifiers.contextsetups
 
-storage.register("fonts/setups" ,  setups ,  "fonts.specifiers.contextsetups" )
-storage.register("fonts/numbers",  numbers,  "fonts.specifiers.contextnumbers")
-storage.register("fonts/merged",   merged,   "fonts.specifiers.contextmerged")
-storage.register("fonts/synonyms", synonyms, "fonts.specifiers.synonyms")
+storage.register("fonts/setups" ,     setups ,     "fonts.specifiers.contextsetups" )
+storage.register("fonts/numbers",     numbers,     "fonts.specifiers.contextnumbers")
+storage.register("fonts/merged",      merged,      "fonts.specifiers.contextmerged")
+storage.register("fonts/synonyms",    synonyms,    "fonts.specifiers.synonyms")
+storage.register("fonts/scriptsets" , scriptsets , "fonts.specifiers.scriptsets" )
 
 -- inspect(setups)
 
@@ -516,17 +519,17 @@ do
 
     local beforepassingfonttotex = sequencers.new {
         name      = "beforepassingfonttotex",
-        arguments = "tfmdata",
+        arguments = "target,original",
     }
 
     appendgroup(beforepassingfonttotex,"before") -- user
     appendgroup(beforepassingfonttotex,"system") -- private
     appendgroup(beforepassingfonttotex,"after" ) -- user
 
-    function constructors.beforepassingfonttotex(tfmdata)
+    function constructors.beforepassingfonttotex(original,target)
         local runner = beforepassingfonttotex.runner
         if runner then
-            runner(tfmdata)
+            runner(original,target)
         end
     end
 
@@ -606,6 +609,8 @@ end)
 --     end
 -- end
 
+local reported = setmetatableindex("table")
+
 local function presetcontext(name,parent,features) -- will go to con and shared
     if features == "" and find(parent,"=",1,true) then
         features = parent
@@ -638,6 +643,9 @@ local function presetcontext(name,parent,features) -- will go to con and shared
                     -- reverted, so we only take from parent when not set
                     if features[k] == nil then
                         features[k] = v
+                    elseif k ~= "number" and not reported[parent][k] then
+                        report("ignoring feature overload %a in %a",k,parent)
+                        reported[parent][k] = true
                     end
                 end
             else
@@ -2240,37 +2248,63 @@ end
 
 local dimenfactors = number.dimenfactors
 
-function helpers.dimenfactor(unit,id)
-    if unit == "ex" then
-        return id and exheights[id] or 282460 -- lm 10pt
-    elseif unit == "em" then
-        return id and emwidths [id] or 655360 -- lm 10pt
-    else
-        local du = dimenfactors[unit]
-        return du and 1/du or tonumber(unit) or 1
-    end
-end
+do
 
-local function digitwidth(font) -- max(quad/2,wd(0..9))
-    local tfmdata = fontdata[font]
-    local parameters = tfmdata.parameters
-    local width = parameters.digitwidth
-    if not width then
-        width = round(parameters.quad/2) -- maybe tex.scale
-        local characters = tfmdata.characters
-        for i=48,57 do
-            local wd = round(characters[i].width)
-            if wd > width then
-                width = wd
-            end
+    local xscaled = nuts.xscaled
+    local yscaled = nuts.yscaled
+    local getfont = nuts.getfont
+
+    function helpers.dimenfactor(unit,id)
+        if unit == "ex" then
+            return id and exheights[id] or 282460 -- lm 10pt
+        elseif unit == "em" then
+            return id and emwidths[id] or 655360 -- lm 10pt
+        else
+            local du = dimenfactors[unit]
+            return du and 1/du or tonumber(unit) or 1
         end
-        parameters.digitwidth = width
     end
-    return width
-end
 
-helpers.getdigitwidth = digitwidth
-helpers.setdigitwidth = digitwidth
+    function helpers.glyphdimenfactor(unit,glyph,font)
+        if unit == "ex" then
+            return yscaled(glyph,exheights[glyph and getfont(glyph) or font or true])
+        elseif unit == "em" then
+            return xscaled(glyph,emwidths[glyph and getfont(glyph) or font or true])
+        else
+            local du = dimenfactors[unit]
+            return du and 1/du or tonumber(unit) or 1
+        end
+    end
+
+    local function digitwidth(font) -- max(quad/2,wd(0..9))
+        local tfmdata = fontdata[font]
+        local parameters = tfmdata.parameters
+        local width = parameters.digitwidth
+        if not width then
+            width = round(parameters.quad/2) -- maybe tex.scale
+            local characters = tfmdata.characters
+            for i=48,57 do
+                local wd = round(characters[i].width)
+                if wd > width then
+                    width = wd
+                end
+            end
+            parameters.digitwidth = width
+        end
+        return width
+    end
+
+    helpers.getdigitwidth = digitwidth
+    helpers.setdigitwidth = digitwidth
+
+ -- local function glyphdigitwidth(glyph) -- max(quad/2,wd(0..9))
+ --     return xscaled(glyph,digitwidth(getfont(glyph)))
+ -- end
+ --
+ -- helpers.getglyphdigitwidth = glyphdigitwidth
+ -- helpers.setglyphdigitwidth = glyphdigitwidth
+
+end
 
 --
 
@@ -2461,7 +2495,7 @@ do
 
     implement {
         name      = "normalizedbodyfontsize",
-        arguments = "dimen",
+        arguments = "dimension",
         actions   = function(d)
             context(lpegmatch(stripper,f_strip(d/65536)))
         end
@@ -2556,6 +2590,18 @@ do
     implement {
         name    = "registerlanguagefeatures",
         actions = registerlanguagefeatures,
+    }
+
+    local function registerscriptset(n,s)
+         scriptsets[n] = settings_to_array(s)
+    end
+
+    constructors.registerscriptset = registerscriptset
+
+    implement {
+        name      = "definefontscriptset",
+        arguments = "2 strings",
+        actions   = registerscriptset
     }
 
 end
@@ -2951,8 +2997,6 @@ end)
 
 do
 
-    local settings_to_array = utilities.parsers.settings_to_array
-
     implement {
         name      = "definefontcolorpalette",
         arguments = "2 strings",
@@ -3333,6 +3377,7 @@ do
             return dimen_code, yscaled(c and c.height or 0)
         end
     }
+
     implement {
         name      = "descender",
         public    = true,
@@ -3345,6 +3390,7 @@ do
             return dimen_code, yscaled(c and c.depth or 0)
         end
     }
+
     implement {
         name      = "capheight",
         public    = true,
@@ -3374,5 +3420,29 @@ do
  --         return dimen_code, yscaled(parameters[true][properties[index]] or 0)
  --     end
  -- }
+
+     implement {
+        name      = "rightmathkern",
+        usage     = "value",
+        public    = true,
+        protected = true,
+        arguments = "string",
+        actions   = function(str)
+            local u = utfsplit(str)
+            local v = 0
+            if u and #u > 0 then
+                local c = characters[true][utfbyte(u[#u])]
+                local t = c.topright or 0
+                local b = c.bottomright or 0
+                if t > 0 then
+                    v = t
+                end
+                if b > t then
+                    v = b
+                end
+            end
+            return dimen_code, v
+        end
+    }
 
 end

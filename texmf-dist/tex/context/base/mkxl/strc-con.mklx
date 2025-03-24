@@ -157,7 +157,7 @@
 \tolerant\permanent\protected\def\startnamedconstruction[#1]#*[#S#2]#*[#3]%
   {\begingroup
    \strc_constructions_initialize{#1}%
-   \strc_constructions_register[#3][\c!label={\constructionparameter\c!text},\c!reference=,\c!title=,\c!bookmark=,\c!list=,\c!referencetext=,#2]%
+   \strc_constructions_register[#3][\c!reference=,\c!title=,\c!bookmark=,\c!list=,\c!referencetext=,#2]%
    \csname\??constructionstarthandler\currentconstructionhandler\endcsname}
 
 \permanent\protected\def\stopnamedconstruction
@@ -331,7 +331,7 @@
    \c_strc_constructions_distance_none\conditionaltrue}
 
 \protected\defcsname\??constructionstarthandler\v!construction\endcsname % this will be redone (reorganized) .. too much boxing
-  {\dostarttaggedchained\t!construction\currentconstruction\currentconstructionhash
+  {\dostarttaggedchained\t!construction\currentconstruction\currentconstruction\currentconstructionhash
 %    \dotagsetconstruction
    \constructionparameter\c!before
    \begingroup
@@ -397,7 +397,7 @@
      \fi
    \fi
    %
-   \dostarttagged\t!constructiontag\empty % todo
+   \dostarttaggednodetail\t!constructiontag % todo
    \setbox\constructionheadbox\hbox
      {\scratchskip\parindent
       \forgetall
@@ -412,6 +412,7 @@
       \else
         \csname\??constructionmainhandler\currentconstructionhandler\endcsname{\boxedconstructionhead\currentconstructiontext}%
       \fi}%
+   \dostoptagged % tag
    \edef\p_strc_constructions_aligntitle{\constructionparameter\c!aligntitle}%
    \ifx\p_strc_constructions_aligntitle\v!no
      \leftconstructionskip \leftskip
@@ -435,16 +436,35 @@
    %
    \directsetup\p_strc_constructions_renderingsetup\relax
    % moved to here 2014-07-03
+   % we'd like to use \useindentingparameter\constructionparameter but ...
    \edef\p_strc_constructions_indenting{\constructionparameter\c!indenting}%
    \ifempty\p_strc_constructions_indenting \else
-     \indenting[\p_strc_constructions_indenting]% \use...
+     \c_spac_indentation_indent_first\conditionaltrue % recently added, better no v!reset
+     \indenting[\v!first,\p_strc_constructions_indenting]% Wolfgang needs to check this
    \fi
    %
-   \dostoptagged % tag
-   \dostarttagged\t!constructioncontent\empty
+   \dostarttaggednodetail\t!constructioncontent
   %\freezeparagraphproperties
    \updateparagraphshapes
    \ignorespaces} % args not needed
+
+% This is why we need the \v!first in indentation above
+%
+% \defineenumeration
+%   [foo]
+%   [alternative=serried,
+%    indenting={yes,medium}]
+%
+% \startitemize
+%     \startitem
+%         \startfoo
+%             AAA\par
+%             BBB\par
+%             CCC\par
+%             DDD\par
+%         \stopfoo
+%     \stopitem
+% \stopitemize
 
 \protected\defcsname\??constructionstophandler\v!construction\endcsname
   {\strc_constructions_close_symbol_place
@@ -606,7 +626,7 @@
      \getnoflines\scratchdimen
      \hangafter-\noflines
    \orelse\ifx\p_strc_constructions_hang\v!broad
-     \scratchdimen\dimexpr\htdp\constructionheadbox+.5\strutht\relax
+     \scratchdimen{\htdp\constructionheadbox+.5\strutht}%
      \getnoflines\scratchdimen
      \hangafter-\noflines
    \else
@@ -648,7 +668,7 @@
     \enforced\let\\\crlf
     \noindent
     \strc_constructions_set_pure_box\v!flushleft
-    \leftskip\dimexpr\leftconstructionskip+\constructionsheadwidth+\constructionsheaddistance\relax
+    \leftskip{\leftconstructionskip+\constructionsheadwidth+\constructionsheaddistance}%
     \rightskip\rightconstructionskip\relax
     \llap {
         \hpack to \leftskip {
@@ -674,11 +694,11 @@
     \enforced\let\\\crlf
     \noindent
     \leftskip\leftconstructionskip
-    \rightskip\dimexpr\rightconstructionskip+\constructionsheadwidth\relax
+    \rightskip{\rightconstructionskip+\constructionsheadwidth}%
    %\strc_constructions_pure_hang_box\raggedleft
     \strc_constructions_set_pure_box\v!flushright
     \rlap {
-        \hskip\dimexpr\hsize-\leftskip-\rightskip\relax
+        \hskip{\hsize-\leftskip-\rightskip}%
         \copy\constructionheadbox
         \hskip\rightconstructionskip
     }
@@ -751,7 +771,7 @@
     \strc_constructions_set_hang\v!right
     \noindent
     \rlap {
-        \hpack to \dimexpr\hsize-\leftskip-\rightskip\relax {
+        \hpack to {\hsize-\leftskip-\rightskip} {
             \hss
             \tpack to \zeropoint {
                 \box\constructionheadbox
@@ -963,7 +983,7 @@
     \enforced\let\\\crlf
     \noindent
     \leftskip\leftconstructionskip
-    \rightskip\dimexpr\rightconstructionskip+\constructionsheadwidth+\constructionsheaddistance\relax
+    \rightskip{\rightconstructionskip+\constructionsheadwidth+\constructionsheaddistance}%
     \parfillskip\zeroskip
     \strc_constructions_set_pure_box\v!flushright
     \directparwrapper \relax {%
@@ -1008,7 +1028,7 @@
 \mutable\let\currentconstructionlistentry\!!zerocount
 
 \protected\def\strc_constructions_register
-  {\clf_doifelselisthasentry\numexpr\currentconstructionlistentry\relax
+  {\clf_doifelselisthasentry{\currentconstructionlistentry}%
      \strc_constructions_register_nop
      \strc_constructions_register_yes}
 
@@ -1145,7 +1165,7 @@
             stopper       {\constructionparameter\c!numberstopper}
             segments      {\constructionparameter\c!numbersegments}
         }
-    \or
+    \else
        % symbol
     \fi
         userdata {\detokenize{#1}}

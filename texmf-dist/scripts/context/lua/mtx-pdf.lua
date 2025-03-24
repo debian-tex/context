@@ -30,9 +30,12 @@ local helpinfo = [[
     <flag name="fonts"><short>show used fonts (<ref name="detail"/>)</short></flag>
     <flag name="object"><short>show object</short></flag>
     <flag name="links"><short>show links</short></flag>
+    <flag name="highlights"><short>show highlights</short></flag>
+    <flag name="comments"><short>show comments</short></flag>
     <flag name="sign"><short>sign document (assumes signature template)</short></flag>
     <flag name="verify"><short>verify document</short></flag>
     <flag name="detail"><short>print detail to the console</short></flag>
+    <flag name="userdata"><short>print userdata to the console</short></flag>
    </subcategory>
    <subcategory>
     <example><command>mtxrun --script pdf --info foo.pdf</command></example>
@@ -42,6 +45,7 @@ local helpinfo = [[
     <example><command>mtxrun --script pdf --sign --certificate=somesign.pem --password=test --uselibrary somefile</command></example>
     <example><command>mtxrun --script pdf --verify --certificate=somesign.pem --password=test --uselibrary somefile</command></example>
     <example><command>mtxrun --script pdf --detail=nofpages somefile</command></example>
+    <example><command>mtxrun --script pdf --userdata=keylist [--format=lua|json|lines] somefile</command></example>
    </subcategory>
   </category>
  </flags>
@@ -66,7 +70,6 @@ elseif CONTEXTLMTXMODE then
 else
     dofile(resolvers.findfile("lpdf-pde.lua","tex"))
 end
-dofile(resolvers.findfile("util-jsn.lua","tex"))
 
 scripts     = scripts     or { }
 scripts.pdf = scripts.pdf or { }
@@ -79,13 +82,62 @@ local function loadpdffile(filename)
     elseif not lfs.isfile(filename) then
         report("unknown file %a",filename)
     else
-        local pdffile = lpdf.epdf.load(filename)
+        local ownerpassword = environment.arguments.ownerpassword
+        local userpassword  = environment.arguments.userpassword
+        if not ownerpassword then
+            ownerpassword = userpassword
+        end
+        if not userpassword then
+            userpassword = ownerpassword
+        end
+        local pdffile = lpdf.epdf.load(filename,userpassword,ownerpassword)
         if pdffile then
             return pdffile
         else
             report("no valid pdf file %a",filename)
         end
     end
+end
+
+-- Looks like we can get (even from programs using the adobe library):
+--
+-- 1 0 obj << /Metadata 3 0 R >> endobj
+-- 3 0 obj << /Subtype /XML /Type /Metadata /Length 9104 >> stream ...
+-- 2 0 obj << /Metadata 4 0 R /Subtype /XML /Type /Metadata >> endobj
+-- 4 0 obj << /Length 9104 >> stream ...
+
+do
+
+    -- This is a goodie. Checking came up in the ctx chat (HHR) in relation
+    -- to conversion and newer (lossless jpeg) file formats (not in pdf) but
+    -- that could be dealt with later (at least get the size and resolution
+    -- info).
+
+    -- todo : svg
+    -- todo : pdf (similar table)
+    -- todo : jbig jbig2 jb2 (if needed)
+
+    local graphics = nil
+
+    function scripts.pdf.identify(filename)
+        if graphics == nil then
+            graphics = require("grph-img.lua") or false
+        end
+        if graphics then
+            local info = graphics.identify(filename)
+            if info and info.length then
+                report("filename    : %s",filename)
+                report("filetype    : %s",info.filetype)
+                report("filesize    : %s",info.length)
+                report("colordepth  : %s",info.colordepth)
+                report("colorspace  : %s",graphics.colorspaces[info.colorspace])
+                report("size        : %s %s",info.xsize,info.ysize)
+                report("resolution  : %s %s",info.xres,info.yres)
+                report("boundingbox : 0 0 %s %s (bp)",graphics.bpsize(info))
+            end
+        end
+    end
+
 end
 
 function scripts.pdf.info(filename)
@@ -95,20 +147,66 @@ function scripts.pdf.info(filename)
         local info     = pdffile.Info
         local pages    = pdffile.pages
         local nofpages = pdffile.nofpages
+        local metadata = catalog.Metadata
 
         local unset    = "<unset>"
+
+        local title            = info.Title
+        local creator          = info.Creator
+        local producer         = info.Producer
+        local author           = info.Author
+        local creationdate     = info.CreationDate
+        local modificationdate = info.ModDate
+
+        if metadata then
+            metadata = metadata()
+            if metadata then
+                local m = xml.convert(metadata)
+                title            = title            or xml.text(m,"Description/title/**/*")
+                author           = author           or xml.text(m,"Description/author/**/*")
+                creator          = creator          or xml.text(m,"Description/CreatorTool")
+                producer         = producer         or xml.text(m,"Description/Producer")
+                creationdate     = creationdate     or xml.text(m,"Description/CreateDate")
+                modificationdate = modificationdate or xml.text(m,"Description/ModifyDate")
+            end
+        end
+
+        local function checked(str)
+            return str and str ~= "" and str or unset
+        end
 
         report("%-17s > %s","filename",          filename)
         report("%-17s > %s","pdf version",       catalog.Version      or unset)
         report("%-17s > %s","major version",     pdffile.majorversion or unset)
         report("%-17s > %s","minor version",     pdffile.minorversion or unset)
         report("%-17s > %s","number of pages",   nofpages             or 0)
-        report("%-17s > %s","title",             info.Title           or unset)
-        report("%-17s > %s","creator",           info.Creator         or unset)
-        report("%-17s > %s","producer",          info.Producer        or unset)
-        report("%-17s > %s","author",            info.Author          or unset)
-        report("%-17s > %s","creation date",     info.CreationDate    or unset)
-        report("%-17s > %s","modification date", info.ModDate         or unset)
+        report("%-17s > %s","title",             checked(title))
+        report("%-17s > %s","creator",           checked(creator))
+        report("%-17s > %s","producer",          checked(producer))
+        report("%-17s > %s","author",            checked(author))
+        report("%-17s > %s","creation date",     checked(creationdate))
+        report("%-17s > %s","modification date", checked(modificationdate))
+
+        local function checked(what,str)
+            if str ~= nil and str ~= "" then
+                report("%-17s > %S",what,str)
+            end
+        end
+
+        local viewerpreferences = catalog.ViewerPreferences
+        local pagelayout        = catalog.PageLayout
+        local pagemode          = catalog.PageMode
+        local encrypted         = pdffile.encrypted
+        local permissions       = pdffile.permissions
+
+        checked("duplex",      viewerpreferences and viewerpreferences.Duplex)
+        checked("page layout", pagelayout)
+        checked("page mode",   pagemode)
+        checked("encrypted",   encrypted and "yes" or nil)
+
+        if permissions then
+            report("%-17s > % t","permissions",table.sortedkeys(permissions))
+        end
 
         local function somebox(what)
             local box = string.lower(what)
@@ -378,6 +476,46 @@ end
 
 local expanded = lpdf.epdf.expanded
 
+function scripts.pdf.userdata(filename,name,format)
+    local pdffile = loadpdffile(filename)
+    if pdffile then
+        local catalog  = pdffile.Catalog
+        local userdata = catalog.LMTX_Userdata
+        if userdata then
+            if type(name) == "string" then
+                local t = { }
+                if type(format) == "string" then
+                    for s in gmatch(name,"([^,]+)") do
+                        t[s] = userdata[s]
+                    end
+                    if format == "lua" then
+                        print(table.serialize(t,"userdata"))
+                    elseif format == "json" then
+                        print(utilities.json.tojson(t))
+                    else
+                        for k, v in sortedhash(t) do
+                            print(k .. "=" .. v)
+                        end
+                    end
+                else
+                    for s in gmatch(name,"([^,]+)") do
+                        t[#t+1] = userdata[s]
+                    end
+                    print(concat(t," "))
+                end
+            else
+                for k, v in expanded(userdata) do
+                    if k ~= "Type" then
+                        report("%s : %s",k,v)
+                    end
+                end
+            end
+        else
+            report("no userdata")
+        end
+    end
+end
+
 local function getfonts(pdffile)
     local usedfonts  = { }
 
@@ -455,7 +593,7 @@ function scripts.pdf.fonts(filename)
         local usedfonts = getfonts(pdffile)
         local found     = { }
         local common    = table.setmetatableindex("table")
-        for k, v in table.sortedhash(usedfonts) do
+        for k, v in sortedhash(usedfonts) do
             local basefont = v.BaseFont
             local encoding = v.Encoding
             local subtype  = v.Subtype
@@ -521,7 +659,7 @@ function scripts.pdf.fonts(filename)
 
         local list = { }
         for k, v in next, found do
-            local s = string.gsub(k,"(%d+)",function(s) return string.format("%05i",tonumber(s)) end)
+            local s = string.gsub(k,"(%d+)",function(s) return format("%05i",tonumber(s)) end)
             list[s] = { k, v }
             if #v.chars > 0 then
                 haschar = true
@@ -624,7 +762,8 @@ function scripts.pdf.links(filename,asked)
                         local S = a.S
                         if S == "GoTo" then
                             local D = a.D
-                            if D then
+                            local t = type(D)
+                            if t == "table" then
                                 local D1 = D[1]
                                 local R1 = reverse[D1]
                                 if not done then
@@ -632,15 +771,17 @@ function scripts.pdf.links(filename,asked)
                                     done = true
                                 end
                                 if tonumber(R1) then
-                                    report("intern, page % 4i",R1 or 0)
+                                    report("intern, page %i",R1 or 0)
                                 else
                                     report("intern, name %s",tostring(D1))
                                 end
+                            elseif t == "string" then
+                                report("intern, name %s",D)
                             end
                         elseif S == "GoToR" then
                             local D = a.D
                             if D then
-                                local F = A.F
+                                local F = a.F
                                 if F then
                                     local D1 = D[1]
                                     if not done then
@@ -648,9 +789,9 @@ function scripts.pdf.links(filename,asked)
                                         done = true
                                     end
                                     if tonumber(D1) then
-                                        report("extern, page % 4i, file %s",D1 + 1,F)
+                                        report("extern, page %i, file %s",D1 + 1,F)
                                     else
-                                        report("extern, page % 4i, file %s, name %s",0,F,D[1])
+                                        report("extern, page %i, file %s, name %s",0,F,D[1])
                                     end
                                 end
                             end
@@ -697,16 +838,211 @@ function scripts.pdf.links(filename,asked)
                     local D = v.D
                     if D then
                         local p = reverse[D[1]]
-                        report("tag %s, page % 4i",k,p)
+                        report("tag %s, page %i",k,p)
                         insert(list[p],k)
                     end
                 end
                 for k, v in sortedhash(list) do
                     report("")
-                    report("page %i, names % t",k,v)
+                    report("page %i, names : [ % | t ]",k,v)
                 end
             end
         end
+    end
+end
+
+function scripts.pdf.outlines(filename)
+
+    local pdffile = loadpdffile(filename)
+    if pdffile then
+
+        local outlines     = pdffile.Catalog.Outlines
+        local destinations = pdffile.destinations
+        local pages        = pdffile.pages
+
+        local function showdestination(current,depth,title)
+            local action = current.A
+            if type(title) == "table" then
+                title = lpdf.frombytes(title[2],title[3])
+            end
+            if action then
+                local subtype = action.S
+                if subtype == "GoTo" then
+                    local destination = action.D
+                    local kind = type(destination)
+                    if kind == "string" then
+                        report("%wtitle %a, name %a",2*depth,title,destination)
+                    elseif kind == "table" then
+                        local pageref = #destination
+                        if pageref then
+                            local pagedata = pages[pageref]
+                            if pagedata then
+                                report("%wtitle %a, page %a",2*depth,title,pagedata.number)
+                            end
+                        end
+                    end
+                end
+            else
+                local destination = current.Dest
+                if destination then
+                    if type(destination) == "string" then
+                        report("%wtitle %a, name %a",2*depth,title,destination)
+                    else
+                        local pagedata = destination and destination[1]
+                        if pagedata and pagedata.Type == "Page" then
+                            report("%wtitle %a, page %a",2*depth,title,pagedata.number)
+                        end
+                    end
+                end
+            end
+            if title then
+--                 report("%wtitle %a, unknown",2*depth,title)
+            end
+        end
+
+        if outlines then
+
+            local function traverse(current,depth)
+                while current do
+                    local title = current.Title -- can be pdfdoc or unicode
+--                     local title = current("Title")  -- can be pdfdoc or unicode
+                    if title then
+                        showdestination(current,depth,title)
+                    end
+                    local first = current.First
+                    if first then
+                        local current = first
+                        while current do
+                            local title = current.Title
+                            if title then
+                                showdestination(current,depth,title)
+                            end
+                            traverse(current.First,depth+1)
+                            current = current.Next
+                        end
+                    end
+                    current = current.Next
+                end
+            end
+            report("")
+            report("outlines")
+            report("")
+            traverse(outlines,0)
+            report("")
+
+        else
+            report("no outlines in %a",filename)
+        end
+
+    end
+
+end
+
+function scripts.pdf.structure(filename)
+    local pdffile = loadpdffile(filename)
+    if pdffile then
+
+        local pages    = pdffile.pages
+        local nofpages = pdffile.nofpages
+
+        -- When I'm really bored, have a stack of new cd's or it's depressing
+        -- weather I might be willing to waste time on this.
+
+--         local tree = pdffile.Catalog.StructTreeRoot
+--         if tree then
+--             local kids = tree.K
+--         end
+
+    end
+end
+
+local function whatever(filename,asked,what,subtype)
+    local pdffile = loadpdffile(filename)
+    if pdffile then
+
+        local pages    = pdffile.pages
+        local nofpages = pdffile.nofpages
+
+        if asked and (asked < 1 or asked > nofpages) then
+            report("")
+            report("no page %i, last page %i",asked,nofpages)
+            report("")
+            return
+        end
+
+        local function banner(pagenumber)
+            report("")
+            report("%s @ page %i",what,pagenumber)
+            report("")
+        end
+
+        local function show(pagenumber)
+            local page   = pages[pagenumber]
+            local annots = page.Annots
+            if annots then
+                local done = false
+                for i=1,#annots do
+                    local annotation = annots[i]
+                    local S = annotation.Subtype
+                    if S == subtype then
+                        local author   = annotation.T or "unknown"
+                        local contents = annotation.Contents or "empty"
+                        local rect     = annotation.Rect()
+                        local name     = annotation.NM or "unset"
+                        if not done then
+                            banner(pagenumber)
+                            done = true
+                        end
+                        local x = rect[1]
+                        local y = rect[2]
+                        local w = rect[3] - rect[1]
+                        local h = rect[4] - rect[2]
+                        report("position (%N,%N), dimensions (%N,%N), name %a, author %a, contents %a",
+                            x,y,w,h,name,author,contents)
+                    end
+                end
+            end
+        end
+
+        if asked then
+            show(asked)
+        else
+            for pagenumber=1,nofpages do
+                show(pagenumber)
+            end
+        end
+
+    end
+end
+
+
+function scripts.pdf.highlights(filename,asked)
+    whatever(filename,asked,"highlights","Highlight")
+end
+
+function scripts.pdf.comments(filename,asked)
+    whatever(filename,asked,"comments","Text")
+end
+
+local template = [[
+\startTEXpage
+\externalfigure[%s][page=%i]
+\stopTEXpage
+]]
+
+function scripts.pdf.split(filename)
+    local pdffile = loadpdffile(filename)
+    if pdffile then
+        local pages   = pdffile.nofpages
+        local name    = file.nameonly(filename)
+        local texname = "mtx-pdf-temp.tex"
+        for page=1,pages do
+            local pdfname = file.addsuffix(name.."-"..page,"pdf")
+            local command = format("context --batch --nostats --silent --once %s --result=%s --purgeall",texname,pdfname)
+            io.savedata(texname,format(template,filename,page))
+            os.execute(command)
+        end
+        os.remove(texname)
     end
 end
 
@@ -721,16 +1057,28 @@ if filename == "" then
     application.help()
 elseif environment.argument("info") then
     scripts.pdf.info(filename)
+elseif environment.argument("identify") then
+    scripts.pdf.identify(filename)
 elseif environment.argument("metadata") then
     scripts.pdf.metadata(filename,environment.argument("pretty"))
 elseif environment.argument("formdata") then
     scripts.pdf.formdata(filename,environment.argument("save"))
+elseif environment.argument("userdata") then
+    scripts.pdf.userdata(filename,environment.argument("userdata"),environment.argument("format"))
 elseif environment.argument("fonts") then
     scripts.pdf.fonts(filename)
 elseif environment.argument("object") then
     scripts.pdf.object(filename,tonumber(environment.argument("object")))
 elseif environment.argument("links") then
     scripts.pdf.links(filename,tonumber(environment.argument("page")))
+elseif environment.argument("outlines") then
+    scripts.pdf.outlines(filename)
+elseif environment.argument("structure") then
+    scripts.pdf.structure(filename)
+elseif environment.argument("highlights") then
+    scripts.pdf.highlights(filename,tonumber(environment.argument("page")))
+elseif environment.argument("comments") then
+    scripts.pdf.comments(filename,tonumber(environment.argument("page")))
 elseif environment.argument("signature") then
     scripts.pdf.signature(filename,environment.argument("save"))
 elseif environment.argument("sign") then
@@ -739,6 +1087,8 @@ elseif environment.argument("detail") then
     scripts.pdf.detail(filename,environment.argument("detail"))
 elseif environment.argument("verify") then
     scripts.pdf.verify(filename)
+elseif environment.argument("split") then
+    scripts.pdf.split(filename)
 elseif environment.argument("exporthelp") then
     application.export(environment.argument("exporthelp"),filename)
 else

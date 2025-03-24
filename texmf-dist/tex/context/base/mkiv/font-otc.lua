@@ -130,7 +130,7 @@ local function validspecification(specification,name)
     end
 end
 
-local function addfeature(data,feature,specifications,prepareonly)
+local function addfeature(data,feature,specifications,prepareonly,filename)
 
     -- todo: add some validator / check code so that we're more tolerant to
     -- user errors
@@ -148,8 +148,8 @@ local function addfeature(data,feature,specifications,prepareonly)
         return
     end
 
-    local features     = resources.features
-    local sequences    = resources.sequences
+    local features  = resources.features
+    local sequences = resources.sequences
 
     if not features or not sequences then
         report_otf("missing specification")
@@ -368,14 +368,16 @@ local function addfeature(data,feature,specifications,prepareonly)
         data.resources .spacekerns    = nil
     end
 
-    local function prepare_kern(list,featuretype)
+    local function prepare_kern(list,featuretype,nocheck)
         local coverage = { }
         local cover    = coveractions[featuretype]
         local isspace  = false
         for code, replacement in next, list do
             local unicode     = tounicode(code)
             local description = descriptions[unicode]
-            if description and type(replacement) == "table" then
+            if not nocheck and not description then
+                skip = skip + 1
+            elseif type(replacement) == "table" then
                 local r = { }
                 for k, v in next, replacement do
                     local u = tounicode(k)
@@ -405,14 +407,16 @@ local function addfeature(data,feature,specifications,prepareonly)
         return coverage
     end
 
-    local function prepare_pair(list,featuretype)
+    local function prepare_pair(list,featuretype,nocheck)
         local coverage = { }
         local cover    = coveractions[featuretype]
         if cover then
             for code, replacement in next, list do
                 local unicode     = tounicode(code)
                 local description = descriptions[unicode]
-                if description and type(replacement) == "table" then
+                if not nocheck and not description then
+                    skip = skip + 1
+                elseif type(replacement) == "table" then
                     local r = { }
                     for k, v in next, replacement do
                         local u = tounicode(k)
@@ -674,6 +678,28 @@ local function addfeature(data,feature,specifications,prepareonly)
     for s=1,#dataset do
         local specification = dataset[s]
         local valid = specification.valid -- nowhere used
+        local files = specification.files
+        if files and filename then
+            local name = string.lower(file.basename(filename))
+            -- hash test
+            local okay = files[name]
+            -- list test
+            if not okay then
+                for i=1,#files do
+                    if name == files[i] then
+                        okay = true
+                        break
+                    end
+                end
+            end
+            if okay then
+             -- report_otf("feature applied to file %a",name)
+            else
+             -- report_otf("feature skipped for file %a",name)
+                return
+            end
+        end
+        --
         local feature = specification.name or feature
         if not feature or feature == "" then
             report_otf("no valid name given for extra feature")
@@ -755,13 +781,13 @@ local function addfeature(data,feature,specifications,prepareonly)
                                 coverage = prepare_multiple(list,featuretype,nocheck)
                             elseif featuretype == "kern" or featuretype == "move" then
                                 format   = featuretype
-                                coverage = prepare_kern(list,featuretype)
+                                coverage = prepare_kern(list,featuretype,nocheck)
                             elseif featuretype == "pair" then
                                 format   = "pair"
-                                coverage = prepare_pair(list,featuretype)
+                                coverage = prepare_pair(list,featuretype,nocheck)
                             elseif featuretype == "single" then
                                 format   = "single"
-                                coverage = prepare_single(list,featuretype)
+                                coverage = prepare_single(list,featuretype,nocheck)
                             end
                             if coverage and next(coverage) then
                                 nofsteps = nofsteps + 1
@@ -786,9 +812,9 @@ local function addfeature(data,feature,specifications,prepareonly)
                     local list     = askedsteps[i]
                     local coverage = nil
                     local format   = nil
-if type(list) == "function" then
-    list = list(data,specification,list,i)
-end
+                    if type(list) == "function" then
+                        list = list(data,specification,list,i) -- why pass list instead if askedsteps
+                    end
                     if not list then
                         -- see ebgaramond hack
                     elseif featuretype == "substitution" then
@@ -807,15 +833,15 @@ end
                     elseif featuretype == "kern" or featuretype == "move" then
                         category = "gpos"
                         format   = featuretype
-                        coverage = prepare_kern(list,featuretype)
+                        coverage = prepare_kern(list,featuretype,nocheck)
                     elseif featuretype == "pair" then
                         category = "gpos"
                         format   = "pair"
-                        coverage = prepare_pair(list,featuretype)
+                        coverage = prepare_pair(list,featuretype,nocheck)
                     elseif featuretype == "single" then
                         category = "gpos"
                         format   = "single"
-                        coverage = prepare_single(list,featuretype)
+                        coverage = prepare_single(list,featuretype,nocheck)
                     elseif featuretype == "chainsubstitution" then
                         category = "gsub"
                         coverage = prepare_chain(list,featuretype,sublookups,nocheck)
@@ -929,7 +955,7 @@ end
 local function enhance(data,filename,raw)
     for slot=1,#extrafeatures do
         local specification = extrafeatures[slot]
-        addfeature(data,specification.name,specification)
+        addfeature(data,specification.name,specification,nil,filename)
     end
 end
 

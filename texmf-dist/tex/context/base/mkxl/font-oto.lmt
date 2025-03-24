@@ -31,8 +31,8 @@ otf.defaultbasealternate     = "none" -- first last
 
 local getprivate             = fonts.constructors.getprivate
 
-local wildcard               = "*"
-local default                = "dflt"
+local wildcard               <const> = "*"
+local default                <const> = "dflt"
 
 local formatters             = string.formatters
 local f_unicode              = formatters["%U"]
@@ -162,10 +162,11 @@ end
 -- As you can see here, latin modern is less complete than dejavu but
 -- in practice one will not notice it.
 --
--- The while loop is needed because we need to resolve for instance pseudo names like
--- hyphen_hyphen to endash so in practice we end up with a bit too many definitions but the
--- overhead is neglectable. We can have changed[first] or changed[second] but it quickly becomes
--- messy if we need to take that into account.
+-- The while loop is needed because we need to resolve for instance pseudo names
+-- like hyphen_hyphen to endash so in practice we end up with a bit too many
+-- definitions but the overhead is neglectable. We can have changed[first] or
+-- changed[second] but it quickly becomes messy if we need to take that into
+-- account.
 
 local function makefake(tfmdata,name,present)
     local private   = getprivate(tfmdata)
@@ -474,6 +475,13 @@ local function featuresinitializer(tfmdata,value)
                                 local feature = order[i]
                                 local value = features[feature]
                                 if value then
+                                    local script   = script
+                                    local language = language
+if type(value) == "string" then
+    local t = utilities.parsers.settings_to_hash(value)
+    script   = t and t.script   or script
+    language = t and t.language or language
+end
                                     local validlookups, lookuplist = collectlookups(rawdata,feature,script,language)
                                     if not validlookups then
                                         -- skip

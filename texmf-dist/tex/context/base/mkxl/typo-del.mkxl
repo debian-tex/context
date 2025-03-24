@@ -20,7 +20,7 @@
 \ifdefined\dotagsetdelimitedsymbol   \else \aliased\let\dotagsetdelimitedsymbol  \gobbleoneargument \fi
 \ifdefined\dotagsetsubsentencesymbol \else \aliased\let\dotagsetsubsentencesymbol\gobbleoneargument \fi
 
-% THIS IS OBSOLETE:
+% Kind of special ...
 
 \installcorenamespace{hyphenmarksign} % let's not waste a setuphandler (yet)
 
@@ -67,7 +67,32 @@
 \definesymbol[\c!rightcompoundhyphen] [\languageparameter\c!rightcompoundhyphen]
 \definesymbol[\c!compoundhyphen]      [\languageparameter\c!compoundhyphen]
 
-% TILL HERE
+\immutable\integerdef\compoundhyphencode\privatecharactercode{compoundhyphen}
+
+\pushoverloadmode
+
+\permanent\protected\def\compoundhyphenfont
+  {\char\compoundhyphencode}                 % tuned for font
+
+\permanent\protected\def\compoundhyphenfake
+  {\char\hyphenasciicode
+  %\kern-.10775\emwidth                      % mkiv (.25\exheight)
+  %\kern-.5\fontcharwd\font\hyphenasciicode  % for a while
+   \kern{-\fontcharwd\font\hyphenasciicode/3}% okay for most
+   \char\hyphenasciicode}
+
+\permanent\protected\def\compoundhyphen
+  {\hbox\bgroup
+     \iffontchar\font\compoundhyphencode
+       \compoundhyphenfont
+     \else
+       \compoundhyphenfake
+     \fi
+   \egroup}
+
+\popoverloadmode
+
+% ... till here.
 
 \setnewconstant\boundarycharactermode\plusone
 
@@ -165,7 +190,7 @@
    \fi}
 
 \permanent\protected\def\midsentence
-  {\dostarttagged\t!subsentencesymbol\empty
+  {\dostarttaggednodetail\t!subsentencesymbol
    \dotagsetsubsentencesymbol\s!middle
    \symbol[\c!midsentence]%
    \dostoptagged}
@@ -182,18 +207,18 @@
    \ifnum\c_typo_subsentence_nesting=\plusone
      \dontleavehmode
    \fi
-   \dostarttagged\t!subsentence\empty % no chain
-   \dostarttagged\t!subsentencesymbol\empty
+   \dostarttaggednodetail\t!subsentence
+   \dostarttaggednodetail\t!subsentencesymbol
    \dotagsetsubsentencesymbol\s!left
    \symbol[\ifodd\c_typo_subsentence_nesting\c!leftsentence\else\c!leftsubsentence\fi]%
    \dostoptagged
-   \dostarttagged\t!subsentencecontent\empty
+   \dostarttaggednodetail\t!subsentencecontent
    \typo_subsentence_cleanup_start}
 
 \permanent\protected\def\endofsubsentence % relax prevents space gobbling
   {\typo_subsentence_cleanup_stop
    \dostoptagged
-   \dostarttagged\t!subsentencesymbol\empty
+   \dostarttaggednodetail\t!subsentencesymbol
    \dotagsetsubsentencesymbol\s!right
    \symbol[\ifodd\c_typo_subsentence_nesting\c!rightsentence\else\c!rightsubsentence\fi]%
    \dostoptagged
@@ -411,7 +436,7 @@
 \permanent\tolerant\protected\def\startdelimitedtext[#1]#*[#2]%
   {\begingroup
    \typo_delimited_push{#1}{#2}%
-   \dostarttaggedchained\t!delimitedblock\currentdelimitedtext\??delimitedtext
+   \dostarttaggedchained\t!delimitedblock\currentparentdelimitedtext\currentdelimitedtext\??delimitedtext
    \edef\p_method{\delimitedtextparameter\c!method}%
    \ifx\p_method\v!font
      \expandafter\typo_delimited_start_font
@@ -425,7 +450,7 @@
 
 \def\typo_delimited_start_font
   {\let\typo_delimited_stop\typo_delimitedtexts_finish_font
-   \dostarttagged\t!delimitedsymbol\empty
+   \dostarttaggednodetail\t!delimitedsymbol
    \dotagsetdelimitedsymbol\s!left
    \delimitedtextparameter\c!left
    \dostoptagged
@@ -452,7 +477,7 @@
 
 \def\typo_delimitedtexts_finish_font
   {\removeunwantedspaces % again ?
-   \dostarttagged\t!delimitedsymbol\empty
+   \dostarttaggednodetail\t!delimitedsymbol
    \dotagsetdelimitedsymbol\s!right
    \delimitedtextparameter\c!right
    \dostoptagged}
@@ -472,7 +497,7 @@
   {\let\typo_delimited_show_language\gobbletwoarguments}
 
 \def\typo_delimited_start_content
-  {\dostarttagged\t!delimitedcontent\empty
+  {\dostarttaggednodetail\t!delimitedcontent
    \begingroup
    \douselanguageparameter\currentdelimitedlanguage
    \typo_delimited_show_language<\hss
@@ -533,7 +558,6 @@
 \def\typo_delimited_stop_par
   {\typo_delimited_stop_content
    \rightdelimitedtextmark
-   \rightdelimitedtextmark
    \carryoverpar\endgroup
    \endgraf
    \endgroup
@@ -590,7 +614,7 @@
 \permanent\protected\def\stopdelimited {\stopdelimitedtext}  % no let, dynamically assigned
 \permanent          \def\delimited     {\delimitedtext}
 
-% todo: \dostarttagged\t!nothing\empty % for left/right boxes
+% todo: \dostarttaggednodetail\t!nothing % for left/right boxes
 
 %D We have 4 different location and symbol handlers (two pairs):
 %D
@@ -649,7 +673,10 @@
    \fi}
 
 \def\typo_delimited_left_symbol#1%
-  {\dostarttagged\t!delimitedsymbol\empty
+  {% a hack: we need to make sure that the par counter is incremented for tagging / export
+   \dontleavehmode
+   % oterwise we get a break because the symbol has a different par number
+   \dostarttaggednodetail\t!delimitedsymbol
    \dotagsetdelimitedsymbol\s!left
    \setbox\scratchbox\hbox{\usedelimitedtextstyleandcolor\c!symstyle\c!symcolor#1}%
    \dontleavehmode
@@ -657,11 +684,11 @@
    \ifx\p_delimited_margin\v!margin
       \kern-\wd\scratchbox
    \fi
-   \box\scratchbox
+   \unhbox\scratchbox
    \dostoptagged}
 
 \def\typo_delimited_right_symbol#1%
-  {\dostarttagged\t!delimitedsymbol\empty
+  {\dostarttaggednodetail\t!delimitedsymbol
    \dotagsetdelimitedsymbol\s!right
    \hsmash{\usedelimitedtextstyleandcolor\c!symstyle\c!symcolor#1}%
    \dostoptagged}
@@ -727,7 +754,7 @@
         %\fi
        \fi
        \strut % new, needed below
-       \dostarttagged\t!delimitedsymbol\empty
+       \dostarttaggednodetail\t!delimitedsymbol
        \dotagsetdelimitedsymbol\s!middle
        \delimitedtextparameter#1% unhbox\scratchbox
        \dostoptagged
@@ -754,7 +781,7 @@
    %   \hskip\zeroskip % == \prewordbreak
    % \fi
      \strut % new, needed below
-     \dostarttagged\t!delimitedsymbol\empty
+     \dostarttaggednodetail\t!delimitedsymbol
      \dotagsetdelimitedsymbol\s!left
      \delimitedtextparameter#1% unhbox\scratchbox
      \dostoptagged
@@ -777,7 +804,7 @@
        \hskip\zeroskip % == \prewordbreak
      \fi
      \strut % new, needed below
-     \dostarttagged\t!delimitedsymbol\empty
+     \dostarttaggednodetail\t!delimitedsymbol
      \dotagsetdelimitedsymbol\s!right
      \delimitedtextparameter#1% unhbox\scratchbox
      \dostoptagged
@@ -787,7 +814,7 @@
 
 \protected\def\typo_delimited_par
   {\groupedcommand
-     {\dostarttaggedchained\t!delimited\currentdelimitedtext\??delimitedtext % block?
+     {\dostarttaggedchained\t!delimited\currentparentdelimitedtext\currentdelimitedtext\??delimitedtext % block?
       \usedelimitedtextstyleandcolor\c!style\c!color
       \typo_delimited_handle_left\c!left
       \typo_delimited_start_content}
@@ -808,9 +835,9 @@
 \def\typo_delimited_quoted
   {\dontleavehmode
    \begingroup
-   \dostarttaggedchained\t!delimited\currentdelimitedtext\??delimitedtext
-   \typo_delimited_handle_left\c!left
+   \dostarttaggedchained\t!delimited\currentparentdelimitedtext\currentdelimitedtext\??delimitedtext
    \usedelimitedtextstyleandcolor\c!style\c!color
+   \typo_delimited_handle_left\c!left
    \typo_delimited_start_content
    \bgroup
    \aftergroup\typo_delimited_quoted_e
@@ -827,7 +854,7 @@
 \def\typo_delimited_attributed
   {\dontleavehmode
    \begingroup
-   \dostarttaggedchained\t!delimited\currentdelimitedtext\??delimitedtext
+   \dostarttaggedchained\t!delimited\currentparentdelimitedtext\currentdelimitedtext\??delimitedtext
    \usedelimitedtextstyleandcolor\c!style\c!color
    \typo_delimited_start_content
    \bgroup
@@ -843,9 +870,9 @@
 \def\typo_delimited_fontdriven
   {\dontleavehmode
    \begingroup
-   \dostarttaggedchained\t!delimited\currentdelimitedtext\??delimitedtext
-   \usedlanguageparameter{\c!left\currentparentdelimitedtext}% was: \currentdelimitedtext
+   \dostarttaggedchained\t!delimited\currentparentdelimitedtext\currentdelimitedtext\??delimitedtext
    \usedelimitedtextstyleandcolor\c!style\c!color
+   \usedlanguageparameter{\c!left\currentparentdelimitedtext}% was: \currentdelimitedtext
    \typo_delimited_start_content
    \bgroup
    \aftergroup\typo_delimited_fontdriven_e

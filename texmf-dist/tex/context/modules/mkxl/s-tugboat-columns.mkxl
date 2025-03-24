@@ -348,7 +348,7 @@
 %
 %      \setupcaptions
 %        [headstyle=\AcroFontBold,
-%         style={\AcroFont\advance\baselineskip by -1pt},
+%         style={\AcroFont\advanceby\baselineskip by -1pt},
 %         align=right]
 %
 %      %D We like a colon after the caption label.
@@ -778,6 +778,12 @@
 \continueifinputfile{s-tugboat-columns.mkxl}
 
 \setupexternalfigures[location={local,global,default}]
+
+\setuppagecolumns[page=]
+
+\input ward
+
+\kern 1cm
 
 \StartArticle
 

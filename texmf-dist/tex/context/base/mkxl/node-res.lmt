@@ -134,7 +134,7 @@ nutpool.register  = register_node -- could be register_nut
 local disc              = register_nut(new_nut(nodecodes.disc))
 local kern              = register_nut(new_nut(kern_code,kerncodes.userkern))
 local fontkern          = register_nut(new_nut(kern_code,kerncodes.fontkern))
-local italickern        = register_nut(new_nut(kern_code,kerncodes.italiccorrection))
+local italiccorrection  = register_nut(new_nut(kern_code,kerncodes.italiccorrection))
 local spacefontkern     = register_nut(new_nut(kern_code,kerncodes.spacefontkern))
 local penalty           = register_nut(new_nut(nodecodes.penalty))
 local glue              = register_nut(new_nut(glue_code))
@@ -171,6 +171,7 @@ local choice            = register_nut(new_nut(nodecodes.choice))
 
 local boundary          = register_nut(new_nut(nodecodes.boundary,boundarycodes.user))
 local wordboundary      = register_nut(new_nut(nodecodes.boundary,boundarycodes.word))
+local luaboundary       = register_nut(new_nut(nodecodes.boundary,boundarycodes.lua))
 
 local cleader           = register_nut(copy_nut(glue)) setsubtype(cleader,gluecodes.cleaders) setglue(cleader,0,65536,0,2,0)
 
@@ -186,6 +187,7 @@ local outlinerule       = register_nut(new_nut(rule_code,rulecodes.outline)) -- 
 local imagerule         = register_nut(new_nut(rule_code,rulecodes.image))   -- setdirection(rule, lefttoright_code)
 local boxrule           = register_nut(new_nut(rule_code,rulecodes.box))     -- setdirection(rule, lefttoright_code)
 local virtualrule       = register_nut(new_nut(rule_code,rulecodes.virtual)) -- setdirection(rule, lefttoright_code)
+local spacingrule       = register_nut(new_nut(rule_code,rulecodes.spacing)) -- setdirection(rule, lefttoright_code)
 local hlist             = register_nut(new_nut(nodecodes.hlist))                setdirection(hlist,lefttoright_code)
 local vlist             = register_nut(new_nut(nodecodes.vlist))                setdirection(vlist,lefttoright_code)
 
@@ -231,6 +233,14 @@ function nutpool.wordboundary(v)
     return n
 end
 
+function nutpool.luaboundary(v,e)
+    local n = copy_nut(luaboundary)
+    if v and v ~= 0 then
+        setvalue(n,v,e or 0)
+    end
+    return n
+end
+
 function nutpool.fontkern(k)
     local n = copy_nut(fontkern)
     if k and k ~= 0 then
@@ -239,13 +249,15 @@ function nutpool.fontkern(k)
     return n
 end
 
-function nutpool.italickern(k)
-    local n = copy_nut(italickern)
+function nutpool.italiccorrection(k)
+    local n = copy_nut(italiccorrection)
     if k and k ~= 0 then
         setkern(n,k)
     end
     return n
 end
+
+nutpool.italickern = nutpool.italiccorrection -- compatibility
 
 function nutpool.spacefontkern(k)
     local n = copy_nut(spacefontkern)
@@ -415,6 +427,14 @@ function nutpool.virtualrule(width,height,depth,data)
     local n = copy_nut(virtualrule)
     if width or height or depth or data then
         setruledimensions(n,width,height,depth,data)
+    end
+    return n
+end
+
+function nutpool.spacingrule(width,height,depth) -- w/h/d == nil will let them adapt
+    local n = copy_nut(spacingrule)
+    if width or height or depth then
+        setwhd(n,width,height,depth)
     end
     return n
 end

@@ -99,12 +99,17 @@
    \c!left="2E,
    \c!right="2E,
    \c!middle="2F,
+   \c!color=,
+   \c!topcolor=\mathfractionparameter\c!textcolor,
+   \c!bottomcolor=\mathfractionparameter\c!textcolor,
+   \c!textcolor=\mathfractionparameter\c!color,
+   \c!symbolcolor=\mathfractionparameter\c!color,
    \c!strut=\v!yes,
    \c!topdistance=,
    \c!bottomdistance=,
    \c!source=\zerocount,
-   \c!hfactor=\plusthousand,
-   \c!vfactor=\plusthousand,
+   \c!hfactor=\plusfivehundred,% skewed
+   \c!vfactor=\plusonehundredtwentyfive,% skewed
    \c!rule=\v!auto]
 
 %D We now default to nice bars:
@@ -120,47 +125,6 @@
 \to \everydefinemathfraction
 
 % Sometimes users want control over the distances:
-
-\let\math_fraction_set_distance\relax
-
-\appendtoks
-    \math_fraction_set_distance
-\to \everymathematics
-
-% why only displaystyle .. a bit weak .. will become a set
-
-\protected\def\math_fraction_set_distance_top
-  {\Umathfractionnumup\displaystyle\m_math_fraction_distance_top
-   \relax}
-
-\protected\def\math_fraction_set_distance_bot
-  {\Umathfractiondenomdown\displaystyle\m_math_fraction_distance_bot
-   \relax}
-
-\protected\def\math_fraction_set_distance_all
-  {\Umathfractionnumup    \displaystyle\m_math_fraction_distance_top
-   \Umathfractiondenomdown\displaystyle\m_math_fraction_distance_bot
-   \relax}
-
-\appendtoks
-    \ifempty\currentmathfraction
-      \edef\m_math_fraction_distance_top{\mathfractionparameter\c!topdistance}%
-      \edef\m_math_fraction_distance_bot{\mathfractionparameter\c!bottomdistance}%
-      \ifempty\m_math_fraction_distance_top
-        \ifempty\m_math_fraction_distance_bot
-          \let\math_fraction_set_distance\relax
-        \else
-          \let\math_fraction_set_distance\math_fraction_set_distance_bot
-        \fi
-      \else
-        \ifempty\m_math_fraction_distance_bot
-          \let\math_fraction_set_distance\math_fraction_set_distance_top
-        \else
-          \let\math_fraction_set_distance\math_fraction_set_distance_all
-        \fi
-      \fi
-    \fi
-\to \everysetupmathfraction
 
 % So far for control.
 
@@ -225,7 +189,7 @@
      \math_fenced_fenced_start\p_math_fraction_fences
    \fi
    %
-   \d_math_fraction_margin\mathfractionparameter\c!margin\relax
+   \d_math_fraction_margin{\mathfractionparameter\c!margin}%
    \ifcase\d_math_fraction_margin
       \let\math_fraction_margin_kern\relax
    \else
@@ -294,61 +258,67 @@
                                                                      \Umathchar\zerocount\fam\scratchcounterthree}
 \defcsname\??fractionmethods\v!horizontal          \v!none\endcsname{\Uskewed
                                                                      \Umathchar\zerocount\fam\scratchcounterthree
-                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
+                                                                     \s!hfactor {\mathfractionparameter\c!hfactor}}
 \defcsname\??fractionmethods\v!horizontal                 \endcsname{\Uskewedwithdelims
                                                                      \Umathchar\zerocount\fam\scratchcounterone
                                                                      \Umathchar\zerocount\fam\scratchcountertwo
                                                                      \Umathchar\zerocount\fam\scratchcounterthree
-                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
+                                                                     \s!hfactor {\mathfractionparameter\c!hfactor}}
 \defcsname\??fractionmethods\v!line                \v!none\endcsname{\Uskewed
                                                                      \Umathchar\zerocount\fam\scratchcounterthree
-                                                                     \s!noaxis \space
-                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
+                                                                     \s!noaxis \relaxedspace
+                                                                     \s!hfactor {\mathfractionparameter\c!hfactor}}
 \defcsname\??fractionmethods\v!line                       \endcsname{\Uskewedwithdelims
                                                                      \Umathchar\zerocount\fam\scratchcounterone
                                                                      \Umathchar\zerocount\fam\scratchcountertwo
                                                                      \Umathchar\zerocount\fam\scratchcounterthree
-                                                                     \s!noaxis \space
-                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
-\defcsname\??fractionmethods\v!center              \v!none\endcsname{\Uskewed
-                                                                     \Umathchar\zerocount\fam\scratchcounterthree
-                                                                     \s!noaxis \space \s!center
-                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
-\defcsname\??fractionmethods\v!center                     \endcsname{\Uskewedwithdelims
-                                                                     \Umathchar\zerocount\fam\scratchcounterone
-                                                                     \Umathchar\zerocount\fam\scratchcountertwo
-                                                                     \Umathchar\zerocount\fam\scratchcounterthree
-                                                                     \s!noaxis \space \s!center
-                                                                     \s!hfactor \numexpr\mathfractionparameter\c!hfactor\relax}
+                                                                     \s!noaxis \relaxedspace
+                                                                     \s!hfactor {\mathfractionparameter\c!hfactor}}
 
-\setupmathfractions % we now inherit !
-  [\c!topcolor=\mathfractionparameter\c!color,
-   \c!bottomcolor=\mathfractionparameter\c!color,
-   \c!rulecolor=\mathfractionparameter\c!color]
-
-\def\math_frac_command_u
-  {\edef\p_method   {\mathfractionparameter\c!method}%
-   \edef\p_rule     {\mathfractionparameter\c!rule}%
-   \edef\p_thickness{\mathfractionparameter\c!rulethickness}%
+\def\math_frac_common
+  {\edef\p_method     {\mathfractionparameter\c!method}%
+   \edef\p_rule       {\mathfractionparameter\c!rule}%
+   \edef\p_thickness  {\mathfractionparameter\c!rulethickness}%
    \scratchcounterone  \mathfractionparameter\c!left  \relax
    \scratchcountertwo  \mathfractionparameter\c!right \relax
    \scratchcounterthree
       \ifx\p_method\v!horizontal
         \mathfractionparameter\c!middle
+    % \orelse\ifx\p_method\v!mp
+    %   \mathfractionparameter\c!middle
       \orelse\ifx\p_method\v!line
-        \mathfractionparameter\c!middle
-      \orelse\ifx\p_method\v!center
         \mathfractionparameter\c!middle
       \else
         \mathfractionparameter\c!symbol
       \fi
    \relax
+   %
+   \ifcstok{\mathfractionparameter\c!mathstyle}\s!identity
+     \frozen\Umathnumeratorvariant  \allmathstyles\mathstylevariantidentity
+     \frozen\Umathdenominatorvariant\allmathstyles\mathstylevariantidentity
+     \resetmathfractionparameter\c!mathstyle
+   \fi
+   %
+   \ifcstok{\mathfractionparameter\c!plugin}\v!mp
+     \edef\p_mp{\mathfractionparameter\c!mp}%
+     \ifempty\p_mp\else
+       \clf_set_extensible_data
+           mp     {\p_mp}
+           left   \scratchcounterthree
+           right  \scratchcounterthree
+           middle \scratchcounterthree
+        \relax
+     \fi
+   \else
+     \lettonothing\p_mp
+   \fi
+   %
    \ifcsname
       \??fractionmethods
       \p_method
       \ifx\p_method\v!horizontal
+    % \orelse\ifx\p_method\v!mp
       \orelse\ifx\p_method\v!line
-      \orelse\ifx\p_method\v!center
       \orelse\ifcsname\??fractionmethods\p_method\p_rule\endcsname % \v!vertical
         \p_rule
       \else
@@ -360,16 +330,20 @@
         \fi
       \fi
    \endcsname \lastnamedcs \else \csname\??fractionmethods\v!vertical\v!auto\endcsname \fi
-   \usedcolorparameterattributes{\mathfractionparameter\c!rulecolor}% was \c!color so we break compatibility !
-   thickness \ifx\p_thickness\v!font
-     \zeropoint
-     \s!font \space
-   \else
-     \dimexpr\p_thickness\relax
-   \fi
+   \usedsymbolcolorparameterattributes{\mathfractionparameter\c!symbolcolor}%
+   \s!thickness
+     \ifx\p_thickness\v!font
+       \zeropoint
+       \s!font\relaxedspace
+     \else
+       {\p_thickness}%
+     \fi
    \s!class   \math_class_by_parameter\mathfractionparameter\c!mathclass
-   \s!vfactor \numexpr\mathfractionparameter\c!vfactor\relax
-   \s!source  \number\namedboxanchor{\mathfractionparameter\c!source}}
+   \s!vfactor {\mathfractionparameter\c!vfactor}%
+   \s!source  {\namedboxanchor{\mathfractionparameter\c!source}}%
+   \ifempty\p_mp\else
+     \s!usecallback\relaxedspace
+   \fi}
 
 \installcorenamespace{mathalignsimple} % this should move to math-ali
 
@@ -387,13 +361,13 @@
 
 \protected\defcsname\??mathfractionalternative\v!inner\endcsname#1#2%
   {%\beginmathgroup
-   \math_frac_command_u
-     {\dousecolorparameter{\mathfractionparameter\c!topcolor}%
+   \math_frac_common
+     {\usemathfractioncolorparameter\c!topcolor
       \math_fraction_margin_kern
       \usemathstyleparameter\mathfractionparameter\c!mathnumeratorstyle
       \m_fractions_strut_top\math_frac_aligned_top{#1}%
       \math_fraction_margin_kern}%
-     {\dousecolorparameter{\mathfractionparameter\c!bottomcolor}%
+     {\usemathfractioncolorparameter\c!bottomcolor
       \math_fraction_margin_kern
       \usemathstyleparameter\mathfractionparameter\c!mathdenominatorstyle
       \m_fractions_strut_bot\math_frac_aligned_bot{#2}%
@@ -404,12 +378,12 @@
 \protected\defcsname\??mathfractionalternative\v!outer\endcsname#1#2%
   {\beginmathgroup
    \usemathstyleparameter\mathfractionparameter\c!mathstyle
-   \math_frac_command_u
-     {\dousecolorparameter{\mathfractionparameter\c!topcolor}%
+   \math_frac_common
+     {\usemathfractioncolorparameter\c!topcolor
       \math_fraction_margin_kern
       \m_fractions_strut_top\math_frac_aligned_top{#1}%
       \math_fraction_margin_kern}%
-     {\dousecolorparameter{\mathfractionparameter\c!bottomcolor}%
+     {\usemathfractioncolorparameter\c!bottomcolor
       \math_fraction_margin_kern
       \m_fractions_strut_bot\math_frac_aligned_bot{#2}%
       \math_fraction_margin_kern}%
@@ -419,13 +393,13 @@
 \protected\defcsname\??mathfractionalternative\v!both\endcsname#1#2%
   {\beginmathgroup
    \usemathstyleparameter\mathfractionparameter\c!mathstyle
-   \math_frac_command_u
-     {\dousecolorparameter{\mathfractionparameter\c!topcolor}%
+   \math_frac_common
+     {\usemathfractioncolorparameter\c!topcolor
       \math_fraction_margin_kern
       \usemathstyleparameter\mathfractionparameter\c!mathnumeratorstyle
       \m_fractions_strut_top\math_frac_aligned_top{#1}%
       \math_fraction_margin_kern}%
-     {\dousecolorparameter{\mathfractionparameter\c!bottomcolor}%
+     {\usemathfractioncolorparameter\c!bottomcolor
       \math_fraction_margin_kern
       \usemathstyleparameter\mathfractionparameter\c!mathdenominatorstyle
       \m_fractions_strut_bot\math_frac_aligned_bot{#2}%
@@ -444,27 +418,39 @@
 
 %D Spacing (sensitive for definition of \triggermathstyle:
 
-\permanent\protected\def\nomathfractiongaps     {\normalexpanded{\math_no_fraction_gaps     \allmathstyles}}
-\permanent\protected\def\overlaymathfractiongaps{\normalexpanded{\math_overlay_fraction_gaps\allmathstyles}}
-
-\protected\def\math_no_fraction_gaps#1%
-  {\Umathfractionnumup    #1\zeropoint
-   \Umathfractiondenomdown#1\zeropoint}
-
-\protected\def\math_overlay_fraction_gaps#1%
-  {\Umathfractionnumup    #1\zeropoint
-   \Umathfractionnumvgap  #1\zeropoint
-   \Umathfractiondenomvgap#1\zeropoint
-   \Umathfractiondenomdown#1\zeropoint}
-
 \installcorenamespace{mathfractiondistance}
 
-\letcsname\??mathfractiondistance\v!none   \endcsname\nomathfractiongaps
-\letcsname\??mathfractiondistance\v!no     \endcsname\nomathfractiongaps
-\letcsname\??mathfractiondistance\v!overlay\endcsname\overlaymathfractiongaps
+\defcsname\??mathfractiondistance\v!none\endcsname
+  {\Umathfractionnumup    \allmathstyles\zeropoint
+   \Umathfractiondenomdown\allmathstyles\zeropoint}
+
+\defcsname\??mathfractiondistance\v!no\endcsname
+  {\Umathfractionnumup    \allmathstyles\zeropoint
+   \Umathfractiondenomdown\allmathstyles\zeropoint}
+
+\defcsname\??mathfractiondistance\v!overlay\endcsname
+  {\Umathfractionnumup    \allmathstyles\zeropoint
+   \Umathfractionnumvgap  \allmathstyles\zeropoint
+   \Umathfractiondenomvgap\allmathstyles\zeropoint
+   \Umathfractiondenomdown\allmathstyles\zeropoint}
+
+\defcsname\??mathfractiondistance\v!top\endcsname
+  {\Umathfractionnumvgap  \allmathstyles{\mathfractionparameter\c!topdistance}%
+   \relax}
+
+\defcsname\??mathfractiondistance\v!bottom\endcsname
+  {\Umathfractiondenomvgap\allmathstyles{\mathfractionparameter\c!bottomdistance}%
+   \relax}
+
+\defcsname\??mathfractiondistance\v!both\endcsname
+  {\Umathfractionnumvgap  \allmathstyles{\mathfractionparameter\c!topdistance}%
+   \Umathfractiondenomvgap\allmathstyles{\mathfractionparameter\c!bottomdistance}%
+   \relax}
 
 \setupmathfractions
-  [\c!distance=\v!none]
+  [\c!distance=\v!none,
+   \c!topdistance=\zeropoint,
+   \c!bottomdistance=\zeropoint]
 
 % we need to keep it local, so not everybodyfont
 
@@ -511,6 +497,8 @@
 
 \def\math_fraction_set_threshold_display_auto
    {\Umathfractiondelsize\alldisplaystyles\maxdimen}
+
+% \dimexpr#1*\plusthousand/\glyphscale\relax
 
 \def\math_fraction_set_threshold_inline_ratio % watch the reverse compensation
   {\edef\p_threshold{\mathfractionparameter\c!inlinethreshold}%
@@ -724,28 +712,20 @@
   [\c!mathnumeratorstyle=\v!display,
    \c!mathdenominatorstyle=\v!display]
 
-%D More fracking (for Alan):
-
-% \appendtoks
-%     \Umathskewedfractionhgap\allmathstyles\namedmathfractionparameter\s!vfrac\c!hfactor\fontemwidth \mathstylefont\textstyle
-%     \Umathskewedfractionvgap\allmathstyles\namedmathfractionparameter\s!vfrac\c!vfactor\fontexheight\mathstylefont\textstyle
-% \to \everymathematics
-
-\definemathfraction
-  [\v!horizontal]
-  [\c!method=\v!horizontal]
+%D More fracking:
+%D
+%D \starttyping
+%D \m {\mathaxisbelow\vfrac             {1}{x}}
+%D \m {\mathaxisbelow\vfrac[method=line]{1}{x}}
+%D \stoptyping
 
 \definemathfraction
   [\s!vfrac]
-  [\v!horizontal]
-  [\c!hfactor=20, % quite small, as we have 1000 as default
-   \c!vfactor=10] % quite small, as we have 1000 as default
+  [\c!method=\v!horizontal]
 
-\definemathfraction
-  [hfrac]
-  [\c!method=\v!center,
-   \c!hfactor=\zerocount,
-   \c!vfactor=\zerocount]
+% \definemathfraction
+%   [hfrac] % for ton's asciimath
+%   [\c!method=\v!line]
 
 %D And a cheat (for Mikael):
 

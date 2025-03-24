@@ -355,6 +355,10 @@
 
 \normalexpanded{\permanent\let\noexpand\blankspace=\space\space}
 
+%D this is the same as \type {\relaxedspace} in \type {syst-ini.mkxl} but we had
+%D it (name) from the start of \CONTEXT\ so we keep it; it is also a name used in
+%D logging.
+
 %D \macros
 %D   {setvalue,setgvalue,setevalue,setxvalue,
 %D    letvalue,letgvalue,getvalue,resetvalue,
@@ -1326,10 +1330,10 @@
 % todo: use the push back dimen trickery
 
 \permanent\def\percentdimen#1#2% dimen percentage (with %)
-  {\dimexpr\clf_percentageof{#2}\dimexpr#1\relax}
+  {\dimexpr\clf_percentageof{#2}{#1}\relax}
 
 \permanent\protected\def\setpercentdimen#1#2% dimen percentage (with %)
-  {#1=\clf_percentageof{#2}\dimexpr#1\relax}
+  {#1=\clf_percentageof{#2}{#1}}
 
 %D \macros
 %D   {makerawcommalist,
@@ -2909,7 +2913,7 @@
 \permanent\protected\def\letvalueempty #1{\letcsname #1\endcsname\empty}
 \permanent\protected\def\letgvalueempty#1{\gletcsname#1\endcsname\empty}
 \permanent\protected\def\letvaluerelax #1{\letcsname #1\endcsname\relax}
-\permanent\protected\def\letgvalurelax #1{\gletcsname#1\endcsname\relax}
+\permanent\protected\def\letgvaluerelax#1{\gletcsname#1\endcsname\relax}
 
 \permanent\protected\def\relaxvalueifundefined#1%
   {\ifcsname#1\endcsname \else
@@ -3027,6 +3031,17 @@
 \permanent\protected\def\restoreglobal
   {\enforced\let\redoglobal\syst_helpers_redo_global
    \enforced\let\dodoglobal\syst_helpers_dodo_global}
+
+% Maybe:
+%
+% \installmacrostack\globaldefs
+%
+% \protected\def\start_global
+%   {\push_macro_globaldefs
+%    \globaldefs\plusone}
+%
+% \protected\def\stop_global
+%   {\pop_macro_globaldefs}
 
 %D Whatever (will be overloaded):
 
@@ -3169,11 +3184,11 @@
 
 %D Nowadays we don't mind a few more tokens if we can gain a bit of speed.
 
-\def\syst_helpers_do_increment#1{\dodoglobal\edef#1{\the\numexpr\ifdefined#1\ifrelax#1\else#1\fi\fi+\plusone \relax}}
-\def\syst_helpers_do_decrement#1{\dodoglobal\edef#1{\the\numexpr\ifdefined#1\ifrelax#1\else#1\fi\fi+\minusone\relax}}
+\def\syst_helpers_do_increment#1{\dodoglobal\edef#1{\tointeger{\ifdefined#1\ifrelax#1\else#1\fi\fi+\plusone }}}
+\def\syst_helpers_do_decrement#1{\dodoglobal\edef#1{\tointeger{\ifdefined#1\ifrelax#1\else#1\fi\fi+\minusone}}}
 
-\def\syst_helpers_do_do_do_increment#1,#2){\dodoglobal\edef#1{\the\numexpr\ifdefined#1\ifrelax#1\else#1\fi\fi+#2\relax}}
-\def\syst_helpers_do_do_do_decrement#1,#2){\dodoglobal\edef#1{\the\numexpr\ifdefined#1\ifrelax#1\else#1\fi\fi-#2\relax}}
+\def\syst_helpers_do_do_do_increment#1,#2){\dodoglobal\edef#1{\tointeger{\ifdefined#1\ifrelax#1\else#1\fi\fi+#2}}}
+\def\syst_helpers_do_do_do_decrement#1,#2){\dodoglobal\edef#1{\tointeger{\ifdefined#1\ifrelax#1\else#1\fi\fi-#2}}}
 
 \def\syst_helpers_do_do_increment(#1%
   {\def\m_syst_action_yes{\syst_helpers_do_do_do_increment#1}%
@@ -3188,8 +3203,8 @@
 \permanent\protected\def\increment{\doifelsenextcharcs(\syst_helpers_do_do_increment\syst_helpers_do_increment}
 \permanent\protected\def\decrement{\doifelsenextcharcs(\syst_helpers_do_do_decrement\syst_helpers_do_decrement}
 
-\permanent\protected\def\fastincrement#1{\dodoglobal\edef#1{\the\numexpr#1+\plusone \relax}}
-\permanent\protected\def\fastdecrement#1{\dodoglobal\edef#1{\the\numexpr#1+\minusone\relax}}
+\permanent\protected\def\fastincrement#1{\dodoglobal\edef#1{\tointeger{#1+\plusone }}}
+\permanent\protected\def\fastdecrement#1{\dodoglobal\edef#1{\tointeger{#1+\minusone}}}
 
 \permanent\protected\def\incrementvalue#1{\expandafter\increment\csname#1\endcsname}
 \permanent\protected\def\decrementvalue#1{\expandafter\decrement\csname#1\endcsname}
@@ -3461,7 +3476,7 @@
    \push_macro_recursedepth
    \protected\gdef\recurseaction##1##2{#1}%
    \untraced\edef\recurselevel{\noexpand\the\nestedloopiterator\the\currentloopnesting\space}%
-   \untraced\edef\recursedepth{\the\numexpr\currentloopnesting+\plusone}%
+   \untraced\edef\recursedepth{\tointeger{\currentloopnesting+\plusone}}%
    \localcontrolledendless
      {%\edef\recurselevel{\the\currentloopiterator}%
       %\edef\recursedepth{\the\currentloopnesting}%
@@ -3559,8 +3574,8 @@
 
 \let\m_syst_helpers_fast_loop_cs\relax
 
-\permanent\protected\def\dofastloopcs#1%
-  {\fastloopfinal#1\relax
+\permanent\protected\def\dofastloopcs#1% kind of obsolete
+  {\fastloopfinal{#1}%
    \ifcase\fastloopfinal
      \expandafter\gobbleoneargument
    \else
@@ -3605,9 +3620,12 @@
    \push_macro_recurselevel
    \push_macro_recursedepth
    \protected\gdef\recurseaction##1##2{#4}%
-   \untraced\edef\recurselevel{\noexpand\the\nestedloopiterator\the\currentloopnesting\space}%
-   \untraced\edef\recursedepth{\the\numexpr\currentloopnesting+\plusone}%
-   \localcontrolledloop=#1=#2=#3%
+%    \untraced\edef\recurselevel{\noexpand\the\nestedloopiterator\the\currentloopnesting\space}%
+%    \untraced\edef\recursedepth{\the\numexpr\currentloopnesting+\plusone}%
+%    \localcontrolledloop=#1=#2=#3%
+\untraced\edef\recurselevel{\noexpand\tointeger\nestedloopiterator{\the\currentloopnesting}}%
+\untraced\edef\recursedepth{\tointeger{\currentloopnesting+\plusone}}%
+   \localcontrolledloop{#1}{#2}{#3}%
      {%\edef\recurselevel{\the\currentloopiterator}%
       %\edef\recursedepth{\the\currentloopnesting}%
       \normalexpanded{\recurseaction{\the\currentloopiterator}{\the\currentloopnesting}}}%
@@ -3620,9 +3638,12 @@
    \push_macro_recurselevel
    \push_macro_recursedepth
    \protected\gdef\recurseaction##1##2{#2}%
-   \untraced\edef\recurselevel{\noexpand\the\nestedloopiterator\the\currentloopnesting\space}%
-   \untraced\edef\recursedepth{\the\numexpr\currentloopnesting+\plusone}%
-   \localcontrolledrepeat=#1%
+%    \untraced\edef\recurselevel{\noexpand\the\nestedloopiterator\the\currentloopnesting\space}%
+%    \untraced\edef\recursedepth{\the\numexpr\currentloopnesting+\plusone}%
+%    \localcontrolledrepeat=#1%
+   \untraced\edef\recurselevel{\noexpand\tointeger\nestedloopiterator{\the\currentloopnesting}}%
+   \untraced\edef\recursedepth{\tointeger{\currentloopnesting+\plusone}}%
+   \localcontrolledrepeat{#1}%
      {%\edef\recurselevel{\the\currentloopiterator}%
       %\edef\recursedepth{\the\currentloopnesting}%
       \normalexpanded{\recurseaction{\the\currentloopiterator}{\the\currentloopnesting}}}%
@@ -3642,7 +3663,7 @@
    \push_macro_m_expanded_recursed
    \def\m_expanded_recursed##1{#2}%
    \endlocalcontrol
-   \expandedrepeat#1{\expandafter\m_expanded_recursed\expandafter{\the\currentloopiterator}}%
+   \expandedrepeat{#1}{\expandafter\m_expanded_recursed\expandafter{\the\currentloopiterator}}%
    \beginlocalcontrol
    \pop_macro_m_expanded_recursed
    \endlocalcontrol}
@@ -3978,6 +3999,9 @@
 %D
 %D Watch the one level expansion of the second argument.
 
+% This is only used in \spac_lines_between .. pretty ugly. Never change
+% this one!
+
 \permanent\protected\def\doifelsemeaning#1#2%
   {\edef\m_syst_string_one{\normalmeaning#1}%
    \def \m_syst_string_two{#2}%
@@ -4195,6 +4219,8 @@
 %D nesting works all right. The extra \type {\bgroup}||\type {\egroup} is needed to
 %D keep \type {\m_syst_helpers_handle_group_after} both into sight and local.
 
+%D Todo: use more modern features like atendofgroup
+
 \let\m_syst_helpers_handle_group_after \relax
 \let\m_syst_helpers_handle_group_before\relax
 
@@ -4257,13 +4283,15 @@
    \m_syst_helpers_handle_group_b}
 
 \protected\def\syst_helpers_handle_group_nop_x
-  {\ifnum\currentgrouptype=\semisimplegroupcode
+  {% why this ...
+   \ifnum\currentgrouptype=\semisimplegroupcode
      \begingroup
      \aftergroup\endgroup
    \else
      \beginsimplegroup
      \aftergroup\egroup
    \fi
+   % ... till here
    \m_syst_helpers_handle_group_b}
 
 \protected\def\syst_helpers_handle_group_normal_x
@@ -4338,6 +4366,9 @@
 %D \def\BoldRaggedCenter%
 %D   {\groupedcommand{\raggedcenter\bf}{\par}}
 %D \stoptyping
+%D
+%D In \LUAMETATEX\ this is less of an issue as we can save the state (and do so in
+%D \CONTEXT).
 
 %D For math we use this:
 
@@ -5161,7 +5192,7 @@
 % \dimensiontocount{10.51pt}\scratchcounter \the\scratchcounter / \numberofpoints{10.51pt}
 
 \permanent\def\dimensiontocount#1#2{#2\numexpr\dimexpr#1\relax/\maxcard\relax}
-\permanent\def\numberofpoints    #1{\the\numexpr\dimexpr#1\relax/\maxcard\relax}
+\permanent\def\numberofpoints    #1{\tointeger{\dimexpr#1\relax/\maxcard}}
 
 %D \macros
 %D   {swapdimens,swapskips,swapcounts,swapmacros,
@@ -5831,7 +5862,7 @@
 %D
 %D But, as we run a recent version of \TEX, we can use the new primitive:
 
-\aliased\let\dontleavehmode\quitvmode
+% \untraced\aliased\let\dontleavehmode\quitvmode % defined in syst-ini.mkxl
 
 %D \macros
 %D   {utfupper, utflower, uppercasestring, lowercasestring}
@@ -6032,10 +6063,10 @@
 %D The next macro rounds a real number to two digits. They are probably no longer needed
 %D but we keep them around for a while.
 
-\permanent\def\integerrounding   #1{\clf_rounded\zerocount\numexpr#1\relax}
-\permanent\def\onedigitrounding  #1{\clf_rounded\plusone  \numexpr#1\relax}
-\permanent\def\twodigitrounding  #1{\clf_rounded\plustwo  \numexpr#1\relax}
-\permanent\def\threedigitrounding#1{\clf_rounded\plusthree\numexpr#1\relax}
+\permanent\def\integerrounding   #1{\clf_rounded\zerocount{#1}}
+\permanent\def\onedigitrounding  #1{\clf_rounded\plusone  {#1}}
+\permanent\def\twodigitrounding  #1{\clf_rounded\plustwo  {#1}}
+\permanent\def\threedigitrounding#1{\clf_rounded\plusthree{#1}}
 
 %D \macros
 %D   {processcontent}
@@ -6275,15 +6306,15 @@
 \installsystemnamespace{measure}
 
 \permanent\tolerant\protected\def\definemeasure[#1]#*[#2]{\defcsname \??measure#1\endcsname{#2}}
-\permanent\tolerant\protected\def\freezemeasure[#1]#*[#2]{\edefcsname\??measure#1\endcsname{\the\dimexpr#2}}
+\permanent\tolerant\protected\def\freezemeasure[#1]#*[#2]{\edefcsname\??measure#1\endcsname{\todimension{#2}}}
 
-\permanent\protected\def\setmeasure #1#2{\defcsname \??measure#1\endcsname{#2}}             % quick way
-\permanent\protected\def\setgmeasure#1#2{\gdefcsname\??measure#1\endcsname{#2}}             % quick way
-\permanent\protected\def\setemeasure#1#2{\edefcsname\??measure#1\endcsname{\the\dimexpr#2}} % quick way
-\permanent\protected\def\setxmeasure#1#2{\xdefcsname\??measure#1\endcsname{\the\dimexpr#2}} % quick way
+\permanent\protected\def\setmeasure #1#2{\defcsname \??measure#1\endcsname{#2}}               % quick way
+\permanent\protected\def\setgmeasure#1#2{\gdefcsname\??measure#1\endcsname{#2}}               % quick way
+\permanent\protected\def\setemeasure#1#2{\edefcsname\??measure#1\endcsname{\todimension{#2}}} % quick way
+\permanent\protected\def\setxmeasure#1#2{\xdefcsname\??measure#1\endcsname{\todimension{#2}}} % quick way
 
-\permanent\def\measure   {\the\measured}
-\permanent\def\measured#1{\dimexpr\ifcsname\??measure#1\endcsname\lastnamedcs\else\zeropoint\fi\relax}
+\permanent\def\measure #1{\todimension{\ifcsname\??measure#1\endcsname\lastnamedcs\else\zeropoint\fi}}
+\permanent\def\measured#1{\dimexpr    {\ifcsname\??measure#1\endcsname\lastnamedcs\else\zeropoint\fi}}
 
 % #2 could be omitted, but we want to support spaces
 %
@@ -6299,16 +6330,16 @@
 \installsystemnamespace{quantity}
 
 \permanent\tolerant\protected\def\definequantity[#1]#*[#2]{\defcsname \??quantity#1\endcsname{#2}}
-\permanent\tolerant\protected\def\freezequantity[#1]#*[#2]{\edefcsname\??quantity#1\endcsname{\the\numexpr#2}}
+\permanent\tolerant\protected\def\freezequantity[#1]#*[#2]{\edefcsname\??quantity#1\endcsname{\tointeger{#2}}}
 
 \permanent\protected\def\setquantity #1#2{\defcsname \??quantity#1\endcsname{#2}}             % quick way
 \permanent\protected\def\setgquantity#1#2{\gdefcsname\??quantity#1\endcsname{#2}}             % quick way
-\permanent\protected\def\setequantity#1#2{\edefcsname\??quantity#1\endcsname{\the\numexpr#2}} % quick way
-\permanent\protected\def\setxquantity#1#2{\xdefcsname\??quantity#1\endcsname{\the\numexpr#2}} % quick way
+\permanent\protected\def\setequantity#1#2{\edefcsname\??quantity#1\endcsname{\tointeger{#2}}} % quick way
+\permanent\protected\def\setxquantity#1#2{\xdefcsname\??quantity#1\endcsname{\tointeger{#2}}} % quick way
 
 \permanent\def\quantity        {\the\quantitied}
 \permanent\def\quantitied    #1{\numexpr\ifcsname\??quantity#1\endcsname\lastnamedcs\else\zeropoint\fi\relax}
-\permanent\def\directquantity#1{\the\numexpr#1\relax}
+\permanent\def\directquantity#1{\tointeger{#1}}
 
 % let\quantified\quantitied
 
@@ -6331,10 +6362,11 @@
 %D \macros
 %D   {doifdimensionelse}
 %D
-%D This is a dirty one: we simply append a unit and discard it when needed.
+%D This is a dirty one: we simply append a unit and discard it when needed. We no longer
+%D use this in core code because we just use th econditional.
 
 \permanent\def\doifelsedimension#1%
-  {\ifchkdim#1\or
+  {\ifchkdim#1\or % or \ifchkdimension
      \expandafter\firstoftwoarguments
    \else
      \expandafter\secondoftwoarguments
@@ -6382,9 +6414,9 @@
 
 \permanent\protected\def\comparedimensioneps#1#2% todo: use eps feature
   {\compresult
-     \ifabsdim\dimexpr#1-#2\relax<\roundingeps
+     \ifabsdim{(#1)-(#2)}<\roundingeps
        \zerocount
-     \orelse\ifdim#1<#2 % space wil be skipped
+     \orelse\ifdim{#1}<{#2}%
        \plusone
      \else
        \plustwo
@@ -6404,7 +6436,7 @@
 \permanent\protected\def\letcsnamecs    {\expandafter\let}
 \permanent\protected\def\letcsnamecsname{\expandafter\expandafter\expandafter\let\expandafter\expandafter}
 
-% another one, add an item to a commalist
+% Another one, add an item to a commalist, was only used in definesymbol
 
 \permanent\protected\def\addvalue#1#2% cs item
   {\ifcsname#1\endcsname\else\letcsname#1\endcsname\empty\fi
@@ -6605,7 +6637,7 @@
 %D \stoptyping
 
 \permanent\protected\def\freezedimenmacro#1%
-  {\edef#1{\the\dimexpr#1}}
+  {\edef#1{\todimension{#1}}}
 
 %D The next macro negates a macro (dimension or number, or actually, whatever. It's
 %D a typical example of \type {\if} usage:
@@ -6656,8 +6688,10 @@
 
 %D We have a better splitter at the \LUA\ end.
 
-\integerdef\c_helpers_range_min\zerocount
-\integerdef\c_helpers_range_max\zerocount
+\integerdef\c_helpers_range_min    \zerocount
+\integerdef\c_helpers_range_max    \zerocount
+\integerdef\c_helpers_range_abs_min\zerocount
+\integerdef\c_helpers_range_abs_max\zerocount
 
 \lettonothing\m_helpers_range_action
 
@@ -6691,6 +6725,43 @@
    \integerdef\c_helpers_range_min#1\relax
    \integerdef\c_helpers_range_max#2\relax
    \processcommacommand[#3]\syst_helpers_with_range}
+
+% todo: use the helper that we made in lua (sets)
+
+\def\syst_helpers_with_range_slice#1%
+  {\splitstring#1\at:\to\m_syst_helpers_range_from\and\m_syst_helpers_range_to
+   \ifx\m_syst_helpers_range_from\wildcardsymbol
+     \edef\m_syst_helpers_range_from{\number\c_helpers_range_min}%
+   \fi
+   \ifx\m_syst_helpers_range_to\wildcardsymbol
+     \edef\m_syst_helpers_range_to{\number\c_helpers_range_max}%
+   \fi
+   \ifempty\m_syst_helpers_range_to
+     \let\m_syst_helpers_range_to\m_syst_helpers_range_from
+   \fi
+   \ifnum\m_syst_helpers_range_from<\zerocount
+     \dostepwiserecurse
+       \m_syst_helpers_range_from
+       \m_syst_helpers_range_to
+       {\ifnum\m_syst_helpers_range_from>\m_syst_helpers_range_to\minusone\else\plusone\fi}%
+       {%(\the\numexpr\c_helpers_range_abs_max+##1+\plusone\relax)
+        \m_helpers_range_action{\tointeger{\c_helpers_range_abs_max+##1+\plusone}}}%
+   \else
+     \dostepwiserecurse
+       \m_syst_helpers_range_from
+       \m_syst_helpers_range_to
+       {\ifnum\m_syst_helpers_range_from>\m_syst_helpers_range_to\minusone\else\plusone\fi}
+       {%(\the\numexpr\c_helpers_range_abs_min+##1-\plusone\relax)
+        \m_helpers_range_action{\tointeger{\c_helpers_range_abs_min+##1-\plusone}}}%
+   \fi}
+
+\permanent\protected\def\dowithminmaxrangeslice#1#2#3#4#5#6% absmin absmax min max set action
+  {\def\m_helpers_range_action{#6}%
+   \integerdef\c_helpers_range_abs_min#1\relax
+   \integerdef\c_helpers_range_abs_max#2\relax
+   \integerdef\c_helpers_range_min    #3\relax
+   \integerdef\c_helpers_range_max    #4\relax
+   \processcommacommand[#5]\syst_helpers_with_range_slice}
 
 % \def\DoSomething#1{ [item #1] }
 % \dowithrange[1,4:5]\DoSomething
@@ -6878,7 +6949,7 @@
 
 %D Other dimensions than pt (used in mb-mp)
 
-\permanent\def\converteddimen#1#2{\clf_converteddimen\dimexpr#1\relax{#2}}
+\permanent\def\converteddimen#1#2{\clf_converteddimen{#1}{#2}}
 
 %D Maybe (looks ugly):
 %D
@@ -6947,7 +7018,7 @@
 %D This is not real fast but quite okay:
 
 %def\ntimes#1#2{\ifnum#2>\zerocount#1\ntimes{#1}{\numexpr#2-\plusone\relax}\fi} % 1.72
-\permanent\def\ntimes#1#2{\clf_ntimes{#1}\numexpr#2\relax}                                % 0.33
+\permanent\def\ntimes#1#2{\clf_ntimes{#1}{#2}}                                  % 0.33
 
 %D Experiment (sometimes looks nicer in code):
 
@@ -7064,9 +7135,15 @@
      \expandafter\secondoftwoarguments
    \fi}
 
-%D Here (can become primitive):
+%D This one is used in math-frc so don't change it
 
 \untraced\permanent\protected\def\glyphscaled#1% name will change
   {\dimexpr#1*\plusthousand/\glyphscale\relax}
+
+%D \macros {nologbuffering, linebuffering}
+%D
+%D This saves one sec on luametatex manual in console. And in the case of an error
+%D no buffering will make sure what is cached gets flushed too. We define these two
+%D at the LUA end: \typ {\nologbuffering} and \typ {\linebuffering}.
 
 \protect \endinput

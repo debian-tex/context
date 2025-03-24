@@ -66,6 +66,62 @@
 
 % Todo: use lua instead of synonyms
 
+% \permanent\protected\def\righttoleftstring#1{\begingroup\righttoleft#1\endgroup}
+% \permanent\protected\def\lefttorightstring#1{\begingroup\lefttoright#1\endgroup}
+%
+% \startluacode
+%     local find  = string.find
+%     local getid = lxml.getid
+%
+%     local lefttorightstring = context.verbatim.lefttorightstring
+%     local righttoleftstring = context.verbatim.righttoleftstring
+%
+%     local notcatcodes = tex.notcatcodes
+%
+%     interfaces.implement {
+%         name      = "xmldiratt",
+%         public    = true,
+%         arguments = "2 strings",
+%         actions   = function(id,name)
+%             local e = lxml.getid(id)
+%             if e then
+%                 local at = e.at
+%                 if at then
+%                     att = at[name]
+%                     if att then
+%                         if find(att,"[a-zA-Z]") then -- todo: check for arabic instead
+%                             lefttorightstring(att)
+%                         else
+%                             righttoleftstring(att)
+%                         end
+%                     end
+%                 end
+%             end
+%         end
+%     }
+%
+%     interfaces.implement {
+%         name      = "dirstring",
+%         public    = true,
+%         arguments = "string",
+%         actions   = function(str)
+%             if find(str,"[a-zA-Z]") then -- todo: check for arabic instead
+%                 lefttorightstring(str)
+%             else
+%                 righttoleftstring(str)
+%             end
+%         end
+%     }
+% \stopluacode
+%
+% \let\dircheckedstring\firstofoneargument
+% \let\dircheckedxmlatt\xmlatt
+%
+% \startinterface persian
+%     \let\dircheckedstring\dirstring
+%     \let\dircheckedxmlatt\xmldiratt
+% \stopinterface
+
 \unprotect
 
 % We might apply this locally!
@@ -120,6 +176,9 @@
 \unexpanded\def\setupoptfont {\sl}
 \unexpanded\def\setupalwcolor{}
 \unexpanded\def\setupoptcolor{darkgray}
+
+% \detokenize is redundant because we already need to pass verbatim due to
+% percent characters
 
 \unexpanded\def\setupvarword#1{\detokenize{#1}}
 \unexpanded\def\setupintword#1{\WORD{\detokenize{#1}}}
@@ -217,9 +276,11 @@
 
     local context        = context
 
-    local setupvarword   = context.formatted.setupvarword
-    local setupintword   = context.formatted.setupintword
-    local setuptxtword   = context.formatted.setuptxtword
+    -- we can have percent signs here so we need to be verbatim
+
+    local setupvarword   = context.verbatim.setupvarword
+    local setupintword   = context.verbatim.setupintword
+    local setuptxtword   = context.verbatim.setuptxtword
 
     local getsetupstring = interfaces.getsetupstring
 
@@ -415,7 +476,9 @@
         arguments = { "string" },
     }
 
-    if structures then
+    local trace  = false  trackers.register("setups.trace", function(v) trace = v end)
+
+    if trace and structures then
         local synonyms = structures.synonyms
         if synonyms then
             local collected = synonyms.collected
@@ -980,12 +1043,14 @@
     }
 \stopxmlsetups
 
+% \enabletrackers[typesetters.directions*]%
+
 \startxmlsetups xml:setups:inherit
   % \cmd_column_two_start{}{}
         \rawsetupstring{cd:inherits}:
         \enspace
         \letterbackslash
-        \xmlatt{#1}{name}
+        \xmlatt{#1}{name}% maybe hboxed
   % \cmd_column_two_stop
     \ignorespaces
 \stopxmlsetups

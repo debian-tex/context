@@ -44,7 +44,7 @@
 \permanent\def\usedadaptivecolor      {\m_adaptive_color}
 \permanent\def\usedadaptivealternative{\m_adaptive_alternative}
 
-\protected\untraced\def\usedadaptivetotal{\dimexpr\usedadaptiveheight+\usedadaptivedepth\relax}
+\permanent\protected\untraced\def\usedadaptivetotal{\dimexpr\usedadaptiveheight+\usedadaptivedepth\relax}
 
 \definesystemattribute[adaptive][public]
 
@@ -65,6 +65,8 @@
    \c!method=1,
    \c!stretch=,
    \c!shrink=,
+  %\c!width=8\lineheight,  % default same as external figure
+  %\c!height=6\lineheight, % default same as external figure
   %\c!strut=\v!no,
    \c!margin=2\emwidth]
 
@@ -99,16 +101,16 @@
          \clf_setadaptive {
            method         \adaptiveparameter\c!method
            setups        {\p_setups}%
+           location      {\adaptiveparameter\c!location}%
            color         {\adaptiveparameter\c!color}%
            alternative   {\adaptiveparameter\c!alternative}%
-           rulethickness  \adaptiveparameter\c!rulethickness
+           rulethickness {\adaptiveparameter\c!rulethickness}%
          }%
        \fi
-       \scratchdimen\adaptiveparameter\c!margin\relax
-       \edef\p_stretch{\adaptiveparameter\c!stretch}%
-       \edef\p_shrink {\adaptiveparameter\c!shrink}%
+       \scratchdimen{\adaptiveparameter\c!margin}%
+       % maybe when method == 2 then no \hss
        \uleaders
-         \s!callback \numexpr \adaptiveattribute \relax
+         \s!callback {\adaptiveattribute}%
          \ifcase#1%
            \hbox
              \s!spread \scratchdimen
@@ -125,8 +127,8 @@
            \vskip
          \fi
            \zeropoint
-           \s!plus  \ifempty\p_stretch\scratchdimen\else\p_stretch\fi
-           \s!minus \ifempty\p_shrink \scratchdimen\else\p_shrink \fi
+           \s!plus  \ifchkdimexpr\adaptiveparameter\c!stretch\or\lastchkdimension\else\scratchdimen\fi
+           \s!minus \ifchkdimexpr\adaptiveparameter\c!shrink \or\lastchkdimension\else\scratchdimen\fi
          \endgroup}%
     \ifcase#1\hbox\else\vbox\fi}
 
@@ -201,7 +203,7 @@
 %D         \externalfigure
 %D           [cow.pdf]
 %D           [width=\usedadaptivewidth,
-%D            height=\dimexpr\usedadaptiveheight+\usedadaptivedepth\relax]%
+%D            height=\usedadaptiveheight+\usedadaptivedepth]%
 %D    \egroup
 %D \stopsetups
 %D
@@ -223,6 +225,8 @@
 %D
 %D \page
 %D
+%D % How about stretch on an float (make it fit)
+%D
 %D \startsetups adaptive:test
 %D     \setbox\usedadaptivebox\vbox to \usedadaptivetotal \bgroup
 %D         \externalfigure
@@ -239,5 +243,45 @@
 %D }
 %D
 %D \stoptyping
+
+%D This kind of usage for \type {\uluaders} is a bit weird but the fact that we
+%D can put a callback on it combined with it being something with optional glue
+%D has some potential anyway. Consider it a playground for myself. I considered
+%D extending inserts with seomething like this. Very little code is involved.
+%D
+%D \starttyping
+%D \dorecurse {2} {
+%D     \setexcept[left] {\strut\red   EXCEPT L#1.1}%
+%D     \samplefile{tufte}
+%D     \dorecurse{12}{\setexcept[right]{\strut\blue  EXCEPT R#1.##1}}%
+%D     \setexcept[left] {\strut\green EXCEPT L#1.2}%
+%D     \samplefile{tufte}
+%D     \blank
+%D     \samplefile{tufte}
+%D }
+%D \stoptyping
+%D
+%D The ideas to keep the except within the text areas and force a page break
+%D otherwise: the except depth is part of the page total & goal check.
+
+\def\typo_adaptive_except
+  {\finalizeobjectbox\nextbox
+   \setbox\nextbox\hpack{\box\nextbox}%
+   \smashbox\nextbox
+   \clf_setadaptive {method \plustwo location {\currentexceptlocation}}%
+   \uleaders
+     nobreak % no a break in the par builder
+     line    % kick in early (post line break, not in vpackage)
+     \s!callback {\adaptiveattribute}%
+     \hpack{\box\nextbox}%
+     \hskip\zeropoint
+   \endgroup}
+
+\permanent\tolerant\protected\def\setexcept[#1]%
+   {\dontleavehmode
+    \begingroup
+    % todo: outer and inner
+    \cdef\currentexceptlocation{#1}%
+    \dowithnextboxcs\typo_adaptive_except\hbox}
 
 \protect

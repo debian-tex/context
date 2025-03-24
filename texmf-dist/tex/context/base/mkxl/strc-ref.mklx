@@ -11,6 +11,9 @@
 %C therefore copyrighted by \PRAGMA. See mreadme.pdf for
 %C details.
 
+% \ifexporting\dostarttaggednodetail\t!link\fi
+% \ifexporting\dostoptagged\fi
+
 % todo: (1) configure references, (2) rendering => with presets
 %
 % \defineconversionset[default][Character,number,Romannumerals,Character][number]
@@ -192,22 +195,22 @@
 
 \protected\def\strc_references_destination_point_yes
   {\strc_references_inject_before % new
-   \dostarttagged\t!reference\empty
+   %dostarttaggednodetail\t!reference
    \dontleavehmode\hbox attr \destinationattribute\lastdestinationattribute\bgroup % \hpack
      \strc_references_flush_destination_nodes
      \strc_references_placeholder
      \egroup
-   \dostoptagged
+   %dostoptagged
    \strc_references_inject_after}
 
 \protected\def\strc_references_destination_point_nop
   {\strc_references_inject_before % new
-   \dostarttagged\t!reference\empty
+   %\dostarttaggednodetail\t!reference
    \dontleavehmode\hbox \bgroup % \hpack
      \strc_references_flush_destination_nodes
      \strc_references_placeholder
    \egroup
-   \dostoptagged
+   %\dostoptagged
    \strc_references_inject_after}
 
 \protected\def\strc_references_start_destination_nodes % messy but we need the delay
@@ -1044,7 +1047,7 @@
    \postponenotes % might go
    \referencingparameter\c!left
    \doifelsereferencefound{#label}
-     {\goto{\limitatetext\currentreferencetitle{\referencingparameter\c!width}\unknown}[#label]}% not so efficient (dup lookup)
+     {\goto{\limitatetext\currentreferencetitle{\dimexpr\referencingparameter\c!width\relax}\unknown}[#label]}% not so efficient (dup lookup)
      {}% todo
    \flushnotes % might go
    \referencingparameter\c!right
@@ -1305,7 +1308,7 @@
 
 % NEEDS TESTING:
 
-\tolerant\def\strc_references_pickup_goto#=#=#:#*[#3]%
+\tolerant\def\strc_references_pickup_goto#=#*#=#:#*[#3]% #* added so that we can do \in {} {} []
   {\leftreferencetoks
      \ifparameter#1\or
        {#1}%
@@ -1409,17 +1412,13 @@
    \edef\currentreferenceformatautocase{\referenceformatparameter\c!autocase}%
    \usereferenceformatstyleandcolor\c!style\c!color
    \ifempty\currentstyleparameter \else
-     \resetinteractionparameter\c!style
+     \resetinteractionstyle
    \fi
    \ifempty\currentcolorparameter \else
-     \resetinteractionparameter\c!contrastcolor
-     \resetinteractionparameter\c!color
+     \resetinteractioncolor
    \fi
    \ifx\currentreferenceformatlabel\wildcardsymbol
-      \edef\currentreferenceformatlabel{\autoreferencelabeltext}%
-   \fi
-   \ifx\currentreferenceformatautocase\v!yes
-     \setcharactercleaning[1]%
+      \let\currentreferenceformatlabel\autoreferencelabeltext
    \fi
    \ifempty\currentreferenceformatlabel
      \defaultleftreferencetoks {\referenceformatparameter\c!text}%
@@ -1440,10 +1439,15 @@
    %
    \enforced\lettonothing\leftofreferencecontent
    \enforced\lettonothing\rightofreferencecontent
+   %
+   \ifx\currentreferenceformatautocase\v!yes
+     \setcharactercleaning[1]%
+   \fi
    \strc_references_pickup_goto}
 
-\permanent\protected\def\autoreferencelabeltext
-  {\clf_getcurrentreferencemetadata{name}}
+\permanent\def\autoreferencelabeltext
+%   {\clf_getcurrentreferencemetadata{name}}
+  {\clf_getcurrentreferencelabel}
 
 % \starttext
 %     \definereferenceformat[inxx]  [left=(,right=),text=txt]
@@ -1485,8 +1489,8 @@
 \newconditional\uselocationstrut \uselocationstrut\conditionaltrue
 
 \permanent\def\extrareferencearguments
-  {highlight \luaconditional\highlighthyperlinks\space
-   newwindow \luaconditional\gotonewwindow\space
+  {highlight \luaconditional\highlighthyperlinks\relaxedspace
+   newwindow \luaconditional\gotonewwindow\relaxedspace
    layer     {\currentviewerlayer}}
 
 \permanent\protected\def\directgoto
@@ -1538,9 +1542,9 @@
      \setstrut % can be option
      \global\lastsavedreferenceattribute\lastreferenceattribute
      \c_attr_reference\lastreferenceattribute
-     \dostarttagged\t!link\empty % not here
+     \ifexporting\dostarttaggednodetail\t!link\fi
      #content%
-     \dostoptagged
+     \ifexporting\dostoptagged\fi
    \else
      #content%
    \fi
@@ -1556,17 +1560,17 @@
         {\referenceprefix}%
         {#label}%
         {%
-            height \dimexpr\interactionparameter\c!height\relax
-            depth  \dimexpr\interactionparameter\c!depth \relax
+            height {\interactionparameter\c!height}%
+            depth  {\interactionparameter\c!depth}%
             \extrareferencearguments
         }%
      \relax
      \setlocationattributes
      \c_attr_reference\lastreferenceattribute
      \global\lastsavedreferenceattribute\lastreferenceattribute
-     \dostarttagged\t!link\empty
+     \ifexporting\dostarttaggednodetail\t!link\fi
      #content%
-     \dostoptagged
+     \ifexporting\dostoptagged\fi
    \else
      #content%
    \fi
@@ -1588,9 +1592,9 @@
         \setstrut % can be option
         \global\lastsavedreferenceattribute\lastreferenceattribute
         \c_attr_reference\lastreferenceattribute
-        \dostarttagged\t!link\empty
+        \ifexporting\dostarttaggednodetail\t!link\fi
         #content%
-        \dostoptagged}%
+        \ifexporting\dostoptagged\fi}%
        {#content}%
    \else
      #content%
@@ -1609,9 +1613,9 @@
      \global\lastsavedreferenceattribute\currentreferenceattribute
      \c_attr_reference\currentreferenceattribute
      \setlocationattributes
-     \dostarttagged\t!link\empty
+     \ifexporting\dostarttaggednodetail\t!link\fi
      #content%
-     \dostoptagged
+     \ifexporting\dostoptagged\fi
    \else
      #content%
    \fi
@@ -1645,11 +1649,11 @@
    \setstrut % can be option
    \global\lastsavedreferenceattribute\lastreferenceattribute
    \c_attr_reference\lastreferenceattribute
-   \dostarttagged\t!link\empty
+   \ifexporting\dostarttaggednodetail\t!link\fi
    \let\stopgoto\strc_references_stop_goto_yes}
 
 \protected\def\strc_references_stop_goto_yes
-  {\dostoptagged
+  {\ifexporting\dostoptagged\fi
    \endgroup}
 
 \def\strc_references_goto_htdp#content#dummy[#label]% dummy gobbles spaces
@@ -1660,15 +1664,15 @@
    \iflocation
      \clf_doifelsereference{\referenceprefix}{#label}{\extrareferencearguments}%
        {\clf_injectcurrentreferencehtdp
-          \dimexpr\interactionparameter\c!height\relax
-          \dimexpr\interactionparameter\c!depth \relax
+          {\interactionparameter\c!height}%
+          {\interactionparameter\c!depth}%
         \relax
         \setlocationattributes
         \global\lastsavedreferenceattribute\lastreferenceattribute
         \c_attr_reference\lastreferenceattribute
-        \dostarttagged\t!link\empty
+        \ifexporting\dostarttaggednodetail\t!link\fi
         #content%
-        \dostoptagged}%
+        \ifexporting\dostoptagged\fi}%
        {#content}%
    \else
      #content%
@@ -1688,9 +1692,9 @@
      \relax
      \setlocationattributes
      \global\lastsavedreferenceattribute\lastreferenceattribute
-     \dostarttagged\t!link\empty
+     \ifexporting\dostarttaggednodetail\t!link\fi
      \hbox attr \referenceattribute \lastreferenceattribute {#content}%
-     \dostoptagged
+     \ifexporting\dostoptagged\fi
    \else
      #content%
    \fi
@@ -1709,9 +1713,9 @@
      \relax
      \setlocationcolorspec{#resolver}% no consequence for strut
      \global\lastsavedreferenceattribute\lastreferenceattribute
-     \dostarttagged\t!link\empty
+     \ifexporting\dostarttaggednodetail\t!link\fi
      \hbox attr \referenceattribute \lastreferenceattribute {#content}%
-     \dostoptagged
+     \ifexporting\dostoptagged\fi
    \else
      #content%
    \fi
@@ -1729,9 +1733,9 @@
        {\extrareferencearguments}%
      \relax
      \global\lastsavedreferenceattribute\lastreferenceattribute
-     \dostarttagged\t!link\empty
+     \ifexporting\dostarttaggednodetail\t!link\fi
      \hbox attr \referenceattribute \lastreferenceattribute {#content}%
-     \dostoptagged
+     \ifexporting\dostoptagged\fi
    \else
      #content%
    \fi
@@ -1747,9 +1751,9 @@
        {\clf_injectcurrentreference
         \setlocationattributes
         \global\lastsavedreferenceattribute\lastreferenceattribute
-        \dostarttagged\t!link\empty
+        \ifexporting\dostarttaggednodetail\t!link\fi
         \hbox attr \referenceattribute \lastreferenceattribute {#content}%
-        \dostoptagged}%
+        \ifexporting\dostoptagged\fi}%
        {#content}%
    \else
      #content%

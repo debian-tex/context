@@ -30,14 +30,19 @@
 
 \unprotect
 
-\def\typo_localboxes_reset
-  {\localleftbox  {}% no index here, works grouped
-   \localrightbox {}%
-   \localmiddlebox{}}
+% Local boxes are a real mess and although we already mnade it behave better it's
+% still a trouble maker.
+
+% \def\typo_localboxes_reset
+%   {\localleftbox  {}% no index here, works grouped
+%    \localrightbox {}%
+%    \localmiddlebox{}}
+
+\aliased\let\typo_localboxes_reset\resetlocalboxes
 
 \appendtoks
     \typo_localboxes_reset
-\to\everyforgetall
+\to \everyforgetall
 
 \definesystemattribute[localboxesmark][public]
 
@@ -117,13 +122,13 @@
      \cdef\currentlocalboxes{#2}%
      \edef\currentlocalboxeslocation{#1}%
      \typo_localboxes_localbox
-        index \c_typo_localboxes_index
+        \s!index \c_typo_localboxes_index
         \bgroup
           \hpack
             \ifcstok{\localboxesparameter\c!repeat}\v!no
-              attr \localboxesmarkattribute \localboxmarkonce\c_typo_localboxes_index\relax
+              \s!attr \localboxesmarkattribute \localboxmarkonce\c_typo_localboxes_index\relax
             \fi
-            to \zeropoint
+            \s!to \zeropoint
           \bgroup
             \uselocalboxesstyleandcolor\c!style\c!color
             \hbox{#3}%
@@ -138,11 +143,11 @@
      \cdef\currentlocalboxes{#2}%
      \edef\currentlocalboxeslocation{#1}%
      \typo_localboxes_localbox
-        index \c_typo_localboxes_index
+        \s!index \c_typo_localboxes_index
         \bgroup
           \hpack
             \ifcstok{\localboxesparameter\c!repeat}\v!no
-              attr \localboxesmarkattribute \localboxmarkonce\c_typo_localboxes_index\relax
+              \s!attr \localboxesmarkattribute \localboxmarkonce\c_typo_localboxes_index\relax
             \fi
             % todo: use width if dimension, use distance if given
           \bgroup
@@ -170,7 +175,7 @@
      \cdef\currentlocalboxes{#1}%
      \ifcsname\??localboxesresetters\localboxesparameter\c!location\endcsname
        \edef\currentlocalboxeslocation{\lastnamedcs}%
-       \typo_localboxes_localbox index \c_typo_localboxes_index {}%
+       \typo_localboxes_localbox \s!index \c_typo_localboxes_index {}%
      \fi
    \fi}
 
@@ -246,20 +251,20 @@
         \setbox\localboxcontentbox\lastbox
         \unhbox\localboxcontentbox}%
    \fi
-   \hpack xoffset \dimexpr
-     -#1
+   \hpack \s!xoffset {%
+     -#1%
      -\localboxprogress
      -\wd\localboxcontentbox
-     -\localboxesparameter\c!distance
-   \relax{\box\localboxcontentbox}}
+     -(\localboxesparameter\c!distance)%
+   }{\box\localboxcontentbox}}
 
 \permanent\protected\def\localmarginrighttext#1%
-  {\hpack xoffset \dimexpr
+  {\hpack \s!xoffset {%
       #1
      +\localboxlinewidth
      -\localboxprogress
-     +\localboxesparameter\c!distance
-   \relax{\box\localboxcontentbox}}
+     +{\localboxesparameter\c!distance}%
+   }{\box\localboxcontentbox}}
 
 % todo: use generic one above
 
@@ -270,11 +275,11 @@
      \cdef\currentlocalboxes{#1}%
      \edef\currentlocalboxeslocation{\localboxesparameter\c!location}%
      \ifx\currentlocalboxeslocation\v!right\localrightbox\orelse\ifx\currentlocalboxeslocation\v!left\localleftbox\else\localmiddlebox\fi
-        index \c_typo_localboxes_index
+        \s!index \c_typo_localboxes_index
         \bgroup
           \hpack
             \ifcstok{\localboxesparameter\c!repeat}\v!no
-              attr \localboxesmarkattribute \localboxmarkonce\c_typo_localboxes_index\relax
+              \s!attr \localboxesmarkattribute \localboxmarkonce\c_typo_localboxes_index\relax
             \fi
             to \zeropoint
           \bgroup

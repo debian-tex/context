@@ -291,7 +291,8 @@
 %     \raggedonelinerstate\conditionalfalse
 % \to \everyforgetall
 
-\newconstant\raggedstatus % public
+\newconstant\raggedstatus     % public
+\newconstant\raggedhangstatus % public
 
 \newconstant\c_spac_align_state_horizontal
 \newconstant\c_spac_align_state_broad
@@ -315,6 +316,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_none % should also relax \updateraggedskips
   {\raggedstatus     \zerocount
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\attributeunsetvalue
    \leftskip         \plusone\leftskip
    \rightskip        \plusone\rightskip
@@ -330,6 +332,7 @@
 \permanent\protected\def\spac_align_set_horizontal_left
   {\setraggedness    \spac_align_set_raggedness_left
    \raggedstatus     \plusone
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plusone
    \leftskip         \plusone\leftskip \s!plus\spac_align_set_raggedness_left
    \rightskip        \plusone\rightskip\s!plus\zeropoint
@@ -348,6 +351,7 @@
 \permanent\protected\def\spac_align_set_horizontal_center
   {\setraggedness    \spac_align_set_raggedness_middle
    \raggedstatus     \plustwo
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plustwo
    \leftskip         \plusone\leftskip \s!plus\spac_align_set_raggedness_middle
    \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_middle
@@ -363,6 +367,7 @@
 \permanent\protected\def\spac_align_set_horizontal_right
   {\setraggedness    \spac_align_set_raggedness_right
    \raggedstatus     \plusthree
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plusthree
    \leftskip         \plusone\leftskip \s!plus\zeropoint
    \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_right
@@ -377,6 +382,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_very_left
   {\raggedstatus     \plusone
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plusone
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount
    \rightskip        \plusone\rightskip\s!plus\zeropoint
@@ -394,6 +400,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_very_center
   {\raggedstatus     \plustwo
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plustwo
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount
@@ -408,6 +415,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_very_right
   {\raggedstatus     \plusthree
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plusthree
    \leftskip         \plusone\leftskip \s!plus\zeropoint
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount
@@ -423,6 +431,7 @@
 \permanent\protected\def\spac_align_set_horizontal_wide_center
   {\setraggedness    \spac_align_set_raggedness_middle
    \raggedstatus     \plustwo
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plustwo
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount_half
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount_half
@@ -437,6 +446,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_centered_last_line
   {\raggedstatus     \zerocount
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\attributeunsetvalue
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount\relax
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount_negative\relax
@@ -451,6 +461,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_flushedright_last_line
   {\raggedstatus     \zerocount
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\attributeunsetvalue
    \leftskip         \plusone\leftskip \s!plus\v_spac_align_fill_amount\relax
    \rightskip        \plusone\rightskip\s!plus\v_spac_align_fill_amount_negative\relax
@@ -466,6 +477,7 @@
 \permanent\protected\def\spac_align_set_horizontal_right_tt % a plain command
   {\tttf % brrr
    \raggedstatus     \plusthree
+   \raggedhangstatus \zerocount
    \c_attr_alignstate\plusthree
    \leftskip         \plusone\leftskip \s!plus\zeropoint\relax
    \rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_right\relax
@@ -480,6 +492,7 @@
 
 \permanent\protected\def\spac_align_set_horizontal_slanted
   {\raggedstatus     \zerocount
+   \raggedhangstatus \zerocount
   %\c_attr_alignstate\attributeunsetvalue
    \c_attr_alignstate\plustwo
    \leftskip         \plusone\leftskip \s!plus\spac_align_set_raggedness_middle
@@ -573,6 +586,12 @@
    \or
      % 12 hangright
      \spac_align_set_horizontal_hang_right
+   \or
+     % 13 hangleft range, private
+     \spac_align_set_horizontal_hang_left_range
+   \or
+     % 14 hangright range, private
+     \spac_align_set_horizontal_hang_right_range
    \fi
    \relax}
 
@@ -701,11 +720,13 @@
   {\csname\??aligncommand#1\endcsname}
 
 \permanent\protected\tolerant\def\definealign[#1]#*[#2]%
-  {\pushmacro\m_spac_align_named
+  {\pushmacro\raggedcommand
+   \pushmacro\updateraggedskips
    \edef\m_spac_align_named{#1}%
    \edef\m_spac_align_asked{#2}%
    \spac_align_add_to_cache
-   \popmacro\m_spac_align_named}
+   \popmacro\updateraggedskips
+   \popmacro\raggedcommand}
 
 % The local (key driven) setter:
 
@@ -872,12 +893,83 @@
 \permanent\protected\def\spac_align_set_horizontal_hang_right
   {\spac_align_set_horizontal_very_left
    \parinitrightskip\s_zero_plus_one_fill
+   \raggedhangstatus \plusone
    \relax}
 
 \permanent\protected\def\spac_align_set_horizontal_hang_left
   {\spac_align_set_horizontal_very_right
    \parinitleftskip \s_zero_plus_one_fill
+   \raggedhangstatus \plustwo
    \relax}
+
+% idem but better: experimental !
+
+\defcsname\??aligncommand\v!hangleft  range\endcsname{\c_spac_align_state_horizontal\plusthirteen}
+\defcsname\??aligncommand\v!hangright range\endcsname{\c_spac_align_state_horizontal\plusfourteen}
+
+\permanent\protected\def\spac_align_set_horizontal_hang_right_range % special purpose
+  {\spac_align_set_horizontal_very_left
+  %\rightskip        \plusone\rightskip\s!plus\spac_align_set_raggedness_left
+   \rightskip        \plusone\rightskip\s!plus.5\hsize % if we change this then we need a *_right_range_tt variant
+   \parinitrightskip \s_zero_plus_one_fill
+   \parfillleftskip  \s_zero_plus_zero
+   \raggedhangstatus \plusthree
+   \relax}
+
+\permanent\protected\def\spac_align_set_horizontal_hang_left_range % special purpose
+  {\spac_align_set_horizontal_very_right
+  %\leftskip        \plusone\leftskip \s!plus\spac_align_set_raggedness_left %
+   \leftskip        \plusone\leftskip \s!plus.5\hsize % if we change this then we need a *_right_range_tt variant
+   \parinitleftskip \s_zero_plus_one_fill
+   \raggedhangstatus\plusfour
+   \relax}
+
+\newconditional\c_spac_align_hang_done
+
+\permanent\protected\def\starthangrange
+  {\c_spac_align_hang_done\conditionalfalse}
+
+\permanent\protected\def\stophangrange
+  {\c_spac_align_hang_done\conditionalfalse
+   \removeunwantedspaces
+  %\localbreakpar
+   \par}
+
+\permanent\protected\def\starthangrangestep
+  {\ifconditional\c_spac_align_hang_done
+     \removeunwantedspaces
+   % \hfillneg
+   % \strut
+   % \parbreak
+     \localbreakpar
+   \fi
+   \ifnum\raggedhangstatus=\plusthree
+     \ifhmode
+       \strut
+       \penalty\plustenthousand
+       \hskip-\leftskip
+       \penalty\plustenthousand
+     \else
+       \spac_align_set_horizontal_hang_right_range
+       \dontleavehmode
+     \fi
+   \orelse\ifnum\raggedhangstatus=\plusfour
+     \ifhmode
+       \strut
+       \hfill
+     \else
+       \spac_align_set_horizontal_hang_left_range
+       \dontleavehmode
+     \fi
+   \fi
+  %\luaboundary 123 456
+   \ignorespaces}
+
+\permanent\protected\def\stophangrangestep
+  {\par\c_spac_align_hang_done\conditionaltrue} % par is needed
+
+\permanent\protected\def\emptyhangrangestep
+  {\strut\localbreakpar}
 
 % experiment
 
@@ -907,51 +999,93 @@
    \lastlinefit\ifcase\c_spac_align_state_fit\zerocount\else\plusthousand\fi
 \to \t_spac_align_applied
 
-% linebreakcriterion
+\immutable\integerdef\defaultdoublehyphendemerits\plustenthousand
+\immutable\integerdef\defaultfinalhyphendemerits \plusfivethousand
+\immutable\integerdef\defaultadjdemerits         \plustenthousand
+\immutable\integerdef\defaultorphanpenalty       \plusfifty
+\immutable\integerdef\defaulttoddlerpenalty      \plusfifty
+\immutable\integerdef\defaultlefttwindemerits    \plusseventyfivehundred
+\immutable\integerdef\defaultrighttwindemerits   \plusseventyfivehundred
 
-\immutable\integerdef\defaultdoublehyphendemerits    10000
-\immutable\integerdef\defaultfinalhyphendemerits      5000
-\immutable\integerdef\defaultadjdemerits             10000
-\immutable\integerdef\defaultorphanpenalty               0
-\immutable\integerdef\defaultlinebreakcriterion          0 % 12 12 12 99 : 0C0C0C63
+\immutable\integerdef\granularadjdemerits        \plusfivethousand % see accumulation in granular
 
-\immutable\integerdef\granularadjdemerits              5000  % maybe 2500
-\immutable\integerdef\granularlinebreakcriterion  "020C2A63  %  2 12 42 99
+\frozen\doublehyphendemerits \defaultdoublehyphendemerits
+\frozen\finalhyphendemerits  \defaultfinalhyphendemerits
+\frozen\adjdemerits          \defaultadjdemerits
 
-\frozen\doublehyphendemerits\defaultdoublehyphendemerits
-\frozen\finalhyphendemerits \defaultfinalhyphendemerits
-\frozen\adjdemerits         \defaultadjdemerits
-\frozen\linebreakcriterion  \defaultlinebreakcriterion
-\frozen\orphanpenalty       \defaultorphanpenalty
+\frozen\orphanpenalty        \zerocount
+\frozen\toddlerpenalty       \zerocount
+\frozen\lefttwindemerits     \zerocount
+\frozen\righttwindemerits    \zerocount
 
-% better but incompatible:
-%
-% \frozen\adjdemerits         \optimaladjdemerits
-% \frozen\linebreakcriterion  \optimallinebreakcriterion
+\permanent\protected\def\noorphans   {\orphanpenalty    \defaultorphanpenalty}
+\permanent\protected\def\notoddlers  {\toddlerpenalty   \defaulttoddlerpenalty}
+\permanent\protected\def\notwins     {\lefttwindemerits \defaultlefttwindemerits
+                                      \righttwindemerits\defaultrighttwindemerits}
 
-\newconstant\c_spac_align_state_granular
+\permanent\protected\def\keeporphans {\orphanpenalty    \zerocount}
+\permanent\protected\def\keeptoddlers{\toddlerpenalty   \zerocount}
+\permanent\protected\def\keeptwins   {\lefttwindemerits \zerocount
+                                      \righttwindemerits\zerocount}
 
-\defcsname\??aligncommand\v!granular\endcsname % no way to reset it .. todo: \everyresetalign
-  {\c_spac_align_state_granular\plusone}
+% for now, not interfaced as these are experiments:
+
+    \immutable\def\s!noorphans   {noorphans}
+    \immutable\def\s!keeporphans {keeporphans}
+    \immutable\def\s!notwins     {notwins}
+    \immutable\def\s!keeptwins   {keeptwins}
+    \immutable\def\s!notoddlers  {notoddlers}
+    \immutable\def\s!keeptoddlers{keeptoddlers}
+
+\defcsname\??aligncommand\s!noorphans   \endcsname{\toksapp\t_spac_align_collected{\noorphans}}
+\defcsname\??aligncommand\s!keeporphans \endcsname{\toksapp\t_spac_align_collected{\keeporphans}}
+\defcsname\??aligncommand\s!notwins     \endcsname{\toksapp\t_spac_align_collected{\notwins}}
+\defcsname\??aligncommand\s!keeptwins   \endcsname{\toksapp\t_spac_align_collected{\keeptwins}}
+\defcsname\??aligncommand\s!notoddlers  \endcsname{\toksapp\t_spac_align_collected{\notoddlers}}
+\defcsname\??aligncommand\s!keeptoddlers\endcsname{\toksapp\t_spac_align_collected{\keeptoddlers}}
+
+\newconstant \matchallfitnessclasses \setconstant \matchallfitnessclasses "FF
 
 \appendtoks
-   \c_spac_align_state_granular\zerocount
+    \fitnessclasses \zerocount
 \to \t_spac_align_presets
 
-% \doubleadjdemerits: when zero it defaults to \adjdemerits
+\permanent\protected\def\installaligncommand#1#2%
+  {\defcsname\??aligncommand#1\endcsname{\appendtoks#2\to\t_spac_align_applied}}
 
-\appendtoks
-  \ifcase\c_spac_align_state_granular
-     \adjdemerits       \defaultadjdemerits
-     \doubleadjdemerits \defaultadjdemerits
-     \linebreakcriterion\defaultlinebreakcriterion
-   \else
-     \adjdemerits       \granularadjdemerits
-% \doubleadjdemerits 100000
-     \doubleadjdemerits \defaultadjdemerits
-     \linebreakcriterion\granularlinebreakcriterion
-   \fi
-\to \t_spac_align_applied
+\aliased\let\stopinstallaligncommand\relax
+
+\permanent\protected\def\startinstallaligncommand[#1]#S#/\stopinstallaligncommand
+  {\defcsname\??aligncommand#1\endcsname{\appendtoks#2\to\t_spac_align_applied}}
+
+\permanent \specificationdef \granularfitnessclasses \fitnessclasses \plusnine
+    \plusninetynine
+    \plusfourtytwo  % .75
+    \plustwelve     % .50
+    \plustwo        % .25
+    \zerocount      % .00
+    \plustwo        % .25
+    \plustwelve     % .50
+    \plusfourtytwo  % .75
+    \plusninetynine
+
+% \permanent \specificationdef \defaultadjacentdemerits \adjacentdemerits \minusone \plustenthousand
+
+\permanent \specificationdef \granularadjacentdemerits \adjacentdemerits \pluseight
+    \zerocount
+    \plustwentyfivehundred
+    \plusfivethousand
+    \plusseventyfivehundred
+    \plustenthousand
+    \numexpr\plustenthousand+\plustwentyfivehundred \relax
+    \numexpr\plustenthousand+\plusfivethousand      \relax
+   %\numexpr\plustenthousand+\plusseventyfivehundred\relax
+    \numexpr\plustenthousand+\plustenthousand       \relax
+
+\installaligncommand
+  {\v!granular}
+  {\granularfitnessclasses
+   \granularadjacentdemerits}
 
 % end of definitions
 
@@ -1122,9 +1256,11 @@
        \spaceskip \xspaceskip
        \parindent \parfillleftskip \parinitrightskip \parinitleftskip \parfillrightskip
        \hyphenpenalty \exhyphenpenalty \automatichyphenpenalty \explicithyphenpenalty
-       \displaywidowpenalty \widowpenalty \clubpenalty \brokenpenalty
+     % \displaywidowpenalty
+       \widowpenalty \clubpenalty \brokenpenalty
        \doublehyphendemerits \finalhyphendemerits \adjdemerits \orphanpenalty
-       \linebreakcriterion
+       \toddlerpenalty \lefttwindemerits \righttwindemerits
+     % \linebreakstretchcriterion \linebreakshrinkcriterion
    \relax}}}}}
 
 \permanent\protected\def\startshowpardata
@@ -1158,10 +1294,10 @@
 
 \permanent\protected\def\shiftalignedline#1#2#3#4% left, right, inner, outer
   {\rightorleftpageaction
-     {\everyleftofalignedline {\hskip\dimexpr#1+#3\relax}%
-      \everyrightofalignedline{\hskip\dimexpr#2+#4\relax}}
-     {\everyleftofalignedline {\hskip\dimexpr#1+#4\relax}%
-      \everyrightofalignedline{\hskip\dimexpr#2+#3\relax}}}
+     {\everyleftofalignedline {\hskip{#1+#3}}%
+      \everyrightofalignedline{\hskip{#2+#4}}}
+     {\everyleftofalignedline {\hskip{#1+#4}}%
+      \everyrightofalignedline{\hskip{#2+#3}}}}
 
 \permanent\protected\def\doalignline#1#2% \\ == newline
   {\noindentation  % was \noindent
@@ -1226,11 +1362,14 @@
 
 \installcorenamespace{alignline}
 
+% Here left and flushleft as well as right and flushright are the same, as it's
+% not used with % the aligh key.
+
 \letcsname\??alignline\v!left      \endcsname\leftaligned
 \letcsname\??alignline\v!right     \endcsname\rightaligned
 \letcsname\??alignline\v!middle    \endcsname\midaligned
-\letcsname\??alignline\v!flushleft \endcsname\rightaligned % beware, makes no sense in locations / we will have a special locations handler
-\letcsname\??alignline\v!flushright\endcsname\leftaligned  % beware, makes no sense in locations / we will have a special locations handler
+\letcsname\??alignline\v!flushleft \endcsname\leftaligned  % beware, makes no sense in locations / we will have a special locations handler
+\letcsname\??alignline\v!flushright\endcsname\rightaligned % beware, makes no sense in locations / we will have a special locations handler
 \letcsname\??alignline\v!center    \endcsname\midaligned
 \letcsname\??alignline\v!max       \endcsname\maxaligned
 
@@ -1296,8 +1435,7 @@
   {\registerparwrapper
      {\v!word:\v!right}
      {\begingroup
-      \frozen\parfillrightskip   \zeroskip  % frozen ?
-      \frozen\finalhyphendemerits\zerocount % frozen ?
+      \frozen\parfillrightskip\zeroskip  % frozen ?
       \endgroup}
      {\doifelseparwrapper{\v!word:\v!right}{\unregisterparwrapper{\v!word:\v!right}}\donothing
       \removeunwantedspaces
@@ -1308,10 +1446,12 @@
       \else
         \kern-#1%
       \fi
+      \hfill
+      \strut
+      \kern\emwidth\strut\kern-\emwidth
+      \nobreak
       \hfilll
-      \discretionary{\strut}{\strut}{\strut}% \allowbreak % changed back from \hskip\zeropoint
-      \hfilll
-      \quad % decent spacing
+      \quad
       #2}}
 
 % \dorecurse{5}{something} \wordright{--someone} \endgraf

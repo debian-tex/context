@@ -1,6 +1,6 @@
 -- merged file : c:/data/develop/context/sources/luatex-fonts-merged.lua
 -- parent file : c:/data/develop/context/sources/luatex-fonts.lua
--- merge date  : 2024-02-27 09:18
+-- merge date  : 2025-02-28 18:12
 
 do -- begin closure to overcome local limits and interference
 
@@ -16,6 +16,7 @@ LUAMAJORVERSION,LUAMINORVERSION=string.match(_VERSION,"^[^%d]+(%d+)%.(%d+).*$")
 LUAMAJORVERSION=tonumber(LUAMAJORVERSION) or 5
 LUAMINORVERSION=tonumber(LUAMINORVERSION) or 1
 LUAVERSION=LUAMAJORVERSION+LUAMINORVERSION/10
+LUAFORMAT=status and status.lua_format or 0
 if LUAVERSION<5.2 and jit then
  MINORVERSION=2
  LUAVERSION=5.2
@@ -4896,6 +4897,7 @@ local loaddatafromcache=caches.loaddata
 local savedataincache=caches.savedata
 local report_containers=logs.reporter("resolvers","containers")
 local allocated={}
+local cache_format=1.001 
 local mt={
  __index=function(t,k)
   if k=="writable" then
@@ -4940,7 +4942,9 @@ end
 function containers.is_valid(container,name)
  if name and name~="" then
   local storage=container.storage[name]
-  return storage and storage.cache_version==container.version
+  return storage
+   and storage.cache_format==cache_format 
+   and storage.cache_version==container.version
  else
   return false
  end
@@ -4951,7 +4955,7 @@ function containers.read(container,name)
  local stored=not reload and storage[name]
  if not stored and container.enabled and caches and containers.usecache then
   stored=loaddatafromcache(container.readables,name,container.writable)
-  if stored and stored.cache_version==container.version then
+  if stored and stored.cache_format==cache_format and stored.cache_version==container.version then
    if trace_cache or trace_containers then
     report_containers("action %a, category %a, name %a","load",container.subcategory,name)
    end
@@ -4968,6 +4972,7 @@ function containers.read(container,name)
 end
 function containers.write(container,name,data,fast)
  if data then
+  data.cache_format=cache_format
   data.cache_version=container.version
   if container.enabled and caches then
    local unique=data.unique
@@ -9663,7 +9668,7 @@ function constructors.scale(tfmdata,specification)
    if c and c~=unicode then
     local cc=changed[c]
     if cc then
-     while cc do
+     while cc and cc~=unicode and c~=cc do 
       c=cc
       cc=changed[c]
      end
@@ -12008,13 +12013,11 @@ readers.hmtx=function(f,fontdata,specification)
    local glyph=glyphs[i]
    width=readshort(f) 
    leftsidebearing=readshort(f)
-   if width~=0 then
-    glyph.width=width
-   end
+   glyph.width=width
   end
-  for i=nofmetrics,nofglyphs-1 do
+  for i=0,nofglyphs-1 do
    local glyph=glyphs[i]
-   if width~=0 then
+   if not glyph.width then
     glyph.width=width
    end
   end
@@ -19208,6 +19211,7 @@ local function readmathvariants(f,fontdata,offset)
  local function get(offset,coverage,nofglyphs,construction,kvariants,kparts,kitalic,korientation,orientation)
   if coverage~=0 and nofglyphs>0 then
    local coverage=readcoverage(f,offset+coverage,true)
+   local n=0
    for i=1,nofglyphs do
     local c=construction[i]
     if c~=0 then
@@ -19222,6 +19226,7 @@ local function readmathvariants(f,fontdata,offset)
       for i=1,nofvariants do
        local variant=readushort(f)
        if variant==index then
+        n=n+1
        elseif variants then
         v=v+1
         variants[v]=variant
@@ -19231,7 +19236,7 @@ local function readmathvariants(f,fontdata,offset)
        end
        skipshort(f)
       end
-      if not variants then
+      if not variants or not next(variants) then
       elseif not math then
        math={ [kvariants]=variants }
        glyph.math=math
@@ -19268,21 +19273,57 @@ local function readmathvariants(f,fontdata,offset)
       if italic and italic~=0 then
        math[kitalic]=italic
       end
-      if orientation then
+      if korientation and orientation then
        math[korientation]=orientation
+      end
+     end
+    end
+   end
+   if n>0 then
+    report("discarding %i self referencing %s variant entries",n,orientation)
+   end
+   for index=1,#glyphs do
+    local g=glyphs[index]
+    local m=g.math
+    if m then
+     local v=m[kvariants]
+     if v then
+      local done={ [index]=true }
+      local size=#v
+      local i=1
+      while i<=size do
+       local vi=v[i]
+       if done[vi] then
+        report("discarding %sdirect circular %s variant index 0x%04X for index 0x%04X, %C","",orientation,vi,index,tonumber(g.unicode) or 0xFFFD)
+        table.remove(v,i)
+        size=size-1
+        goto NEXT
+       else
+        local gg=glyphs[vi]
+        if gg then
+         local mm=gg.math
+         if mm then
+          local vv=mm[kvariants]
+          if vv then
+           report("discarding %sdirect circular %s variant index 0x%04X for index 0x%04X, %C","in",orientation,vi,index,tonumber(g.unicode) or 0xFFFD)
+           table.remove(v,i)
+           size=size-1
+           goto NEXT
+          end
+         end
+        end
+        done[vi]=true
+       end
+       i=i+1
+        ::NEXT::
       end
      end
     end
    end
   end
  end
- if CONTEXTLMTXMODE and CONTEXTLMTXMODE>0 then
-  get(offset,hcoverage,hnofglyphs,hconstruction,"variants","parts","partsitalic","partsorientation","horizontal")
-  get(offset,vcoverage,vnofglyphs,vconstruction,"variants","parts","partsitalic","partsorientation","vertical")
- else
-  get(offset,vcoverage,vnofglyphs,vconstruction,"vvariants","vparts","vitalic")
-  get(offset,hcoverage,hnofglyphs,hconstruction,"hvariants","hparts","hitalic")
- end
+ get(offset,hcoverage,hnofglyphs,hconstruction,"hvariants","hparts","hitalic",nil,"horizontal")
+ get(offset,vcoverage,vnofglyphs,vconstruction,"vvariants","vparts","vitalic",nil,"vertical")
 end
 function readers.math(f,fontdata,specification)
  local tableoffset=gotodatatable(f,fontdata,"math",specification.glyphs)
@@ -19308,11 +19349,14 @@ function readers.colr(f,fontdata,specification)
  local tableoffset=gotodatatable(f,fontdata,"colr",specification.glyphs)
  if tableoffset then
   local version=readushort(f)
-  if version==0 or version==1 then
-   report("table version %a of %a is not supported (yet), maybe font %s is bad",version,"colr",fontdata.filename)
-   return
-  else
-  end
+		if version==0 then
+			
+		elseif version==1 then
+			report("table version %a of %a is %s supported for font %s",version,"colr","partially",fontdata.filename)
+		else
+			report("table version %a of %a is %s supported for font %s",version,"colr","not",fontdata.filename)
+			return
+		end
   if not fontdata.tables.cpal then
    report("color table %a in font %a has no mandate %a table","colr",fontdata.filename,"cpal")
    fontdata.colorpalettes={}
@@ -21353,7 +21397,7 @@ if not modules then modules={} end modules ['font-otl']={
 local lower=string.lower
 local type,next,tonumber,tostring,unpack=type,next,tonumber,tostring,unpack
 local abs=math.abs
-local derivetable,sortedhash=table.derive,table.sortedhash
+local derivetable,sortedhash,remove=table.derive,table.sortedhash,table.remove
 local formatters=string.formatters
 local setmetatableindex=table.setmetatableindex
 local allocate=utilities.storage.allocate
@@ -21369,7 +21413,7 @@ local trace_defining=false  registertracker("fonts.defining",function(v) trace_d
 local report_otf=logs.reporter("fonts","otf loading")
 local fonts=fonts
 local otf=fonts.handlers.otf
-otf.version=3.140 
+otf.version=3.144 
 otf.cache=containers.define("fonts","otl",otf.version,true)
 otf.svgcache=containers.define("fonts","svg",otf.version,true)
 otf.pngcache=containers.define("fonts","png",otf.version,true)
@@ -21571,7 +21615,7 @@ function otf.setfeatures(tfmdata,features)
   return {} 
  end
 end
-local function copytotfm(data,cache_id)
+local function copytotfm(data,cache_id,wipemath)
  if data then
   local metadata=data.metadata
   local properties=derivetable(data.properties)
@@ -21593,15 +21637,59 @@ local function copytotfm(data,cache_id)
    minsize=100
    maxsize=100
   end
-  if mathspecs then
-   for name,value in next,mathspecs do
-    mathparameters[name]=value
-   end
-  end
   for unicode in next,data.descriptions do 
    characters[unicode]={}
   end
-  if mathspecs then
+  local filename=constructors.checkedfilename(resources)
+  local fontname=metadata.fontname
+  local fullname=metadata.fullname or fontname
+  local psname=fontname or fullname
+  local subfont=metadata.subfontindex
+  local units=metadata.units or 1000
+  if units==0 then 
+   units=1000 
+   metadata.units=1000
+   report_otf("changing %a units to %a",0,units)
+  end
+  if not mathspecs then
+  elseif wipemath then
+   local wiped=false
+   local features=resources.features
+   local sequences=resources.sequences
+   if features then
+    local gsub=features.gsub
+    if gsub and gsub.ssty then
+     gsub.ssty=nil
+     wiped=true
+    end
+   end
+   if sequences then
+    for i=#sequences,1,-1 do
+     local sequence=sequences[i]
+     local features=sequence.features
+     if features then
+      if features.ssty then
+       remove(sequences,i)
+       wiped=true
+      end
+     end
+    end
+   end
+   if resources.mathconstants then
+    resources.mathconstants=nil
+    wiped=true
+   end
+   if resources.math then
+    metadata.math=nil
+    wiped=true
+   end
+   if wiped then
+    report_otf("math data wiped from %a",fullname)
+   end
+  else
+   for name,value in next,mathspecs do
+    mathparameters[name]=value
+   end
    for unicode,character in next,characters do
     local d=descriptions[unicode] 
     local m=d.math
@@ -21651,17 +21739,6 @@ local function copytotfm(data,cache_id)
      end
     end
    end
-  end
-  local filename=constructors.checkedfilename(resources)
-  local fontname=metadata.fontname
-  local fullname=metadata.fullname or fontname
-  local psname=fontname or fullname
-  local subfont=metadata.subfontindex
-  local units=metadata.units or 1000
-  if units==0 then 
-   units=1000 
-   metadata.units=1000
-   report_otf("changing %a units to %a",0,units)
   end
   local monospaced=metadata.monospaced
   local charwidth=metadata.averagewidth 
@@ -21819,7 +21896,7 @@ local function otftotfm(specification)
   if rawdata and next(rawdata) then
    local descriptions=rawdata.descriptions
    rawdata.lookuphash={} 
-   tfmdata=copytotfm(rawdata,cache_id)
+   tfmdata=copytotfm(rawdata,cache_id,features and features.wipemath)
    if tfmdata and next(tfmdata) then
     local features=constructors.checkedfeatures("otf",features)
     local shared=tfmdata.shared
@@ -24026,6 +24103,7 @@ local P,R,S=lpeg.P,lpeg.R,lpeg.S
 local lpegmatch=lpeg.match
 local insert,remove,copy,unpack=table.insert,table.remove,table.copy,table.unpack
 local find=string.find
+local idiv=number.idiv
 local formatters=string.formatters
 local sortedkeys=table.sortedkeys
 local sortedhash=table.sortedhash
@@ -24711,7 +24789,7 @@ local function checklookups(fontdata,missing,nofmissing)
     end
    end
    if parts then
-    parts[#parts//2+1].unicode=unicode
+    parts[idiv(#parts,2)+1].unicode=unicode
    end
   end
  end
@@ -26735,10 +26813,13 @@ function readers.expand(data)
   for u,d in next,descriptions do
    local bb=d.boundingbox
    local wd=d.width
-   if not wd then
+   if d.class=="mark" then
+    if trace_markwidth and wd~=0 then
+     report_markwidth("mark %a with width %b found in %a",d.name or "<noname>",wd,basename)
+    end
+    d.width=0
+   elseif not wd then
     d.width=defaultwidth
-   elseif trace_markwidth and wd~=0 and d.class=="mark" then
-    report_markwidth("mark %a with width %b found in %a",d.name or "<noname>",wd,basename)
    end
    if bb then
     local ht=bb[4]
@@ -31200,7 +31281,7 @@ local function validspecification(specification,name)
   return specification,name
  end
 end
-local function addfeature(data,feature,specifications,prepareonly)
+local function addfeature(data,feature,specifications,prepareonly,filename)
  if not specifications then
   report_otf("missing specification")
   return
@@ -31402,14 +31483,16 @@ local function addfeature(data,feature,specifications,prepareonly)
   data.properties.hasspacekerns=true
   data.resources .spacekerns=nil
  end
- local function prepare_kern(list,featuretype)
+ local function prepare_kern(list,featuretype,nocheck)
   local coverage={}
   local cover=coveractions[featuretype]
   local isspace=false
   for code,replacement in next,list do
    local unicode=tounicode(code)
    local description=descriptions[unicode]
-   if description and type(replacement)=="table" then
+   if not nocheck and not description then
+    skip=skip+1
+   elseif type(replacement)=="table" then
     local r={}
     for k,v in next,replacement do
      local u=tounicode(k)
@@ -31438,14 +31521,16 @@ local function addfeature(data,feature,specifications,prepareonly)
   end
   return coverage
  end
- local function prepare_pair(list,featuretype)
+ local function prepare_pair(list,featuretype,nocheck)
   local coverage={}
   local cover=coveractions[featuretype]
   if cover then
    for code,replacement in next,list do
     local unicode=tounicode(code)
     local description=descriptions[unicode]
-    if description and type(replacement)=="table" then
+    if not nocheck and not description then
+     skip=skip+1
+    elseif type(replacement)=="table" then
      local r={}
      for k,v in next,replacement do
       local u=tounicode(k)
@@ -31689,6 +31774,23 @@ local function addfeature(data,feature,specifications,prepareonly)
  for s=1,#dataset do
   local specification=dataset[s]
   local valid=specification.valid 
+  local files=specification.files
+  if files and filename then
+   local name=string.lower(file.basename(filename))
+   local okay=files[name]
+   if not okay then
+    for i=1,#files do
+     if name==files[i] then
+      okay=true
+      break
+     end
+    end
+   end
+   if okay then
+   else
+    return
+   end
+  end
   local feature=specification.name or feature
   if not feature or feature=="" then
    report_otf("no valid name given for extra feature")
@@ -31760,13 +31862,13 @@ local function addfeature(data,feature,specifications,prepareonly)
         coverage=prepare_multiple(list,featuretype,nocheck)
        elseif featuretype=="kern" or featuretype=="move" then
         format=featuretype
-        coverage=prepare_kern(list,featuretype)
+        coverage=prepare_kern(list,featuretype,nocheck)
        elseif featuretype=="pair" then
         format="pair"
-        coverage=prepare_pair(list,featuretype)
+        coverage=prepare_pair(list,featuretype,nocheck)
        elseif featuretype=="single" then
         format="single"
-        coverage=prepare_single(list,featuretype)
+        coverage=prepare_single(list,featuretype,nocheck)
        end
        if coverage and next(coverage) then
         nofsteps=nofsteps+1
@@ -31788,9 +31890,9 @@ local function addfeature(data,feature,specifications,prepareonly)
      local list=askedsteps[i]
      local coverage=nil
      local format=nil
-if type(list)=="function" then
- list=list(data,specification,list,i)
-end
+     if type(list)=="function" then
+      list=list(data,specification,list,i) 
+     end
      if not list then
      elseif featuretype=="substitution" then
       category="gsub"
@@ -31807,15 +31909,15 @@ end
      elseif featuretype=="kern" or featuretype=="move" then
       category="gpos"
       format=featuretype
-      coverage=prepare_kern(list,featuretype)
+      coverage=prepare_kern(list,featuretype,nocheck)
      elseif featuretype=="pair" then
       category="gpos"
       format="pair"
-      coverage=prepare_pair(list,featuretype)
+      coverage=prepare_pair(list,featuretype,nocheck)
      elseif featuretype=="single" then
       category="gpos"
       format="single"
-      coverage=prepare_single(list,featuretype)
+      coverage=prepare_single(list,featuretype,nocheck)
      elseif featuretype=="chainsubstitution" then
       category="gsub"
       coverage=prepare_chain(list,featuretype,sublookups,nocheck)
@@ -31909,7 +32011,7 @@ end
 local function enhance(data,filename,raw)
  for slot=1,#extrafeatures do
   local specification=extrafeatures[slot]
-  addfeature(data,specification.name,specification)
+  addfeature(data,specification.name,specification,nil,filename)
  end
 end
 otf.enhancers.enhance=enhance
@@ -35047,7 +35149,7 @@ local afm=handlers.afm or {}
 handlers.afm=afm
 local readers=afm.readers or {}
 afm.readers=readers
-afm.version=1.540
+afm.version=1.541
 local get_indexes,get_shapes
 do
  local decrypt
@@ -35433,7 +35535,7 @@ local afmfeatures=constructors.features.afm
 local registerafmfeature=afmfeatures.register
 local afmenhancers=constructors.enhancers.afm
 local registerafmenhancer=afmenhancers.register
-afm.version=1.540 
+afm.version=1.541 
 afm.cache=containers.define("fonts","one",afm.version,true)
 afm.autoprefixed=true 
 afm.helpdata={}  

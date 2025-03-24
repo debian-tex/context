@@ -724,7 +724,12 @@
 %   {\limitatetext{#1}\currentregistermaxwidth\unknown}%
 
 \def\strc_registers_limited_entry#1%
-  {\limitated left \currentregistermaxwidth sentinel {\unknown} text {#1} freeze true\relax}
+  {\limitated
+     left     {\currentregistermaxwidth}%
+     sentinel {\unknown}%
+     text     {#1}%
+     freeze   true
+   \relax}
 
 \aliased\let\limitedregisterentry\firstofoneargument
 
@@ -925,8 +930,8 @@
 \permanent\protected\def\startregisteroutput
   {\endgraf
    \begingroup
-   \d_strc_registers_distance\registerparameter\c!distance\relax
-   \dostarttaggedchained\t!register\currentregister\??register
+   \d_strc_registers_distance{\registerparameter\c!distance}%
+   \dostarttaggedchained\t!register\currentregister\currentregister\??register
    \forgeteverypar
    \forgetparindent
    \forgetparskip}
@@ -944,8 +949,7 @@
 %    % how about style
 %    \ifconditional\c_strc_registers_text_interaction
 %      \ifempty\currentcolorparameter \else
-%        \resetinteractionparameter\c!color
-%        \resetinteractionparameter\c!contrastcolor
+%        \resetinteractioncolor
 %      \fi
 %    \fi}
 %
@@ -953,7 +957,7 @@
 %   {\endgraf
 %    \begingroup
 %    \c_strc_register_level\ifnum#1>\c_strc_registers_maxlevel\c_strc_registers_maxlevel\else#1\fi\relax
-%    \dostarttagged\t!registerentries\empty
+%    \dostarttaggednodetail\t!registerentries
 %  % \let\savedcurrentregister\currentregister
 %    \pushmacro\currentregister
 %    \cdef\currentregister{\currentregister:\the\c_strc_register_level}%
@@ -1011,8 +1015,7 @@
    % how about style
    \ifconditional\c_strc_registers_text_interaction
      \ifempty\currentcolorparameter \else
-       \resetinteractionparameter\c!color
-       \resetinteractionparameter\c!contrastcolor
+       \resetinteractioncolor
      \fi
    \fi}
 
@@ -1022,7 +1025,7 @@
    \fi
    \begingroup
    \c_strc_register_level\ifnum#1>\c_strc_registers_maxlevel\c_strc_registers_maxlevel\else#1\fi\relax
-   \dostarttagged\t!registerentries\empty
+   \dostarttaggednodetail\t!registerentries
    \pushmacro\currentregister % bah
    \cdef\currentregister{\currentregister:\the\c_strc_register_level}%
    \let\currentnestedregister\currentregister
@@ -1030,7 +1033,7 @@
    \ifnum\c_strc_register_level>\plusone
      \advanceby\leftskip\d_strc_registers_distance\relax
    \fi
-   \d_strc_registers_hangindent\registerparameter\c!distance\relax
+   \d_strc_registers_hangindent{\registerparameter\c!distance}%
    \c_strc_registers_hangafter \plusone
    \ifconditional\c_strc_registers_vertical
      \blank[\v!samepage]%
@@ -1045,7 +1048,7 @@
 \permanent\protected\def\startregisterentry#1% todo: level
   {\typo_injectors_check_register
    \begingroup
-   \dostarttagged\t!registerentry\empty
+   \dostarttaggednodetail\t!registerentry
    \global\setconstant\c_strc_registers_page_state\zerocount
    \ifconditional\c_strc_registers_vertical
      \hangindent\d_strc_registers_hangindent
@@ -1066,8 +1069,8 @@
    \endgroup}
 
 \permanent\protected\def\startregistersection#1% title
-  {\dostarttagged\t!registersection\empty
-   \dostarttagged\t!registertag\empty
+  {\dostarttaggednodetail\t!registersection
+   \dostarttaggednodetail\t!registertag
    \registercharacter{#1}\endgraf
    \dostoptagged}
 
@@ -1077,7 +1080,7 @@
 
 \permanent\protected\def\startregisterpages
   {\begingroup
-   \dostarttagged\t!registerpages\empty
+   \dostarttaggednodetail\t!registerpages
    \useregisterstyleandcolor\c!pagestyle\c!pagecolor
    \registerparameter\c!pageleft}
 
@@ -1088,7 +1091,7 @@
 
 \permanent\protected\def\startregisterseewords
   {\begingroup
-   \dostarttagged\t!registerpage\empty
+   \dostarttaggednodetail\t!registerpage
    \useregisterstyleandcolor\c!pagestyle\c!pagecolor}
 
 \permanent\protected\def\stopregisterseewords
@@ -1099,11 +1102,11 @@
   {\ifcase\c_strc_registers_page_state
      \hskip\d_strc_registers_distance\relax
    \or
-     \dostarttagged\t!registerseparator\empty
+     \dostarttaggednodetail\t!registerseparator
      \registerpageseparatorsymbol % page
      \dostoptagged
    \or
-     \dostarttagged\t!registerseparator\empty
+     \dostarttaggednodetail\t!registerseparator
      \registerpageseparatorsymbol % see
      \dostoptagged
    \fi}
@@ -1171,7 +1174,7 @@
    \ifcstok{\registerparameter\c!pagenumber}\v!no\else
      \registerpageseparator
      \global\setconstant\c_strc_registers_page_state\plusone
-     \dostarttagged\t!registerpage\empty
+     \dostarttaggednodetail\t!registerpage
      \withregisterpagecommand{#2}{#3}{#4}{#5}%
      \dostoptagged
    \fi
@@ -1195,19 +1198,19 @@
    \ifcstok{\registerparameter\c!pagenumber}\v!no\else
      \registerpageseparator
      \global\setconstant\c_strc_registers_page_state\plusone
-     \dostarttagged\t!registerpagerange\empty
-     \dostarttagged\t!registerfrompage\empty
+     \dostarttaggednodetail\t!registerpagerange
+     \dostarttaggednodetail\t!registerfrompage
      \withregisterpagecommand{#2}{#3}{#4}{#5}%
      \dostoptagged
      \ifconditional\c_strc_registers_following
-       \ifnum#3=\numexpr#6-1\relax
+       \ifnum#3={#6-1}%
          \labeltext{following:\s!singular}%
        \else
          \labeltext{following:\s!plural}%
        \fi
      \else
        \registeronepagerangeseparator
-       \dostarttagged\t!registertopage\empty
+       \dostarttaggednodetail\t!registertopage
        \withregisterpagecommand{#2}{#6}{#7}{#8}%
      \fi
      \dostoptagged
@@ -1235,7 +1238,7 @@
    \popcurrentregister}
 
 \permanent\protected\def\doapplyregisterentrycommand#1#2% processor text
-  {\dostarttagged\t!registercontent\empty
+  {\dostarttaggednodetail\t!registercontent
    \ifempty\currentregisterseeindex \else
      \dontleavehmode
      \dosetdirectpagereference{seeindex:\currentregisterseeindex}% maybe some day we will support an area
@@ -1260,7 +1263,7 @@
    \global\setconstant\c_strc_registers_page_state\plustwo
    \def\currentregisterpageindex{#5}%
    \def\currentregisterseeindex{#6}%
-   \dostarttagged\t!registersee\empty
+   \dostarttaggednodetail\t!registersee
    \c_strc_registers_page_done\conditionaltrue
    \ifchknum\currentregisterseeindex\or
      \lettonothing\currentregisterpageprefix
@@ -1303,7 +1306,7 @@
    \fi
    \global\setconstant\c_strc_registers_page_state\plustwo
    \def\currentregisterpageindex{#5}%
-   \dostarttagged\t!registersection\empty
+   \dostarttaggednodetail\t!registersection
    \c_strc_registers_page_done\conditionaltrue
    \iflocation
      \def\currentregistersectionindex{#6}%

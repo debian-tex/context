@@ -34,12 +34,12 @@ local actions = tasks.actions("shipouts")
 
 handlers.finalizelist = actions
 
-function handlers.finalizebox(box)
-    actions(getbox(box)) -- nut
+function handlers.finalizebox(box,ispage)
+    actions(getbox(box),ispage) -- nut
 end
 
-function handlers.finalizelist(list) -- beware of export: block it if needed
-    actions(list) -- nut
+function handlers.finalizelist(list,ispage) -- beware of export: block it if needed
+    actions(list,ispage) -- nut
 end
 
 do
@@ -57,8 +57,11 @@ do
     directives.register("backend.cleanup.flatten", function(v) flatten = v end)
     directives.register("backend.cleanup.soften",  function(v) soften  = v end)
 
+    -- we do it in normalize but there we only handle lines, so hboxes still
+    -- have them .. so:
+
     nodes.handlers.cleanuppage = function(head)
-     -- local count    = 0
+        local count    = 0 -- see below
         local found    = 0
         local replaced = 0
         if flatten then
@@ -86,8 +89,14 @@ end
 -- interface
 
 implement {
-    name      = "finalizebox",
-    arguments = "integer",
+    name      = "finalizeshipoutbox",
+    arguments = { "integer", true },
+    actions   = handlers.finalizebox,
+}
+
+implement {
+    name      = "finalizeobjectbox",
+    arguments = { "integer", false },
     actions   = handlers.finalizebox,
 }
 
@@ -143,14 +152,14 @@ trackers.register("nodes.frequencies",function(v)
     if type(v) == "string" then
         frequencies.filename = v
     end
-    handlers.frequencies_shipouts_before   = register("shipouts",   "begin")
-    handlers.frequencies_shipouts_after    = register("shipouts",   "end")
-    handlers.frequencies_processors_before = register("processors", "begin")
-    handlers.frequencies_processors_after  = register("processors", "end")
-    tasks.prependaction("shipouts",   "before", "nodes.handlers.frequencies_shipouts_before")
-    tasks.appendaction ("shipouts",   "after",  "nodes.handlers.frequencies_shipouts_after")
-    tasks.prependaction("processors", "before", "nodes.handlers.frequencies_processors_before")
-    tasks.appendaction ("processors", "after",  "nodes.handlers.frequencies_processors_after")
+    tracers.frequencies_shipouts_before   = register("shipouts",   "begin")
+    tracers.frequencies_shipouts_after    = register("shipouts",   "end")
+    tracers.frequencies_processors_before = register("processors", "begin")
+    tracers.frequencies_processors_after  = register("processors", "end")
+    tasks.prependaction("shipouts",   "before", "nodes.tracers.frequencies_shipouts_before")
+    tasks.appendaction ("shipouts",   "after",  "nodes.tracers.frequencies_shipouts_after")
+    tasks.prependaction("processors", "before", "nodes.tracers.frequencies_processors_before")
+    tasks.appendaction ("processors", "after",  "nodes.tracers.frequencies_processors_after")
 end)
 
 statistics.register("node frequencies", function()
@@ -161,7 +170,7 @@ statistics.register("node frequencies", function()
     end
 end)
 
-do -- for the moment:
+do -- no longer used
 
     local whatsitcodes = nodes.whatsitcodes
 
@@ -206,8 +215,8 @@ do -- for the moment:
         name      = "cleanupbox",
         public    = true,
         protected = true,
+        arguments = "integer",
         actions   = handlers.cleanupbox,
-        arguments = "integerargument"
     }
 
 end

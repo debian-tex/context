@@ -23,38 +23,68 @@
 
 % \resetpenalties\orphanpenalties
 
+%integerdef\unknownparpassclass     "000
+\integerdef\verylooseparpassclass   "001
+\integerdef\looseparpassclass       "002
+\integerdef\almostlooseparpassclass "004
+\integerdef\barelylooseparpassclass "008
+\integerdef\decentparpassclass      "010
+\integerdef\barelytightparpassclass "020
+\integerdef\almosttightparpassclass "040
+\integerdef\tightparpassclass       "080
+\integerdef\verytightparpassclass   "100
+
+%  \fitnessdemerits \numexpr \verylooseparpassclass + \almostlooseparpassclass \relax % 5 default
+
+% \integerdef\indecentparpassclasses\numexpr
+%       \verylooseparpassclass
+%     + \looseparpassclass
+%     + \almostlooseparpassclass
+%     + \barelylooseparpassclass
+%     % \decentparpassclass
+%     + \barelytightparpassclass
+%     + \almosttightparpassclass
+%     + \tightparpassclass
+%     + \verytightparpassclass
+% \relax
+
+\integerdef\allparpassclasses "FFFF
+
 \integerdef\indecentparpassclasses\numexpr
-      \verylooseparpassclass
-    + \looseparpassclass
-    + \semilooseparpassclass
-    % \decentparpassclass
-    + \semitightparpassclass
-    + \tightparpassclass
+    \allparpassclasses
+  - \decentparpassclass
 \relax
 
 \integerdef\almostdecentparpassclasses\numexpr
       \verylooseparpassclass
     + \looseparpassclass
-    % \semilooseparpassclass
+    + \almostlooseparpassclass
     % \decentparpassclass
-    % \semitightparpassclass % yes or no
+    + \almosttightparpassclass
     + \tightparpassclass
+    + \verytightparpassclass
 \relax
 
 \integerdef\looseparpassclasses\numexpr
       \verylooseparpassclass
     + \looseparpassclass
-    + \semilooseparpassclass
+    % \decentparpassclass
+    + \almostlooseparpassclass
+    + \barelylooseparpassclass
 \relax
 
 \integerdef\tightparpassclasses\numexpr
-      \semitightparpassclass
+      \verytightparpassclass
     + \tightparpassclass
+    % \decentparpassclass
+    + \almosttightparpassclass
+    + \barelytightparpassclass
 \relax
 
 \appendtoks
     \ifcase\linebreakpasses\else
         \linebreakpasses\zerocount
+        % maybe always:
         \pretolerance   \plushundred
         \tolerance      \plustwohundred
     \fi
@@ -107,5 +137,30 @@
 
 % \dorecurse{41}{line #1\par}
 % here \singlelinepenalty20000 \updateparagraphpenalties here here
+
+%D Todo:
+
+% \specificationdef \parpassonemoreline \parpasses 3
+%     looseness    1
+%     tolerance  100
+% next
+%     tolerance 200
+%     hyphenation  1
+% next
+%     demerits 1
+%     emergencystretch 4em
+%
+% \specificationdef \parpasstwomorelines \parpasses 3
+%     looseness    2
+%     tolerance  100
+% next
+%     tolerance  200
+%     hyphenation  1
+% next
+%     demerits 1
+%     emergencystretch 8em
+%
+% \permanent\protected\def\onemoreline {\parpassesexception\parpassonemoreline }
+% \permanent\protected\def\twomorelines{\parpassesexception\parpasstwomorelines}
 
 \protect

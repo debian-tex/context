@@ -12,10 +12,11 @@ return {
         "tracingoutput", "tracingstats", "tracingonline", "year", "month", "day",
         "time", "hour", "minute", "charcode", "charwd", "charht", "chardp",
         "charic", "pausing", "showstopping", "texscriptmode", "overloadmode",
-        "linejoin", "linecap", "stacking", "miterlimit", "warningcheck",
-        "truecorners", "defaultcolormodel", "restoreclipcolor", "numbersystem",
+        "linejoin", "linecap", "stacking", "miterlimit", "warningcheck", "defaultzeroangle",
+        "truecorners", "defaultcolormodel", "restoreclipcolor", "numbersystem", "jointolerance",
         "numberprecision", "jobname", "addto", "atleast", "begingroup",
         "controls", "curl", "delimiters", "endgroup", "everyjob", "exitif",
+        "firstcontrol", "secondcontrol",
         "expandafter", "interim", "let", "newinternal", "of", "randomseed",
         "maxknotpool", "save", "scantokens", "runscript", "maketext", "shipout",
         "step", "str", "void", "tension", "to", "until", "within", "write",
@@ -37,10 +38,12 @@ return {
         "deltaprecontrol", "deltapostcontrol", "deltadirection", "arclength",
         "angle", "cycle", "nocycle", "stroked", "filled", "clipped", "grouped",
         "bounded", "or", "and", "substring", "subpath", "directiontime", "point",
-        "precontrol", "postcontrol", "direction", "pathpoint", "pathprecontrol",
+        "deltapoint", "pathindex", "pathlastindex", "pathlength", "pathfirst", "pathlast",
+        "pathstate", "precontrol", "postcontrol", "direction", "pathpoint", "pathprecontrol",
         "pathpostcontrol", "pathdirection", "penoffset", "arctime", "arcpoint",
         "arcpointlist", "subarclength", "mpversion", "rotated", "slanted",
-        "scaled", "shifted", "transformed", "xscaled", "yscaled", "zscaled",
+        "scaled", "shifted", "transformed", "xscaled", "yscaled", "zscaled", "xyscaled",
+        "xrelative", "yrelative", "xyrelative", "xabsolute", "yabsolute", "xyabsolute",
         "intersectiontimes", "intersectiontimeslist", "envelope", "boundingpath",
         "numeric", "string", "boolean", "path", "pen", "nep", "picture",
         "transform", "color", "rgbcolor", "cmykcolor", "pair", "end", "dump",
@@ -48,9 +51,11 @@ return {
         "inner", "outer", "setproperty", "showtoken", "showstats", "show",
         "showvariable", "showdependencies", "doublepath", "contour", "also",
         "withpen", "dashed", "withprescript", "withpostscript", "withstacking",
+        "withnestedprescript", "withnestedpostscript",
         "withlinecap", "withlinejoin", "withmiterlimit", "withoutcolor",
         "withgreyscale", "withcolor", "withrgbcolor", "withcmykcolor", "clip",
         "setgroup", "setbounds", "message", "errmessage", "errhelp",
+        "lessdigits",
         --
         -- aliased
         --
@@ -118,6 +123,8 @@ return {
         "range", "thru",
         "z", "laboff",
         "bye",
+        --
+        "crossprod",
         --
         "red", "green", "blue", "cyan", "magenta", "yellow", "black", "white", "background",
         --

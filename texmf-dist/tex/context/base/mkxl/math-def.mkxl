@@ -85,14 +85,19 @@
 \definemathfunction [cs:median] [\c!command=\widetilde]
 \definemathfunction [sk:median] [\c!command=\widetilde]
 
-% \definemathfunction[partial]      [class=differential]
-% \definemathfunction[gradient]     [class=differential]
-\definemathfunction[adjoint]         [right=\adjointsymbol]
-\definemathfunction[transpose]       [right=\transposesymbol]
-\definemathfunction[derivative]      [right=\derivativesymbol]
-\definemathfunction[secondderivative][right=\secondderivativesymbol]
-\definemathfunction[thirdderivative] [right=\thirdderivativesymbol]
-\definemathfunction[fourthderivative][right=\fourthderivativesymbol]
+% Maybe set a method as well to signal the order
+
+%definemathfunction[partial]              [class=differential]
+%definemathfunction[gradient]             [class=differential]
+\definemathfunction[adjoint]              [right=\adjointsymbol]
+\definemathfunction[orthogonalcomplement] [right=\orthogonalcomplementsymbol]
+\definemathfunction[transpose]            [right=\transposesymbol]
+\definemathfunction[derivative]           [right=\derivativesymbol]
+\definemathfunction[secondderivative]     [right=\secondderivativesymbol]
+\definemathfunction[thirdderivative]      [right=\thirdderivativesymbol]
+\definemathfunction[fourthderivative]     [right=\fourthderivativesymbol]
+\definemathfunction[preimage]             [right=\preimagesymbol]
+\definemathfunction[inverse]              [right=\inversesymbol]
 
 % \definemathfunction[laplace]      [class=differential]
 % \definemathfunction[crossproduct] [class=binary]
@@ -101,27 +106,6 @@
 \definemathfunction[neg]
 
 \aliased\let\normalmatharg\arg % todo: maybe automatically
-
-%D This needs checking:
-
-\permanent\protected\def\setoperatorlimits#1#2% operator limits
-  {\savenormalmeaning{#1}%
-   %frozen\protected\expandafter\def\expandafter#1\expandafter{\csname normal\csstring#1\endcsname#2}}
-   \frozen\protected\edef#1{\expandafter\noexpand\csname\s!normal\csstring#1\endcsname\noexpand#2}}
-
-\pushoverloadmode
-
-\setoperatorlimits \int              \intlimits
-\setoperatorlimits \iint             \intlimits
-\setoperatorlimits \iiint            \intlimits
-\setoperatorlimits \oint             \intlimits
-\setoperatorlimits \oiint            \intlimits
-\setoperatorlimits \oiiint           \intlimits
-\setoperatorlimits \intclockwise     \intlimits
-\setoperatorlimits \ointclockwise    \intlimits
-\setoperatorlimits \ointctrclockwise \intlimits
-
-\popoverloadmode
 
 %D \macros
 %D   {centercolon, colonminus, minuscolon, colonequals, equalscolon,
