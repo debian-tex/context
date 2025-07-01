@@ -1,8 +1,8 @@
 context (2025.03.05.20250324+dfsg-1) experimental; urgency=medium
 
-  * New upstream.
+  * New upstream, for TL 2025. Refresh patches.
 
- -- Hilmar Preuße <hille42@debian.org>  Mon, 24 Mar 2025 22:43:14 +0100
+ -- Hilmar Preuße <hille42@debian.org>  Tue, 01 Jul 2025 23:33:39 +0200
 
 context (2024.04.01.20240428+dfsg-2) unstable; urgency=medium
 
