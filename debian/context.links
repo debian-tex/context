@@ -1,2 +1,3 @@
 usr/bin/luametatex usr/bin/context
 usr/bin/luametatex usr/bin/mtxrun
+usr/share/color/icc/sRGB.icc usr/share/texmf/tex/context/colors/icc/context/sRGB.icc
