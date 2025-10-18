@@ -1,3 +1,10 @@
+Description: Fix syntax errors in manual pages.
+Author: Hilmar Preusse <hille42@web.de>
+Origin: other
+Forwarded: no
+Last-Update: 2022-02-12
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- context.orig/texmf-dist/doc/man/man1/context.1
 +++ context/texmf-dist/doc/man/man1/context.1
 @@ -135,7 +135,7 @@
