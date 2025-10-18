@@ -25,7 +25,7 @@ fi
 
 unpackone() {
   what=$1
-  for i in "" .doc .source .i386-linux ; do
+  for i in "" .doc .i386-linux ; do
     fn="$tlnet/archive/$what${i}.tar.xz"
     if [ -r "$fn" ] ; then
       echo "unpacking $fn"
