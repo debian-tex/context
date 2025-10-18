@@ -6,6 +6,7 @@ context (2025.03.05.20250324+dfsg-3) UNRELEASED; urgency=medium
   * Recommends inkscape (Closes: #940072).
   * Remove context.source from make-orig-tar, contains just luametatex code.
   * Add Apache 2.0 Copyright statement (Closes: #1116018).
+  * Remove obsolete patches.
 
  -- Hilmar Preuße <hille42@debian.org>  Sat, 20 Sep 2025 00:01:52 +0200
 
