@@ -4,7 +4,6 @@ context source: debian-watch-file-is-missing
 context source: upstream-metadata-missing-bug-tracking
 # No sources for HTML documents.
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/context.html]
-context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/luatools.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-babel.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-base.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.html]
@@ -33,7 +32,6 @@ context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-scite
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-server.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-spell.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-texworks.html]
-context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-timing.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-tools.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-unicode.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-unzip.html]
@@ -42,3 +40,10 @@ context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-vscod
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-watch.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-youless.html]
 context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtxrun.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-convert.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-ctan.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-install.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-kpse.html]
+context source: source-is-missing [texmf-dist/doc/context/scripts/mkiv/mtx-synctex.html]
