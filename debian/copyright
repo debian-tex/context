@@ -79,10 +79,13 @@ are under GFDL:
   A copy of the license is included in the section entitled `GNU
   Free Documentation License'.
 
+The contnav font (texmf-dist/fonts/type1/hoekwater/context/contnav*) is
+under Apache 2.0 License, b/c t1write is under Apache 2.0 license.
 
 On Debian systems the text of the GNU General Public License can be found
-in /usr/share/common-licenses/GPL-2, and the GNU Free Documentation
-License, Version 1.2, in /usr/share/common-licenses/GFDL-1.2
+in /usr/share/common-licenses/GPL-2, the GNU Free Documentation
+License, Version 1.2, in /usr/share/common-licenses/GFDL-1.2 and the Apache 2.0
+license is in /usr/share/common-licenses/Apache-2.0 .
 
 
 The LaTeX Project Public License
