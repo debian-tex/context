@@ -1,3 +1,9 @@
+context (2025.09.21.20251026+dfsg-1) UNRELEASED; urgency=medium
+
+  * New upstream, for xxx. Refresh patches.
+
+ -- Hilmar Preuße <hille42@debian.org>  Sun, 26 Oct 2025 17:44:07 +0100
+
 context (2025.03.05.20250324+dfsg-3) unstable; urgency=medium
 
   * Remove obsolete conffile, /etc/texmf/tex/context/user/cont-sys.rme
