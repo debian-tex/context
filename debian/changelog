@@ -1,8 +1,10 @@
-context (2025.09.21.20251026+dfsg-1) UNRELEASED; urgency=medium
+context (2025.09.21.20251026+dfsg-1) unstable; urgency=medium
 
-  * New upstream, for xxx. Refresh patches.
+  * New upstream for latest TeX Live checkout (Closes: #1118561).
+    - Refresh patches.
+  * Bump Standards version, no changes needed.
 
- -- Hilmar Preuße <hille42@debian.org>  Sun, 26 Oct 2025 17:44:07 +0100
+ -- Hilmar Preuße <hille42@debian.org>  Thu, 30 Oct 2025 21:56:01 +0100
 
 context (2025.03.05.20250324+dfsg-3) unstable; urgency=medium
 

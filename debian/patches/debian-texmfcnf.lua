@@ -1,5 +1,10 @@
---- context-2025.09.21.20251026.orig/texmf-dist/web2c/texmfcnf.lua
-+++ context-2025.09.21.20251026/texmf-dist/web2c/texmfcnf.lua
+Description: Debian settings for TeXMF tree.
+Author: Hilmar Preuße <hille42@web.de>
+Forwarded: not-needed
+Last-Update: 2025-10-30
+
+--- context.orig/texmf-dist/web2c/texmfcnf.lua
++++ context/texmf-dist/web2c/texmfcnf.lua
 @@ -81,14 +81,16 @@
      comment = "ConTeXt MkIV and LMTX configuration file",
      author  = "Hans Hagen & Max Chernoff",

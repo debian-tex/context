@@ -5,7 +5,7 @@ Maintainer: Debian TeX Task Force <debian-tex-maint@lists.debian.org>
 Uploaders: Norbert Preining <norbert@preining.info>,
 	   Hilmar Preuße <hille42@debian.org>
 Build-Depends: debhelper-compat (= 13), tex-common
-Standards-Version: 4.6.0
+Standards-Version: 4.7.2
 Rules-Requires-Root: no
 Vcs-Git: https://github.com/debian-tex/context.git
 Vcs-Browser: https://github.com/debian-tex/context
@@ -17,8 +17,8 @@ Depends: ruby, luametatex, texlive-binaries (>= 2019), texlive-base (>= 2019), t
 Recommends: fonts-gfs-artemisia, fonts-gfs-baskerville, fonts-gfs-bodoni-classic, fonts-gfs-didot-classic, fonts-gfs-didot, fonts-gfs-olga, fonts-gfs-porson, fonts-gfs-gazis, fonts-gfs-neohellenic, fonts-gfs-solomos, fonts-gfs-theokritos, fonts-freefont-otf, fonts-sil-gentium, context-modules, inkscape
 Suggests: perl-tk, libxml-parser-perl, fontforge, context-nonfree
 Conflicts: texlive-context
-Replaces: texlive-context, tetex-bin (<< 2007)
-Breaks: tetex-bin (<< 2007)
+Replaces: texlive-context, tetex-bin (<< 2007), texlive-base (<< 2025.20250927-4)
+Breaks: tetex-bin (<< 2007), texlive-base (<< 2025.20250927-4)
 Provides: texlive-context
 Description: powerful TeX format
  ConTeXt is a document-production system based, like LaTeX, on the TeX
