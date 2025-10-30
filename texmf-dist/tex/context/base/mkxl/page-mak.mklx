@@ -42,8 +42,8 @@
 \installcommandhandler \??makeup {makeup} \??makeup
 
 \appendtoks
-   \frozen\protected\instance\edefcsname\e!start\currentmakeup\e!makeup\endcsname{\startmakeup[\currentmakeup]}%
-   \frozen\protected\instance\edefcsname\e!stop \currentmakeup\e!makeup\endcsname{\stopmakeup}%
+   \protected\frozen\instance\edefcsname\e!start\currentmakeup\e!makeup\endcsname{\startmakeup[\currentmakeup]}%
+   \protected\frozen\instance\edefcsname\e!stop \currentmakeup\e!makeup\endcsname{\stopmakeup}%
    \doifelselayoutdefined\currentmakeup\donothing{\definelayout[\currentmakeup]}% new
 \to \everydefinemakeup
 
@@ -104,6 +104,9 @@
 % \definelayout[whatever][height=2cm]
 % \setuplayout[whatever]
 
+\lettonothing\m_page_makeup_parent
+\lettonothing\m_page_makeup_name
+
 \def\page_makeup_start_indeed[#name][#S#settings]%
   {% the next grouping hack is somewhat messy:
    \begingroup
@@ -111,7 +114,7 @@
    \global\cdef\m_page_makeup_name{#name}%
    \let\currentmakeup\m_page_makeup_name
    \let\currentlayout\m_page_makeup_name
-   \xdef\m_page_makeup_layout_parent{\layoutparameter\s!parent}%
+   \xdef\m_page_makeup_parent{\layoutparameter\s!parent}%
    \setupcurrentmakeup[#settings]%
    \edef\p_page {\makeupparameter\c!page}%
    \ifempty\p_page
@@ -122,7 +125,7 @@
      % nothing
      \endgroup
    \else
-     \normalexpanded{\endgroup\page[\p_page]}%
+     \expanded{\endgroup\page[\p_page]}%
    \fi
    % some dirty trickery (sorry) for determining if we have
    %  - a layout definition at all
@@ -130,9 +133,9 @@
    %  - inherit from the current layout otherwise
    \ifx\m_page_makeup_name\currentlayout
       % we already use the layout
-   \orelse\ifx\m_page_makeup_layout_parent\??layout
+   \orelse\ifx\m_page_makeup_parent\??layout
      % we inherit from the current layout
-     \normalexpanded{\setuplayout[#name][\s!parent=\??layout\currentlayout]}% is remembered but checked later anyway
+     \expanded{\setuplayout[#name][\s!parent=\??layout\currentlayout]}% is remembered but checked later anyway
  % \else
       % we have an inherited layout
    \fi
@@ -171,7 +174,7 @@
      \edef\p_reference{\makeupparameter\c!reference}%
      \edef\p_label{\makeupparameter\c!label}%
      \ifempty\p_label\else
-       \normalexpanded{\setuppagenumber[\c!label=\p_label]}%
+       \expanded{\setuppagenumber[\c!label=\p_label]}%
      \fi
      \dontleavehmode
      \usereferenceparameter\makeupparameter
@@ -187,9 +190,9 @@
    \egroup
    \stoplayout % includes \page
    \ifx\m_page_makeup_name\currentlayout
-   \orelse\ifx\m_page_makeup_layout_parent\??layout
-%      \normalexpanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout]}% is remembered but checked later anyway
-     \normalexpanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout\currentlayout]}% is remembered but checked later anyway
+   \orelse\ifx\m_page_makeup_parent\??layout
+%      \expanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout]}% is remembered but checked later anyway
+     \expanded{\setuplayout[\m_page_makeup_name][\s!parent=\??layout\currentlayout]}% is remembered but checked later anyway
    \fi}
 
 \defcsname\??makeupdoublesided\v!yes\endcsname

@@ -1,12 +1,16 @@
 name context.doc
 category Package
-revision 74402
+revision 76367
 shortdesc doc files of context
-docfiles size=32933
+docfiles size=32871
+ texmf-dist/doc/context/DEPENDS.txt
+ texmf-dist/doc/context/README-CONTEXT-DISTRIBUTION.txt
+ texmf-dist/doc/context/README-PACKAGING.md
  texmf-dist/doc/context/README.TEXLIVE
- texmf-dist/doc/context/context-readme.txt
+ texmf-dist/doc/context/README.txt
+ texmf-dist/doc/context/VERSION
+ texmf-dist/doc/context/colors/profiles/README.txt
  texmf-dist/doc/context/documents/general/leaflets/leaflet-context.pdf
- texmf-dist/doc/context/documents/general/leaflets/leaflet-luametatex.pdf
  texmf-dist/doc/context/documents/general/leaflets/leaflet-mixing.pdf
  texmf-dist/doc/context/documents/general/magazines/mag-0000-mkiv.pdf
  texmf-dist/doc/context/documents/general/magazines/mag-0002-mkiv.pdf
@@ -65,8 +69,6 @@ docfiles size=32933
  texmf-dist/doc/context/documents/general/manuals/lowlevel.pdf
  texmf-dist/doc/context/documents/general/manuals/lua-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/luametafun.pdf
- texmf-dist/doc/context/documents/general/manuals/luametatex.pdf
- texmf-dist/doc/context/documents/general/manuals/luatex.pdf
  texmf-dist/doc/context/documents/general/manuals/ma-cb-en.pdf
  texmf-dist/doc/context/documents/general/manuals/math-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/math-tweaks.pdf
@@ -88,9 +90,11 @@ docfiles size=32933
  texmf-dist/doc/context/documents/general/manuals/pagecolumns.pdf
  texmf-dist/doc/context/documents/general/manuals/pdfmerge.pdf
  texmf-dist/doc/context/documents/general/manuals/rules-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/signals.pdf
  texmf-dist/doc/context/documents/general/manuals/spacing-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/spreadsheets-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/sql-mkiv.pdf
+ texmf-dist/doc/context/documents/general/manuals/standards.pdf
  texmf-dist/doc/context/documents/general/manuals/steps-mkiv.pdf
  texmf-dist/doc/context/documents/general/manuals/still.pdf
  texmf-dist/doc/context/documents/general/manuals/svg-lmtx.pdf
@@ -122,6 +126,9 @@ docfiles size=32933
  texmf-dist/doc/context/examples/calculator/calculator.tex
  texmf-dist/doc/context/examples/clock/clock.pdf
  texmf-dist/doc/context/examples/clock/clock.tex
+ texmf-dist/doc/context/examples/tagging/tagging-basic.pdf
+ texmf-dist/doc/context/examples/tagging/tagging-basic.tex
+ texmf-dist/doc/context/filenames.tex
  texmf-dist/doc/context/presentations/bachotex/2005/bachotex-2005-fonts.tex
  texmf-dist/doc/context/presentations/bachotex/2005/bachotex-2005-hyphenation.tex
  texmf-dist/doc/context/presentations/bachotex/2009/bachotex-2009-luatex.tex
@@ -314,141 +321,132 @@ docfiles size=32933
  texmf-dist/doc/context/presentations/tug/2001/tug-2001-ideas.tex
  texmf-dist/doc/context/presentations/tug/2007/tug-2007-fonts.pdf
  texmf-dist/doc/context/presentations/tug/2007/tug-2007-fonts.tex
+ texmf-dist/doc/context/sample/readme.txt
  texmf-dist/doc/context/scripts/mkiv/context.html
  texmf-dist/doc/context/scripts/mkiv/context.man
  texmf-dist/doc/context/scripts/mkiv/context.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-babel.html
- texmf-dist/doc/context/scripts/mkiv/mtx-babel.man
- texmf-dist/doc/context/scripts/mkiv/mtx-babel.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-base.html
- texmf-dist/doc/context/scripts/mkiv/mtx-base.man
- texmf-dist/doc/context/scripts/mkiv/mtx-base.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.html
- texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.man
- texmf-dist/doc/context/scripts/mkiv/mtx-bibtex.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-cache.html
- texmf-dist/doc/context/scripts/mkiv/mtx-cache.man
- texmf-dist/doc/context/scripts/mkiv/mtx-cache.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-chars.html
- texmf-dist/doc/context/scripts/mkiv/mtx-chars.man
- texmf-dist/doc/context/scripts/mkiv/mtx-chars.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-check.html
- texmf-dist/doc/context/scripts/mkiv/mtx-check.man
- texmf-dist/doc/context/scripts/mkiv/mtx-check.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-colors.html
- texmf-dist/doc/context/scripts/mkiv/mtx-colors.man
- texmf-dist/doc/context/scripts/mkiv/mtx-colors.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-context.html
- texmf-dist/doc/context/scripts/mkiv/mtx-context.man
- texmf-dist/doc/context/scripts/mkiv/mtx-context.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-convert.html
- texmf-dist/doc/context/scripts/mkiv/mtx-convert.man
- texmf-dist/doc/context/scripts/mkiv/mtx-convert.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-ctan.html
- texmf-dist/doc/context/scripts/mkiv/mtx-ctan.man
- texmf-dist/doc/context/scripts/mkiv/mtx-ctan.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-dvi.html
- texmf-dist/doc/context/scripts/mkiv/mtx-dvi.man
- texmf-dist/doc/context/scripts/mkiv/mtx-dvi.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-epub.html
- texmf-dist/doc/context/scripts/mkiv/mtx-epub.man
- texmf-dist/doc/context/scripts/mkiv/mtx-epub.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-evohome.html
- texmf-dist/doc/context/scripts/mkiv/mtx-evohome.man
- texmf-dist/doc/context/scripts/mkiv/mtx-evohome.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-fcd.html
- texmf-dist/doc/context/scripts/mkiv/mtx-fcd.man
- texmf-dist/doc/context/scripts/mkiv/mtx-fcd.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.html
- texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.man
- texmf-dist/doc/context/scripts/mkiv/mtx-fixpdf.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-flac.html
- texmf-dist/doc/context/scripts/mkiv/mtx-flac.man
- texmf-dist/doc/context/scripts/mkiv/mtx-flac.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-fonts.html
- texmf-dist/doc/context/scripts/mkiv/mtx-fonts.man
- texmf-dist/doc/context/scripts/mkiv/mtx-fonts.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-grep.html
- texmf-dist/doc/context/scripts/mkiv/mtx-grep.man
- texmf-dist/doc/context/scripts/mkiv/mtx-grep.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.html
- texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.man
- texmf-dist/doc/context/scripts/mkiv/mtx-install-modules.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-install.html
- texmf-dist/doc/context/scripts/mkiv/mtx-install.man
- texmf-dist/doc/context/scripts/mkiv/mtx-install.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-interface.html
- texmf-dist/doc/context/scripts/mkiv/mtx-interface.man
- texmf-dist/doc/context/scripts/mkiv/mtx-interface.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-kpse.html
- texmf-dist/doc/context/scripts/mkiv/mtx-kpse.man
- texmf-dist/doc/context/scripts/mkiv/mtx-kpse.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-metapost.html
- texmf-dist/doc/context/scripts/mkiv/mtx-metapost.man
- texmf-dist/doc/context/scripts/mkiv/mtx-metapost.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-modules.html
- texmf-dist/doc/context/scripts/mkiv/mtx-modules.man
- texmf-dist/doc/context/scripts/mkiv/mtx-modules.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-package.html
- texmf-dist/doc/context/scripts/mkiv/mtx-package.man
- texmf-dist/doc/context/scripts/mkiv/mtx-package.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-patterns.html
- texmf-dist/doc/context/scripts/mkiv/mtx-patterns.man
- texmf-dist/doc/context/scripts/mkiv/mtx-patterns.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-pdf.html
- texmf-dist/doc/context/scripts/mkiv/mtx-pdf.man
- texmf-dist/doc/context/scripts/mkiv/mtx-pdf.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-plain.html
- texmf-dist/doc/context/scripts/mkiv/mtx-plain.man
- texmf-dist/doc/context/scripts/mkiv/mtx-plain.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-profile.html
- texmf-dist/doc/context/scripts/mkiv/mtx-profile.man
- texmf-dist/doc/context/scripts/mkiv/mtx-profile.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-rsync.html
- texmf-dist/doc/context/scripts/mkiv/mtx-rsync.man
- texmf-dist/doc/context/scripts/mkiv/mtx-rsync.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-scite.html
- texmf-dist/doc/context/scripts/mkiv/mtx-scite.man
- texmf-dist/doc/context/scripts/mkiv/mtx-scite.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-server.html
- texmf-dist/doc/context/scripts/mkiv/mtx-server.man
- texmf-dist/doc/context/scripts/mkiv/mtx-server.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-spell.html
- texmf-dist/doc/context/scripts/mkiv/mtx-spell.man
- texmf-dist/doc/context/scripts/mkiv/mtx-spell.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-synctex.html
- texmf-dist/doc/context/scripts/mkiv/mtx-synctex.man
- texmf-dist/doc/context/scripts/mkiv/mtx-synctex.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-texworks.html
- texmf-dist/doc/context/scripts/mkiv/mtx-texworks.man
- texmf-dist/doc/context/scripts/mkiv/mtx-texworks.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-tools.html
- texmf-dist/doc/context/scripts/mkiv/mtx-tools.man
- texmf-dist/doc/context/scripts/mkiv/mtx-tools.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-unicode.html
- texmf-dist/doc/context/scripts/mkiv/mtx-unicode.man
- texmf-dist/doc/context/scripts/mkiv/mtx-unicode.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-unzip.html
- texmf-dist/doc/context/scripts/mkiv/mtx-unzip.man
- texmf-dist/doc/context/scripts/mkiv/mtx-unzip.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-update.html
- texmf-dist/doc/context/scripts/mkiv/mtx-update.man
- texmf-dist/doc/context/scripts/mkiv/mtx-update.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-vscode.html
- texmf-dist/doc/context/scripts/mkiv/mtx-vscode.man
- texmf-dist/doc/context/scripts/mkiv/mtx-vscode.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-watch.html
- texmf-dist/doc/context/scripts/mkiv/mtx-watch.man
- texmf-dist/doc/context/scripts/mkiv/mtx-watch.xml
- texmf-dist/doc/context/scripts/mkiv/mtx-youless.html
- texmf-dist/doc/context/scripts/mkiv/mtx-youless.man
- texmf-dist/doc/context/scripts/mkiv/mtx-youless.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-babel.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-babel.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-babel.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-bibtex.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-bibtex.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-bibtex.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-cache.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-cache.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-cache.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-chars.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-chars.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-chars.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-check.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-check.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-check.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-colors.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-colors.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-colors.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-context.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-context.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-context.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-convert.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-convert.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-convert.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-ctan.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-ctan.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-ctan.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-dvi.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-dvi.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-dvi.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-epub.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-epub.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-epub.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-evohome.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-evohome.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-evohome.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fcd.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fcd.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fcd.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fixpdf.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fixpdf.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fixpdf.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-flac.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-flac.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-flac.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fonts.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fonts.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-fonts.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-grep.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-grep.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-grep.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-interface.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-interface.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-interface.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-kpse.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-kpse.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-kpse.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-metapost.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-metapost.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-metapost.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-modules.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-modules.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-modules.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-package.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-package.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-package.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-patterns.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-patterns.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-patterns.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-pdf.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-pdf.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-pdf.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-plain.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-plain.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-plain.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-profile.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-profile.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-profile.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-rsync.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-rsync.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-rsync.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-scite.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-scite.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-scite.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-server.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-server.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-server.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-spell.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-spell.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-spell.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-synctex.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-synctex.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-synctex.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-texworks.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-texworks.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-texworks.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-tools.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-tools.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-tools.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-unicode.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-unicode.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-unicode.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-unzip.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-unzip.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-unzip.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-update.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-update.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-update.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-vscode.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-vscode.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-vscode.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-watch.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-watch.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-watch.xml
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-youless.html
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-youless.man
+ texmf-dist/doc/context/scripts/mkiv/mtxrun-youless.xml
  texmf-dist/doc/context/scripts/mkiv/mtxrun.html
  texmf-dist/doc/context/scripts/mkiv/mtxrun.man
  texmf-dist/doc/context/scripts/mkiv/mtxrun.xml
  texmf-dist/doc/context/sources/general/leaflets/leaflet-common.tex
  texmf-dist/doc/context/sources/general/leaflets/leaflet-context.tex
- texmf-dist/doc/context/sources/general/leaflets/leaflet-luametatex.tex
  texmf-dist/doc/context/sources/general/leaflets/leaflet-mixing.tex
  texmf-dist/doc/context/sources/general/magazines/mag-0000-mkiv.tex
  texmf-dist/doc/context/sources/general/magazines/mag-0002-mkiv.tex
@@ -806,6 +804,7 @@ docfiles size=32933
  texmf-dist/doc/context/sources/general/manuals/lua/lua-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-arrow.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-axis.tex
+ texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-bytemaps.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-chart.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-color.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun-contents.tex
@@ -837,27 +836,6 @@ docfiles size=32933
  texmf-dist/doc/context/sources/general/manuals/luametafun/luametafun.tex
  texmf-dist/doc/context/sources/general/manuals/luametafun/mozilla-svg-001.svg
  texmf-dist/doc/context/sources/general/manuals/luametafun/mozilla-svg-002.svg
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-assumptions.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-callbacks.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-constructions.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-contents.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-engines.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-fonts.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-internals.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-introduction.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-languages.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-libraries.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-lua.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-math.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-metapost.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-nodes.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-pdf.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-primitives.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-principles.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-style.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-tex.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex-tokens.tex
- texmf-dist/doc/context/sources/general/manuals/luametatex/luametatex.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-contents.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-enhancements.tex
  texmf-dist/doc/context/sources/general/manuals/luatex/luatex-firstpage.tex
@@ -1068,6 +1046,7 @@ docfiles size=32933
  texmf-dist/doc/context/sources/general/manuals/musings/musings-deserved.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-dontusetex.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-history.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-howcomplex.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-hownotto.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-introduction.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-manuals.tex
@@ -1078,6 +1057,7 @@ docfiles size=32933
  texmf-dist/doc/context/sources/general/manuals/musings/musings-plain.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-riscv.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-roadmap.tex
+ texmf-dist/doc/context/sources/general/manuals/musings/musings-shift.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-speed.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-stability.tex
  texmf-dist/doc/context/sources/general/manuals/musings/musings-staygo.tex
@@ -1344,6 +1324,8 @@ docfiles size=32933
  texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv-gm-1.pdf
  texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv-gm-1.png
  texmf-dist/doc/context/sources/general/manuals/swiglib/swiglib-mkiv.tex
+ texmf-dist/doc/context/sources/general/manuals/tagging/signals.tex
+ texmf-dist/doc/context/sources/general/manuals/tagging/standards.tex
  texmf-dist/doc/context/sources/general/manuals/tagging/tagging.tex
  texmf-dist/doc/context/sources/general/manuals/templates/templates-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/texit/texit-conditions.tex
@@ -1390,91 +1372,113 @@ docfiles size=32933
  texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv-tricks.tex
  texmf-dist/doc/context/sources/general/manuals/xml/xml-mkiv.tex
  texmf-dist/doc/context/sources/general/manuals/xtables/xtables-mkiv.tex
+ texmf-dist/doc/fonts/context/readme.txt
+ texmf-dist/doc/luametatex/base/LICENSE
+ texmf-dist/doc/luametatex/base/README
+ texmf-dist/doc/luametatex/base/leaflet-luametatex.pdf
+ texmf-dist/doc/luametatex/base/leaflet-luametatex.tex
+ texmf-dist/doc/luametatex/base/luametatex-assumptions.tex
+ texmf-dist/doc/luametatex/base/luametatex-callbacks.tex
+ texmf-dist/doc/luametatex/base/luametatex-constructions.tex
+ texmf-dist/doc/luametatex/base/luametatex-contents.tex
+ texmf-dist/doc/luametatex/base/luametatex-engines.tex
+ texmf-dist/doc/luametatex/base/luametatex-fonts.tex
+ texmf-dist/doc/luametatex/base/luametatex-internals.tex
+ texmf-dist/doc/luametatex/base/luametatex-introduction.tex
+ texmf-dist/doc/luametatex/base/luametatex-languages.tex
+ texmf-dist/doc/luametatex/base/luametatex-libraries.tex
+ texmf-dist/doc/luametatex/base/luametatex-lua.tex
+ texmf-dist/doc/luametatex/base/luametatex-math.tex
+ texmf-dist/doc/luametatex/base/luametatex-metapost.tex
+ texmf-dist/doc/luametatex/base/luametatex-nodes.tex
+ texmf-dist/doc/luametatex/base/luametatex-pdf.tex
+ texmf-dist/doc/luametatex/base/luametatex-primitives.tex
+ texmf-dist/doc/luametatex/base/luametatex-principles.tex
+ texmf-dist/doc/luametatex/base/luametatex-security.tex
+ texmf-dist/doc/luametatex/base/luametatex-style.tex
+ texmf-dist/doc/luametatex/base/luametatex-tex.tex
+ texmf-dist/doc/luametatex/base/luametatex-tokens.tex
+ texmf-dist/doc/luametatex/base/luametatex.pdf
+ texmf-dist/doc/luametatex/base/luametatex.tex
  texmf-dist/doc/man/man1/context.1
  texmf-dist/doc/man/man1/context.man1.pdf
- texmf-dist/doc/man/man1/mtx-babel.1
- texmf-dist/doc/man/man1/mtx-babel.man1.pdf
- texmf-dist/doc/man/man1/mtx-base.1
- texmf-dist/doc/man/man1/mtx-base.man1.pdf
- texmf-dist/doc/man/man1/mtx-bibtex.1
- texmf-dist/doc/man/man1/mtx-bibtex.man1.pdf
- texmf-dist/doc/man/man1/mtx-cache.1
- texmf-dist/doc/man/man1/mtx-cache.man1.pdf
- texmf-dist/doc/man/man1/mtx-chars.1
- texmf-dist/doc/man/man1/mtx-chars.man1.pdf
- texmf-dist/doc/man/man1/mtx-check.1
- texmf-dist/doc/man/man1/mtx-check.man1.pdf
- texmf-dist/doc/man/man1/mtx-colors.1
- texmf-dist/doc/man/man1/mtx-colors.man1.pdf
- texmf-dist/doc/man/man1/mtx-context.1
- texmf-dist/doc/man/man1/mtx-context.man1.pdf
- texmf-dist/doc/man/man1/mtx-convert.1
- texmf-dist/doc/man/man1/mtx-convert.man1.pdf
- texmf-dist/doc/man/man1/mtx-ctan.1
- texmf-dist/doc/man/man1/mtx-ctan.man1.pdf
- texmf-dist/doc/man/man1/mtx-dvi.1
- texmf-dist/doc/man/man1/mtx-dvi.man1.pdf
- texmf-dist/doc/man/man1/mtx-epub.1
- texmf-dist/doc/man/man1/mtx-epub.man1.pdf
- texmf-dist/doc/man/man1/mtx-evohome.1
- texmf-dist/doc/man/man1/mtx-evohome.man1.pdf
- texmf-dist/doc/man/man1/mtx-fcd.1
- texmf-dist/doc/man/man1/mtx-fcd.man1.pdf
- texmf-dist/doc/man/man1/mtx-fixpdf.1
- texmf-dist/doc/man/man1/mtx-fixpdf.man1.pdf
- texmf-dist/doc/man/man1/mtx-flac.1
- texmf-dist/doc/man/man1/mtx-flac.man1.pdf
- texmf-dist/doc/man/man1/mtx-fonts.1
- texmf-dist/doc/man/man1/mtx-fonts.man1.pdf
- texmf-dist/doc/man/man1/mtx-grep.1
- texmf-dist/doc/man/man1/mtx-grep.man1.pdf
- texmf-dist/doc/man/man1/mtx-install-modules.1
- texmf-dist/doc/man/man1/mtx-install-modules.man1.pdf
- texmf-dist/doc/man/man1/mtx-install.1
- texmf-dist/doc/man/man1/mtx-install.man1.pdf
- texmf-dist/doc/man/man1/mtx-interface.1
- texmf-dist/doc/man/man1/mtx-interface.man1.pdf
- texmf-dist/doc/man/man1/mtx-kpse.1
- texmf-dist/doc/man/man1/mtx-kpse.man1.pdf
- texmf-dist/doc/man/man1/mtx-metapost.1
- texmf-dist/doc/man/man1/mtx-metapost.man1.pdf
- texmf-dist/doc/man/man1/mtx-modules.1
- texmf-dist/doc/man/man1/mtx-modules.man1.pdf
- texmf-dist/doc/man/man1/mtx-package.1
- texmf-dist/doc/man/man1/mtx-package.man1.pdf
- texmf-dist/doc/man/man1/mtx-patterns.1
- texmf-dist/doc/man/man1/mtx-patterns.man1.pdf
- texmf-dist/doc/man/man1/mtx-pdf.1
- texmf-dist/doc/man/man1/mtx-pdf.man1.pdf
- texmf-dist/doc/man/man1/mtx-plain.1
- texmf-dist/doc/man/man1/mtx-plain.man1.pdf
- texmf-dist/doc/man/man1/mtx-profile.1
- texmf-dist/doc/man/man1/mtx-profile.man1.pdf
- texmf-dist/doc/man/man1/mtx-rsync.1
- texmf-dist/doc/man/man1/mtx-rsync.man1.pdf
- texmf-dist/doc/man/man1/mtx-scite.1
- texmf-dist/doc/man/man1/mtx-scite.man1.pdf
- texmf-dist/doc/man/man1/mtx-server.1
- texmf-dist/doc/man/man1/mtx-server.man1.pdf
- texmf-dist/doc/man/man1/mtx-spell.1
- texmf-dist/doc/man/man1/mtx-spell.man1.pdf
- texmf-dist/doc/man/man1/mtx-synctex.1
- texmf-dist/doc/man/man1/mtx-synctex.man1.pdf
- texmf-dist/doc/man/man1/mtx-texworks.1
- texmf-dist/doc/man/man1/mtx-texworks.man1.pdf
- texmf-dist/doc/man/man1/mtx-tools.1
- texmf-dist/doc/man/man1/mtx-tools.man1.pdf
- texmf-dist/doc/man/man1/mtx-unicode.1
- texmf-dist/doc/man/man1/mtx-unicode.man1.pdf
- texmf-dist/doc/man/man1/mtx-unzip.1
- texmf-dist/doc/man/man1/mtx-unzip.man1.pdf
- texmf-dist/doc/man/man1/mtx-update.1
- texmf-dist/doc/man/man1/mtx-update.man1.pdf
- texmf-dist/doc/man/man1/mtx-vscode.1
- texmf-dist/doc/man/man1/mtx-vscode.man1.pdf
- texmf-dist/doc/man/man1/mtx-watch.1
- texmf-dist/doc/man/man1/mtx-watch.man1.pdf
- texmf-dist/doc/man/man1/mtx-youless.1
- texmf-dist/doc/man/man1/mtx-youless.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-babel.1
+ texmf-dist/doc/man/man1/mtxrun-babel.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-bibtex.1
+ texmf-dist/doc/man/man1/mtxrun-bibtex.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-cache.1
+ texmf-dist/doc/man/man1/mtxrun-cache.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-chars.1
+ texmf-dist/doc/man/man1/mtxrun-chars.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-check.1
+ texmf-dist/doc/man/man1/mtxrun-check.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-colors.1
+ texmf-dist/doc/man/man1/mtxrun-colors.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-context.1
+ texmf-dist/doc/man/man1/mtxrun-context.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-convert.1
+ texmf-dist/doc/man/man1/mtxrun-convert.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-ctan.1
+ texmf-dist/doc/man/man1/mtxrun-ctan.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-dvi.1
+ texmf-dist/doc/man/man1/mtxrun-dvi.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-epub.1
+ texmf-dist/doc/man/man1/mtxrun-epub.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-evohome.1
+ texmf-dist/doc/man/man1/mtxrun-evohome.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-fcd.1
+ texmf-dist/doc/man/man1/mtxrun-fcd.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-fixpdf.1
+ texmf-dist/doc/man/man1/mtxrun-fixpdf.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-flac.1
+ texmf-dist/doc/man/man1/mtxrun-flac.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-fonts.1
+ texmf-dist/doc/man/man1/mtxrun-fonts.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-grep.1
+ texmf-dist/doc/man/man1/mtxrun-grep.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-interface.1
+ texmf-dist/doc/man/man1/mtxrun-interface.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-kpse.1
+ texmf-dist/doc/man/man1/mtxrun-kpse.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-metapost.1
+ texmf-dist/doc/man/man1/mtxrun-metapost.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-modules.1
+ texmf-dist/doc/man/man1/mtxrun-modules.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-package.1
+ texmf-dist/doc/man/man1/mtxrun-package.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-patterns.1
+ texmf-dist/doc/man/man1/mtxrun-patterns.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-pdf.1
+ texmf-dist/doc/man/man1/mtxrun-pdf.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-plain.1
+ texmf-dist/doc/man/man1/mtxrun-plain.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-profile.1
+ texmf-dist/doc/man/man1/mtxrun-profile.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-rsync.1
+ texmf-dist/doc/man/man1/mtxrun-rsync.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-scite.1
+ texmf-dist/doc/man/man1/mtxrun-scite.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-server.1
+ texmf-dist/doc/man/man1/mtxrun-server.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-spell.1
+ texmf-dist/doc/man/man1/mtxrun-spell.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-synctex.1
+ texmf-dist/doc/man/man1/mtxrun-synctex.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-texworks.1
+ texmf-dist/doc/man/man1/mtxrun-texworks.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-tools.1
+ texmf-dist/doc/man/man1/mtxrun-tools.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-unicode.1
+ texmf-dist/doc/man/man1/mtxrun-unicode.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-unzip.1
+ texmf-dist/doc/man/man1/mtxrun-unzip.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-update.1
+ texmf-dist/doc/man/man1/mtxrun-update.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-vscode.1
+ texmf-dist/doc/man/man1/mtxrun-vscode.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-watch.1
+ texmf-dist/doc/man/man1/mtxrun-watch.man1.pdf
+ texmf-dist/doc/man/man1/mtxrun-youless.1
+ texmf-dist/doc/man/man1/mtxrun-youless.man1.pdf
  texmf-dist/doc/man/man1/mtxrun.1
  texmf-dist/doc/man/man1/mtxrun.man1.pdf

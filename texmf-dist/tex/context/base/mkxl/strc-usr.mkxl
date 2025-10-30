@@ -92,8 +92,8 @@
 \installcommandhandler \????userdataalternative {userdataalternative} \????userdataalternative
 
 \appendtoks
-    \frozen\protected\instance\edefcsname\e!start\currentuserdata\endcsname{\userdata_start_instance{\currentuserdata}}%
-    \frozen\protected\instance\letcsname \e!stop \currentuserdata\endcsname\userdata_stop_instance
+    \protected\frozen\instance\edefcsname\e!start\currentuserdata\endcsname{\userdata_start_instance{\currentuserdata}}%
+    \protected\frozen\instance\letcsname \e!stop \currentuserdata\endcsname\userdata_stop_instance
 \to \everydefineuserdata
 
 \permanent\protected\def\startuserdata
@@ -155,8 +155,8 @@
 
 % kind of nested, when we need it:
 %
-% \permanent\tolerant\protected\def\getuserdata      [#1]{\normalexpanded{\getbufferdata[\s!userdata:\ifparameter#1\or#1\else\currentuserdata\fi]}}
-% \permanent\tolerant\protected\def\getinlineuserdata[#1]{\normalexpanded{\inlinebuffer [\s!userdata:\ifparameter#1\or#1\else\currentuserdata\fi]}}
+% \permanent\tolerant\protected\def\getuserdata      [#1]{\expanded{\getbufferdata[\s!userdata:\ifparameter#1\or#1\else\currentuserdata\fi]}}
+% \permanent\tolerant\protected\def\getinlineuserdata[#1]{\expanded{\inlinebuffer [\s!userdata:\ifparameter#1\or#1\else\currentuserdata\fi]}}
 
 % unnested, as before:
 

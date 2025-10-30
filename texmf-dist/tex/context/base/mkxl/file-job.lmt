@@ -418,12 +418,57 @@ end
 
 local stopped
 
+local isdefined     = tokens.isdefined
+local logsreport    = logs.report
+local setjobcomment = false
+
+updaters.register("backends.injections.latebindings",function()
+    setjobcomment = backends.codeinjections.setjobcomment
+end)
+
+local interferences = {
+    -- this makes little sense in the perspective of context, why not just use latex instead, but as loading (per 2025) takes
+    -- eight seconds users probably already aware that something might be wrong
+    { macro = "ExplFileDate",         usage = "latex expl stuff",   comment = "beware of side effects",   feedback = "module"  },
+    { macro = "__codepoint_data:nnn", usage = "latex unicode data", comment = "it makes no sense at all", feedback = "badnews" },
+    { macro = "sys_load_backend:n",   usage = "latex backend code", comment = "this can badly interfere", feedback = "badnews" },
+    -- users will notice that many files are loaded but some graphics are also demanding (maybe cache them)
+    { macro = "starttikzpicture",     usage = "tikz graphics",      comment = "this can impact runtime",  feedback = "module"  },
+    -- more might end up here as we don't want external code usage to backfire
+}
+
+local function checkinterferences()
+    local done = false
+    for i=1,#interferences do
+        local f = interferences[i]
+        if f and isdefined(f.macro) then
+            if not done then
+                logsreport("warning")
+                done = true
+            end
+            logsreport("warning","%s code loaded, %s",f.usage,f.comment)
+            interferences[i] = false
+            if setjobcomment then
+                setjobcomment(
+                    "This file can be suboptimal due to non-ConTeXt packages being used."
+                )
+                setjobcomment = false
+            end
+            statistics.feedback.setstate(f.feedback,true)
+        end
+    end
+    if done then
+        logsreport("warning")
+    end
+end
+
 local function starttext()
     if textlevel == 0 then
         if trace_jobfiles then
             report_jobfiles("starting text")
         end
         context.dostarttext()
+        checkinterferences()
     end
     textlevel = textlevel + 1
     texsetcount("global",c_textlevel,textlevel)
@@ -441,6 +486,7 @@ local function stoptext()
             if trace_jobfiles then
                 report_jobfiles("stopping text")
             end
+            checkinterferences()
             context.dostoptext()
             stopped = true
         end
@@ -632,7 +678,7 @@ jobstructure.tobesaved  = root
 jobstructure.components = { }
 jobstructure.namestack  = { }
 
-function collectstructure(collected)
+local function collectstructure(collected)
     local namestack = { }
     local n         = 0
     local function collect(root,result,stack)

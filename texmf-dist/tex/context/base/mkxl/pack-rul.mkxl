@@ -77,7 +77,7 @@
 %D Inheritance:
 
 \permanent\protected\def\installinheritedframed#1%
-  {\normalexpanded{\mult_interfaces_install_inherited_framed
+  {\expanded{\mult_interfaces_install_inherited_framed
      \expandafter\noexpand\csname current#1\endcsname
      \expandafter\noexpand\csname #1parameter\endcsname
      \expandafter\noexpand\csname #1parameterhash\endcsname
@@ -92,7 +92,7 @@
   {\enforced\frozen\def#5##1##2{\ifrelax##1#6{##2}\else#4{##1}{##2}\fi}%
 %    \enforced\frozen\def#6##1{\ifcsname\??framed:##1\endcsname\??framed:##1\else\??empty\fi}% root
 \enforced\frozen\def#6##1{\ifcsname\??framed:##1\endcsname\csnamestring\else\??empty\fi}% root
-   \frozen\instance\protected\def#8%
+   \protected\frozen\instance\def#8%
      {\bgroup
       \bgroup
       \inframedtrue
@@ -101,7 +101,7 @@
       \enforced\let\framedparameterhash#3%
       \enforced\let\setupcurrentframed #7%
       \pack_framed_process_indeed}%
-   \frozen\instance\protected\def#9%
+   \protected\frozen\instance\def#9%
      {\bgroup
       \inframedtrue
       \enforced\let\currentframed      #1%
@@ -239,7 +239,6 @@
 %newdimen    \d_framed_linewidth  \aliased\let   \ruledlinewidth\d_framed_linewidth % needed at lua end
 \newdimension\d_framed_linewidth  \aliasdimension\ruledlinewidth\d_framed_linewidth % needed at lua end
 
-\lettonothing\p_frame
 \lettonothing\p_framed_adaptive
 \lettonothing\p_framed_anchoring
 \lettonothing\p_framed_autostrut
@@ -253,16 +252,17 @@
 \lettonothing\p_framed_empty
 \lettonothing\p_framed_foregroundcolor
 \lettonothing\p_framed_foregroundstyle
-\lettonothing\p_framed_frame            % \framedparameter\c!frame
+\lettonothing\p_framed_frame
 \lettonothing\p_framed_framecolor
 \lettonothing\p_framed_framecorner
-%lettonothing\p_framed_frameradius
+\lettonothing\p_framed_frameradius
 \lettonothing\p_framed_franalyze
 \lettonothing\p_framed_lines
 \lettonothing\p_framed_location
 \lettonothing\p_framed_minheight
 \lettonothing\p_framed_orientation
-%lettonothing\p_framed_rulethickness
+\lettonothing\p_framed_rulethickness
+\lettonothing\p_framed_setup
 \lettonothing\p_framed_setups
 \lettonothing\p_framed_synchronize
 \lettonothing\p_framed_text_depthcorrection
@@ -2799,9 +2799,9 @@
    \c!margin=\v!standard]
 
 \appendtoks
-    \frozen\instance\protected\edefcsname\e!start\currentframedtext\endcsname{\pack_framed_text_start [\currentframedtext]}%
-    \frozen\instance\protected\edefcsname\e!stop \currentframedtext\endcsname{\pack_framed_text_stop                      }%
-    \frozen\instance\protected\edefcsname        \currentframedtext\endcsname{\pack_framed_text_direct[\currentframedtext]}%
+    \protected\frozen\instance\edefcsname\e!start\currentframedtext\endcsname{\pack_framed_text_start [\currentframedtext]}%
+    \protected\frozen\instance\edefcsname\e!stop \currentframedtext\endcsname{\pack_framed_text_stop                      }%
+    \protected\frozen\instance\edefcsname        \currentframedtext\endcsname{\pack_framed_text_direct[\currentframedtext]}%
 \to \everydefineframedtext
 
 \defcsname\??framedtextlocation\v!left\endcsname
@@ -3009,7 +3009,7 @@
 \to \everypresetframed
 
 \appendtoks
-    \frozen\instance\protected\edefcsname\currentframed\endcsname{\pack_framed_defined_process[\currentframed]}%
+    \protected\frozen\instance\edefcsname\currentframed\endcsname{\pack_framed_defined_process[\currentframed]}%
 \to \everydefineframed
 
 \newinteger\c_temp_framed_crap

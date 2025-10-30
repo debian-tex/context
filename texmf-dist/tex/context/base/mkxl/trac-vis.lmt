@@ -11,7 +11,7 @@ if not modules then modules = { } end modules ['trac-vis'] = {
 
 local node, nodes, attributes, tex = node, nodes, attributes, tex
 local type, tonumber, next, rawget = type, tonumber, next, rawget
-local gmatch, gsub, sub = string.gmatch, string.gsub, string.sub
+local gmatch = string.gmatch
 local formatters = string.formatters
 local round = math.round
 
@@ -187,8 +187,9 @@ local
     l_glyph, l_discretionary, l_expansion, l_fontkern, l_italic, l_marginkern, l_space,
     l_math, l_mathkern, l_mathshape,
     l_dir, l_whatsit,
-    l_mark, l_insert, l_boundary
- -- l_user
+    l_mark, l_insert, l_boundary,
+ -- l_user,
+    l_mathshapekern, l_par
 
 local enabled = false
 local layers  = { }
@@ -568,7 +569,7 @@ function visualizers.registercache(name)
     return caches[name]
 end
 
-local fontkern, italiccorrection, marginkern, mathkern do
+local fontkern, italiccorrection, marginkern, mathkern, mathshapekern do
 
     local f_cache = caches["fontkern"]
     local i_cache = caches["italiccorrection"]
@@ -1179,10 +1180,10 @@ local ruledglyph do
                 return head, current
             end
         end
-if continuation then
-    local options = getoptions(glyph)
-    continuation = (options & iscontinuation_code) == iscontinuation_code
-end
+        if continuation then
+            local options = getoptions(glyph)
+            continuation = (options & iscontinuation_code) == iscontinuation_code
+        end
         local wd, ht, dp = getglyphdimensions(glyph)
         if wd ~= 0 then
             local next = getnext(current)
@@ -1246,10 +1247,11 @@ end
 
 end
 
-local ruledglue, ruledmathglue do
+local ruledglue, ruledmathglue, ruledspace do
 
     local effectiveglue         = nuts.effectiveglue
     local iszeroglue            = nuts.iszeroglue
+    local getoptions            = nuts.getoptions
 
     local gluecodes             = nodes.gluecodes
 
@@ -1271,6 +1273,8 @@ local ruledglue, ruledmathglue do
     local correctionskip_code   <const> = gluecodes.correctionskip
     local tabskip_code          <const> = gluecodes.tabskip
 
+    local noautobreak_code      <const> = tex.glueoptioncodes.noautobreak
+
     local g_cache_v  = caches["vglue"]
     local g_cache_h  = caches["hglue"]
 
@@ -1278,7 +1282,7 @@ local ruledglue, ruledmathglue do
     local g_cache_gz = caches["gluezero"]
     local g_cache_gf = caches["gluefixed"]
 
-    local tags = {
+    local tags = { -- todo: keep in order, indexed
      -- [userskip_code]                   = "US",
         [gluecodes.lineskip]              = "LI",
         [gluecodes.baselineskip]          = "BS",
@@ -1335,9 +1339,13 @@ local ruledglue, ruledmathglue do
 
     ruledglue = function(head,current,subtype,vertical,parent)
         local width   = effectiveglue(current,parent)
+        local nobreak = (getoptions(current) & noautobreak_code) ~= 0
         local stag    = stags[subtype]
-        local cache   = g_caches[subtype] or (vertical and g_cache_v) or g_cache_h
-        local amount  = f_amount(tags[subtype] or (vertical and "VS") or "HS",width*ptfactor)
+        local cache   = (nobreak and g_caches["NB"])
+                     or g_caches[subtype]
+                     or (vertical and g_cache_v)
+                     or g_cache_h
+        local amount  = f_amount(nobreak and "NB" or tags[subtype] or (vertical and "VS") or "HS",width*ptfactor)
         local info    = cache[amount]
         if subtype == intermathskip_code then
             head = ruledmathglue(head,current)
@@ -1440,6 +1448,8 @@ local ruledglue, ruledmathglue do
 
     mathvalues[-1] = "left"  -- (script) slack detail value
     mathvalues[-2] = "right" -- (script) slack detail value
+
+    local gsub, sub = string.gsub, string.sub
 
     local morehack = setmetatableindex(function(t,k)
         local v = mathematics.classnames[k] -- yet unknown
@@ -1566,7 +1576,7 @@ local ruledstrut do
                 end
                 if a then
                     local p = getprev(current)
-                    local b, e
+                    local b, e, rule
                     for n in traverseid(math_code,current) do
                         e = n
                         break
@@ -1729,6 +1739,8 @@ local ruleddiscretionary, ruledglyphdiscretionary do
      -- maybe: return head, getnext(current)
         return head, current
     end
+
+    local sub = string.sub
 
     ruledglyphdiscretionary = function(head,current,glyph)
         local part, after, code = getdiscpart(glyph)
@@ -2207,6 +2219,7 @@ do
                 -- todo: discretionary
                 head, current = ruledpenalty(head,current,vertical,subtype,f)
             end
+            goto next
           ::glue::
             content = getleader(current)
             if content then

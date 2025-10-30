@@ -7480,6 +7480,9 @@ return {
    ["pe"]="جایگزین",
    ["ro"]="alternativ",
   },
+  ["alternativetext"]={
+   ["en"]="alternativetext",
+  },
   ["anchor"]={
    ["en"]="anchor",
    ["fr"]="ancre",
@@ -8517,6 +8520,9 @@ return {
    ["pe"]="تصحیح‌عمق",
    ["ro"]="corectieadancime",
   },
+  ["descriptiontext"]={
+   ["en"]="descriptiontext",
+  },
   ["direction"]={
    ["cs"]="smer",
    ["de"]="richtung",
@@ -9163,6 +9169,10 @@ return {
    ["nl"]="grid",
    ["pe"]="توری",
    ["ro"]="grid",
+  },
+  ["gridcorrection"]={
+   ["en"]="gridcorrection",
+   ["nl"]="gridcorrectie",
   },
   ["group"]={
    ["en"]="group",
@@ -14479,16 +14489,6 @@ return {
    ["pe"]="جستجوی‌نوشتار",
    ["ro"]="CautaDocument",
   },
-  ["ShowBookmarks"]={
-   ["cs"]="UkazZalozky",
-   ["de"]="ShowBookmarks",
-   ["en"]="ShowBookmarks",
-   ["fr"]="MontrerMarquepages",
-   ["it"]="MostraSegnalibro",
-   ["nl"]="ShowBookmarks",
-   ["pe"]="نمایش‌چوبخط",
-   ["ro"]="ShowBookmarks",
-  },
   ["ShowField"]={
    ["cs"]="UkazPole",
    ["de"]="ZeigeFeld",
@@ -14498,16 +14498,6 @@ return {
    ["nl"]="ToonVeld",
    ["pe"]="نمایش‌میدان",
    ["ro"]="AfiseazaCamp",
-  },
-  ["ShowThumbs"]={
-   ["cs"]="UkazNahledy",
-   ["de"]="ShowThumbs",
-   ["en"]="ShowThumbs",
-   ["fr"]="MontrerVignettes",
-   ["it"]="MostraThumbs",
-   ["nl"]="ShowThumbs",
-   ["pe"]="نمایش‌شصت",
-   ["ro"]="ShowThumbs",
   },
   ["StartMovie"]={
    ["cs"]="SpustitFilm",

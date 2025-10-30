@@ -9,6 +9,7 @@ if not modules then modules = { } end modules ['mtx-pdf'] = {
 local tonumber = tonumber
 local format, gmatch, gsub, match, find = string.format, string.gmatch, string.gsub, string.match, string.find
 local utfchar = utf.char
+local formatters = string.formatters
 local concat, insert, swapped = table.concat, table.insert, table.swapped
 local setmetatableindex, sortedhash, sortedkeys = table.setmetatableindex, table.sortedhash, table.sortedkeys
 
@@ -34,8 +35,10 @@ local helpinfo = [[
     <flag name="comments"><short>show comments</short></flag>
     <flag name="sign"><short>sign document (assumes signature template)</short></flag>
     <flag name="verify"><short>verify document</short></flag>
+    <flag name="validate"><short>validate document (calls verapdf)</short></flag>
     <flag name="detail"><short>print detail to the console</short></flag>
     <flag name="userdata"><short>print userdata to the console</short></flag>
+    <flag name="structure"><short>check the (context speficic) structure of the content</short></flag>
    </subcategory>
    <subcategory>
     <example><command>mtxrun --script pdf --info foo.pdf</command></example>
@@ -46,6 +49,7 @@ local helpinfo = [[
     <example><command>mtxrun --script pdf --verify --certificate=somesign.pem --password=test --uselibrary somefile</command></example>
     <example><command>mtxrun --script pdf --detail=nofpages somefile</command></example>
     <example><command>mtxrun --script pdf --userdata=keylist [--format=lua|json|lines] somefile</command></example>
+    <example><command>mtxrun --script pdf --validate --structure --details --save somefile</command></example>
    </subcategory>
   </category>
  </flags>
@@ -58,17 +62,20 @@ local application = logs.application {
     helpinfo = helpinfo,
 }
 
-local report = application.report
+local report   = application.report
+local findfile = resolvers.findfile
 
 if not pdfe then
-    dofile(resolvers.findfile("lpdf-epd.lua","tex"))
+    dofile(findfile("lpdf-epd.lua","tex"))
 elseif CONTEXTLMTXMODE then
-    dofile(resolvers.findfile("util-dim.lua","tex"))
-    dofile(resolvers.findfile("lpdf-ini.lmt","tex"))
-    dofile(resolvers.findfile("lpdf-pde.lmt","tex"))
-    dofile(resolvers.findfile("lpdf-sig.lmt","tex"))
+    local fullname
+    dofile(findfile("util-dim.lua","tex"))
+    dofile(findfile("lpdf-ini.lmt","tex"))
+    dofile(findfile("lpdf-pde.lmt","tex"))
+    dofile(findfile("lpdf-sig.lmt","tex"))
+    fullname = findfile("lpdf-crp.lmt","tex") if fullname and fullname ~= "" then dofile(fullname) end
 else
-    dofile(resolvers.findfile("lpdf-pde.lua","tex"))
+    dofile(findfile("lpdf-pde.lua","tex"))
 end
 
 scripts     = scripts     or { }
@@ -79,7 +86,9 @@ local details = environment.argument("detail") or environment.argument("details"
 local function loadpdffile(filename)
     if not filename or filename == "" then
         report("no filename given")
-    elseif not lfs.isfile(filename) then
+    end
+    filename = file.addsuffix(filename,"pdf")
+    if not lfs.isfile(filename) then
         report("unknown file %a",filename)
     else
         local ownerpassword = environment.arguments.ownerpassword
@@ -457,6 +466,107 @@ function scripts.pdf.verify(filename,save)
     }
 end
 
+function scripts.pdf.validate(filename)
+    local pdffile = file.addsuffix(filename,"pdf")
+    if not lfs.isfile(pdffile) then
+        report("invalid pdf file %a",pdffile)
+        return
+    end
+    -- runner
+    local data = os.resultof('verapdf "' .. pdffile .. '"')
+    if data and #data > 0 then
+        local x = xml.convert(data)
+        if x then
+            local r = xml.first(x,"buildInformation/releaseDetails[id='core'")
+            if r then
+                report("validator    : %s","verapdf")
+                report("version      : %s",r.at.version or "unknown")
+                report()
+            else
+                report("unsupported %a validator","verapdf")
+                return
+            end
+            local r = xml.first(x,"validationReport")
+            if r then
+                local interaction  = environment.arguments.interaction
+                local destinations = 0
+                local annotations  = 0
+                local at = r.at
+                report("compliant    : %s",at.isCompliant  or "unknown")
+                report("job status   : %s",at.jobEndStatus or "unknown")
+                report("profile      : %s",at.profileName  or "unknown")
+                report("statement    : %s",at.statement    or "unknown")
+                r = xml.first(r,"/details")
+                if r then
+                    local at = r.at
+                    report()
+                    report("checks       : %i passed, %i failed",tonumber(at.passedChecks) or 0,tonumber(at.failedChecks) or 0)
+                    report("rules        : %i passed, %i failed",tonumber(at.passedRules ) or 0,tonumber(at.failedRules ) or 0)
+                 -- <rule> <!-- why is clause not an element but an attribute -->
+                 --   <description>...</description>
+                 --   <object>...</object>
+                 --   <test>...</test>
+                 --   <check>
+                 --     <context>root/document[0]/StructTreeRoot[0](15 0 obj PDStructTreeRoot)</context>
+                 --     <errorMessage>...</errorMessage>
+                 --   </check>
+                 -- </rule>
+                    local reported   = { }
+                    local duplicates = 0
+                    local total      = 0
+                    for e in xml.collected(r, "/rule/check[@status='failed']/..") do
+                        local tc = xml.text(e,"/check/context")
+                        local td = xml.text(e,"/description")
+                        local te = xml.text(e,"/check/errorMessage")
+                        if tc then
+                            tc = gsub(tc,"%((%d+).-%)","(%1)")
+                        end
+                        if find(te,"annotation") then
+                            annotations = annotations + 1
+                        end
+                        if find(te,"estination") then
+                            destinations = destinations + 1
+                        end
+                        if interaction and not reported[te] then
+                            report()
+                            report("condition    : %s",td or "unknown")
+                            report("error message: %s",te or "unknown")
+                            report("object tree  : %s",tc or "unknown")
+                            reported[te] = true
+                            duplicates = duplicates + 1
+                        end
+                        total = total + 1
+                    end
+                    if total > 0 then
+                        report()
+                        report("duplicates   : %i",duplicates)
+                        report("failed checks: %i",total)
+                        if destinations or annotations then
+                            report()
+                            report("destinations : %i",destinations)
+                            report("annotations  : %i",annotations)
+                            if destinations + annotations >= total then
+                                report()
+                                report("the document looks okay, interaction is fragile in tagging and validation")
+                            end
+                            if not interaction then
+                                report()
+                                report("use --interaction to get more details")
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            report()
+            report("no valid test result")
+        end
+    else
+        report()
+        report("make sure verapdf is installed")
+    end
+end
+
 function scripts.pdf.metadata(filename,pretty)
     local pdffile = loadpdffile(filename)
     if pdffile then
@@ -592,7 +702,7 @@ function scripts.pdf.fonts(filename)
     if pdffile then
         local usedfonts = getfonts(pdffile)
         local found     = { }
-        local common    = table.setmetatableindex("table")
+        local common    = setmetatableindex("table")
         for k, v in sortedhash(usedfonts) do
             local basefont = v.BaseFont
             local encoding = v.Encoding
@@ -938,21 +1048,86 @@ function scripts.pdf.outlines(filename)
 
 end
 
+-- When I'm really bored, have a stack of new cd's or it's depressing whether I
+-- might be willing to waste time on this. Actually I have to find back and use the
+-- code MS and I used when checking out tagging but it might have gotton lost (note
+-- for myself: check 2023 archive as there must be code somewhere that actually
+-- printed the tree.).
+
 function scripts.pdf.structure(filename)
-    local pdffile = loadpdffile(filename)
-    if pdffile then
-
-        local pages    = pdffile.pages
-        local nofpages = pdffile.nofpages
-
-        -- When I'm really bored, have a stack of new cd's or it's depressing
-        -- weather I might be willing to waste time on this.
-
---         local tree = pdffile.Catalog.StructTreeRoot
---         if tree then
---             local kids = tree.K
---         end
-
+    if lpdf.collectcontent then
+        local pdffile = loadpdffile(filename)
+        if pdffile then
+            local arguments = environment.arguments
+            local options   = {
+                attachments = true,
+                comments    = true,
+                nobreaks    = false,
+                details     = false,
+                save        = arguments.save or false,
+            }
+            if arguments.attachments ~= nil then options.attachments = arguments.attachments end
+            if arguments.comments    ~= nil then options.comments    = arguments.comments    end
+            if arguments.nobreaks    ~= nil then options.nobreaks    = arguments.nobreaks    end
+            if arguments.details     ~= nil then options.details     = arguments.details     end
+            if arguments.detail      ~= nil then options.detail      = arguments.detail      end
+            local result, statistics = lpdf.collectcontent(pdffile,options)
+            if result and #result > 0 then
+                local savename = options.save and file.nameonly(filename) .. "-tagview.xml"
+                report()
+                report("disclaimer:")
+                report()
+                report("This mostly is a simple check utility and we will complete this when we")
+                report("feel the need or when a user has a test file and needs some checker. So,")
+                report("feel free to ask on the mailing list. The output is yet sub-optimal and")
+                report("complete (but it's not that hard to do).")
+                report()
+                report("This is not an official export, just a way to check how a text can be")
+                report("seen and/or read. Users can define their own mappings and this is a way")
+                report("to see what happens. Tags are sanitized to serve that purpose and some")
+                report("extra information is provided by attributes.")
+                if savename then
+                    io.savedata(savename,result)
+                else
+                    report()
+                    report()
+                    print(result)
+                    report()
+                end
+                report()
+                report("options:")
+                report()
+                for k, v in sortedhash(options) do
+                    report("%-12s : %S",k,v)
+                end
+                report()
+                report("statistics:")
+                report()
+                for k, v in sortedhash(statistics) do
+                    report("%-12s : %S",k,v)
+                end
+                if savename then
+                    report()
+                    report("result:",savename)
+                    report()
+                    report("%-12s : %S","filename",savename)
+                    report("%-12s : %S bytes","filesize",#result)
+                end
+                if environment.argument("validate") then
+                    report()
+                    report("validation:")
+                    report()
+                    scripts.pdf.validate(filename)
+                end
+                report()
+            else
+                report("this file has no tags")
+            end
+        else
+            report("this file is invalid")
+        end
+    else
+        report("this feature is not supported")
     end
 end
 
@@ -1053,10 +1228,20 @@ end
 
 local filename = environment.files[1] or ""
 
+if environment.argument("check") then
+    -- an undocumented shortcut, mostly for ourselves
+    environment.arguments.validate  = true
+    environment.arguments.structure = true
+    environment.arguments.details   = true
+    environment.arguments.save      = true
+end
+
 if filename == "" then
     application.help()
 elseif environment.argument("info") then
     scripts.pdf.info(filename)
+elseif environment.argument("structure") then
+    scripts.pdf.structure(filename)
 elseif environment.argument("identify") then
     scripts.pdf.identify(filename)
 elseif environment.argument("metadata") then
@@ -1073,22 +1258,23 @@ elseif environment.argument("links") then
     scripts.pdf.links(filename,tonumber(environment.argument("page")))
 elseif environment.argument("outlines") then
     scripts.pdf.outlines(filename)
-elseif environment.argument("structure") then
-    scripts.pdf.structure(filename)
 elseif environment.argument("highlights") then
     scripts.pdf.highlights(filename,tonumber(environment.argument("page")))
+------ structure before attachments and comments (are options there)
+elseif environment.argument("verify") then
+    scripts.pdf.verify(filename)
 elseif environment.argument("comments") then
     scripts.pdf.comments(filename,tonumber(environment.argument("page")))
 elseif environment.argument("signature") then
     scripts.pdf.signature(filename,environment.argument("save"))
 elseif environment.argument("sign") then
     scripts.pdf.sign(filename)
-elseif environment.argument("detail") then
-    scripts.pdf.detail(filename,environment.argument("detail"))
-elseif environment.argument("verify") then
-    scripts.pdf.verify(filename)
+elseif environment.argument("validate") then
+    scripts.pdf.validate(filename)
 elseif environment.argument("split") then
     scripts.pdf.split(filename)
+elseif environment.argument("detail") then
+    scripts.pdf.detail(filename,environment.argument("detail"))
 elseif environment.argument("exporthelp") then
     application.export(environment.argument("exporthelp"),filename)
 else

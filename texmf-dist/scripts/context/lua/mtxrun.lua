@@ -577,7 +577,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-sandbox"] = package.loaded["l-sandbox"] or true
 
--- original size: 9604, stripped down to: 6394
+-- original size: 9700, stripped down to: 6452
 
 if not modules then modules={} end modules ['l-sandbox']={
  version=1.001,
@@ -735,12 +735,6 @@ function require(name)
   return requiem(name)
  end
 end
-function blockrequire(name,lib)
- if trace then
-  report("preventing reload of: %s",name)
- end
- blocked[name]=lib or _G[name] or false
-end
 function sandbox.enable()
  if not sandboxed then
   debug={
@@ -800,10 +794,19 @@ function sandbox.enable()
   sandboxed=true
  end
 end
-blockrequire("lfs",lfs)
-blockrequire("io",io)
-blockrequire("os",os)
-blockrequire("ffi",ffi)
+do
+ local function blockrequire(name,lib)
+  if trace then
+   report("preventing reload of: %s",name)
+  end
+  blocked[name]=lib or _G[name] or false
+ end
+ blockrequire("lfs",lfs)
+ blockrequire("io",io)
+ blockrequire("os",os)
+ blockrequire("ffi",ffi)
+ sandbox.blockrequire=blockrequire
+end
 local function supported(library)
  local l=_G[library]
  return l
@@ -1202,7 +1205,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-lpeg"] = package.loaded["l-lpeg"] or true
 
--- original size: 38742, stripped down to: 19489
+-- original size: 38786, stripped down to: 19523
 
 if not modules then modules={} end modules ['l-lpeg']={
  version=1.001,
@@ -1739,6 +1742,8 @@ local upper=utf and utf.upper or string.upper
 function lpeg.setutfcasers(l,u)
  lower=l or lower
  upper=u or upper
+ utf.upper=upper
+ utf.lower=lower
 end
 local function make1(t,rest)
  local p=p_false
@@ -2142,7 +2147,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-table"] = package.loaded["l-table"] or true
 
--- original size: 42643, stripped down to: 23053
+-- original size: 44262, stripped down to: 24008
 
 if not modules then modules={} end modules ['l-table']={
  version=1.001,
@@ -2309,6 +2314,61 @@ function table.allkeys(t)
   end
  end
  return sortedkeys(keys)
+end
+if lua.getcheckedkeys then
+ local getcheckedkeys=lua.getcheckedkeys
+ local getstringkeys=lua.getstringkeys
+ local getnumerickeys=lua.getnumerickeys
+ local getkeys=lua.getallkeys
+ local comparekeys=lua.comparekeys
+ local sort=table.sort
+ sortedkeys=function(tab)
+  if tab then
+   local srt,category=getcheckedkeys(tab)
+   if category==0 then
+   elseif category==3 then
+    sort(srt,comparekeys)
+   else
+    sort(srt)
+   end
+   return srt
+  else
+   return {}
+  end
+ end
+ sortedhashonly=function(tab)
+  if tab then
+   local srt,n=getstringkeys(tab)
+   if n>1 then
+    sort(srt)
+   end
+   return srt
+  else
+   return {}
+  end
+ end
+ sortedindexonly=function(tab)
+  if tab then
+   local srt,n=getnumerickeys(tab)
+   if n>1 then
+    sort(srt)
+   end
+   return srt
+  else
+   return {}
+  end
+ end
+ sortedhashkeys=function(tab,cmp) 
+  if tab then
+   local srt,n=getkeys(tab) 
+   if n>1 then
+    sort(srt,cmp)
+   end
+   return srt
+  else
+   return {}
+  end
+ end
 end
 table.sortedkeys=sortedkeys
 table.sortedhashonly=sortedhashonly
@@ -3868,7 +3928,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-os"] = package.loaded["l-os"] or true
 
--- original size: 20690, stripped down to: 10794
+-- original size: 20908, stripped down to: 10884
 
 if not modules then modules={} end modules ['l-os']={
  version=1.001,
@@ -4018,7 +4078,7 @@ do
  local iopopen=io.popen
  local ostype=os.type
  local function resultof(command)
-  local handle=iopopen(command,ostype=="windows" and "rb" or "r")
+  local handle=iopopen(command,"r") 
   if handle then
    local result=handle:read("*all") or ""
    handle:close()
@@ -4047,6 +4107,9 @@ do
  local startuptime=gettimeofday()
  function os.runtime()
   return gettimeofday()-startuptime
+ end
+ function os.startuptime()
+  return startuptime
  end
 end
 do
@@ -4311,6 +4374,9 @@ do
   end
   return osexit()
  end
+end
+if serial and serial.write then
+ os.serialwrite=serial.write 
 end
 
 
@@ -4894,7 +4960,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-url"] = package.loaded["l-url"] or true
 
--- original size: 14713, stripped down to: 6981
+-- original size: 14727, stripped down to: 6995
 
 if not modules then modules={} end modules ['l-url']={
  version=1.001,
@@ -4972,7 +5038,7 @@ lpegpatterns.urlescaper=escaper
 lpegpatterns.urlunescaper=unescaper
 lpegpatterns.urlgetcleaner=getcleaner
 function url.unescapeget(str)
- return lpegmatch(getcleaner,str)
+ return str and lpegmatch(getcleaner,str) or ""
 end
 local function split(str)
  return (type(str)=="string" and lpegmatch(parser,str)) or str
@@ -5158,7 +5224,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-dir"] = package.loaded["l-dir"] or true
 
--- original size: 19139, stripped down to: 11345
+-- original size: 19379, stripped down to: 11553
 
 if not modules then modules={} end modules ['l-dir']={
  version=1.001,
@@ -5260,7 +5326,7 @@ local function glob_pattern_function(path,patt,recurse,action)
   end
  end
 end
-local function glob_pattern_table(path,patt,recurse,result)
+local function glob_pattern_table(path,patt,recurse,result,dirresult)
  if not result then
   result={}
  end
@@ -5300,12 +5366,16 @@ local function glob_pattern_table(path,patt,recurse,result)
  end
  if dirs then
   for i=1,nofdirs do
-   glob_pattern_table(dirs[i],patt,recurse,result)
+   local dir=dirs[i]
+   glob_pattern_table(dir,patt,recurse,result,dirresult)
+   if dirresult then
+    dirresult[#dirresult+1]=dir
+   end
   end
  end
- return result
+ return result,dirresult
 end
-local function globpattern(path,patt,recurse,method)
+local function globpattern(path,patt,recurse,method,dirmethod)
  local kind=type(method)
  if patt and sub(patt,1,-3)==path then
   patt=false
@@ -5315,8 +5385,11 @@ local function globpattern(path,patt,recurse,method)
   return okay and glob_pattern_function(path,patt,recurse,method) or {}
  elseif kind=="table" then
   return okay and glob_pattern_table(path,patt,recurse,method) or method
+ elseif okay then
+  local files,dirs=glob_pattern_table(path,patt,recurse,{},{})
+  return files or {},dirs or {}
  else
-  return okay and glob_pattern_table(path,patt,recurse,{}) or {}
+  return {},dirmethod and {} or nil
  end
 end
 dir.globpattern=globpattern
@@ -5371,7 +5444,7 @@ end
 local filter=Cs ((
  P("**")/".*"+P("*")/"[^/]*"+P("?")/"[^/]"+P(".")/"%%."+P("+")/"%%+"+P("-")/"%%-"+P(1)
 )^0 )
-local function glob(str,t)
+local function glob(str,t,dirstoo)
  if type(t)=="function" then
   if type(str)=="table" then
    for s=1,#str do
@@ -5388,30 +5461,28 @@ local function glob(str,t)
     globpattern(start,result,recurse,t)
    end
   end
- else
-  if type(str)=="table" then
-   local t=t or {}
-   for s=1,#str do
-    glob(str[s],t)
-   end
+ elseif type(str)=="table" then
+  local t=t or {}
+  for s=1,#str do
+   glob(str[s],t)
+  end
+  return t
+ elseif isfile(str) then
+  if t then
+   t[#t+1]=str
    return t
-  elseif isfile(str) then
-   if t then
-    t[#t+1]=str
-    return t
-   else
-    return { str }
-   end
   else
-   local root,path,base=lpegmatch(pattern,str) 
-   if root and path and base then
-    local recurse=find(base,"**",1,true) 
-    local start=root..path
-    local result=lpegmatch(filter,start..base)
-    return globpattern(start,result,recurse,t)
-   else
-    return {}
-   end
+   return { str }
+  end
+ else
+  local root,path,base=lpegmatch(pattern,str) 
+  if root and path and base then
+   local recurse=find(base,"**",1,true) 
+   local start=root..path
+   local result=lpegmatch(filter,start..base)
+   return globpattern(start,result,recurse,t,dirstoo)
+  else
+   return {},dirstoo and {} or nil
   end
  end
 end
@@ -6503,7 +6574,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["l-math"] = package.loaded["l-math"] or true
 
--- original size: 2679, stripped down to: 1909
+-- original size: 3260, stripped down to: 2345
 
 if not modules then modules={} end modules ['l-math']={
  version=1.001,
@@ -6597,6 +6668,28 @@ if not math.ult then
   return floor(m)<floor(n) 
  end
 end
+if setinspector and vector then
+ local inspect=inspect
+ local isvector=vector.isvector
+ local totable=vector.totable
+ setinspector("vector",function(v)
+  if isvector(v) then
+   inspect(totable(v))
+   return true
+  end
+ end)
+ local mesh=vector.mesh
+ if mesh then
+  local ismesh=mesh.ismesh
+  local totable=mesh.totable
+  setinspector("mesh",function(v)
+   if ismesh(v) then
+    inspect(totable(v))
+    return true
+   end
+  end)
+ end
+end
 
 
 end -- of closure
@@ -6605,7 +6698,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-str"] = package.loaded["util-str"] or true
 
--- original size: 46975, stripped down to: 24530
+-- original size: 46220, stripped down to: 24637
 
 if not modules then modules={} end modules ['util-str']={
  version=1.001,
@@ -6989,7 +7082,7 @@ end
 string.texnewlines=lpeg.replacer(patterns.newline,"\r",true)
 local preamble=""
 local environment={
- global=global or _G,
+ ["global"]=_G,
  lpeg=lpeg,
  type=type,
  tostring=tostring,
@@ -7309,6 +7402,9 @@ local format_z=function(f)
  n=n+(tonumber(f) or 1)
  return "''" 
 end
+local format_Z=function(f)
+ return format("a%s",tonumber(f) or 1)
+end
 local format_rest=function(s)
  return format("%q",s) 
 end
@@ -7364,8 +7460,8 @@ local builder=Cs { "start",
 +V("a") 
 +V("A") 
 +V("j")+V("J") 
-+V("m")+V("M") 
-+V("z")
++V("m")+V("M")
++V("z")+V("Z")
 +V(">") 
 +V("<")
    )+V("*")
@@ -7412,6 +7508,7 @@ local builder=Cs { "start",
  ["m"]=(prefix_any*P("m"))/format_m,
  ["M"]=(prefix_any*P("M"))/format_M,
  ["z"]=(prefix_any*P("z"))/format_z,
+ ["Z"]=(prefix_any*P("Z"))/format_Z,
  ["a"]=(prefix_any*P("a"))/format_a,
  ["A"]=(prefix_any*P("A"))/format_A,
  ["<"]=(prefix_any*P("<"))/format_left,
@@ -7578,7 +7675,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-tab"] = package.loaded["util-tab"] or true
 
--- original size: 34169, stripped down to: 18433
+-- original size: 35024, stripped down to: 18453
 
 if not modules then modules={} end modules ['util-tab']={
  version=1.001,
@@ -7593,7 +7690,7 @@ local tables=utilities.tables
 local format,gmatch,gsub,sub=string.format,string.gmatch,string.gsub,string.sub
 local concat,insert,remove,sort=table.concat,table.insert,table.remove,table.sort
 local setmetatable,getmetatable,tonumber,tostring,rawget=setmetatable,getmetatable,tonumber,tostring,rawget
-local type,next,rawset,tonumber,tostring,load,select=type,next,rawset,tonumber,tostring,load,select
+local type,next,rawset,rawget,tonumber,tostring,load,select=type,next,rawset,rawget,tonumber,tostring,load,select
 local lpegmatch,P,Cs,Cc=lpeg.match,lpeg.P,lpeg.Cs,lpeg.Cc
 local sortedkeys,sortedpairs=table.sortedkeys,table.sortedpairs
 local formatters=string.formatters
@@ -8314,7 +8411,7 @@ function table.ordered(t)
   return function() end
  end
 end
-function combine(target,source)
+local function combine(target,source)
  if target then
   for k,v in next,source do
    if type(v)=="table" then
@@ -14708,7 +14805,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-tpl"] = package.loaded["util-tpl"] or true
 
--- original size: 7722, stripped down to: 4212
+-- original size: 7708, stripped down to: 4212
 
 if not modules then modules={} end modules ['util-tpl']={
  version=1.001,
@@ -14861,7 +14958,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["util-sbx"] = package.loaded["util-sbx"] or true
 
--- original size: 21376, stripped down to: 13435
+-- original size: 21448, stripped down to: 13434
 
 if not modules then modules={} end modules ['util-sbx']={
  version=1.001,
@@ -15171,7 +15268,7 @@ local runners={
    if trace then
     report("resultof: %s",command)
    end
-   local handle=iopopen(command,"rb") 
+   local handle=iopopen(command,"r") 
    if handle then
     local result=handle:read("*all") or ""
     handle:close()
@@ -16577,9 +16674,165 @@ end -- of closure
 
 do -- create closure to overcome 200 locals limit
 
+package.loaded["util-sig"] = package.loaded["util-sig"] or true
+
+-- original size: 5963, stripped down to: 3240
+
+if not modules then modules={} end modules ['util-sig']={
+ version=1.001,
+ comment="companion to luat-lib.mkiv",
+ author="Hans Hagen, PRAGMA-ADE, Hasselt NL",
+ copyright="PRAGMA ADE / ConTeXt Development Team",
+ license="see context related readme files"
+}
+local type,dofile=type,dofile
+local format=string.format
+local resultof=os.resultof
+utilities=utilities or {}
+utilities.signals=utilities.signals or {}
+local signals=utilities.signals
+local serialwrite=serial and serial.write
+if serialwrite then
+ signals.serialwrite=serialwrite
+ signals.serialprefix=":lmtx:1:"
+ local ports={}
+ local function clean(port)
+  return "serial_port_"..string.gsub(port,"[^a-zA-Z0-9]","")..""
+ end
+ function signals.serialopen(port,baud)
+  local p=ports[port]
+  if p then
+   p.level=p.level+1
+  elseif os.getenv(clean(port))=="busy" then
+   p=false
+  else
+   os.setenv(clean(port),"busy")
+   p={
+    handle=serial.open(port,baud),
+    level=1,
+    port=port,
+   }
+   ports[port]=p
+  end
+  return p
+ end
+ function signals.serialclose(p)
+  if type(p)=="string" then
+   p=ports[p]
+  end
+  if type(p)=="table" then
+   local l=p.level
+   local h=p.handle
+   if l and h and l>0 then
+    l=l-1
+    if l==0 then
+     serial.close(h)
+     ports[p.port]=nil
+    end
+    p.level=l
+   end
+  end
+ end
+ function signals.serialsend(p,str)
+  if type(p)=="string" then
+   p=ports[p]
+  end
+  if p then
+   local l=p.level
+   local h=p.handle
+   if l and h and l>0 then
+    return serial.send(h,str)
+   end
+  end
+ end
+ function signals.serialwrite(port,baud,str)
+  return serialwrite(post,baud,str)
+ end
+ function signals.serialfast(port,baud,str)
+  local p=port[port]
+  if not p then
+   p=signals.serialopen(port,baud)
+  end
+  if p then
+   local h=p.handle
+   if h then
+    return serial.send(h,str)
+   end
+  end
+ end
+else
+ function signals.serialwrite()
+  return false
+ end
+end
+local loaded=table.setmetatableindex(function(t,signal)
+ local signalled=false
+ if type(signal)=="string" then
+  local found=resolvers.findfile("util-sig-imp-"..signal..".lua") or ""
+  if found~="" then
+   local triggers=dofile(found)
+   if triggers then
+    signalled=triggers.trigger
+   end
+  end
+  if type(signalled)~="function" then
+   signalled=function(state,run)
+    local c=format("mtxrun --script %s --state=%s --run=%i",signal,state,run)
+    resultof(c)
+   end
+  end
+ end
+ t[signal]=signalled
+ return signalled
+end)
+utilities.signals.version=1.001
+local configuration="ctxsignals.lua"
+signals.configuration=configuration
+function signals.loadstate()
+ local name=resolvers.findfile(configuration)
+ if name then
+  local data=table.load(name)
+  if data then
+   return data,name
+  end
+ end
+end
+function signals.savestate(data)
+ if data then
+  local name=resolvers.findfile(configuration) or ""
+  if name=="" then
+   name=configuration
+  end
+  table.save(name,data)
+  return name
+ end
+end
+function signals.initialize(signal)
+ if signal then
+  local data=signals.loadstate()
+  if not data then
+  elseif not data.signals or not data.signals[signal] then
+  elseif data.usage.enabled==false then
+   return false
+  elseif data.signals[signal].enabled==false then
+   return false
+  else
+   return loaded[signal] or false
+  end
+ else
+  return false
+ end
+end
+signals.report=logs.reporter("signal")
+
+
+end -- of closure
+
+do -- create closure to overcome 200 locals limit
+
 package.loaded["lxml-tab"] = package.loaded["lxml-tab"] or true
 
--- original size: 62465, stripped down to: 36432
+-- original size: 62856, stripped down to: 36566
 
 if not modules then modules={} end modules ['lxml-tab']={
  version=1.001,
@@ -16620,12 +16873,13 @@ function xml.resolvens(url)
 end
 end
 local nsremap,resolvens=xml.xmlns,xml.resolvens
-local stack,level,top,at,xmlnms,errorstr
+local stack,level,top,at,xmlns,errorstr
 local entities,parameters
 local strip,utfize,resolve,cleanup,resolve_predefined,unify_predefined
 local dcache,hcache,acache
 local mt,dt,nt
 local currentfilename,currentline,linenumbers
+local reported_at_errors
 local grammar_parsed_text_one
 local grammar_parsed_text_two
 local grammar_unparsed_text
@@ -17425,7 +17679,9 @@ local function install(spacenewline,spacing,anything)
  end
  local entityresolve=P("%")*(wrdtypename/weirdresolve )*P(";")+P("&")*(wrdtypename/normalresolve)*P(";")
  entitydoctype=entitydoctype+entityresolve
- local doctypeset=beginset*optionalspace*P(elementdoctype+entitydoctype+entityresolve+basiccomment+space)^0*optionalspace*endset
+ local attlistdoctype=optionalspace*P("<!ATTLIST")*somespace*(1-close)^0 
+*optionalspace*close
+ local doctypeset=beginset*optionalspace*P(elementdoctype+entitydoctype+entityresolve+attlistdoctype+basiccomment+space)^0*optionalspace*endset
  local definitiondoctype=doctypename*somespace*doctypeset
  local publicdoctype=doctypename*somespace*P("PUBLIC")*somespace*value*somespace*value*somespace*doctypeset
  local systemdoctype=doctypename*somespace*P("SYSTEM")*somespace*value*somespace*doctypeset
@@ -20386,7 +20642,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["lxml-xml"] = package.loaded["lxml-xml"] or true
 
--- original size: 11096, stripped down to: 7702
+-- original size: 11118, stripped down to: 7721
 
 if not modules then modules={} end modules ['lxml-xml']={
  version=1.001,
@@ -20490,6 +20746,7 @@ local function raw(collected)
   return ""
  end
 end
+local result=false
 local xmltexthandler=xmlnewhandlers {
  name="string",
  initialize=function()
@@ -21203,7 +21460,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["data-exp"] = package.loaded["data-exp"] or true
 
--- original size: 18185, stripped down to: 10438
+-- original size: 18571, stripped down to: 10558
 
 if not modules then modules={} end modules ['data-exp']={
  version=1.001,
@@ -21403,7 +21660,7 @@ local scancache={}
 local fullcache={}
 local nofsharedscans=0
 local addcasecraptoo=true
-local function scan(files,remap,spec,path,n,m,r,onlyone,tolerant)
+local function scan(files,remap,spec,path,n,m,r,onlyone,tolerant,reported)
  local full=path=="" and spec or (spec..path..'/')
  local dirlist={}
  local nofdirs=0
@@ -21444,8 +21701,9 @@ local function scan(files,remap,spec,path,n,m,r,onlyone,tolerant)
       if not rl then
        remap[lower]=name
        r=r+1
-      elseif trace_globbing and rl~=name then
+      elseif trace_globbing and rl~=name and not reported[name] then
        report_globbing("confusing filename, name: %a, lower: %a, already: %a",name,lower,rl)
+       reported[name]=true
       end
       if addcasecraptoo then
        local paths=files[name]
@@ -21471,8 +21729,9 @@ local function scan(files,remap,spec,path,n,m,r,onlyone,tolerant)
      if not rl then
       remap[lower]=name
       r=r+1
-     elseif trace_globbing and rl~=name then
+     elseif trace_globbing and rl~=name and not reported[name] then
       report_globbing("confusing filename, name: %a, lower: %a, already: %a",name,lower,rl)
+      reported[name]=true
      end
     end
    end
@@ -21481,7 +21740,7 @@ local function scan(files,remap,spec,path,n,m,r,onlyone,tolerant)
  if nofdirs>0 then
   sort(dirlist)
   for i=1,nofdirs do
-   files,remap,n,m,r=scan(files,remap,spec,dirlist[i],n,m,r,onlyonce,tolerant)
+   files,remap,n,m,r=scan(files,remap,spec,dirlist[i],n,m,r,onlyonce,tolerant,reported)
   end
  end
  scancache[sub(full,1,-2)]=files
@@ -21505,7 +21764,7 @@ local function scanfiles(path,branch,usecache,onlyonce,tolerant)
  end
  local content
  if isdir(realpath) then
-  local files,remap,n,m,r=scan({},{},realpath..'/',"",0,0,0,onlyonce,tolerant)
+  local files,remap,n,m,r=scan({},{},realpath..'/',"",0,0,0,onlyonce,tolerant,{})
   content={
    metadata={
     path=path,
@@ -21901,7 +22160,7 @@ do -- create closure to overcome 200 locals limit
 
 package.loaded["data-tmp"] = package.loaded["data-tmp"] or true
 
--- original size: 16433, stripped down to: 11636
+-- original size: 16995, stripped down to: 12083
 
 if not modules then modules={} end modules ['data-tmp']={
  version=1.100,
@@ -22219,15 +22478,25 @@ function caches.loadcontent(cachename,dataname,filename)
   filename=joinfile(path,name)
  end
  local state,blob=pcall(loadfile,addsuffix(filename,luasuffixes.luc))
+ if trace_cache and blob then
+  report_caches("getting %s lua content from path %a","regular",filename)
+ end
  if not blob then
   state,blob=pcall(loadfile,addsuffix(filename,luasuffixes.lua))
+  if trace_cache and blob then
+   report_caches("getting %s lua content from path %a","bytecode",filename)
+  end
  end
  if blob then
   local data=blob()
   if data and data.content then
    if data.type==dataname then
     if data.version==resolvers.cacheversion then
-     content_state[#content_state+1]=data.uuid
+     local uuid=data.uuid
+     content_state[#content_state+1]=uuid
+     if trace_cache then
+      report_caches("registering content uuid %a for %a",uuid,filename)
+     end
      if trace_locating then
       report_resolvers("loading %a for %a from %a",dataname,cachename,filename)
      end
@@ -22263,6 +22532,7 @@ function caches.savecontent(cachename,dataname,content,filename)
  if trace_locating then
   report_resolvers("preparing %a for %a",dataname,cachename)
  end
+ local uuid=osuuid()
  local data={
   type=dataname,
   root=cachename,
@@ -22270,9 +22540,12 @@ function caches.savecontent(cachename,dataname,content,filename)
   date=osdate("%Y-%m-%d"),
   time=osdate("%H:%M:%S"),
   content=content,
-  uuid=osuuid(),
+  uuid=uuid,
  }
  local ok=savedata(luaname,serialize(data,true))
+ if trace_cache then
+  report_caches("saving %a with uuid %a",luaname,uuid)
+ end
  if ok then
   if trace_locating then
    report_resolvers("category %a, cachename %a saved in %a",dataname,cachename,luaname)
@@ -26695,10 +26968,10 @@ end
 
 end -- of closure
 
--- used libraries    : l-bit32.lua l-lua.lua l-macro.lua l-sandbox.lua l-package.lua l-lpeg.lua l-function.lua l-string.lua l-table.lua l-io.lua l-number.lua l-set.lua l-os.lua l-file.lua l-gzip.lua l-md5.lua l-sha.lua l-url.lua l-dir.lua l-boolean.lua l-unicode.lua l-math.lua util-str.lua util-tab.lua util-fil.lua util-sac.lua util-sto.lua util-prs.lua util-fmt.lua util-soc-imp-reset.lua util-soc-imp-socket.lua util-soc-imp-copas.lua util-soc-imp-ltn12.lua util-soc-imp-mime.lua util-soc-imp-url.lua util-soc-imp-headers.lua util-soc-imp-tp.lua util-soc-imp-http.lua util-soc-imp-ftp.lua util-soc-imp-smtp.lua trac-set.lua trac-log.lua trac-inf.lua trac-pro.lua util-lua.lua util-deb.lua util-tpl.lua util-sbx.lua util-mrg.lua util-env.lua luat-env.lua util-zip.lua lxml-tab.lua lxml-lpt.lua lxml-mis.lua lxml-aux.lua lxml-xml.lua trac-xml.lua data-ini.lua data-exp.lua data-env.lua data-tmp.lua data-met.lua data-res.lua data-pre.lua data-inp.lua data-out.lua data-fil.lua data-con.lua data-use.lua data-zip.lua data-tre.lua data-sch.lua data-lua.lua data-aux.lua data-tmf.lua data-lst.lua libs-ini.lua luat-sta.lua luat-fmt.lua util-jsn.lua
+-- used libraries    : l-bit32.lua l-lua.lua l-macro.lua l-sandbox.lua l-package.lua l-lpeg.lua l-function.lua l-string.lua l-table.lua l-io.lua l-number.lua l-set.lua l-os.lua l-file.lua l-gzip.lua l-md5.lua l-sha.lua l-url.lua l-dir.lua l-boolean.lua l-unicode.lua l-math.lua util-str.lua util-tab.lua util-fil.lua util-sac.lua util-sto.lua util-prs.lua util-fmt.lua util-soc-imp-reset.lua util-soc-imp-socket.lua util-soc-imp-copas.lua util-soc-imp-ltn12.lua util-soc-imp-mime.lua util-soc-imp-url.lua util-soc-imp-headers.lua util-soc-imp-tp.lua util-soc-imp-http.lua util-soc-imp-ftp.lua util-soc-imp-smtp.lua trac-set.lua trac-log.lua trac-inf.lua trac-pro.lua util-lua.lua util-deb.lua util-tpl.lua util-sbx.lua util-mrg.lua util-env.lua luat-env.lua util-zip.lua util-sig.lua lxml-tab.lua lxml-lpt.lua lxml-mis.lua lxml-aux.lua lxml-xml.lua trac-xml.lua data-ini.lua data-exp.lua data-env.lua data-tmp.lua data-met.lua data-res.lua data-pre.lua data-inp.lua data-out.lua data-fil.lua data-con.lua data-use.lua data-zip.lua data-tre.lua data-sch.lua data-lua.lua data-aux.lua data-tmf.lua data-lst.lua libs-ini.lua luat-sta.lua luat-fmt.lua util-jsn.lua
 -- skipped libraries : -
--- original bytes    : 1068584
--- stripped bytes    : 426011
+-- original bytes    : 1078878
+-- stripped bytes    : 430424
 
 -- end library merge
 
@@ -26780,6 +27053,8 @@ local ownlibs = { -- order can be made better
     'luat-env.lua', -- can come before inf (as in mkiv)
 
     'util-zip.lua',
+
+    'util-sig.lua',
 
     'lxml-tab.lua',
     'lxml-lpt.lua',
@@ -26946,7 +27221,7 @@ if not environment.trackers    then environment.trackers    = e_trackers    end
 if not environment.directives  then environment.directives  = e_directives  end
 if not environment.experiments then environment.experiments = e_experiments end
 
---
+-- I need to check all the options.
 
 resolvers.reset()
 
@@ -26964,6 +27239,7 @@ local helpinfo = [[
     <flag name="script"><short>run an mtx script (lua prefered method) (<ref name="noquotes"/>), no script gives list</short></flag>
     <flag name="evaluate"><short>run code passed on the commandline (between quotes) (=loop) (exit|quit aborts)</short></flag>
     <flag name="execute"><short>run a script or program (texmfstart method) (<ref name="noquotes"/>)</short></flag>
+    <flag name="direct"><short>run a program </short></flag>
     <flag name="resolve"><short>resolve prefixed arguments</short></flag>
     <flag name="ctxlua"><short>run internally (using preloaded libs)</short></flag>
     <flag name="internal"><short>run script using built in libraries (same as <ref name="ctxlua"/>)</short></flag>
@@ -26987,11 +27263,13 @@ local helpinfo = [[
     <flag name="verbose"><short>give a bit more info</short></flag>
     <flag name="trackers" value="list"><short>enable given trackers</short></flag>
     <flag name="progname" value="str"><short>format or backend</short></flag>
+    <flag name="platform" value="str"><short>show platform as seen by script</short></flag>
     <flag name="systeminfo" value="str"><short>show current operating system, processor, etc</short></flag>
    </subcategory>
    <subcategory>
     <flag name="edit"><short>launch editor with found file</short></flag>
     <flag name="launch"><short>launch files like manuals, assumes os support (<ref name="all"/>,<ref name="list"/>)</short></flag>
+    <flag name="associate"><short>launch files like manuals, assumes os support via suffix association</short></flag>
    </subcategory>
    <subcategory>
     <flag name="timedrun"><short>run a script and time its run</short></flag>
@@ -27025,9 +27303,22 @@ local helpinfo = [[
     <flag name="var-value"><short>report value of variable</short></flag>
     <flag name="find-file"><short>report file location</short></flag>
     <flag name="find-path"><short>report path of file</short></flag>
+    <flag name="format-path"><short>report path where format files end up</short></flag>
    </subcategory>
    <subcategory>
     <flag name="pattern" value="string"><short>filter variables</short></flag>
+    <flag name="all" value="string"><short>report all (when applicable)</short></flag>
+    <flag name="format" value="string"><short>filter by file format (when applicable)</short></flag>
+   </subcategory>
+   <subcategory>
+    <flag name="selfclean" value="string"><short>remove libraries (maintainance)</short></flag>
+    <flag name="selfmerge" value="string"><short>embed libraries (maintainance)</short></flag>
+    <flag name="selfupdate" value="string"><short>move to bin path (maintainance)</short></flag>
+   <subcategory>
+   </subcategory>
+    <flag name="help" value="string"><short>show help info</short></flag>
+    <flag name="help" value="string"><short>show version info</short></flag>
+    <flag name="gethelp" value="string"><short>launch the given help info (<ref name="url"/>)</short></flag>
    </subcategory>
   </category>
  </flags>
@@ -27036,7 +27327,7 @@ local helpinfo = [[
 
 local application = logs.application {
     name     = "mtxrun",
-    banner   = "ConTeXt TDS Runner Tool 1.32",
+    banner   = "ConTeXt TDS Runner Tool 1.33",
     helpinfo = helpinfo,
 }
 
@@ -27182,11 +27473,11 @@ function runners.execute_script(fullname,internal,nosplit)
                     environment.ownscript = result
                     dofile(result)
                 else
-local texmfcnf =  resolvers.getenv("TEXMFCNF")
-if not texmfcnf or texmfcnf == "" then
-    texmfcnf = resolvers.expandedpathfromlist(resolvers.splitpath(resolvers.resolve(resolvers.luacnfspec)))
-    resolvers.setenv("TEXMFCNF",table.concat(texmfcnf,";")) -- for running texexec etc (after tl change to texmf-dist)
-end
+                    local texmfcnf =  resolvers.getenv("TEXMFCNF")
+                    if not texmfcnf or texmfcnf == "" then
+                        texmfcnf = resolvers.expandedpathfromlist(resolvers.splitpath(resolvers.resolve(resolvers.luacnfspec)))
+                        resolvers.setenv("TEXMFCNF",table.concat(texmfcnf,";")) -- for running texexec etc (after tl change to texmf-dist)
+                    end
                     local binary = runners.applications[file.suffix(result)]
                     result = string.quoted(string.unquoted(result))
                  -- if string.match(result,' ') and not string.match(result,"^\".*\"$") then
@@ -27805,54 +28096,43 @@ else
 
 end
 
--- joke .. reminds me of messing with gigi terminals
-
-do
-
-    local a_locale = e_argument("locale")
-
-    if a_locale then
-
-        -- I really hate this crap but am too tired of discussing it over and over
-        -- again so for the sake of usiage outside context we will provide ways to
-        -- use locales in an otherwise supposed to be locale agnostic system. And
-        -- forget about support in case of interferences.
-
-        report()
-        report(what == "force" and "forcing locale:" or "original locale:")
-        report()
-        report("  collate  : %s",status.lc_collate  or "<unset>")
-        report("  ctype    : %s",status.lc_ctype    or "<unset>")
-        report("  monetary : %s",status.lc_monetary or "<unset>")
-        report("  numeric  : %s",status.lc_numeric  or "<unset>")
-        report("  time     : %s",status.lc_time     or "<unset>")
-        report()
-
-    end
-
-    if a_locale == "force" then
-        os.setlocale(status.lc_collate ,"collate")
-        os.setlocale(status.lc_ctype   ,"ctype")
-        os.setlocale(status.lc_monetary,"monetary")
-        os.setlocale(status.lc_numeric ,"numeric")
-        os.setlocale(status.lc_time    ,"time")
-    else
-        function os.setlocale()
-        end
-    end
-
-end
-
--- if e_argument("ansi") or e_argument("ansilog") then
-
---     logs.setformatters(e_argument("ansi") and "ansi" or "ansilog")
-
---  -- local script = e_argument("script") or e_argument("scripts")
---  --
---  -- if type(script) == "string" then
---  --     logs.writer("]0;"..script.."") -- for Alan to test
---  -- end
-
+-- -- Gone, as it's useless and also because we don't enable locales in luametatex
+-- -- at all. Too much hassle.
+--
+-- do
+--
+--     local a_locale = e_argument("locale")
+--
+--     if a_locale then
+--
+--         -- I really hate this crap but am too tired of discussing it over and over
+--         -- again so for the sake of usage outside context we will provide ways to
+--         -- use locales in an otherwise supposed to be locale agnostic system. And
+--         -- forget about support in case of interferences.
+--
+--         report()
+--         report(what == "force" and "forcing locale:" or "original locale:")
+--         report()
+--         report("  collate  : %s",status.lc_collate  or "<unset>")
+--         report("  ctype    : %s",status.lc_ctype    or "<unset>")
+--         report("  monetary : %s",status.lc_monetary or "<unset>")
+--         report("  numeric  : %s",status.lc_numeric  or "<unset>")
+--         report("  time     : %s",status.lc_time     or "<unset>")
+--         report()
+--
+--     end
+--
+--     if a_locale == "force" then
+--         os.setlocale(status.lc_collate ,"collate")
+--         os.setlocale(status.lc_ctype   ,"ctype")
+--         os.setlocale(status.lc_monetary,"monetary")
+--         os.setlocale(status.lc_numeric ,"numeric")
+--         os.setlocale(status.lc_time    ,"time")
+--     else
+--         function os.setlocale()
+--         end
+--     end
+--
 -- end
 
 if e_argument("script") or e_argument("scripts") then
@@ -28002,21 +28282,15 @@ elseif e_argument("timedrun") then
 
 elseif e_argument("variables") or e_argument("show-variables") or e_argument("expansions") or e_argument("show-expansions") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--expansions",filename)
-
     resolvers.load("nofiles")
     resolvers.listers.variables(e_argument("pattern"))
 
 elseif e_argument("configurations") or e_argument("show-configurations") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--configurations",filename)
-
     resolvers.load("nofiles")
     resolvers.listers.configurations()
 
 elseif e_argument("find-file") then
-
-    -- luatools: runners.execute_ctx_script("mtx-base","--find-file",filename)
 
     resolvers.load()
     local e_all     = e_argument("all")
@@ -28033,8 +28307,6 @@ elseif e_argument("find-file") then
 
 elseif e_argument("find-path") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--find-path",filename)
-
     resolvers.load()
     local path = resolvers.findpath(filename)
     if e_verbose then
@@ -28045,16 +28317,12 @@ elseif e_argument("find-path") then
 
 elseif e_argument("expand-braces") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--expand-braces",filename)
-
     resolvers.load("nofiles")
     runners.register_arguments(filename)
     environment.initializearguments(environment.arguments_after)
     resolvers.dowithfilesandreport(resolvers.expandbraces, environment.files)
 
 elseif e_argument("expand-path") then
-
-    -- luatools: runners.execute_ctx_script("mtx-base","--expand-path",filename)
 
     resolvers.load("nofiles")
     runners.register_arguments(filename)
@@ -28070,16 +28338,12 @@ elseif e_argument("resolve-path") then
 
 elseif e_argument("expand-var") or e_argument("expand-variable") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--expand-var",filename)
-
     resolvers.load("nofiles")
     runners.register_arguments(filename)
     environment.initializearguments(environment.arguments_after)
     resolvers.dowithfilesandreport(resolvers.expansion, environment.files)
 
 elseif e_argument("show-path") or e_argument("path-value") then
-
-    -- luatools: runners.execute_ctx_script("mtx-base","--show-path",filename)
 
     resolvers.load("nofiles")
     runners.register_arguments(filename)
@@ -28088,8 +28352,6 @@ elseif e_argument("show-path") or e_argument("path-value") then
 
 elseif e_argument("var-value") or e_argument("show-value") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--show-value",filename)
-
     resolvers.load("nofiles")
     runners.register_arguments(filename)
     environment.initializearguments(environment.arguments_after)
@@ -28097,16 +28359,9 @@ elseif e_argument("var-value") or e_argument("show-value") then
 
 elseif e_argument("format-path") then
 
-    -- luatools: runners.execute_ctx_script("mtx-base","--format-path",filename)
-
-    resolvers.load()
+--     resolvers.load()
+    resolvers.load("nofiles")
     report(caches.getwritablepath("format"))
-
--- elseif e_argument("pattern") then
---
---     -- luatools
---
---     runners.execute_ctx_script("mtx-base","--pattern='" .. e_argument("pattern") .. "'",filename)
 
 elseif e_argument("generate") then
 
@@ -28124,31 +28379,15 @@ elseif e_argument("generate") then
 
     e_verbose = true
 
-elseif e_argument("make") or e_argument("ini") or e_argument("compile") then
-
-    -- luatools: runners.execute_ctx_script("mtx-base","--make",filename)
-
-    resolvers.load()
-    trackers.enable("resolvers.locating")
-    environment.make_format(filename)
-
-elseif e_argument("run") then
-
-    -- luatools
-
-    runners.execute_ctx_script("mtx-base","--run",filename)
-
-elseif e_argument("fmt") then
-
-    -- luatools
-
-    runners.execute_ctx_script("mtx-base","--fmt",filename)
-
-elseif e_argument("help") and filename=='base' then
-
-    -- luatools
-
-    runners.execute_ctx_script("mtx-base","--help")
+-- The original idea was to have a common system for installing formats for
+-- luatex but I don't see this happen in the current tex ecosystem. Every format
+-- goes its own (incompatible) way.
+--
+-- elseif e_argument("make") or e_argument("ini") or e_argument("compile") then
+--
+--     resolvers.load()
+--     trackers.enable("resolvers.locating")
+--     environment.make_format(filename)
 
 elseif e_argument("version") then
 
@@ -28177,10 +28416,6 @@ elseif e_argument("systeminfo") then
 
     runners.systeminfo()
 
-elseif e_argument("locale") then
-
-    -- already done
-
 elseif e_argument("help") or filename=='help' or filename == "" then
 
     application.help()
@@ -28205,14 +28440,22 @@ elseif false then
         ok = runners.execute_script(filename)
     end
 
-elseif environment.files[1] == 'texmfcnf.lua' then -- so that we don't need to load mtx-base
+elseif environment.files[1] == 'texmfcnf.lua' then
 
     resolvers.load("nofiles")
     resolvers.listers.configurations()
 
 else
-    runners.loadbase()
-    runners.execute_ctx_script("mtx-base",filename)
+
+    resolvers.load()
+    local e_pattern = e_argument("pattern")
+    if not e_pattern then
+        runners.register_arguments(filename)
+        environment.initializearguments(environment.arguments_after)
+        resolvers.dowithfilesandreport(resolvers.findfile,environment.files)
+    elseif type(e_pattern) == "string" then
+        resolvers.dowithfilesandreport(resolvers.findfile,{ e_pattern })
+    end
 
 end
 

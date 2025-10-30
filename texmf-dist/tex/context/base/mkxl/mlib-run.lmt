@@ -46,10 +46,12 @@ local metapost        = metapost
 metapost.showlog      = false
 metapost.lastlog      = ""
 metapost.texerrors    = false
+metapost.quitonerror  = true
 metapost.exectime     = metapost.exectime or { } -- hack
 metapost.nofruns      = 0
 
 local mpxformats      = { }
+local mpxnames        = { }
 local nofformats      = 0
 local mpxpreambles    = { }
 local mpxterminals    = { }
@@ -98,8 +100,9 @@ local function executempx(mpx,data)
     return result
 end
 
-directives.register("mplib.texerrors",  function(v) metapost.texerrors = v end)
-trackers.register  ("metapost.showlog", function(v) metapost.showlog   = v end)
+directives.register("mplib.quitonerror", function(v) metapost.quitonerror = v end)
+directives.register("mplib.texerrors",   function(v) metapost.texerrors   = v end)
+trackers  .register("metapost.showlog",  function(v) metapost.showlog     = v end)
 
 function metapost.resetlastlog()
     metapost.lastlog = ""
@@ -213,9 +216,14 @@ function metapost.load(name,method)
         maketext        = metapost.maketext,
         handlers        = {
             log         = metapost.newlogger(),
-         -- warning     = function(...) end,
-         -- error       = function(...) end,
+         -- warning     = function() end,
+         -- error       = function() end,
+         -- status      = function() end,
         },
+    }
+    mpxnames[mpx] = {
+        name   = name,
+        method = method,
     }
     report_metapost("initializing number mode %a",method)
     local result
@@ -533,6 +541,9 @@ do
                 if not metapost.reporterror(result) and result.fig then
                     converted = metapost.convert(specification,result)
                 end
+                if result and result.status > 2 and metapost.quitonerror then
+                    luatex.abort()
+                end
             else
                 report_metapost("error: invalid graphic")
             end
@@ -624,12 +635,17 @@ end
 
 local getstatistics = mplib.getstatistics
 
+local function currentusage(mpx)
+    return 0 -- todo
+end
+
 function metapost.getstatistics(memonly)
     if memonly then
         local n, m = 0, 0
         for name, mpx in next, mpxformats do
+            local s = getstatistics(mpx)
             n = n + 1
-            m = m + getstatistics(mpx).memory
+            m = currentusage(mpx)
         end
         return n, m
     else
@@ -667,6 +683,11 @@ end
 function metapost.getinstancebyname(name)
     return mpxformats[name]
 end
+
+function metapost.getinstanceinfo(mpx)
+    return mpxnames[mpx] or { name = "unknown", method = "unknown" }
+end
+
 
 -- This used to be in mlib-pdf but is also used elsewhere so we need to
 -- define it early.

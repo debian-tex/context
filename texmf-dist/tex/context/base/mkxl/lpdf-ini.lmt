@@ -71,6 +71,7 @@ local formatters = string.formatters
 local isboolean = string.is_boolean
 local hextointeger, octtointeger = string.hextointeger,string.octtointeger
 
+local report_userdata   = logs.reporter("backend","userdata")
 local report_objects    = logs.reporter("backend","objects")
 local report_finalizing = logs.reporter("backend","finalizing")
 local report_blocked    = logs.reporter("backend","blocked")
@@ -108,7 +109,7 @@ local f_hex_2 = formatters["%02X"]
 
 local h_hex_4 = table.setmetatableindex(function(t,k) -- we already have this somewhere
     if k < 0 then
-     --report("fatal h_hex_4 error: %i",k)
+      --report("fatal h_hex_4 error: %i",k)
         return "0000"
     elseif k < 256 then -- maybe 512
         -- not sparse in this range
@@ -175,10 +176,11 @@ do
 
     updaters.register("backends.pdf.latebindings",function()
         job.positions.registerhandlers {
-            getpos  = drivers.getpos,
-            getrpos = drivers.getrpos,
-            gethpos = drivers.gethpos,
-            getvpos = drivers.getvpos,
+            getpos    = drivers.getpos,
+            gethvrpos = drivers.gethvrpos,
+            gethpos   = drivers.gethpos,
+            getvpos   = drivers.getvpos,
+            getrpos   = drivers.getrpos,
         }
         pdfgetmatrix = lpdf.getmatrix
         pdfhasmatrix = lpdf.hasmatrix
@@ -469,11 +471,8 @@ do
         if not s or s == "" then
             return ""
         elseif flags & utf16flags ~= 0 then
--- print("original",s)
--- print("utf8    ",utf16toutf8(s))
             return utf16toutf8(s)
         else
--- print("original",s)
             return s
         end
     end
@@ -760,6 +759,55 @@ local mt_r = { __index = { __lpdftype__ = "reference"  }, __tostring = tostring_
 local mt_v = { __index = { __lpdftype__ = "verbose"    }, __tostring = tostring_v, __call = value_v }
 local mt_l = { __index = { __lpdftype__ = "literal"    }, __tostring = tostring_l, __call = value_l }
 
+do
+
+    -- these can become helpers
+
+    local find = string.find
+
+    local tostring_u1 = function(t)
+        local s = t[1]
+        if #s == 0 then
+            return "()"
+        elseif find(s,"[\x00-\x1F\x27-\x28\x80-\xBF]") then
+            -- nop: control codes         : 0x00 .. 0x1F
+            -- yes: before left parent    : we don't like escaping
+            -- nop: left and right parent : 0x27 .. 0x28
+            -- yes: after right parent    : we don't like escaping
+            -- nop: after tilde           : 0x80 .. 0xBF
+            print(s)
+            return tosixteen(s)
+        else
+            return "(" .. s .. ")"
+        end
+    end
+
+    local tostring_u2 = function(t)
+        local s = t[1]
+        if #s == 0 then
+            return "()"
+        elseif find(s,"[\x80-\xBF]") then
+         -- return "(\xEF\xBB\xBF" .. s .. ")"
+            return "(\239\187\191" .. s .. ")"
+        else
+            return "(" .. s .. ")"
+        end
+    end
+
+    local function setutfstringmode(mode)
+        tostring_u = mode and tostring_u2 or tostring_u1
+        mt_u.__tostring = tostring_u
+    end
+
+    lpdf.setutfstringmode = setutfstringmode
+
+    directives.register("backend.pdf.utf", setutfstringmode)
+
+    setutfstringmode(false)
+
+end
+
+
 local function pdfstream(t) -- we need to add attributes
     if t then
         local tt = type(t)
@@ -1037,9 +1085,6 @@ function lpdf.finalizedocument()
     end
 end
 
-callbacks.register("finish_pdfpage", lpdf.finalizepage)
-callbacks.register("finish_pdffile", lpdf.finalizedocument)
-
 do
 
     -- some minimal tracing, handy for checking the order
@@ -1058,19 +1103,23 @@ do
 
     lpdf.protectresources = true
 
-    local catalog = pdfdictionary { Type = pdfconstant("Catalog") } -- nicer, but when we assign we nil the Type
-    local info    = pdfdictionary { Type = pdfconstant("Info")    } -- nicer, but when we assign we nil the Type
-    ----- names   = pdfdictionary { Type = pdfconstant("Names")   } -- nicer, but when we assign we nil the Type
+    local info    = pdfdictionary { Type = pdfconstant("Info") }
+    local catalog = pdfdictionary { Type = pdfconstant("Catalog") }
+    ----- names   = pdfdictionary { Type = pdfconstant("Names")   }
 
     local function checkcatalog()
-        if not environment.initex then
+        if environment.initex then
+            -- nothing
+        else
             trace_flush("catalog")
             return true
         end
     end
 
     local function checkinfo()
-        if not environment.initex then
+        if environment.initex then
+            -- nothing
+        elseif lpdf.getformatoption("info") then
             trace_flush("info")
             if lpdf.majorversion() > 1 then
                 for k, v in next, info do
@@ -1098,26 +1147,43 @@ do
     end
 
     local userdata = nil
+    local comments = nil
 
-    function lpdf.setuserdata(key,value)
+    function codeinjections.setuserdata(key,value)
         if not userdata then
             userdata = pdfdictionary()
         end
-        userdata[key] = pdfunicode(tostring(value))
+        if userdata[key] then
+            report_userdata("entry %a is already set",key)
+        else
+            userdata[key] = pdfunicode(tostring(value))
+        end
+    end
+
+    function codeinjections.setjobcomment(value)
+        if not comments then
+            comments = pdfarray()
+        end
+        comments[#comments+1] = pdfunicode(tostring(value))
     end
 
     function lpdf.getcatalog()
         if checkcatalog() then
             catalog.Type = pdfconstant("Catalog")
-            -- A bit fuzzy and useless. Has to be a direct one (makes one wonder about what drives
-            -- these demands, like limitations in certain aplications).
-            catalog.Extensions = pdfdictionary {
-                Type = pdfconstant("Extensions"),
-                LMTX = pdfdictionary {
-                    BaseVersion    = pdfconstant("2.0"),
-                    ExtensionLevel = 1,
+            if lpdf.getformatoption("extensions") then
+                -- A bit fuzzy and useless. Has to be a direct one (makes one wonder about what drives
+                -- these demands, like limitations in certain applications).
+                catalog.Extensions = pdfdictionary {
+                    Type = pdfconstant("Extensions"),
+                    LMTX = pdfdictionary {
+                        BaseVersion    = pdfconstant("2.0"),
+                        ExtensionLevel = 1,
+                    }
                 }
-            }
+            else
+                -- We just assume that adding extension info is okay. After all we registered the
+                -- namespace and the ptex ones are also accepted.
+            end
             local statistics = pdfdictionary {
                 FontRegistries = lpdf.noffontregistries(),
             }
@@ -1128,9 +1194,19 @@ do
                 catalog.LMTX_Statistics = pdfreference(pdfimmediateobject(tostring(statistics)))
             end
             --
+            if userdata and next(userdata) then
+                userdata.Type = pdfconstant("Userdata")
+                catalog.LMTX_Userdata = pdfreference(pdfimmediateobject(tostring(userdata)))
+            end
+            --
+            if comments and next(comments) then
+                comments.Type = pdfconstant("Comments")
+                catalog.LMTX_Comments = pdfreference(pdfimmediateobject(tostring(comments)))
+            end
+            --
             local labels = structures.pages.getlabels()
             if labels and next(labels) then
-                for k, v in next, labels do
+                for k, v in sortedhash(labels) do
                     if type(v) == "table" then
                         labels[k] = pdfarray(v)
                     end
@@ -1142,12 +1218,23 @@ do
                 catalog.LMTX_Pages = pdfreference(pdfimmediateobject(tostring(labels)))
             end
             --
+            local tagging = lpdf.gettaggingstatus()
+
+            if tagging and next(tagging) then
+                tagging = pdfdictionary {
+                    Type     = pdfconstant("Tagging"),
+                    Version  = "1.00",
+                    Profiles = tagging.profiles,
+                    Comment  = tagging.comment,
+                }
+                catalog.LMTX_Tagging = pdfreference(pdfimmediateobject(tostring(tagging)))
+            end
             return pdfreference(pdfimmediateobject(tostring(catalog)))
         end
     end
 
     function lpdf.getinfo()
-        if checkinfo() then
+        if info and checkinfo() then
             return pdfreference(pdfimmediateobject(tostring(info)))
         end
     end
@@ -1160,7 +1247,7 @@ do
     end
 
     function lpdf.addtoinfo(k,v)
-        if not (lpdf.protectresources and info[k]) then
+        if type(info) == "table" and not (lpdf.protectresources and info[k]) then
             trace_set("info",k)
             info[k] = v
         end
@@ -1455,7 +1542,7 @@ if implement then
 
     implement {
         name      = "startactualtext",
-        arguments = "string",
+        arguments = "argument",
         actions   = function(str)
             context(pdfdirect(f_actual_text(tosixteen(str))))
         end
@@ -1470,7 +1557,7 @@ if implement then
 
     implement {
         name      = "startalternativetext",
-        arguments = "string",
+        arguments = "argument",
         actions   = function(str)
             context(pdfdirect(f_alternative_text(tosixteen(str))))
         end
@@ -1495,10 +1582,10 @@ if implement then
 
     implement {
         name      = "pdfsetuserdata",
-        arguments = "2 strings",
+        arguments = "2 arguments",
         protected = true,
         public    = true,
-        actions   = lpdf.setuserdata
+        actions   = codeinjections.setuserdata
     }
 
 end
@@ -1584,23 +1671,18 @@ do
 
     -- This is obsolete but old viewers might still use it as directive for what to send to a
     -- postscript printer. The bad is that even 2.0 validation can bark about it missing but
-    -- maybe we should no longer care abotu that.
+    -- maybe we should no longer care about that.
 
     local a_procset = nil
     local d_procset = nil
-    local include   = false
 
     lpdf.registerinitializer(function()
         a_procset = nil
         d_procset = nil
     end)
 
-    function lpdf.setincludeprocset(v)
-        include = v
-    end
-
     function lpdf.procset(dict)
-        if not include or lpdf.majorversion() > 1 then
+        if not lpdf.getformatoption("procsets") or lpdf.majorversion() > 1 then
             return nil
         else
             if not a_procset then

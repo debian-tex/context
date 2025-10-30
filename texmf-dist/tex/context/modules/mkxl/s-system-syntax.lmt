@@ -4,15 +4,17 @@ local lpegmatch = lpeg.match
 
 local context = context
 
-local moduledata   = moduledata        or { }
-moduledata.engine  = moduledata.engine or { }
-moduledata.mplib   = moduledata.mplib  or { }
-moduledata.pdfe    = moduledata.pdfe   or { }
-moduledata.node    = moduledata.node   or { }
+local moduledata   = moduledata         or { }
+moduledata.engine  = moduledata.engine  or { }
+moduledata.mplib   = moduledata.mplib   or { }
+moduledata.pdfe    = moduledata.pdfe    or { }
+moduledata.node    = moduledata.node    or { }
+moduledata.context = moduledata.context or { }
 
-local primitives   = token.getprimitives()
-local commandnames = tokens.commands
-local origins      = tex.getprimitiveorigins()
+local primitives   = token and token.getprimitives() or { }
+local commandnames = tokens and tokens.commands
+local origins      = tex and tex.getprimitiveorigins()
+local legacies     = tex and tex.getprimitivelegacies()
 local commandhash  = { }
 local keywords     = setmetatableindex("number")
 
@@ -297,6 +299,7 @@ syntax.charnumber = newsyntax {
         optional(sequence(keyword("options"),s_integer)),
         optional(sequence(keyword("font"),s_integer)),
         optional(sequence(keyword("id"),s_integer)),
+        optional(keyword("keepspacing")),
         s_integer
     ),
 }
@@ -546,15 +549,22 @@ local common_rule = sequence(
     optional(sequence(keyword("width"),s_dimension)),
     optional(sequence(keyword("height"),s_dimension)),
     optional(sequence(keyword("depth"),s_dimension)),
+    optional(sequence(keyword("pair"),s_dimension,s_dimension)),
     optional(sequence(keyword("xoffset"),s_dimension)),
-    optional(sequence(keyword("yoffset"),s_dimension))
+    optional(sequence(keyword("yoffset"),s_dimension)),
+    optional(keyword("running")),
+    optional(keyword("discardable")),
+    optional(keyword("keepspacing")),
+    optional(keyword("resetspacing"))
 )
 
 local normal_rule = sequence(common_rule,
     optional(sequence(keyword("left"),s_dimension)),
     optional(sequence(keyword("right"),s_dimension)),
     optional(sequence(keyword("top"),s_dimension)),
-    optional(sequence(keyword("bottom"),s_dimension))
+    optional(sequence(keyword("bottom"),s_dimension)),
+    optional(sequence(keyword("on"),s_dimension)),
+    optional(sequence(keyword("off"),s_dimension))
 )
 
 local strut_rule = sequence(common_rule,sequence(
@@ -1078,7 +1088,8 @@ do
         optional(keyword("retain")),
         optional(keyword("container")),
         optional(keyword("mathtext")),
-     -- optional(keyword("discarded")),
+     -- optional(keyword("discardable")),
+        optional(keyword("keepspacing")),
         optional(sequence(keyword("class"),s_integer)),
         optional(keyword("swap")),
         s_tokens
@@ -2204,7 +2215,9 @@ end
 
 -- end of syntax specification
 
-do
+if context then
+
+    local context = context
 
     local P   = lpeg.P
     local R   = lpeg.R
@@ -2269,11 +2282,10 @@ do
         cat[p]    = category[n]
         org[p]    = l[4]
     end
-    local tag = { }
-    for k, v in next, origins do
-        tag[k] = sub(v,1,1)
-    end
-
+ -- local tag = { }
+ -- for k, v in next, origins do
+ --     tag[k] = sub(v,1,1) -- we now have two l's
+ -- end
     moduledata.engine.data = {
         cmd = cmd,
         lst = lst,
@@ -2281,11 +2293,36 @@ do
         cat = cat,
     }
 
+    local legacy = {
+        text    = true,
+        math    = true,
+        ignored = true,
+    }
+
+    interfaces.implement {
+        name      = "legacystate",
+        public    = true,
+        arguments = "string",
+        actions   = function(s)
+            local h = commandhash[s]
+            if h then
+                local l = legacies[h[5]]
+                if legacy[l] then
+                    context(l)
+                end
+            end
+        end,
+    }
+
     local function specification(k,v,done)
         local s = v[1]
         local r = v[2]
         local d = done[s]
-        context.formatted.startPrimitive("%s \\tex{%s}",tag[commandhash[k][4]],k)
+        local h = commandhash[k]
+     -- local t = tag[commandhash[k][4]]
+        local t = origins[h[4]]
+     -- local l = legacies[h[5]]
+        context.formatted.startPrimitive("%s : \\tex{%s}",t,k)
         if s and s ~= "" then
             if d then
                 context(" see \\tex{%s}",done[s])
@@ -2350,7 +2387,7 @@ do
 
 end
 
-do
+if context then
 
     local context = context
 
@@ -2444,6 +2481,21 @@ do
         else
             context("there is no function node.%s",what)
         end
+    end
+
+    local getstates  = callbacks.getstates
+    local getcomment = callbacks.getcomment
+
+    function moduledata.context.callbacks()
+        ctx_starttabulate { "|lT|lT|r|p|" }
+        for name, index in sortedhash(callbacks.list) do
+            ctx_NC() context(name)
+            ctx_NC() context("% t",getstates (index))
+            ctx_NC() context(index)
+            ctx_NC() context(getcomment(index))
+            ctx_NC() ctx_NR()
+        end
+        ctx_stoptabulate()
     end
 
 end

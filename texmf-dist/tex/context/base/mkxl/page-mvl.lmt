@@ -36,8 +36,6 @@ local setmetatableindex = table.setmetatableindex
 local properties        = nodes.properties.data
 
 local nuts              = nodes.nuts
-local tonode            = nuts.tonode
-local tonut             = nuts.tonut
 
 local setlink           = nuts.setlink
 local setbox            = nuts.setbox
@@ -101,6 +99,7 @@ local nums = { }
 
 columnsets.data = data -- while we test
 
+local nofcolumnsets = 0
 local nofcolumngaps = 0
 
 local c_realpageno <const> = texiscount("realpageno")
@@ -173,6 +172,7 @@ local function setstate(dataset,flushing)
     else
         dataset.spread  = 1
         dataset.sheet   = 1
+if dataset.doublesided then
         if odd(realpage) then
             dataset.initial = "right"
             dataset.count   = 2
@@ -180,6 +180,10 @@ local function setstate(dataset,flushing)
             dataset.initial = "left"
             dataset.count   = 1
         end
+else
+    dataset.initial = "left"
+    dataset.count   = 1
+end
         dataset.state = dataset.initial
     end
     if odd(dataset.count) then
@@ -503,7 +507,7 @@ do
         local nofleft         = t.nofleft or 1
         local nofright        = t.nofright or 1
         local nofcolumns      = nofleft + nofright
-        local doublesided     = false
+        local doublesided     = t.doublesided
         local dataset         = data[name] or { }
         --
         data[name]            = dataset
@@ -544,6 +548,8 @@ do
         dataset.sheet           = 1
         dataset.spread          = 1
         --
+        dataset.limited         = false
+        --
         dataset.sheets          = dataset.sheets          or setmetatableindex("table")
         dataset.delayed         = dataset.delayed         or setmetatableindex("table")
         dataset.spreadsheets    = dataset.spreadsheets    or setmetatableindex("table")
@@ -569,6 +575,7 @@ do
     function columnsets.reset(t)
         local dataset = columnsets.define(t)
         if dataset then
+            nofcolumnsets = nofcolumnsets + 1
             setfirstcells(dataset)
             check(dataset)
             checkwidth(dataset,t.width,"reset")
@@ -611,6 +618,7 @@ do
             { "distance", "dimension" },
             { "maxwidth", "dimension" },
             { "limit", "integer" },
+            { "doublesided", "boolean" },
         } }
     }
 
@@ -1068,8 +1076,12 @@ do
         local boxnumber  = t.box
         local box        = boxnumber and getbox(boxnumber)
         --
-local ntop    = t.ntop    or 0
-local nbottom = t.nbottom or 0
+        local nextsheet  = not dataset.doublesided and
+                           not dataset.byspread    and
+                           not odd(dataset.sheet)
+        --
+        local ntop       = t.ntop    or 0
+        local nbottom    = t.nbottom or 0
         --
         if boxwidth > 0 and boxheight > 0 then
             -- we're ok
@@ -1099,6 +1111,7 @@ local nbottom = t.nbottom or 0
     --     t.c = tc
     -- end
         --
+
         local c = t.c or 0
         local r = t.r or 0
         if c == 0 then
@@ -1113,20 +1126,22 @@ local nbottom = t.nbottom or 0
         end
      -- report("checking width %p, height %p, depth %p, slot (%i,%i)",boxwidth,boxheight,boxdepth,c,r)
         local nr = ceil(boxheight/(lineheight+linedepth))
+        local nc = 0
         --
         local action = methods[method]
         local cfound = false
         local rfound = false
         local lastcolumn = dataset.lastcolumn
 
-        if dataset.byspread then
-            lastcolumn = dataset.nofleft + dataset.nofright
-        elseif odd(dataset.count) then
-            c = 1
-            lastcolumn = dataset.nofleft
-        else
-            c = dataset.nofleft + 1
-            lastcolumn = dataset.nofleft + dataset.nofright
+        lastcolumn = dataset.nofleft + dataset.nofright
+
+        if nextsheet and t.c <= dataset.nofleft then
+            local tc = t.c
+            if tc == 0 then
+                t.c = tc + dataset.nofleft + 1
+            else
+                t.c = tc + dataset.nofleft
+            end
         end
 
         if t.c and t.c >= 1 and t.c <= lastcolumn then
@@ -1144,19 +1159,21 @@ local nbottom = t.nbottom or 0
          -- report("action %s, c %i, r %i, nr %i, width %p","here",c,r,nr,w)
             cfound, rfound, nc = here(c,r,nr,lastcolumn,nofrows,cells,w,spans)
         end
-if cfound then
-    if rfound == 1 then
-        ntop = 0
-    end
-    if rfound + nr - 1 == dataset.nofrows then
-        nbottom = 0
-    end
-    if (rfound - ntop) < 0 then
-        cfound = false
-    elseif (rfound + nr + nbottom - 1) > dataset.nofrows then
-        cfound = false
-    end
-end
+
+        if cfound then
+            if rfound == 1 then
+                ntop = 0
+            end
+            if rfound + nr - 1 == dataset.nofrows then
+                nbottom = 0
+            end
+            if (rfound - ntop) < 0 then
+                cfound = false
+            elseif (rfound + nr + nbottom - 1) > dataset.nofrows then
+                cfound = false
+            end
+        end
+
         if cfound then
             local ht = nr*(lineheight+linedepth)
             local wd = spans[cfound][nc]
@@ -1506,8 +1523,9 @@ do
             deadcycles = deadcycles - 1
         end
         if deadcycles == 0 then
+            -- needs to be checked ... on presentation
             report("fatal error: mvl %i mismatch",dataset.currentmvl or 1)
-            os.exit()
+--             os.exit()
         end
     end
 
@@ -2725,7 +2743,8 @@ do
             end
             lines[#lines+1] = "]"
             return
-             "[ page "       .. texgetcount(c_realpageno) ..
+             "[ set "        .. nofcolumnsets ..
+             ", page "       .. texgetcount(c_realpageno) ..
              ", spread "     .. dataset.spread ..
              ", sheet "      .. sheet ..
              ", nofcolumns " .. dataset.nofcolumns ..
@@ -2750,8 +2769,6 @@ end
 
 do
 
-    local div, mod = math.div, math.mod
-
     local actions = { "spread", "page", "column", "slot", "lines", "amount" }
     local trace   = false
     local eject   <const> = tex.magicconstants.ejectpenalty
@@ -2770,7 +2787,7 @@ do
     local trybreak_code  <const> = tex.balancecallbackcodes.trybreak
     local skipzeros_code <const> = tex.balancecallbackcodes.skipzeros
 
-    callback.register("balance_boundary", function(what,count,identifier,slot)
+    local function balance_boundary_callback(what,count,identifier,slot)
         local name    = nums[identifier]
         local action  = actions[what] or "unknown"
         local result  = skipzeros_code
@@ -2925,7 +2942,14 @@ do
             end
         end
         return result, penalty, extra
-    end)
+    end
+
+    callbacks.register {
+        name    = "balance_boundary",
+        action  = balance_boundary_callback,
+        comment = "process balance specific boundary",
+        frozen  = true,
+    }
 
  -- implement {
  --     name      = "columnsetidentifier",

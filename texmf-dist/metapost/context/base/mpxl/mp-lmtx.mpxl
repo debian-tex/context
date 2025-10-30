@@ -2944,3 +2944,246 @@ def lmt_showrivers(expr stepsize, width, height, showpolygon) =
     setbounds q to last_potraced_bounds enlarged (-2,-2) ;
     draw q xysized (width,height) ;
 enddef;
+
+% Sampled Functions
+
+% draw lmt_samplefunction [
+%     preamble = "local pi, sin, cos,  tan = math.pi, math.sin, math.cos, math.tan"
+%   % code     = "return sin(x*x)",
+%   % code     = "return acos(sin(10*x))",
+%   % code     = "return math.max(0,sin(x))",
+%   % code     = "return sin(1/x)",
+%   % code     = "return sin(x)/x",
+%   % code     = "return x/abs(x)",
+%   % code     = "return 1/x",
+%   % code     = "return tan(x)",
+%   % code     = "return x > 0 and (1 + x) or 0",
+%   % code     = "if x > 0 then return cos(x) else return 0 end",
+%   % code     = "return x % 1",
+%   % code     = "return math.floor(x)",
+%   % code     = "return x*x*x/(2*x*x - 6)",
+%     code     = "return sin(x) % 1",
+%   % code     = "return math.acos(sin(10*x))",
+%   % code     = "return x/sin(x)",
+%     %
+%     xmin     = -5*pi,
+%     xmax     =  5*pi,
+%     ymin     =   -pi,
+%     ymax     =  5*pi,
+% ]
+
+presetparameters "samplefunction" [
+    preamble   = "",
+  % code       = "1/x",
+  % xmin       =   -1,
+  % xmax       =    1,
+  % ymin       =   -1,
+  % ymax       =    1,
+  % dmin       =    3,
+  % dmax       =   50,
+  % smax       = 5000,
+  % eps        =    0.001,
+  % curvature  =    0.4,
+] ;
+
+def lmt_samplefunction = applyparameters "samplefunction" "lmt_do_samplefunction" enddef ;
+
+def lmt_load_mlib_fnc =
+    runscript("lua.registercode('mlib-fnc')");
+    extra_beginfig := extra_beginfig & % todo: use different hook
+        "runscript(" & ditto & "mp.lmt_samplefunctions_cleanup()" & ditto & ")" ;
+    let lmt_load_mlib_fnc = relax ;
+enddef ;
+
+vardef lmt_do_samplefunction =
+    lmt_load_mlib_fnc ;
+
+    pushparameters "samplefunction" ;
+
+    lua.mp.lmt_samplefunction_do()
+
+    popparameters ;
+
+    lua.mp.lmt_samplefunction_flush()
+enddef ;
+
+% Parametric plots
+
+% path p ; p := lmt_parametricplot [
+%     preamble  = "local sin, cos = math.sin, math.cos",
+%     xcode     = "return 0.1*t*cos(t)",
+%     ycode     = "return 0.1*t*sin(t)",
+%     tmin      =  -4pi,
+%     tmax      =   4pi,
+%     tolerance = 0.0001,
+% ] scaled 10 ;
+%
+% draw p ; drawdot p withcolor red ;
+
+presetparameters "parametricplot" [
+    preamble  = "",
+  % xcode     = "t",
+  % ycode     = "t",
+  % tmin      = -1,
+  % tmax      =  1,
+  % tolerance =  0.0001,
+] ;
+
+def lmt_parametricplot = applyparameters "parametricplot" "lmt_do_parametricplot" enddef ;
+
+vardef lmt_do_parametricplot =
+    lmt_load_mlib_fnc ;
+
+    pushparameters "parametricplot" ;
+
+    lua.mp.lmt_parametricplot_do()
+
+    popparameters ;
+
+    lua.mp.lmt_parametricplot_flush()
+enddef ;
+
+% meshes
+
+% newscriptindex mfid_meshcontour ; mfid_meshcontour  := scriptindex("meshcontour")  ;
+%
+% def meshcontour(expr name) = runscript mfid_meshcontour name ; enddef ; % just combine with the next one
+%
+% vardef meshexperiment(expr name, kind) =
+%     image (
+%         save p ; path p ; p := meshcontour(name) ;
+%         addto currentpicture doublepath p
+%             withprescript "ms_name=" & name
+%             withprescript "ms_kind=" & kind
+%         ;
+%     )
+% enddef ;
+
+presetparameters "vectorplot" [
+    preamble  = "",
+    kind      = "both",
+    name      = "",
+  % xcode     = "t",
+  % ycode     = "t",
+  % tmin      = -1,
+  % tmax      =  1,
+  % tolerance =  0.0001,
+    bytemap   =  1,
+] ;
+
+def lmt_vectorplot = applyparameters "vectorplot" "lmt_do_vectorplot" enddef ;
+
+% We can use functione before we load so this is a no-go:
+%
+% def lmt_load_mlib_msh =
+%     runscript("lua.registercode('mlib-msh')");
+%     let lmt_load_mlib_msh = relax ;
+% enddef ;
+
+vardef lmt_do_vectorplot =
+  % lmt_load_mlib_msh ;
+
+    image (
+
+        pushparameters "vectorplot" ;
+
+        save p ; path p ; p := meshcontour(getparameter "name",getparameter "kind") ;
+%         if (getparameter "kind") = "bytemap" :
+%             addto currentpicture doublepath unitsquare
+%                 withbytemap getparameter "bytemap"
+%         else :
+            addto currentpicture doublepath p
+                withprescript "ms_name=" & (getparameter "name")
+                withprescript "ms_kind=" & (getparameter "kind")
+%         fi ;
+
+        popparameters ;
+    )
+
+enddef ;
+
+%D For Keith McKay:
+
+newscriptindex mfid_perlinnoise   ; mfid_perlinnoise   := scriptindex "perlinnoise" ;
+newscriptindex mfid_simplexnoise  ; mfid_simplexnoise  := scriptindex "simplexnoise" ;
+newscriptindex mfid_perlinoctave  ; mfid_perlinoctave  := scriptindex "perlinoctave" ;
+newscriptindex mfid_simplexoctave ; mfid_simplexoctave := scriptindex "simplexoctave" ;
+
+vardef perlinnoise (expr p, q, r) = runscript mfid_perlinnoise  p q r enddef ;
+vardef simplexnoise(expr p, q, r) = runscript mfid_simplexnoise p q r enddef ;
+
+vardef perlinoctave (expr        iterations, amplitude, frequency, persistence, lacunarity, ang, minimum, maximum, x, y) =
+    runscript mfid_perlinoctave  iterations  amplitude  frequency  persistence  lacunarity  ang  minimum  maximum  x  y
+enddef ;
+vardef simplexoctave(expr        iterations, amplitude, frequency, persistence, lacunarity, ang, minimum, maximum, x, y) =
+    runscript mfid_simplexoctave iterations  amplitude  frequency  persistence  lacunarity  ang  minimum  maximum  x  y
+enddef ;
+
+presetparameters "noise" [
+    bytemap     = 1,
+    nx          = 10,
+    ny          = 10,
+    nz          = 1,
+    iteration   = 2,
+    persistence = 128,
+    scale       = 0.01,
+    low         = 0,
+    high        = 255,
+    colorcode   = "",
+    angle       = 0,
+    method      = "perlin", % simplex angle detail
+] ;
+
+def lmt_noise = applyparameters "noise" "lmt_do_noise" enddef ;
+
+def lmt_load_mlib_eff =
+    runscript("lua.registercode('mlib-eff')");
+    let lmt_load_mlib_eff = relax ;
+enddef ;
+
+vardef lmt_do_noise =
+    lmt_load_mlib_eff ;
+    image (
+        pushparameters "noise" ;
+        lua.mp.lmt_noise_do() ;
+        draw unitsquare
+            withbytemap (getparameterdefault "bytemap" 1)
+            withpen pencircle scaled 0 ;
+        popparameters ;
+    )
+enddef ;
+
+% bytemaps
+
+presetparameters "bytemap" [
+    bytemap   = 1,
+    colorcode = "",
+] ;
+
+def lmt_bytemap = applyparameters "bytemap" "lmt_do_bytemap" enddef ;
+
+def lmt_load_mlib_bmp =
+    runscript("lua.registercode('mlib-bmp')");
+    let lmt_load_mlib_bmp = relax ;
+enddef ;
+
+vardef lmt_do_bytemap =
+    lmt_load_mlib_bmp ;
+    image (
+        pushparameters "bytemap" ;
+        lua.mp.lmt_bytemap_do() ;
+        draw unitsquare
+            withbytemap (getparameterdefault "bytemap" 1)
+            withpen pencircle scaled 0 ;
+        popparameters ;
+    )
+enddef ;
+
+% We need a vardef instead of def here in order to prevents expansion
+% of the suffix!
+
+vardef downsamplebytemap(expr source, target, n) =
+    lua.mp.downsamplebytemap(source,target,n);
+enddef ;
+
+permanent downsamplebytemap;

@@ -106,6 +106,8 @@
 
 \aliased\let\page\pagebreak
 
+\lettonothing\m_page_breaks_asked
+
 \permanent\protected\def\usepageparameter#1%
   {\edef\m_page_breaks_asked{#1\c!page}%
    \ifempty\m_page_breaks_asked\else
@@ -147,7 +149,8 @@
    \orelse\ifchknum\page_breaks_current_option\or
       \page_otr_command_flush_all_floats
       \page_otr_command_next_page
-      \localcontrolledrepeating
+%       \localcontrolledrepeating
+      \localcontrolledendless
         {\ifnum\userpageno<\page_breaks_current_option\relax
            \page_otr_insert_dummy_page
          \else
@@ -241,7 +244,8 @@
   {\ifdoublesided
      \ifcase{\realpageno;\plusfour}\else
        \page_breaks_handle_direct\v!yes
-       \localcontrolledrepeating
+%        \localcontrolledrepeating
+       \localcontrolledendless
          {\ifcase{\realpageno;\plusfour}%
             \quitloop
           \else
@@ -467,9 +471,9 @@
 
 % the \relax prevents premature expansion in case of lookahead
 
-\permanent\tolerant\protected\def\testpage    [#1]#*[#2]{\relax\normalexpanded{\checkpage[\s!unknown:1][\c!lines=#1,\c!offset=\ifparameter#2\or#2\else\zeropoint\fi]}} %
-\permanent\tolerant\protected\def\testpageonly[#1]#*[#2]{\relax\normalexpanded{\checkpage[\s!unknown:2][\c!lines=#1,\c!offset=\ifparameter#2\or#2\else\zeropoint\fi]}} % no penalties added to the mvl
-\permanent\tolerant\protected\def\testpagesync[#1]#*[#2]{\relax\normalexpanded{\checkpage[\s!unknown:3][\c!lines=#1,\c!offset=\ifparameter#2\or#2\else\zeropoint\fi]}} % force sync
+\permanent\tolerant\protected\def\testpage    [#1]#*[#2]{\relax\expanded{\checkpage[\s!unknown:1][\c!lines=#1,\c!offset=\ifparameter#2\or#2\else\zeropoint\fi]}} %
+\permanent\tolerant\protected\def\testpageonly[#1]#*[#2]{\relax\expanded{\checkpage[\s!unknown:2][\c!lines=#1,\c!offset=\ifparameter#2\or#2\else\zeropoint\fi]}} % no penalties added to the mvl
+\permanent\tolerant\protected\def\testpagesync[#1]#*[#2]{\relax\expanded{\checkpage[\s!unknown:3][\c!lines=#1,\c!offset=\ifparameter#2\or#2\else\zeropoint\fi]}} % force sync
 
 %D Test column breaks.
 

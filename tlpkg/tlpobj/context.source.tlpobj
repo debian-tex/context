@@ -1,0 +1,6 @@
+name context.source
+category Package
+revision 76367
+shortdesc source files of context
+srcfiles size=865
+ texmf-dist/source/context/base/luametatex-20250917.src.zip

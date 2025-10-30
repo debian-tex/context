@@ -8,7 +8,7 @@ if not modules then modules = { } end modules ['colo-ini'] = {
 
 local type, tonumber, tostring = type, tonumber, tostring
 local concat, insert, remove = table.concat, table.insert, table.remove
-local format, gmatch, gsub, lower, match, find = string.format, string.gmatch, string.gsub, string.lower, string.match, string.find
+local format, gmatch, gsub, lower, match, find, char = string.format, string.gmatch, string.gsub, string.lower, string.match, string.find, string.char
 local P, R, C, Cc = lpeg.P, lpeg.R, lpeg.C, lpeg.Cc
 local lpegmatch, lpegpatterns = lpeg.match, lpeg.patterns
 local formatters = string.formatters
@@ -964,12 +964,20 @@ end
 colors.formatcolor = formatcolor
 colors.formatgray  = formatgray
 
-local f_gray         = formatters["s=%1.3f"]
-local f_rgb          = formatters["r=%1.3f%sg=%1.3f%sb=%1.3f"]
-local f_cmyk         = formatters["c=%1.3f%sm=%1.3f%sy=%1.3f%sk=%1.3f"]
+----- f_gray         = formatters["s=%1.3f"]
+----- f_rgb          = formatters["r=%1.3f%sg=%1.3f%sb=%1.3f"]
+----- f_cmyk         = formatters["c=%1.3f%sm=%1.3f%sy=%1.3f%sk=%1.3f"]
+----- f_spot_name    = formatters["p=%s"]
+----- f_spot_value   = formatters["p=%1.3f"]
+----- f_transparency = formatters["a=%1.3f%st=%1.3f"]
+----- f_both         = formatters["%s%s%s"]
+
+local f_gray         = formatters["s=%1.4f"]
+local f_rgb          = formatters["r=%1.4f%sg=%1.4f%sb=%1.4f"]
+local f_cmyk         = formatters["c=%1.4f%sm=%1.4f%sy=%1.4f%sk=%1.4f"]
 local f_spot_name    = formatters["p=%s"]
-local f_spot_value   = formatters["p=%1.3f"]
-local f_transparency = formatters["a=%1.3f%st=%1.3f"]
+local f_spot_value   = formatters["p=%1.4f"]
+local f_transparency = formatters["a=%1.4f%st=%1.4f"]
 local f_both         = formatters["%s%s%s"]
 
 local function colorcomponents(ca,separator) -- return list
@@ -1498,4 +1506,28 @@ do
         actions   = { formatluminanceratio, context },
     }
 
+end
+
+-- This might move to l-number:
+
+local round = math.round
+
+function number.fractiontobyte(f)
+    local b = round(f * 255)
+    if b > 255 then
+        return 255
+    elseif b < 0 then
+        return 0
+    else
+        return b
+    end
+end
+
+-- but not now.
+
+local tobyte = number.fractiontobyte
+
+function colors.rgbbytes(name)
+    local v = colorvalues[name and attributes_list[a_color][name] or attributes_list[a_color].black]
+    return char(tobyte(v[3]),tobyte(v[4]),tobyte(v[5]))
 end

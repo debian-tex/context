@@ -72,9 +72,9 @@
     \restoreendofline % see interferences-001.tex
 \to \everyMPgraphic
 
-\mutable  \def\MPruntimefile    {mprun}
-\mutable  \def\currentMPformat  {metafun}
-\immutable\def\defaultMPinstance{metafun}
+\mutable  \cdef\MPruntimefile    {mprun}
+\mutable  \cdef\currentMPformat  {metafun}
+\permanent\cdef\defaultMPinstance{metafun}
 
 \installcorenamespace{mpinstance}
 \installcorenamespace{mpinclusions}
@@ -92,6 +92,8 @@
 %D The next command is, of course, dedicated to Mojca, who needs it for gnuplot.
 %D Anyway, the whole multiple engine mechanism is to keep her gnuplot from
 %D interfering.
+
+\lettonothing\m_meta_saved_instance
 
 \permanent\tolerant\protected\def\startMPdefinitions#=#:#2\stopMPdefinitions
   {\let\m_meta_saved_instance\currentMPinstance
@@ -114,7 +116,7 @@
 
 \permanent\protected\lettonothing\stopMPinitializations
 
-\permanent\tolerant\protected\def\startMPinclusions[#1]#*#=#:#3\stopMPinclusions
+\permanent\tolerant\protected\def\startMPinclusions[#1]#*#:#=#:#3\stopMPinclusions
   {\let\m_meta_saved_instance\currentMPinstance % \pushmacro
    \cdef\currentMPinstance{#2}%
    \ifempty\currentMPinstance
@@ -174,7 +176,7 @@
 %   {\writestatus\m!metapost{reset will be implemented when needed}}
 
 \def\meta_analyze_graphicname[#1]%
-  {\normalexpanded{\meta_analyze_graphicname_indeed[#1::::]}}
+  {\expanded{\meta_analyze_graphicname_indeed[#1::::]}}
 
 \def\meta_show_properties_indeed
   {\writestatus{metapost}{name: \currentMPgraphicname, instance: \currentMPinstance, format: \currentMPformat}}
@@ -274,15 +276,83 @@
 
 \let\meta_relocate_graphic\relax % experimental hook
 
-\def\meta_process_graphic_start
+% \def\meta_process_graphic_start
+%   {\pushMPboundingbox
+%    \dostarttaggednodetail\t!mpgraphic
+%    \setbox\b_meta_graphic\hpack\bgroup
+%      % We now make everything an artifact because it's not worth the trouble to
+%      % deal with nested text .. it will not be properly dealt with in viewers
+%      % either so why bother mixing content and artifacts.
+%      \dotaggedplaceholder
+%      \dostartignoretagging\empty}
+
+% \def\meta_process_graphic_stop
+%   {\dostopignoretagging
+%    \egroup
+%    \meta_place_graphic
+%    \meta_relocate_graphic
+%    \dostoptagged
+%    \popMPboundingbox}
+
+\aliased\lettonothing\dotagmpgraphic
+
+\def\meta_process_graphic_start_normal
   {\pushMPboundingbox
    \setbox\b_meta_graphic\hpack\bgroup}
 
-\def\meta_process_graphic_stop
+\def\meta_process_graphic_stop_normal
   {\egroup
    \meta_place_graphic
    \meta_relocate_graphic
    \popMPboundingbox}
+
+\def\meta_process_graphic_start_tagged
+  {\pushMPboundingbox
+   \dostarttaggednodetail\t!mpgraphic
+   % only if exporting or tagging / a real nasty bit fo code as we can work inner out
+   \enforced\edef\figuredescriptiontext{\mplevelparameter\c!descriptiontext}% directly use this
+   \enforced\edef\figurealternativetext{\mplevelparameter\c!alternativetext}% directly use this
+   \ifconditional\c_grph_in_image
+     % set description if to yet set
+     \dotagfigure
+   \else
+     \dotagmpgraphic % so it will be faster then
+   \fi
+   % We use image id 3 but then also check need to check the export!
+   \setbox\b_meta_graphic\hpack attr \imageattribute \plusthree\bgroup
+     % We now make everything an artifact because it's not worth the trouble to
+     % deal with nested text .. it will not be properly dealt with in viewers
+     % either so why bother mixing content and artifacts.
+       \dotaggedplaceholder
+       \dostartignoretagging\empty
+     % We also need to prevent that there are annotations that then have no
+     % pointer to what what into tagged, unless we then point to the whole.
+     % \locationfalse % better not
+   }
+
+\def\meta_process_graphic_stop_tagged
+  {\dostopignoretagging
+   \egroup
+   \meta_place_graphic
+   \meta_relocate_graphic
+   \dostoptagged
+   \popMPboundingbox}
+
+% we can alias in the tag enabler
+
+\def\meta_process_graphic_start
+  {\ifconditional\c_strc_tags_enabled
+     \meta_process_graphic_start_tagged
+   \else
+     \meta_process_graphic_start_normal
+   \fi}
+
+\def\meta_process_graphic_stop
+  {\ifconditional\c_strc_tags_enabled
+     \meta_process_graphic_stop_tagged
+   \else
+     \meta_process_graphic_stop_normal
+   \fi}
 
 \protected\def\meta_process_graphic_instance#1#2% used in startMPpage
   {\cdef\currentMPinstance{#1}%
@@ -297,7 +367,7 @@
   {\meta_start_current_graphic
    \forgetall
    \meta_process_graphic_start
-     \normalexpanded{\noexpand\clf_mpgraphic
+     \expanded{\noexpand\clf_mpgraphic
          instance        {\currentMPinstance}%
          format          {\currentMPformat}%
          data            {#1;}%
@@ -437,7 +507,7 @@
 
 \def\meta_grab_clip_path_yes
   {\meta_start_current_graphic
-     \normalexpanded{\noexpand\clf_mpsetclippath
+     \expanded{\noexpand\clf_mpsetclippath
        instance        {\currentMPinstance}%
        format          {\currentMPformat}%
        data            {\begincsname\??mpclip\currentMPclip\endcsname}%
@@ -514,9 +584,19 @@
 \def\meta_mpvar_default{\MPcolor{black}\space}
 %def\meta_mpvar_default{0 }
 
+\installmacrostack\currentmpcategory
+
 \permanent\def\MPvar#1% todo: could be a framed chain
   {\beginlocalcontrol
    \edef\m_meta_current_variable{\mpcategoryparameter{#1}}%
+   % new:
+   \ifempty\m_meta_current_variable
+     \push_macro_currentmpcategory
+     \let\currentmpcategory\currentMPgraphicname
+     \edef\m_meta_current_variable{\mpcategoryparameter{#1}}%
+     \pop_macro_currentmpcategory
+   \fi
+   %
    \endlocalcontrol
    \ifempty\m_meta_current_variable
      \meta_mpvar_default
@@ -536,6 +616,14 @@
 \permanent\def\MPrawvar#1#2% todo: could be a framed chain
   {\beginlocalcontrol
    \edef\m_meta_current_variable{\namedmpcategoryparameter{#1}{#2}}%
+   % new
+ % \ifempty\m_meta_current_variable
+ %   \push_macro_currentmpcategory
+ %   \let\currentmpcategory\currentMPgraphicname
+ %   \edef\m_meta_current_variable{\namedmpcategoryparameter{#1}{#2}}%
+ %   \pop_macro_ currentmpcategory
+ % \fi
+   %
    \endlocalcontrol
    \ifempty\m_meta_current_variable
      \meta_mpvar_default
@@ -611,7 +699,7 @@
    \egroup}
 
 \protected\def\meta_ignore_box_depth
-  {\normalexpanded
+  {\expanded
      {\meta_obey_box_depth % hence the \protected
       \wd\b_meta_graphic\the\wd\b_meta_graphic
       \ht\b_meta_graphic\the\ht\b_meta_graphic
@@ -667,7 +755,7 @@
 \permanent\protected\lettonothing\stopuniqueMPgraphic
 
 \def\meta_start_unique_graphic#1%
-  {\normalexpanded{\meta_start_unique_graphic_indeed{#1}}}
+  {\expanded{\meta_start_unique_graphic_indeed{#1}}}
 
 \permanent\protected\def\meta_start_unique_graphic_indeed#1#2#3\stopuniqueMPgraphic
   {\gdefcsname\??mpgraphic#1\endcsname{\meta_handle_unique_graphic{#1}{#2}{#3}}}
@@ -685,9 +773,14 @@
 
 \def\meta_uniquempgraphic_yes[#1]#*#=%
   {% ugly code but we run on top of older code
-   \resetdummyparameter\c!instance
-   \getdummyparameters[#1]%
-   \cdef\currentMPinstance{\dummyparameter\c!instance}%
+%    \resetdummyparameter\c!instance
+%    \getdummyparameters[#1]%
+%    \cdef\currentMPinstance{\dummyparameter\c!instance}%
+   %
+   \meta_bump_current_level
+   \setupcurrentmplevel[#1]%
+   \cdef\currentMPinstance{\mplevelparameter\c!instance}%
+   %
    % here we feed the instance into the analyzer
    \meta_begin_graphic_group{\ifempty\currentMPinstance\else\currentMPinstance::\fi#1}%
    \checkmpcategoryparent
@@ -717,7 +810,7 @@
 \permanent\protected\lettonothing\stopuseMPgraphic
 
 \def\meta_start_use_graphic#1%
-  {\normalexpanded{\meta_start_use_graphic_indeed{#1}}}
+  {\expanded{\meta_start_use_graphic_indeed{#1}}}
 
 \protected\def\meta_start_use_graphic_indeed#1#2#3\stopuseMPgraphic
   {\gdefcsname\??mpgraphic#1\endcsname{\meta_handle_use_graphic{#1}{#2}{#3}}}
@@ -728,7 +821,7 @@
 \permanent\protected\lettonothing\stopusableMPgraphic
 
 \def\meta_start_usable_graphic#1%
-  {\normalexpanded{\meta_start_usable_graphic_indeed{#1}}}
+  {\expanded{\meta_start_usable_graphic_indeed{#1}}}
 
 \protected\def\meta_start_usable_graphic_indeed#1#2#3\stopusableMPgraphic
   {\gdefcsname\??mpgraphic#1\endcsname{\meta_handle_use_graphic{#1}{#2}{#3}}}
@@ -749,7 +842,7 @@
 \permanent\protected\lettonothing\stopreusableMPgraphic
 
 \def\meta_start_reusable_graphic#1%
-  {\normalexpanded{\meta_start_reusable_graphic_indeed{#1}}}
+  {\expanded{\meta_start_reusable_graphic_indeed{#1}}}
 
 \protected\def\meta_start_reusable_graphic_indeed#1#2#3\stopreusableMPgraphic
   {\gdefcsname\??mpgraphic#1\endcsname{\meta_handle_reusable_graphic{#1}{#2}{#3}}}
@@ -759,9 +852,14 @@
 
 \def\meta_usempgraphic_yes[#1]#*#=%
   {% ugly code but we run on top of older code
-   \resetdummyparameter\c!instance
-   \getdummyparameters[#1]%
-   \cdef\currentMPinstance{\dummyparameter\c!instance}%
+%    \resetdummyparameter\c!instance
+%    \getdummyparameters[#1]%
+%    \cdef\currentMPinstance{\dummyparameter\c!instance}%
+   %
+   \meta_bump_current_level
+   \setupcurrentmplevel[#1]%
+   \cdef\currentMPinstance{\mplevelparameter\c!instance}%
+   %
    % here we feed the instance into the analyzer
    \meta_begin_graphic_group{\ifempty\currentMPinstance\else\currentMPinstance::\fi#2}%
    \ifcsname\??mpgraphic#2\endcsname
@@ -811,7 +909,7 @@
 \permanent\protected\lettonothing\stopoverlayMPgraphic
 
 \def\meta_start_overlay_graphic#1%
-  {\normalexpanded{%
+  {\expanded{%
      \pack_overlay_define{#1}{\useMPgraphic{#1}}%
      \meta_start_overlay_graphic_indeed{#1}}%
    }
@@ -875,7 +973,7 @@
 \permanent\protected\lettonothing\stopuniqueMPpagegraphic
 
 \def\meta_start_unique_page_graphic#1%
-  {\normalexpanded{\meta_start_unique_page_graphic_indeed{#1}}}
+  {\expanded{\meta_start_unique_page_graphic_indeed{#1}}}
 
 \protected\def\meta_start_unique_page_graphic_indeed#1#2#3\stopuniqueMPpagegraphic    % inefficient, double storage
   {\gdefcsname\??mpgraphic o:#1\endcsname{\meta_handle_unique_graphic{o:#1}{#2}{#3}}% % but these also keep the state
@@ -920,6 +1018,8 @@
   {\begingroup
    \catcode\endoflineasciicode\ignorecatcode
    \meta_start_environment}
+
+\lettonothing\m_meta_option
 
 \tolerant\def\meta_start_environment[#1]#:#2\stopMPenvironment
   {\endgroup
@@ -984,11 +1084,17 @@
 
 \def\meta_start_mpcode_yes[#1]#2\stopMPcode
   {\begingroup
-   \resetdummyparameter\c!instance
-   \resetdummyparameter\c!stacking
-   \getdummyparameters[#1]%
-   \cdef\currentMPinstance{\dummyparameter\c!instance}%
-   \setmpcategoryparameter\c!stacking{\dummyparameter\c!stacking}%
+%    \resetdummyparameter\c!instance
+%    \resetdummyparameter\c!stacking
+%    \getdummyparameters[#1]%
+%    \cdef\currentMPinstance{\dummyparameter\c!instance}%
+%    \setmpcategoryparameter\c!stacking{\dummyparameter\c!stacking}%
+   %
+   \meta_bump_current_level
+   \setupcurrentmplevel[#1]%
+   \cdef\currentMPinstance{\mplevelparameter\c!instance}%
+   \setmpcategoryparameter\c!stacking{\mplevelparameter\c!stacking}%
+   %
    \ifempty\currentMPinstance
      \let\currentMPinstance\defaultMPinstance
    \fi
@@ -1037,11 +1143,11 @@
 \permanent\protected\def\useMPrun#1#2% name n
   {\begingroup
    \def\MPaskedfigure{#2}%
-   \normalexpanded{\useMPgraphic{\ifempty{#1}mprun\else#1\fi}}%
+   \expanded{\useMPgraphic{\ifempty{#1}mprun\else#1\fi}}%
    \endgroup}
 
 \permanent\tolerant\protected\def\startMPrun#=#:#2\stopMPrun
-  {\normalexpanded{\startuseMPgraphic{\ifempty{#1}mprun\else#1\fi}}#2\stopuseMPgraphic}
+  {\expanded{\startuseMPgraphic{\ifempty{#1}mprun\else#1\fi}}#2\stopuseMPgraphic}
 
 \permanent\protected\lettonothing\stopMPrun
 
@@ -1087,6 +1193,22 @@
 \permanent          \def\MPtext     #1{\begincsname\??mptext#1\endcsname\empty}
 \permanent          \def\MPstring   #1{"\begincsname\??mptext#1\endcsname\empty"}
 \permanent          \def\MPbetex    #1{btex \begincsname\??mptext#1\endcsname\space etex}
+
+%D Another helper:
+
+\installcorenamespace {mplevel}
+
+\installsetuponlycommandhandler \??mplevel {mplevel}
+
+\lettonothing\currentmplevel
+
+\newinteger\c_meta_mp_level
+
+\def\meta_bump_current_level
+  {\advanceby\c_meta_mp_level\plusone
+   \ifnum\c_meta_mp_level>\plusone
+     \cdef\currentmplevel{mp:\the\c_meta_mp_level}%
+   \fi}
 
 %D In order to communicate conveniently with the \TEX\ engine, we introduce some
 %D typesetting variables.
@@ -1389,8 +1511,10 @@
 
 %D Some more helpers (see \type {meta-grd.mkiv} for an example of usage):
 
-\permanent\def\MPdpar#1#2{\todimension{#1#2}\relaxedspace}
-\permanent\def\MPnpar#1#2{\todimension{#1#2}\relaxedspace}
+% \relaxedspace fails on grid test
+
+\permanent\def\MPdpar#1#2{\todimension{#1#2} }% \space}
+\permanent\def\MPnpar#1#2{\todimension{#1#2} }% \space}
 \permanent\def\MPspar#1#2{"#1#2"}
 
 %D Done.

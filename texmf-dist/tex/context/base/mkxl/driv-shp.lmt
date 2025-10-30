@@ -22,7 +22,6 @@ local round              = math.round
 local nuts               = nodes.nuts
 
 local tonut              = nodes.tonut
-local tonode             = nodes.tonode
 
 local getdirection       = nuts.getdirection
 local getlist            = nuts.getlist
@@ -134,13 +133,18 @@ local flushrule
 local flushliteral
 local flushwhatsit
 local flushspace
+local flushsimplerule
+local flushspecialrule
+local pushleaderlevel
+local popleaderlevel
 
 -- make local
 
-function drivers.getpos () return round(pos_h), round(pos_v) end
-function drivers.getrpos() return round(pos_h), round(pos_v), pos_r end
-function drivers.gethpos() return round(pos_h) end
-function drivers.getvpos() return round(pos_v) end
+function drivers.getpos   () return round(pos_h), round(pos_v) end
+function drivers.gethvrpos() return round(pos_h), round(pos_v), pos_r end
+function drivers.gethpos  () return round(pos_h) end
+function drivers.getvpos  () return round(pos_v) end
+function drivers.getrpos  () return pos_r end
 
 -- characters
 
@@ -691,7 +695,7 @@ local dirstack = { }
 local anchors  = { }
 local befores  = setmetatableindex("table")
 local afters   = setmetatableindex("table")
-local stired   = false
+local stored   = false
 
 local function reset_directions()
     dirstack = { }
@@ -868,6 +872,18 @@ local hlist_out, vlist_out  do
         end
     end
 
+    local hnextnode = nextnode
+    local vnextnode = nextnode
+
+experiments.register("optimize.backend.traverse",function()
+    if helper and helper.traversehorizontal then
+        local glyph = nuts.pool.glyph()
+        hnextnode = helper.traversehorizontal(glyph)
+        vnextnode = helper.traversevertical(glyph)
+        nuts.flushnode(glyph)
+    end
+end)
+
     hlist_out = function(this_box,current)
         local ref_h = pos_h
         local ref_v = pos_v
@@ -884,9 +900,13 @@ local hlist_out, vlist_out  do
      --     current = getlist(this_box)
      -- end
 
+local boxr = pos_r == 1
+local boxh = pos_h
+
         -- we can encounter par, boundary and penalty nodes but a special
         -- iterator over content nodes won't save much
-        for current, id, subtype in nextnode, current do
+
+        for current, id, subtype in hnextnode, current do
             if id == glyph_code then
                 local char, font = isglyph(current)
                 local x_offset, y_offset, left, right, raise = getoffsets(current)
@@ -1326,7 +1346,7 @@ local hlist_out, vlist_out  do
                     goto synced
                 end
             elseif id == whatsit_code then
-                flushwhatsit[subtype](current,pos_h,pos_v)
+                flushwhatsit[subtype](current,pos_h,pos_v,pos_r)
             elseif id == disc_code then
                 local replace, tail = getreplace(current)
                 -- actually, we no longer have these select discs in the packaged list ... it's about
@@ -1390,7 +1410,7 @@ local hlist_out, vlist_out  do
 
      -- while current do
      --     local id = getid(current)
-        for current, id, subtype in nextnode, current do
+        for current, id, subtype in vnextnode, current do
             if id == glue_code then
                 local glueheight = effectiveglue(current,this_box,true)
                 if glueheight ~= 0 then
@@ -1437,7 +1457,7 @@ local hlist_out, vlist_out  do
                                 local edge = cur_v + glueheight
                                 local ly   = 0
                                 if subtype == gleaders_code then
-                                    save_v = cur_v
+                                    local save_v = cur_v
                                     cur_v  = ref_v - shipbox_v - cur_v
                                     cur_v  = total * (cur_v / total)
                                     cur_v  = ref_v - shipbox_v - cur_v
@@ -1447,7 +1467,7 @@ local hlist_out, vlist_out  do
                                     local lr = glueheight % total
                                     cur_v = cur_v + lr / 2
                                 elseif subtype == leaders_code then -- aleader
-                                    save_v = cur_v
+                                    local save_v = cur_v
                                     cur_v = top_edge + total * ((cur_v - top_edge) // total)
                                     if cur_v < save_v then
                                         cur_v = cur_v + total
@@ -1670,7 +1690,7 @@ local hlist_out, vlist_out  do
                     end
                 end
             elseif id == whatsit_code then
-                flushwhatsit[subtype](current,pos_h,pos_v)
+                flushwhatsit[subtype](current,pos_h,pos_v,pos_r)
             else
                 -- penalty
                 goto synced
@@ -1707,8 +1727,10 @@ function drivers.converters.lmtx(driver,box,smode,objnum,specification)
     local actions     = driver.actions
     local flushers    = driver.flushers
 
-    initialize        = actions.initialize
-    finalize          = actions.finalize
+    initialize        = actions.initialize -- called in convert so timed there
+    finalize          = actions.finalize   -- called in convert so timed there
+ -- initialize        = drivers.initialize
+ -- finalize          = drivers.finalize
 
     updatefontstate   = flushers.updatefontstate
 
@@ -1787,9 +1809,6 @@ function drivers.converters.lmtx(driver,box,smode,objnum,specification)
 
     end
 
-    shipbox_ref_h = pos_h
-    shipbox_ref_v = pos_v
-
     details = {
         shippingmode  = smode, -- target
         boundingbox   = { 0, 0, page_size_h, page_size_v },
@@ -1833,7 +1852,7 @@ do
     local f_detail_2 = formatters["%i:%i: %s %s = %s"]
 
     local function showdetails(n,l,tlp,l1,l2)
-        local p = properties[tonut(n)]
+        local p = properties[n]
         if p then
             for k, v in sortedhash(p) do
                 local t = type(v)
@@ -1867,8 +1886,8 @@ do
         literal = showdetails,
     }
 
-    callbacks.register("show_whatsit",function(n,what,l,tlp,l1,l2)
-        local s = nodes.whatsitcodes[n.subtype]
+    local function show_whatsits_callback(n,what,l,tlp,l1,l2)
+        local s = nodes.whatsitcodes[getsubtype(n)]
         if what == 1 then
             return s or "unknown"
      -- elseif what == 2 then
@@ -1878,7 +1897,14 @@ do
                 w(n,l,tlp,l1,l2)
             end
         end
-    end,"provide whatsit details")
+    end
+
+    callbacks.register {
+        name    = "show_whatsit",
+        action  = show_whatsits_callback,
+        comment = "provide whatsit details",
+        frozen  = true,
+    }
 
     local names    = attributes.names  -- we show the name and number
     local taglist  = structures.tags.taglist
@@ -1888,7 +1914,7 @@ do
 
     trackers.register("attributes.tags",function(v) details = v end)
 
-    callbacks.register("get_attribute",function(k,v)
+    local function get_attribute_callback(k,v)
         local detail = nil
         if details and k == a_tagged then
             detail = taglist[v]
@@ -1900,6 +1926,13 @@ do
             end
         end
         return names[k], detail
-    end,"provide verbose attribute name")
+    end
+
+    callbacks.register {
+        name    = "get_attribute",
+        action  = get_attribute_callback,
+        comment = "provide verbose attribute name",
+        frozen  = true,
+    }
 
 end

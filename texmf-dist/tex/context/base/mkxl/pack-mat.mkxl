@@ -72,7 +72,7 @@
      #3%
      \mathboundary\plusone   % prevents binary becoming ord
      \stopimath
-     \normalexpanded{\aftergrouped{%
+     \expanded{\aftergrouped{%
        \integerdef\c_framed_math_last_left \the\lastleftclass \relax
        \integerdef\c_framed_math_last_right\the\lastrightclass\relax
      }}%
@@ -262,7 +262,7 @@
 \newdimension\d_pack_framed_mathframed
 
 \appendtoks
-    \frozen\protected\instance\edefcsname\currentmathframed\endcsname{\pack_framed_mathframed[\currentmathframed]}%
+    \protected\frozen\instance\edefcsname\currentmathframed\endcsname{\pack_framed_mathframed[\currentmathframed]}%
 \to \everydefinemathframed
 
 \tolerant\protected\def\pack_framed_mathframed[#1]#*[#S#2]#:#3% needs testing !
@@ -272,15 +272,14 @@
    \scratchdistance\ifchkdimension\mathframedparameter\c!backgroundoffset\or\lastchkdimension\else\zeropoint\fi
    \ifmmode
      \ifempty{\mathframedparameter\c!mathstyle}%
-       \normalexpanded{\setmathframedparameter{\c!mathstyle}{\m_math_styles_current}}%
+       \expanded{\setmathframedparameter{\c!mathstyle}{\currentverbosemathstyle}}%
      \fi
      \math_atom_by_parameter\mathframedparameter
      \bgroup
      \ifzeropt\scratchdistance\else\kern\scratchdistance\fi
    \fi
-   \edef\m_framed_location{\mathframedparameter\c!location}%
-   \dostarttaggednodetail\t!mrow
-   \ifx\m_framed_location\v!mathematics
+   \dostarttaggednodetail\t!mrow\relax
+   \ifcstok{\mathframedparameter\c!location}\v!mathematics
      \inheritedmathframedframed\bgroup
        \setbox\scratchbox\hbox\bgroup
          \Ustartmath

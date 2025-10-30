@@ -141,9 +141,9 @@
   [\c!numberconversionset=\v!formula] % why forgotten
 
 \appendtoks
-    \normalexpanded{\definelist[\currentformula]}% is expansion needed?
-    \frozen\instance\protected\edefcsname\e!start\currentformula\v!formula\endcsname{\strc_formulas_start_formula{\currentformula}}%
-    \frozen\instance\protected\edefcsname\e!stop \currentformula\v!formula\endcsname{\strc_formulas_stop_formula}%
+    \expanded{\definelist[\currentformula]}% is expansion needed?
+    \protected\frozen\instance\edefcsname\e!start\currentformula\v!formula\endcsname{\strc_formulas_start_formula{\currentformula}}%
+    \protected\frozen\instance\edefcsname\e!stop \currentformula\v!formula\endcsname{\strc_formulas_stop_formula}%
 \to \everydefineformula
 
 \definelist[\v!formula]
@@ -161,8 +161,8 @@
 \let\strc_formulas_stop_formula \relax % defined later
 
 \permanent\tolerant\protected\def\defineformulaalternative[#1]#*[#2]#*[#3]%
-  {\frozen\instance\protected\defcsname\e!start#1\v!formula\endcsname{#2}%
-   \frozen\instance\protected\defcsname\e!stop #1\v!formula\endcsname{#3}}
+  {\protected\frozen\instance\defcsname\e!start#1\v!formula\endcsname{#2}%
+   \protected\frozen\instance\defcsname\e!stop #1\v!formula\endcsname{#3}}
 
 % sp = single line paragraph sd = single line display
 % mp = multi  line paragraph md = multi  line display
@@ -615,27 +615,27 @@
 
 \newif\ifinformula
 
-%D We need a hook into the plain math alignment macros
-%D
-%D \starttyping
-%D \displaylines
-%D \stoptyping
-%D
-%D Otherwise we get a missing \type {$$} error reported.
-
-\pushoverloadmode
-
-    \permanent\protected\def\normaleqno#1{\writestatus\m!system{no native (l/r)eqno equation number support}}
-
-    \aliased\let\normalleqno\normaleqno
-    \aliased\let\normalreqno\normaleqno
-    \aliased\let\normaleqno \normaleqno
-
-    \aliased\let\leqno      \normaleqno
-    \aliased\let\reqno      \normaleqno
-    \aliased\let\eqno       \normaleqno
-
-\popoverloadmode
+% %D We need a hook into the plain math alignment macros
+% %D
+% %D \starttyping
+% %D \displaylines
+% %D \stoptyping
+% %D
+% %D Otherwise we get a missing \type {$$} error reported.
+%
+% \pushoverloadmode
+%
+%     \permanent\protected\def\normaleqno#1{\writestatus\m!system{no native (l/r)eqno equation number support}}
+%
+%     \aliased\let\normalleqno\normaleqno
+%     \aliased\let\normalreqno\normaleqno
+%     \aliased\let\normaleqno \normaleqno
+%
+%     \aliased\let\leqno      \normaleqno
+%     \aliased\let\reqno      \normaleqno
+%     \aliased\let\eqno       \normaleqno
+%
+% \popoverloadmode
 
 %D Tricky stuff:
 
@@ -682,6 +682,7 @@
 %D So, yes has become text
 
 \newconditional\c_strc_math_split_mode
+\newconditional\c_strc_math_pack_mode
 
 \newconditional\c_strc_formulas_tight
 \newconditional\c_strc_formulas_packed
@@ -767,7 +768,7 @@
      \forcestrutdepth
      \strc_formulas_display_space_after_common
    \else
-     \strc_formulas_display_space_after_depth_normal
+     \strc_formulas_display_space_after_normal % was an undefined
    \fi}
 
 \def\strc_formulas_display_space_before
@@ -829,7 +830,7 @@
      \global\csname\??constructionclosesymbol\currentconstruction\endcsname\conditionalfalse
      \edef\p_strc_constructions_closesymbol{\constructionparameter\c!closesymbol}%
      \ifempty\p_strc_constructions_closesymbol \else
-       \normalexpanded
+       \expanded
          {\texthere[\ifparameter#1\or#1\else\v!right\fi]}%
          {\p_strc_constructions_closesymbol}%
      \fi
@@ -970,9 +971,17 @@
 
 \def\strc_math_set_split
   {\ifcstok{\formulaparameter\c!split}\v!line
+     % we produce a hbox
      \global\c_strc_math_split_mode\conditionalfalse
-   \else
+     \global\c_strc_math_pack_mode \conditionalfalse
+   \orelse\iflastnamedcs\v!no
+     % we produce a vbox
      \global\c_strc_math_split_mode\conditionaltrue
+     \global\c_strc_math_pack_mode \conditionaltrue
+   \else
+     % we produce a list (unvboxed)
+     \global\c_strc_math_split_mode\conditionaltrue
+     \global\c_strc_math_pack_mode \conditionalfalse
    \fi
    \mathpenaltiesmode\plusone
    \global\d_strc_math_indent\zeropoint}
@@ -1575,6 +1584,9 @@
    \iftrialtypesetting\else
      \global\advanceby\c_strc_formulas_n\plusone
    \fi
+   %
+   \global\d_strc_formulas_number\zeropoint % maybe we need more resets (order issue ?)
+   %
    \cdef\currentformula{#1}%
    \usesetupsparameter\formulaparameter % new
    \dostarttaggedchained\t!formula\currentformula\currentformula\??formula
@@ -1591,6 +1603,11 @@
    \else
      \let\strc_formulas_begstrut\relax
      \let\strc_formulas_endstrut\relax
+   \fi
+   \ifgridsnapping
+     \ifempty{\formulaparameter\c!gridcorrection}\else
+       \expanded{\setgridcorrection[\lastnamedcs]}%
+     \fi
    \fi
    \noindentation
    \csname\e!start\formulaparameter\c!alternative\v!formula\endcsname}
@@ -1674,6 +1691,7 @@
    \informulatrue
    \beforedisplayspace
    \startinnermath
+   \math_display_mode_signal % has to be in front
    \ifrelax\strc_formulas_begstrut\else
      \strc_formulas_begstrut
      \boundary\c_math_begin_boundary
@@ -1773,7 +1791,7 @@
 \tolerant\protected\def\strc_formulas_nested_formula_start[#S#1]%
   {\begingroup
    \ifparameter#1\or
-      \setupformula[\c!width=\d_strc_formulas_ _width,#1]%
+      \setupformula[\c!width=\d_strc_formulas_display_width,#1]%
       \d_strc_formulas_display_width{\formulaparameter\c!width}%
    \fi
    \vcenter\bgroup
@@ -1789,7 +1807,7 @@
    \hss
    \endgroup}
 
-\normalexpanded{\tolerant\def\noexpand\strc_formulas_start_formulas[#1]#:#2\csname\e!stop\v!formulas\endcsname}%
+\expanded{\tolerant\def\noexpand\strc_formulas_start_formulas[#1]#:#2\csname\e!stop\v!formulas\endcsname}%
   {\startformula
    \dostarttaggednodetail\t!formulaset
    \global\c_strc_formulas_inside_formulas\conditionaltrue
@@ -1924,7 +1942,7 @@
    \edef\currentplaceformulalist     {\dummyparameter\c!list}%
    \edef\currentplaceformulasuffix   {\dummyparameter\c!suffix}%
    \ifempty\currentplaceformulatitle\else
-     \normalexpanded{\setformulalistentry{\currentplaceformulatitle}}%
+     \expanded{\setformulalistentry{\currentplaceformulatitle}}%
    \fi}
 
 \permanent\protected\def\stopplaceformula

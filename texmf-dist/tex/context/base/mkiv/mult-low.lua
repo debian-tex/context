@@ -14,13 +14,14 @@ return {
         "zerocount", "minusone", "minustwo",
         "plusone", "plustwo", "plusthree", "plusfour", "plusfive", "plussix", "plusseven", "pluseight",
         "plusnine", "plusten", "pluseleven", "plustwelve", "plusthirteen", "plusfourteen", "plusfifteen", "plussixteen",
-        "plusfifty", "plushundred", "plusonehundred", "plustwohundred", "plusfivehundred",
+        "plusfifty", "plussixty", "plushundred", "plusonehundred", "plustwohundred", "plusfivehundred",
         "plusonehundredtwentyfive", "plustwohundredfifty",
         "plusthousand", "plustenthousand", "plustwentythousand", "medcard", "maxcard", "maxcardminusone", "maxiterator",
         "plusonethousand", "plustwothousand", "plusthreethousand", "plusfourthousand", "plusfivethousand",
         "plussixthousand", "plusseventhousand", "pluseightthousand", "plusninethousand",
         "plusfifteenhundred", "plustwentyfivehundred", "plusfortyfivehundred", "plusseventyfivehundred",
-        "plusninetynine", "plusfourtytwo", "plustwentyfive",
+        "plusninetynine", "plusthirtytwo",  "plusfourtytwo", "plustwentyfour", "plustwentyfive",
+        "plusthousandfifty", "plustwelvehundredfifty",
         "zeropoint", "onepoint", "halfapoint", "onebasepoint", "maxcount", "maxdimen", "scaledpoint", "thousandpoint",
         "points", "halfpoint", "twopoints", "threepoints",
         "zeroskip", "centeringskip", "stretchingskip", "shrinkingskip",
@@ -67,7 +68,7 @@ return {
         "inicatcodes",
         "ctxcatcodes", "texcatcodes", "notcatcodes", "txtcatcodes", "vrbcatcodes",
         "prtcatcodes", "nilcatcodes", "luacatcodes", "tpacatcodes", "tpbcatcodes",
-        "xmlcatcodes", "ctdcatcodes", "rlncatcodes",
+        "xmlcatcodes", "ctdcatcodes", "rlncatcodes", "hshcatcodes",
         --
         "escapecatcode", "begingroupcatcode", "endgroupcatcode", "mathshiftcatcode", "alignmentcatcode",
         "endoflinecatcode", "parametercatcode", "superscriptcatcode", "subscriptcatcode", "ignorecatcode",
@@ -177,8 +178,12 @@ return {
         "startmodule", "stopmodule", "usemodule", "usetexmodule", "useluamodule","setupmodule","currentmoduleparameter","moduleparameter",
         "everystarttext", "everystoptext", "everyforgetall", "luaenvironment",
         --
+        -- -- maybe do all the important every's
+        --
+     -- "everymathematics", "everyinsidemathematics",
+        --
         "startTEXpage", "stopTEXpage",
-    --  "startMPpage", "stopMPpage", -- already catched by nested lexer
+     -- "startMPpage", "stopMPpage", -- already catched by nested lexer
         --
         "enablemode", "disablemode", "preventmode", "definemode",
         "globalenablemode", "globaldisablemode", "globalpreventmode",
@@ -268,9 +273,12 @@ return {
         "presetsspecificationoptioncode", "integerspecificationoptioncode", "finalspecificationoptioncode",
         "defaultspecificationoptioncode", "ignorespecificationoptioncode", "rotatespecificationoptioncode",
         --
-     -- "noitaliccorrectionmathoptioncode", "noleftpairkernmathoptioncode", "norightpairkernmathoptioncode",
-     -- "autodiscretionarymathoptioncode", "fulldiscretionarymathoptioncode",
-     -- "ignoredcharactermathoptioncode", "islargeoperatormathoptioncode", "hasitalicshapemathoptioncode",
+        "shortmathoptioncode", "orphanedmathoptioncode", "displaymathoptioncode", "crampedmathoptioncode",
+        "nosnappingmathoptioncode",
+        --
+     -- "noitaliccorrectionkerneloptioncode", "noleftpairkernkerneloptioncode", "norightpairkernkerneloptioncode",
+     -- "autodiscretionarykerneloptioncode", "fulldiscretionarykerneloptioncode",
+     -- "ignoredcharacterkerneloptioncode", "islargeoperatorkerneloptioncode", "hasitalicshapekerneloptioncode",
         --
         "nokerningcode", "noligaturingcode", "noitalicscode",
         --
@@ -300,6 +308,8 @@ return {
         "defaultgriddisplaywidowpenalty", "defaultgridwidowpenalty", "defaultgridclubpenalty", "defaultgridbrokenpenalty",
         --
         "luametatexverboseversion", "luametatexfunctionality",
+        --
+        "currentverbosemathstyle",
     },
     ["helpers"] = {
         --
@@ -400,6 +410,8 @@ return {
         "scratchtoks", "globalscratchtoks", "privatescratchtoks",
         "scratchbox", "globalscratchbox", "privatescratchbox",
         "scratchmacro", "scratchmacroone", "scratchmacrotwo",
+        --
+        "ignoredtoks",
         --
         "scratchconditiontrue", "scratchconditionfalse", "ifscratchcondition",
         "scratchconditiononetrue", "scratchconditiononefalse", "ifscratchconditionone",
@@ -521,12 +533,14 @@ return {
         --
         "getdummyparameters", "dummyparameter", "directdummyparameter", "setdummyparameter", "letdummyparameter",
         "setexpandeddummyparameter", "resetdummyparameter",
-        "usedummystyleandcolor", "usedummystyleparameter", "usedummycolorparameter",
+        "usedummystyleandcolor", "usedummystyleparameter", "usedummycolorparameter", "usedummylanguageparameter",
         --
         "processcommalist", "processcommacommand", "quitcommalist", "quitprevcommalist",
         "processaction", "processallactions", "processfirstactioninset", "processallactionsinset",
         --
-        "unexpanded", "expanded", "startexpanded", "stopexpanded", "protect", "unprotect",
+        "unexpanded",
+     -- "expanded",
+        "startexpanded", "stopexpanded", "protect", "unprotect",
         --
         "firstofoneargument",
         "firstoftwoarguments", "secondoftwoarguments",
@@ -574,7 +588,7 @@ return {
         "offinterlineskip", "oninterlineskip", "nointerlineskip",
         --
         "strut", "halfstrut", "quarterstrut", "depthstrut", "halflinestrut", "noheightstrut", "setstrut", "strutbox", "strutht", "strutdp", "strutwd", "struthtdp", "strutgap", "begstrut", "endstrut", "lineheight",
-        "leftboundary", "rightboundary", "signalcharacter",
+        "leftboundary", "rightboundary", "signalcharacter", "signalglyph",
         "ascender", "descender", "capheight",
         --
         "aligncontentleft", "aligncontentmiddle", "aligncontentright",
@@ -675,8 +689,6 @@ return {
         "updateparagraphproperties", "updateparagraphpenalties", "updateparagraphdemerits", "updateparagraphshapes", "updateparagraphlines",
         "updateparagraphpasses",
         --
-        "lastlinewidth",
-        --
         "assumelongusagecs",
         --
         "righttolefthbox", "lefttorighthbox", "righttoleftvbox", "lefttorightvbox", "righttoleftvtop", "lefttorightvtop",
@@ -746,7 +758,7 @@ return {
         "parcontextcodestring",
         --
         "newlocalcount", "newlocaldimen", "newlocalskip", "newlocalmuskip", "newlocaltoks", "newlocalbox",
-        "newlocalwrite", "newlocalread",
+        "newlocalwrite", "newlocalread", "newlocalfloat",
         "setnewlocalcount", "setnewlocaldimen", "setnewlocalskip", "setnewlocalmuskip", "setnewlocaltoks", "setnewlocalbox",
         --
         "ifexpression",
@@ -792,5 +804,9 @@ return {
         "nohpenalties", "novpenalties",
         --
         "toddlerpenalty", "orphanpenalty",
+        --
+        "digitspace",
+        --
+        "inhibitprimitive"
     }
 }

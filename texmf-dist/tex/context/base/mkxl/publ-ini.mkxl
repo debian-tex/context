@@ -822,6 +822,8 @@
 \aliased\let\btxdoifcombiinlistelse          \btxdoifelsecombiinlist
 \aliased\let\btxdoifcitedoneelse             \btxdoifelsecitedone
 
+\lettonothing\p_specification
+
 \tolerant\def\publ_place_list_indeed#1#2#*[#3]#*[#4]%
   {\begingroup
    \ifparameters\or\or
@@ -857,9 +859,9 @@
    \ifconditional#1\relax
      \edef\currentbtxrenderingtitle{\btxrenderingparameter\c!title}%
      \ifempty\currentbtxrenderingtitle
-       \normalexpanded{\startnamedsection[\v!chapter][\c!reference=\currentbtxrendering,\c!title={\headtext{\currentbtxrendering}}]}%
+       \expanded{\startnamedsection[\v!chapter][\c!reference=\currentbtxrendering,\c!title={\headtext{\currentbtxrendering}}]}%
      \else
-       \normalexpanded{\startnamedsection[\v!chapter][\c!reference=\currentbtxrendering,\c!title={\currentbtxrenderingtitle}]}%
+       \expanded{\startnamedsection[\v!chapter][\c!reference=\currentbtxrendering,\c!title={\currentbtxrenderingtitle}]}%
      \fi
    \fi
    \ifempty\currentbtxrendering
@@ -1878,7 +1880,7 @@
 \to \everysetupbtxregister
 
 \appendtoks
-    \normalexpanded{%
+    \expanded{%
       \defineprocessor
         [\s!btx:r:\currentbtxregister]%
         [\c!style=\noexpand\namedbtxregisterparameter{\currentbtxregister}\noexpand\c!style,
@@ -1934,7 +1936,7 @@
 %     \btxusecommand[btx:apa:list:article:title]{foo}
 % \btxstopstyle
 
-\mutable\lettonothing\m_btx_saved_current
+\lettonothing\m_btx_saved_current
 
 \permanent\protected\def\btxstartstyle[#1]%
   {\begingroup
