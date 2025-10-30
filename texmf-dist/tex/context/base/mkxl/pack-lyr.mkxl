@@ -101,6 +101,7 @@
 \lettonothing\m_pack_layers_page
 \lettonothing\m_pack_layers_region
 \lettonothing\m_pack_layers_target
+
 \lettonothing\p_pack_layers_column
 \lettonothing\p_pack_layers_corner
 \lettonothing\p_pack_layers_dx
@@ -155,7 +156,7 @@
         \pack_layers_preset_box{\v!right\currentlayer}%
     \fi
     \pack_layers_preset_box\currentlayer
-    \normalexpanded{\defineoverlay[\currentlayer][\composedlayer{\currentlayer}]}%
+    \expanded{\defineoverlay[\currentlayer][\composedlayer{\currentlayer}]}%
 \to \everydefinelayer
 
 \def\pack_layers_preset_box#1%

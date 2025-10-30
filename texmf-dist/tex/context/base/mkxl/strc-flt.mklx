@@ -271,19 +271,19 @@
    \strc_floats_define_commands{#1}{#2}}
 
 \def\strc_floats_define_commands#1#2%
-  {\frozen\protected\instance\edefcsname\e!place      \e!listof#2\endcsname{\strc_lists_place[#1]}% call will change
-   \frozen\protected\instance\edefcsname\e!complete   \e!listof#2\endcsname{\strc_lists_complete[#1][#2]}% call will change
-   \frozen\protected\instance\edefcsname\e!place               #1\endcsname{\placefloat[#1]}%
-   \frozen\protected\instance\edefcsname\e!start       \e!place#1\endcsname{\startplacefloat[#1]}%
-   \frozen\protected\instance\edefcsname\e!stop        \e!place#1\endcsname{\stopplacefloat}%
-   \frozen\protected\instance\edefcsname\e!start        #1\e!text\endcsname{\startfloattext[#1]}%
-   \frozen\protected\instance\edefcsname\e!stop         #1\e!text\endcsname{\stopfloattext}%
-   \frozen\protected\instance\edefcsname\e!start\e!place#1\e!text\endcsname{\startplacefloattext[#1]}%
-   \frozen\protected\instance\edefcsname\e!stop \e!place#1\e!text\endcsname{\stopplacefloattext}%
+  {\protected\frozen\instance\edefcsname\e!place      \e!listof#2\endcsname{\strc_lists_place[#1]}% call will change
+   \protected\frozen\instance\edefcsname\e!complete   \e!listof#2\endcsname{\strc_lists_complete[#1][#2]}% call will change
+   \protected\frozen\instance\edefcsname\e!place               #1\endcsname{\placefloat[#1]}%
+   \protected\frozen\instance\edefcsname\e!start       \e!place#1\endcsname{\startplacefloat[#1]}%
+   \protected\frozen\instance\edefcsname\e!stop        \e!place#1\endcsname{\stopplacefloat}%
+   \protected\frozen\instance\edefcsname\e!start        #1\e!text\endcsname{\startfloattext[#1]}%
+   \protected\frozen\instance\edefcsname\e!stop         #1\e!text\endcsname{\stopfloattext}%
+   \protected\frozen\instance\edefcsname\e!start\e!place#1\e!text\endcsname{\startplacefloattext[#1]}%
+   \protected\frozen\instance\edefcsname\e!stop \e!place#1\e!text\endcsname{\stopplacefloattext}%
    % these will become obsolete:
-   \frozen\instance\protected\edefcsname\e!reserve               #1\endcsname{\strc_floats_reserve[#1]}%
-   \frozen\instance\protected\edefcsname\e!start\e!reserve#1\e!text\endcsname{\strc_floats_start_reserve_text[#1]}%
-   \frozen\instance\protected\edefcsname\e!stop \e!reserve#1\e!text\endcsname{\strc_floats_stop_reserve_text}}
+   \protected\frozen\instance\edefcsname\e!reserve               #1\endcsname{\strc_floats_reserve[#1]}%
+   \protected\frozen\instance\edefcsname\e!start\e!reserve#1\e!text\endcsname{\strc_floats_start_reserve_text[#1]}%
+   \protected\frozen\instance\edefcsname\e!stop \e!reserve#1\e!text\endcsname{\strc_floats_stop_reserve_text}}
 
 %D Fallback float body:
 
@@ -537,15 +537,18 @@
 \def\strc_floats_make_complete_caption_before
   {\doifelseframed\floatcaptionparameter\strc_floats_make_complete_caption_before_indeed\relax}
 
+\lettonothing\m_strc_floats_align
+\lettonothing\m_strc_floats_strut
+
 \def\strc_floats_make_complete_caption_before_indeed
-  {\edef\m_strc_align{\floatcaptionparameter\c!align}%
-   \edef\m_strc_strut{\floatcaptionparameter\c!strut}%
+  {\edef\m_strc_floats_align{\floatcaptionparameter\c!align}%
+   \edef\m_strc_floats_strut{\floatcaptionparameter\c!strut}%
    \letfloatcaptionparameter\c!align\v!normal
    \letfloatcaptionparameter\c!strut\v!no
    \inheritedfloatcaptionframed
    \bgroup
-   \letfloatcaptionparameter\c!align\m_strc_align
-   \letfloatcaptionparameter\c!strut\m_strc_strut
+   \letfloatcaptionparameter\c!align\m_strc_floats_align
+   \letfloatcaptionparameter\c!strut\m_strc_floats_strut
    \let\strc_floats_make_complete_caption_after\egroup}
 
 % \definefloat  [figure-1] [figure]
@@ -884,6 +887,8 @@
    \bgroup
    \ignorespaces}
 
+\lettonothing\strc_floats_stop_place
+
 \def\strc_floats_stop_place_yes
   {\removeunwantedspaces
    \egroup}
@@ -1016,7 +1021,7 @@
 \ifdefined\page_margin_strc_floats_before    \else \let\page_margin_strc_floats_before   \relax \fi
 \ifdefined\page_margin_strc_floats_set_hsize \else \let\page_margin_strc_floats_set_hsize\relax \fi
 
-\immutable\def\flushfloatslist
+\permanent\def\flushfloatslist
   {\v!left,\v!right,\v!inner,\v!outer,%
    \v!backspace,\v!cutspace,%
    \v!inleft,\v!inright,\v!inmargin,%
@@ -1039,6 +1044,8 @@
    \fi
    \splitfloat{\strc_floats_place_next_box_normal}}
 
+\newinteger\c_strc_float_nesting
+
 \protected\def\strc_floats_place_next_box_normal
   {\ifconditional\c_page_floats_some_waiting
      % this was \checkwaitingfloats spread all over
@@ -1050,8 +1057,20 @@
      % but which should be done before using box \floatbox
    \fi
    \page_margin_strc_floats_before % todo: each float handler gets a before
-   \global\insidefloattrue
-   \dostarttaggedchained\t!float\currentfloat\currentfloat\??float
+   \ifinsidefloat
+     \dostarttaggedchained\t!subfloat\currentfloat\currentfloat\??float
+   \else
+     \dostarttaggedchained\t!float\currentfloat\currentfloat\??float
+   \fi
+   \global\advanceby\c_strc_float_nesting\plusone
+   \ifcase\c_strc_float_nesting
+     % of course not
+   \or
+     % we start nestign (likely a float combination)
+     \global\insidefloattrue
+   \else
+     % well ... we'll see
+   \fi
    \page_margin_strc_floats_set_hsize % todo: each float handler gets a set_hsize
    \expand\everyinsidefloat
    \strc_floats_analyze_variables_one
@@ -1486,7 +1505,16 @@
    % place the float
    \strc_floats_set_box
    \strc_floats_get_box
-   \global\insidefloatfalse}
+   \ifcase\c_strc_float_nesting
+     % error
+   \or
+     % back at the outer level
+     \global\c_strc_float_nesting\zerocount
+     \global\insidefloatfalse
+   \else
+     % nested float (probably combination)
+     \global\advanceby\c_strc_float_nesting\minusone
+   \fi}
 
 \newdimension\availablefloatwidth
 \newdimension\availablefloatheight
@@ -1594,7 +1622,7 @@
      \begingroup
      \scratchconditiononefalse
      \scratchconditiontwofalse
-     \normalexpanded{\dorepeatwithcommand[#settings]}\strc_floats_move_down
+     \expanded{\dorepeatwithcommand[#settings]}\strc_floats_move_down
      \endgroup
    \fi}
 
@@ -2019,6 +2047,10 @@
         \let\strc_floats_align_content\relax
       \fi\fi
       \strc_floats_align_content{\copy\b_strc_floats_content}}}
+
+\lettonothing\p_strc_floats_caption_width
+\lettonothing\p_strc_floats_caption_minwidth
+\lettonothing\p_strc_floats_caption_align
 
 \def\strc_floats_prepare_page_caption
   {\edef\p_strc_floats_caption_width   {\floatcaptionparameter\c!width}%
@@ -2536,10 +2568,10 @@
    \global\setbox\floatbox\vbox % pack ? probably not
      {\strc_floats_set_local_hsize
       \forgetall
-      \ifconditional\c_strc_floats_ornament_caption
-        \strc_floats_build_box_default
-      \orelse\ifconditional\c_floats_store_minimal_package
+      \ifconditional\c_floats_store_minimal_package
         \strc_floats_build_box_separate_make
+      \orelse\ifconditional\c_strc_floats_ornament_caption
+        \strc_floats_build_box_default
       \else
       % \let\floatcaptionarrangement\s!default
         \let\floatcaptionarrangement\v!bottom % for Alan
@@ -3071,7 +3103,7 @@
    \resetlocalfloats}
 
 % \protected\def\getlocalfloat#1%
-%   {\normalexpanded{\foundbox{\??localfloatstack}{\number#1}}}% \vbox{\restorebox...}
+%   {\expanded{\foundbox{\??localfloatstack}{\number#1}}}% \vbox{\restorebox...}
 
 \permanent\protected\def\getlocalfloat#1%
   {\foundbox\??localfloatstack{\number#1}} % \vbox{\restorebox...}

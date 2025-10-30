@@ -93,9 +93,9 @@
 
 \newconditional\c_font_complete_bold_mathstrategy  \c_font_complete_bold_mathstrategy\conditionaltrue
 
-\immutable\def\mathtextsuffix        {-text}
-\immutable\def\mathscriptsuffix      {-script}
-\immutable\def\mathscriptscriptsuffix{-scriptscript}
+\permanent\cdef\mathtextsuffix        {-text}
+\permanent\cdef\mathscriptsuffix      {-script}
+\permanent\cdef\mathscriptscriptsuffix{-scriptscript}
 
 %D Beware: truefontname also does a fallback on defaultfontclass so there can be
 %D some interference here, which is why we use a different method for bold.
@@ -129,6 +129,8 @@
 \mutable\let\fontfamily\relax % for now public but it is a helper
 
 \newinteger\c_math_last_family_used
+
+\lettonothing\font_math_last_font
 
 \def\font_helpers_set_math_family_indeed_normal#mrtag#family% \fontface etc are also used later on
   {\let\savedfontbody\fontbody

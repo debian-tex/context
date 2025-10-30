@@ -31,7 +31,11 @@
 % \overloaded\let\strutdp  \undefined \newdimen\strutdp
 % \overloaded\let\struthtdp\undefined \newdimen\struthtdp
 
-\registerctxluafile{spac-ver}{autosuffix}
+% \doifelsefileexists{spac-ver-new.lmt} {
+%     \registerctxluafile{spac-ver-new}{autosuffix}
+% } {
+    \registerctxluafile{spac-ver}{autosuffix}
+% }
 
 % todo: use usernodes ?
 
@@ -91,6 +95,8 @@
 \ifdefined\bodyfontinterlinespace \else
   \lettonothing\bodyfontinterlinespace
 \fi
+
+\lettonothing\m_spac_normallineheight
 
 \permanent\protected\def\presetnormallineheight % each bodyfont
   {\edef\normallineheight{\interlinespaceparameter\c!line}%
@@ -161,6 +167,8 @@
      \spacing\currentrelativeinterlinespace
    \fi}
 
+\lettonothing\m_spac_interlinespace
+
 \protected\def\spac_linespacing_setup_use
   {\ifcsname\namedinterlinespacehash\m_spac_interlinespace\s!parent\endcsname
      \let\currentinterlinespace\m_spac_interlinespace
@@ -212,6 +220,8 @@
    \expandtoks\everysetuplocalinterlinespace
    \localinterlinespacefalse}
 
+\lettonothing\p_spac_checked_interlinespace
+
 \permanent\protected\def\dosetupcheckedinterlinespace#1% often a chain
   {\edef\p_spac_checked_interlinespace{#1}%
    \ifempty\p_spac_checked_interlinespace
@@ -229,7 +239,7 @@
      \fi
      \pop_macro_currentinterlinespace
    \else
-     \normalexpanded{\noexpand\doifelseassignment{\p_spac_checked_interlinespace}%
+     \expanded{\noexpand\doifelseassignment{\p_spac_checked_interlinespace}%
        \setupspecifiedinterlinespace\setuprelativeinterlinespace[\p_spac_checked_interlinespace]}%
      \iflocalinterlinespace
        \expandtoks\everysetuplocalinterlinespace
@@ -1157,9 +1167,18 @@
 %D When enabled, sigstruts will remove themselves if nothing goes inbetween. For
 %D practical reasons we define some boundary characters here.
 
-\permanent\protected\def\leftboundary   {\protrusionboundary\plusone}
-\permanent\protected\def\rightboundary  {\protrusionboundary\plustwo}
-\permanent\protected\def\signalcharacter{\boundary\plusone\char\zerocount\boundary\plustwo} % not the same as strut signals
+\permanent\protected\def\leftboundary {\protrusionboundary\plusone}
+\permanent\protected\def\rightboundary{\protrusionboundary\plustwo}
+
+\permanent\protected\def\signalcharacter % not the same as strut signals
+  {\boundary\plusone
+   \char\zerocount
+   \boundary\plustwo}
+
+\permanent\protected\def\signalglyph
+  {\boundary \plusone
+   \glyph \s!keepspacing \zerocount
+   \boundary \plustwo}
 
 %D \starttyping
 %D $ \ifhmode H1\fi x \ifhmode H2\fi $\par
@@ -1279,7 +1298,7 @@
    \let\minimumlinedistance\zeropoint}
 
 \overloaded\permanent\protected\def\nointerlineskip
-  {\prevdepth\ignoredepthcriterion}% -\thousandpoint
+  {\ifvmode\prevdepth\ignoredepthcriterion\fi}% -\thousandpoint
 
 \aliased\let\normaloffinterlineskip\offinterlineskip % knuth's original
 
@@ -1394,15 +1413,15 @@
 %D Here now only deal with penalties that relate to vertical breaking; the
 %D horizontal ones have been moved to spac-pas.
 
-\immutable\integerdef\defaultdisplaywidowpenalty       50
-\immutable\integerdef\defaultwidowpenalty            2000 % was: 1000
-\immutable\integerdef\defaultclubpenalty             2000 % was:  800
-\immutable\integerdef\defaultbrokenpenalty            100
+\permanent\immutable\integerdef\defaultdisplaywidowpenalty       50
+\permanent\immutable\integerdef\defaultwidowpenalty            2000 % was: 1000
+\permanent\immutable\integerdef\defaultclubpenalty             2000 % was:  800
+\permanent\immutable\integerdef\defaultbrokenpenalty            100
 
-\immutable\integerdef\defaultgriddisplaywidowpenalty \zerocount
-\immutable\integerdef\defaultgridwidowpenalty        \zerocount
-\immutable\integerdef\defaultgridclubpenalty         \zerocount
-\immutable\integerdef\defaultgridbrokenpenalty       \zerocount
+\permanent\immutable\integerdef\defaultgriddisplaywidowpenalty \zerocount
+\permanent\immutable\integerdef\defaultgridwidowpenalty        \zerocount
+\permanent\immutable\integerdef\defaultgridclubpenalty         \zerocount
+\permanent\immutable\integerdef\defaultgridbrokenpenalty       \zerocount
 
 \permanent\protected\def\nopenalties
   {\frozen\widowpenalty \zerocount
@@ -1659,13 +1678,14 @@
 
 %D Good old blank redone:
 
-%definesystemattribute[kernchars]    [public]
-\definesystemattribute[skipcategory] [public]
-\definesystemattribute[skippenalty]  [public]
-\definesystemattribute[skiporder]    [public]
-\definesystemattribute[snapmethod]   [public]
-\definesystemattribute[snapvbox]     [public]
-%definesystemattribute[snapcategory] [public]
+%definesystemattribute[kernchars]   [public]
+\definesystemattribute[skipcategory][public]
+\definesystemattribute[skippenalty] [public]
+\definesystemattribute[skiporder]   [public]
+\definesystemattribute[snapmethod]  [public]
+\definesystemattribute[snapvbox]    [public]
+\definesystemattribute[snaprange]   [public]
+%definesystemattribute[snapcategory][public]
 
 % TODO: NAMED SNAPPERS
 
@@ -1684,6 +1704,8 @@
 \permanent\def\snappedvboxattribute{\ifgridsnapping attr\snapvboxattribute\c_attr_snapmethod\fi}
 \permanent\def\setlocalgridsnapping{\ifgridsnapping \c_attr_snapvbox \c_attr_snapmethod\fi}
 
+\lettonothing\m_spac_snapper
+
 \def\spac_grids_set_local_snapping#1%
   {\ifgridsnapping
      \ifempty{#1}\else
@@ -1696,6 +1718,8 @@
   {\edef\m_spac_snapper
      {\ifempty\m_spac_snapper\else\m_spac_snapper,\fi
       \ifcsname\??gridsnappersets#1\endcsname\lastnamedcs\else#1\fi}}
+
+\lettonothing\p_spac_snapper
 
 \permanent\protected\def\installsnapvalues#1#2%
   {\lettonothing\m_spac_snapper
@@ -1712,6 +1736,8 @@
 
 \permanent\def\theexpandedsnapperset#1{\begincsname\??gridsnappersets#1\endcsname} % only for manuals
 
+\lettonothing\m_spac_grid_asked
+
 \permanent\protected\def\usegridparameter#1% no checking here
   {\edef\m_spac_grid_asked{#1\c!grid}%
    \ifempty\m_spac_grid_asked
@@ -1721,14 +1747,24 @@
      \c_attr_snapvbox\c_attr_snapmethod
    \fi}
 
+% This could become (after being tested):
+%
+% \permanent\protected\def\usegridparameter#1% no checking here
+%   {\ifempty{#1\c!grid}%
+%      \c_attr_snapvbox\attributeunsetvalue
+%    \else
+%      \expanded{\spac_grids_snap_value_set{\lastnamedcs}}%
+%      \c_attr_snapvbox\c_attr_snapmethod
+%    \fi}
+
 \permanent\tolerant\protected\def\definegridsnapping[#1]#*[#2]%
   {\installsnapvalues{#1}{#2}}
 
-\edef\spac_grids_snap_value_reset
+\protected\edef\spac_grids_snap_value_reset
   {%\gridsnappingfalse
    \c_attr_snapmethod\attributeunsetvalue}
 
-\def\spac_grids_snap_value_set#1%
+\protected\def\spac_grids_snap_value_set#1%
   {%\gridsnappingtrue
    \begincsname\??gridsnappers#1\endcsname}
 
@@ -1814,6 +1850,8 @@
 \definegridsnapping[\v!max]              [\v!max]
 
 \definegridsnapping[\v!middle]           [\v!maxheight,\v!maxdepth] % used in placement
+
+% maybe don't document these
 
 \definegridsnapping[\v!math]             [\v!maxdepth:1.05,\v!maxheight:1.05,\v!strut] % experimental, maybe 1.1
 \definegridsnapping[\v!math:\v!line]     [\v!math,\v!line,\v!split]
@@ -2252,11 +2290,20 @@
      \expandafter\gobbleoneargument
    \fi}
 
+\lettonothing\m_spac_blank_asked
+
 \permanent\protected\def\useblankparameter#1% faster local variant
   {\edef\m_spac_blank_asked{#1\c!blank}%
    \ifempty\m_spac_blank_asked\else
      \directvspacing\m_spac_blank_asked
    \fi}
+
+% This could be (needs to be tested):
+%
+% \permanent\protected\def\useblankparameter#1% faster local variant
+%   {\ifempty{#1\c!blank}\else
+%      \expanded{\directvspacing{\lastnamedcs}}%
+%    \fi}
 
 %D Handy (and faster):
 
@@ -2341,7 +2388,7 @@
 \definevspacing[\v!preference][penalty:-500]  % goodbreak
 \definevspacing[\v!samepage]  [penalty:10000] % nobreak
 
-\definevspacing[\v!always]    [category:0] % hm, internally it's discard
+\definevspacing[\v!always]    [category:0] % hm, internally it's discard so is this used / okay
 \definevspacing[\v!max]       [category:1]
 \definevspacing[\v!force]     [category:2]
 \definevspacing[\v!disable]   [category:5]
@@ -2370,7 +2417,7 @@
    \scratchcounterone{\plusthree*#1+#2}%
    \scratchcountertwo{\c_spac_vspacing_special_base+\c_spac_vspacing_special_step*\scratchcounterone}%
   %\writestatus{defined}{\v!samepage-\number#1-\number#2\space=>\space penalty:\the\scratchcountertwo}%
-   \normalexpanded{\definevspacing[\v!samepage-\number#1-\number#2][penalty:\the\scratchcountertwo]}%
+   \expanded{\definevspacing[\v!samepage-\number#1-\number#2][penalty:\the\scratchcountertwo]}%
    \endgroup}
 
 % \protected\def\spac_vspacing_define_same_page#1%
@@ -2862,5 +2909,40 @@
 
 \permanent\protected\def\parbreak
   {\ifhmode\hfill\penalty-9999\relax\fi}
+
+%D New feature (for finetuning formulas in columnsets):
+%D
+%D \starttabulate[|Tr|l|]
+%D \NC [-]  T \NC minus  two     lines \NC \NR
+%D \NC [-]  L \NC minus  one     line  \NC \NR
+%D \NC [-]  H \NC minus  half    line  \NC \NR
+%D \NC [-]  Q \NC minus  quarter line  \NC \NR
+%D \NC +    T \NC plus   two     lines \NC \NR
+%D \NC +    L \NC plus   one     line  \NC \NR
+%D \NC +    H \NC plus   half    line  \NC \NR
+%D \NC +    Q \NC plus   quarter line  \NC \NR
+%D \NC [+-] Z \NC zero   ht/dp         \NC \NR
+%D \NC [+-] I \NC ignore entry         \NC \NR
+%D \stoptabulate
+
+\newinteger\c_spac_snap_range
+
+\permanent\tolerant\protected\def\setgridcorrection[#1]%
+  {\ifempty{#1}%
+     \attribute\snaprangeattribute\attributeunsetvalue
+   \orelse\ifcstok{#1}\v!reset
+     \attribute\snaprangeattribute\attributeunsetvalue
+   \else
+     \global\advanceby\c_spac_snap_range\plusone
+     \clf_registersnaprange\c_spac_snap_range{#1}%
+     \attribute\snaprangeattribute\c_spac_snap_range
+   \fi}
+
+\tolerant\permanent\protected\def\startgridcorrection
+  {\begingroup
+   \setgridcorrection}
+
+\permanent\protected\def\stopgridcorrection
+  {\endgroup}
 
 \protect \endinput

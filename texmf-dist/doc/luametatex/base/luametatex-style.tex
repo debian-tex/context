@@ -1,0 +1,534 @@
+\enableexperiments[fonts.compact]
+\enableexperiments[fonts.accurate]
+
+\startenvironment luametatex-style
+
+\usemodule[system-syntax]
+\usemodule[system-units]
+\usemodule[abbreviations-logos]
+\usemodule[scite]
+
+\definemeasure [document:margin]  [\paperheight/20]
+
+\setuplayout
+  [topspace=\measure{document:margin},
+   bottomspace=\measure{document:margin},
+   backspace=\measure{document:margin},
+   header=\measure{document:margin},
+   footer=0pt,
+   width=middle,
+   height=middle]
+
+\setupbodyfont
+  [dejavu,10pt] % 12pt is just to large and we use this for all kind of demos
+
+\setupwhitespace
+  [big]
+
+\setuplist
+  [interaction=all]
+
+\setupalign
+  [tolerant,stretch]
+
+\setupdocument
+  [title=No Title,
+   subtitle={in luametatex},
+   author=No Author,
+   coauthor=,
+   color=NoColor]
+
+\definecolor[maincolor][darkblue]
+\definecolor[primcolor][darkblue]
+\definecolor[nonecolor][darkgray]
+
+\startMPdefinitions
+    vardef MyText (expr txt) =
+        image (
+            picture p ; p := lmt_outline [
+                text   = txt,
+                kind   = "path",
+                anchor = "lft",
+            ] ;
+            for i within p :
+                draw pathpart i
+                    withpen pencircle scaled 2/5
+                    withcolor "white" ;
+                draw pathpart i
+                    withpen pencircle scaled 1/3
+                    withcolor "darkgray" ;
+                drawcontrollines pathpart i
+                    withpen pencircle scaled 1/3
+                    withcolor "middlegray" ;
+                drawcontrolpoints pathpart i
+                    withpen pencircle scaled 1/3
+                    withcolor "white" ;
+                drawpoints pathpart i
+                    withpen pencircle scaled 1/3
+                    withcolor "darkyellow" ;
+            endfor ;
+        )
+    enddef ;
+\stopMPdefinitions
+
+\startsetups document:contents
+
+    \page
+
+    \determinelistcharacteristics[chapter,section] [criterium=previous]
+
+    \ifcase\listlength\else
+        \startsubjectlevel[title=Contents]
+            \placelist[chapter,section] [criterium=previous]
+        \stopsubjectlevel
+    \fi
+
+\stopsetups
+
+\startrawsetups document:start
+
+    % raw keeps the lines
+
+    \doifelse {\documentvariable{alternative}} {manual} {
+
+
+        \setuppagenumbering
+            [alternative=doublesided]
+
+        \doifelse {\documentvariable{title}} {luametatex} {
+
+            \startMPpage
+                StartPage;
+                    picture p[] ;
+                    p[1] := image (
+                      % draw MyText("LuaMeta\TEX") xsized (0.8PaperWidth) ;
+                        draw MyText("luametatex") xsized (0.8PaperWidth) ;
+                    ) ;
+                    draw p[1] shifted (.1PaperWidth,.8PaperHeight) ;
+                    p[2] := image (
+                        draw MyText("the manual") ysized 15mm ;
+                    ) ;
+                    draw p[2] shifted urcorner Page shifted (-bbwidth p[2] - .1PaperWidth, - bbheight(p[1]) - bbheight(p[2]) - .2PaperHeight);
+                    p[3] := image (
+                        draw MyText("version \luametatexverboseversion") ysized 10mm ;
+                    ) ;
+%                     draw p[3] shifted lrcorner Page shifted (-bbwidth p[3] - .1PaperWidth, 15mm);
+                    draw p[3] shifted lrcorner Page shifted (-bbwidth p[3] - .1PaperWidth, 25mm);
+                    p[4] := image (
+                        draw MyText("dev id \luametatexfunctionality") ysized 5mm ;
+                    ) ;
+%                     draw p[4] shifted lrcorner Page shifted (-bbwidth p[4] - .1PaperWidth, 5mm);
+                    draw p[4] shifted lrcorner Page shifted (-bbwidth p[4] - .1PaperWidth, 15mm);
+                    addbackground withcolor "darkblue" ;
+                StopPage;
+            \stopMPpage
+
+            \page[right]
+
+            \setups[document:contents]
+
+        } {
+
+            \startMPpage
+                StartPage;
+                    picture p[] ;
+                    p[3] := image (
+                        draw MyText("\word{\documentvariable{title}}") scaled 6 ;
+                    ) ;
+                    draw p[3] shifted lrcorner Page shifted (-bbwidth p[3] - .1PaperWidth, 15mm);
+                    addbackground withcolor "darkblue" ;
+                StopPage;
+            \stopMPpage
+
+            \page[right]
+
+            \normalexpanded{\startchapter[title={\documentvariable{title}}]}
+        }
+
+    } {
+
+        \startMPpage
+            fill Page
+                withcolor "darkgray" ;
+%             draw textext("\doifelsedocumentvariable{xtitle}{\sstf \enspace \documentvariable{xtitle}}{\word{\sstf {\white the} \documentvariable{title}}}")
+            draw textext("\sstf\enspace\doifelsedocumentvariable{xtitle}{\documentvariable{xtitle}}{\word{\documentvariable{title}}}")
+                xysized (.9bbwidth(Page),bbheight(Page)-2cm)
+                xsized (.9bbwidth(Page))
+                shifted center Page
+                withcolor "maincolor" ;
+            draw textext.ulft("\word{\sstf  \documentvariable{subtitle}}")
+                xysized (.9bbwidth(Page)/3,(bbheight(Page)-2cm)/6)
+                shifted center lrcorner Page
+                shifted (-.1bbwidth(Page),.05bbwidth(Page))
+                withcolor "white" ;
+            setbounds currentpicture to Page ;
+        \stopMPpage
+
+        \page[right]
+
+        \setups[document:contents]
+
+    }
+
+    \setupdocument
+      [title=No Title,
+       subtitle={in luametatex}]
+
+\stoprawsetups
+
+\startrawsetups document:stop
+
+    \doif {\documentvariable{alternative}} {manual} {
+
+        \doifnot {\documentvariable{title}} {luametatex} {
+
+            \stopchapter
+
+        }
+
+    }
+
+\stoprawsetups
+
+\definehead
+  [newprimitive]
+  [subsubsubsection]
+
+\definehead
+  [oldprimitive]
+  [subsubsubsection]
+
+\setuphead
+  [chapter,title]
+  [style=\bfc,
+   color=maincolor,
+   headerstate=high,
+   interaction=all]
+
+\setuphead
+  [section]
+  [style=\bfb,
+   color=maincolor]
+
+\setuphead
+  [subsection]
+  [style=\bfa,
+   color=maincolor]
+
+\setuphead
+  [subsubsection]
+  [style=\bf,
+   color=maincolor,
+   after=]
+
+\setuphead
+  [Syntax]
+  [numberwidth=fit,
+   style=\tta\bf]
+
+\pushoverloadmode
+
+    \definehead
+      [Syntax]
+      [subsection]
+      [style=\ttbfb,
+       numberwidth=0pt,
+       after=\blank\startpacked,
+       aftersection=\stoppacked]
+
+\popoverloadmode
+
+\setupexternalfigures
+  [location={default,global}]
+
+\setupinteraction
+  [state=start,
+   color=,
+   contrastcolor=,
+   style=,
+   contraststyle=]
+
+% \setuptabulate
+%   [blank={small,samepage},
+%    margin=.25em,
+%    headstyle=bold,
+%    rulecolor=maincolor,
+%    rulethickness=1pt,
+%    foregroundcolor=white,
+%    foregroundstyle=\ss\bfx\WORD,
+%    backgroundcolor=maincolor]
+
+\setuptabulate
+  [%margin=.25em,
+   headstyle=normal,
+   headcolor=maincolor,
+   rulecolor=maincolor,
+   rulethickness=1pt]
+
+%D These are mostly
+
+\setuptyping
+  [option=tex]
+
+\setuptype
+  [option=tex]
+
+\setuphead
+  [newprimitive]
+  [color=maincolor]
+
+\def\legacycolor
+  {\beginlocalcontrol
+   \begingroup
+   \let\prm\firstofoneargument
+   \expanded
+     {\noexpand\endgroup
+      \noexpand\endlocalcontrol
+      \ifempty{\legacystate{\structurevariable{title}}}%
+        nonecolor%
+      \else
+        darkred%
+      \fi}}
+
+\setuphead
+  [oldprimitive]
+  [%color=nonecolor,
+%    color=\ifcstok{\structureuservariable{obsolete}}{yes}darkred\else nonecolor\fi]
+   textcolor=,
+   numbercolor=,
+   color=\legacycolor] % called quite often
+
+\setuplist
+  [newprimitive]
+  [textcolor=maincolor]
+
+\setuplist
+  [oldprimitive]
+  [textcolor=nonecolor]
+
+\setuplist
+  [chapter]
+  [color=maincolor,
+   style=bold,
+   before={\testpage[3]\blank}]
+
+% We use the next one because we want to check what has been done. In a document
+% like this using \type {\foo} makes more sense.
+
+\protected\def\prm#1%
+% {\doifmode{*bodypart}{\index{\tex{#1}}}\tex{#1}}
+% {\ifmode{*bodypart}\index{\tex{#1!\string#1!}}\fi\tex{#1}}
+  {%ctxlua{if string.find("#1","^U") then context.writestatus("!!!!!!","#1") end}%
+   \ifmode{*bodypart}\index{\tex{#1}}\fi\tex{#1}}
+
+\protected\def\stx#1%
+  {\ctxlua{moduledata.engine.specification("#1")}} % only for checking
+
+% This is why we need to tag bodymatter.
+
+% for nodes and tokens and such
+
+\definehead
+  [enginesubject]
+  [subsubsubject]
+  [before=\testpage[4]\blank,
+   after=\blank,
+   style=bold]
+
+\startluacode
+ -- no_usage_target       = 0,
+ -- direct_usage_target   = 1, /* only available for direct nodes */
+ -- userdata_usage_target = 2, /* only available for userdata nodes */
+ -- separate_usage_target = 3, /* dedicated versions for direct and userdata nodes */
+ -- hybrid_usage_target   = 4, /* shared version for direct and userdata nodes */
+ -- general_usage_target  = 5, /* no direct or userdata arguments */
+    local getusage  = node.direct.getusage
+    local hasusage  = node.direct.hasusage
+    local nodecodes = nodes.nodecodes
+    function moduledata.showrepertoire(name, target)
+        local t = getusage(name, target) -- functionname -> id list
+        if t == true then
+            context("all nodes")
+        elseif t and #t > 0 then
+            for i=1,#t do
+                t[i] = nodecodes[t[i]]
+            end
+            context("% t",t)
+        else
+            context("(yet) unknown")
+        end
+    end
+    function moduledata.showusagepernode(name, target)
+        local t = getusage(nodecodes[name], target) -- id : list per node
+        if t and #t > 0 then
+            table.sort(t)
+            context("% t",t)
+        else
+            context("nothing (yet)")
+        end
+    end
+
+    local report = logs.reporter("manual","todo")
+
+    for name, value in table.sortedhash(node.direct, target) do
+        if type(value) == "function" and not hasusage(name, target) then
+            report("helper %s",name)
+        end
+    end
+
+    local ignore = { id = true }
+
+    function moduledata.showfieldsupport(name,what)
+        local id = tonumber(name) or nodes.nodecodes[name]
+        if id then
+            node.setfielderror(1)
+            local fields = node.fields(id)
+            local n = node.new(id )
+            local t = { }
+            for k, v in table.sortedhash(fields) do
+                if not ignore[v] then
+                    node[what](n,v)
+                    if node.getfielderror() ~= 0 then
+                        t[#t+1] = v
+                    end
+                end
+            end
+            node.free(n)
+            if next(t) then
+                report("")
+                report("%s %s : % t",name,what,t)
+                report("")
+                context("% t",t)
+            else
+                context("-")
+            end
+            node.setfielderror(0)
+        end
+    end
+\stopluacode
+
+\tolerant\protected\def\showenginerepertoire[#1]#*#:#2%
+  {\startenginesubject[title={targets}]
+     \ctxlua{moduledata.showrepertoire("#2")}
+   \stopenginesubject}
+
+\tolerant\protected\def\showenginesetget[#1]#*#:#2%
+  {\startenginesubject[title={#2}]
+     no get: \start \tttf \veryraggedright \ctxlua{moduledata.showfieldsupport("#2","getfield")} \stop \par
+     no set: \start \tttf \veryraggedright \ctxlua{moduledata.showfieldsupport("#2","setfield")} \stop \par
+   \stopenginesubject}
+
+\enablemode[checkfield]
+
+\tolerant\protected\def\showengineusagepernode[#1]#*#:#2%
+  {\startenginesubject[title={direct helpers}]
+     \start \tttf \veryraggedright
+     \ctxlua{moduledata.showusagepernode("#2", 1)}
+     \stop
+   \stopenginesubject
+   \startenginesubject[title={userdata helpers}]
+     \start \tttf \veryraggedright
+     \ctxlua{moduledata.showusagepernode("#2", 2)}
+     \stop
+   \stopenginesubject
+   \startmode[checkfield]
+   \startenginesubject[title={userdata helpers}]
+     \startlines
+     no get: \start \tttf \veryraggedright \ctxlua{moduledata.showfieldsupport("#2","getfield")} \stop \par
+     no set: \start \tttf \veryraggedright \ctxlua{moduledata.showfieldsupport("#2","setfield")} \stop \par
+     \stoplines
+   \stopenginesubject
+   \stopmode}
+
+\tolerant\protected\def\showenginevalues[#1]#*#:#2%
+  {\startenginesubject[title={#2}]
+     \startrows[n=\ifparameter#1\or#1\else2\fi,before=\blank,after=\blank]
+       \ctxlua{moduledata.engine.codes("get#2", 1)}
+     \stoprows
+   \stopenginesubject}
+
+\tolerant\protected\def\showenginefields[#1]#*#:#2%
+  {\startenginesubject[title=fields]
+     \startrows[n=\ifparameter#1\or#1\else3\fi,before=\blank,after=\blank]
+       \ctxlua{moduledata.node.codes("fields","#2",true)}
+     \stoprows
+   \stopenginesubject}
+
+\tolerant\protected\def\showenginesubtypes[#1]#*#:#2%
+  {\startenginesubject[title=subtypes]
+     \startrows[n=\ifparameter#1\or#1\else3\fi,before=\blank,after=\blank]
+       \ctxlua{moduledata.node.codes("subtypes","#2",true)}
+     \stoprows
+  \stopenginesubject}
+
+\tolerant\protected\def\showengineprimitives[#1]%
+  {%\startenginesubject[title=primitives]
+     \startrows[n=\ifparameter#1\or#1\else2\fi,before=\blank,after=\blank]
+     \startluacode
+        local p = token.getprimitives()
+        table.sort(p,function(a,b)
+            if a[1] == b[1] then
+                return a[2] < b[2]
+            else
+                return a[1] < b[1]
+            end
+        end)
+        local skiplist = { [106] = true }
+        local skipping = false
+        context.starttabulate { "|r|r|l|" }
+        for i=1,\letterhash p do
+            local pi = p[i]
+            local pc = pi[1]
+            if skiplist[pc] then
+                if not skipping then
+                    context.NC() context(pc)
+                    context.NC()
+                    context.NC() context.tex("Umath...")
+                    context.NC() context.NR()
+                    skipping = true
+                end
+            else
+                context.NC() context(pc)
+                context.NC() context(pi[2])
+                context.NC() context.tex(pi[3])
+                context.NC() context.NR()
+                skipping = false
+            end
+        end
+        context.stoptabulate()
+     \stopluacode
+     \stoprows
+  }%\stopenginesubject}
+
+\tolerant\protected\def\showenginekeylist#1%
+  {\startluacode
+     local t = #1
+     table.sort(t)
+     context.typ(t[1])
+     for i=2,\letterhash t do
+       context(", ")
+       context.typ(t[i])
+     end
+   \stopluacode}
+
+% \setuptyping
+%   [align=hangright,
+%    keeptogether=yes,
+%    keeptogether=paragraph,
+%    numbering=]
+
+\definerows[two]  [n=2,before=\blank,after=\blank]
+\definerows[three][n=3,before=\blank,after=\blank]
+\definerows[four] [n=4,before=\blank,after=\blank]
+
+\definerows[tworows]  [define=yes,n=2,before=\blank,after=\blank]
+\definerows[threerows][define=yes,n=3,before=\blank,after=\blank]
+\definerows[fourrows] [define=yes,n=4,before=\blank,after=\blank]
+
+\setuplinenumbering
+  [margin=0em,
+   style=\ttx,
+   width=\margindistance,
+   distance=-\margindistance]
+
+\stopenvironment

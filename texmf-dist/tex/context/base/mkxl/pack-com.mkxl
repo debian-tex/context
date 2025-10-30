@@ -172,13 +172,17 @@
 
 \appendtoks
     \c_strc_constructions_define_commands\conditionalfalse
-    \normalexpanded
+    \expanded
       {\definelabel
          [\v!combination:\currentcombination]%
          [\v!combination\ifempty\currentcombinationparent\else:\currentcombinationparent\fi]}%
          [\s!counter=\currentcombination,\c!levels=1]%
     \c_strc_constructions_define_commands\conditionaltrue
 \to \everydefinecombination
+
+\let\m_pack_combinations_leftfiller \relax
+\let\m_pack_combinations_rightfiller\relax
+\let\m_pack_combinations_valigner   \relax
 
 \defcsname\??combinationlocation\v!left  \endcsname{\let\m_pack_combinations_leftfiller \relax}
 \defcsname\??combinationlocation\v!right \endcsname{\let\m_pack_combinations_rightfiller\relax}
@@ -323,10 +327,10 @@
      \lastnamedcs\else\vbox
    \fi\ifx\p_height\v!fit\else to {\p_height} \fi \bgroup
    \enforced\lettonothing\combination % permits \combination{}{} handy for cld
-   \normalexpanded{\pack_combinations_start_indeed[\p_nx_ny]}}
+   \expanded{\pack_combinations_start_indeed[\p_nx_ny]}}
 
 \permanent\protected\def\stopcombination
-  {\bgroup\normalexpanded{\egroup{}\ntimes{{}{}}\c_pack_combinations_y}% brr
+  {\bgroup\expanded{\egroup{}\ntimes{{}{}}\c_pack_combinations_y}% brr
    \dostoptagged
    \egroup
    \begincsname\??combinationmethod\combinationparameter\c!method:\v!stop\endcsname
@@ -370,6 +374,8 @@
 %D some settings conflict with already used combination settings so instead we plug
 %D in labels. This also permits extensions later on.
 
+\lettonothing\p_pack_combinations_alternative
+
 \appendtoks
     \edef\p_pack_combinations_alternative{\combinationparameter\c!alternative}%
 \to \everydefinecombination
@@ -412,7 +418,7 @@
      \usealignparameter\combinationparameter
      \usecombinationstyleandcolor\c!style\c!color
      \begstrut
-       \normalexpanded{\strc_labels_command[\v!combination\ifempty\currentcombination\else:\currentcombination\fi]}%
+       \expanded{\strc_labels_command[\v!combination\ifempty\currentcombination\else:\currentcombination\fi]}%
      \endstrut
    \egroup}
 
@@ -420,7 +426,7 @@
     \edef\p_pack_combinations_alternative{\combinationparameter\c!alternative}%
     \ifx\p_pack_combinations_alternative\v!label
       \ifcstok{\combinationparameter\c!continue}\v!yes\else
-        \normalexpanded{\strc_labels_reset{\v!combination\ifempty\currentcombination\else:\currentcombination\fi}{1}}%
+        \expanded{\strc_labels_reset{\v!combination\ifempty\currentcombination\else:\currentcombination\fi}{1}}%
      \fi
     \fi
 \to \everycombination
@@ -604,8 +610,8 @@
         {\pack_combinations_float_hack_b{\recurselevel}}%
       \to\scratchtoks}% brrr
    \let\pack_combinations_check_x_y\pack_combinations_float_check_x_y
- % \normalexpanded{\startcombination[#1]\the\scratchtoks}\stopcombination
-   \normalexpanded{\startcombination[\v!float][#1]\the\scratchtoks}\stopcombination
+ % \expanded{\startcombination[#1]\the\scratchtoks}\stopcombination
+   \expanded{\startcombination[\v!float][#1]\the\scratchtoks}\stopcombination
    \resetlocalfloats
    \egroup}
 
@@ -760,10 +766,10 @@
 \newdimension\d_pack_pairedboxes_size
 
 \appendtoks
-   \frozen\protected\instance\edefcsname\e!setup\currentpairedbox\e!endsetup\endcsname{\setuppairedbox     [\currentpairedbox]}%
-   \frozen\protected\instance\edefcsname\e!place\currentpairedbox           \endcsname{\placepairedbox     [\currentpairedbox]}% one argument is mandate anyway
-   \frozen\protected\instance\edefcsname\e!start\e!place\currentpairedbox   \endcsname{\startplacepairedbox[\currentpairedbox]}% one argument is mandate anyway
-   \frozen\protected\instance\edefcsname\e!stop\e!place \currentpairedbox   \endcsname{\stopplacepairedbox                    }%
+   \protected\frozen\instance\edefcsname\e!setup\currentpairedbox\e!endsetup\endcsname{\setuppairedbox     [\currentpairedbox]}%
+   \protected\frozen\instance\edefcsname\e!place\currentpairedbox           \endcsname{\placepairedbox     [\currentpairedbox]}% one argument is mandate anyway
+   \protected\frozen\instance\edefcsname\e!start\e!place\currentpairedbox   \endcsname{\startplacepairedbox[\currentpairedbox]}% one argument is mandate anyway
+   \protected\frozen\instance\edefcsname\e!stop\e!place \currentpairedbox   \endcsname{\stopplacepairedbox                    }%
 \to \everydefinepairedbox
 
 \permanent\tolerant\protected\def\startplacepairedbox[#1]#*[#S#2]%

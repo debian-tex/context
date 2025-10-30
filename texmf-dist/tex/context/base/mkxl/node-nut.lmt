@@ -52,6 +52,7 @@ local nuts = {
     append                  = direct.append,
     appendaftertail         = direct.appendaftertail,
     checkdiscretionaries    = direct.checkdiscretionaries,
+    checkdiscretionary      = direct.checkdiscretionary,
     collapsing              = direct.collapsing,
     copy                    = direct.copy,
     copylist                = direct.copylist,
@@ -111,6 +112,7 @@ local nuts = {
     getexpansion            = direct.getexpansion,
     getfam                  = direct.getfam,
     getfield                = direct.getfield,
+    getfirstdirectioninlist = direct.getfirstdirectioninlist,
     getfont                 = direct.getfont,
     getgeometry             = direct.getgeometry,
     getglue                 = direct.getglue,
@@ -119,6 +121,7 @@ local nuts = {
     getheight               = direct.getheight,
     getid                   = d_getid,
     getidsubtype            = direct.getidsubtype,
+    getidsubtypenext        = direct.getidsubtypenext,
     getindex                = direct.getindex,
     getinputfields          = direct.getinputfields,
     getkern                 = direct.getkern,
@@ -183,6 +186,7 @@ local nuts = {
     hasgeometry             = direct.hasgeometry,
     hasglyph                = direct.hasglyph,
     hasglyphoption          = direct.hasglyphoption,
+    hasidsubtype            = direct.hasidsubtype,
     hpack                   = direct.hpack,
     hyphenating             = direct.hyphenating,
     ignoremathskip          = direct.ignoremathskip,
@@ -221,6 +225,7 @@ local nuts = {
     protectglyph            = direct.protectglyph,
     protectglyphs           = direct.protectglyphs,
     protectglyphsnone       = direct.protectglyphsnone,
+    protectglyphsbase       = direct.protectglyphsbase,
     protrusionskippable     = direct.protrusionskippable,
     rangedimensions         = direct.rangedimensions,
     remove                  = d_remove_node,
@@ -319,6 +324,7 @@ local nuts = {
     traverse                = d_traverse,
     traversechar            = direct.traversechar,
     traversecontent         = direct.traversecontent,
+    traversepossible        = direct.traversepossible,
     traverseglyph           = direct.traverseglyph,
     traverseid              = direct.traverseid,
     traverseitalic          = direct.traverseitalic,
@@ -643,7 +649,7 @@ function nuts.setprop(n,k,v)
     end
 end
 
-function nuts.theprop(n)
+function nuts.theprop(n) -- obsolete
     local p = propertydata[n]
     if not p then
         p = { }

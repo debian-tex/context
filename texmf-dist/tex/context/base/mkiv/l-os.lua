@@ -223,7 +223,8 @@ do
 
     local function resultof(command)
         -- already has flush, b is new and we need it to pipe xz output
-        local handle = iopopen(command,ostype == "windows" and "rb" or "r")
+     -- local handle = iopopen(command,ostype == "windows" and "rb" or "r")
+        local handle = iopopen(command,"r") -- rb no longer works
         if handle then
             local result = handle:read("*all") or ""
             handle:close()
@@ -263,6 +264,10 @@ do
 
     function os.runtime()
         return gettimeofday() - startuptime
+    end
+
+    function os.startuptime()
+        return startuptime
     end
 
     -- print(os.gettimeofday()-os.time())
@@ -688,4 +693,8 @@ do
         return osexit()
     end
 
+end
+
+if serial and serial.write then
+    os.serialwrite = serial.write -- for a while
 end

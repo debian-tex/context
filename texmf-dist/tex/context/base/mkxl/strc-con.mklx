@@ -154,14 +154,18 @@
 %D Just a basic environment (mostly for testing). We will provide a 'setup' based
 %D plugin once the rest is sorted out.
 
+\installmacrostack\currentconstructionreference
+
 \tolerant\permanent\protected\def\startnamedconstruction[#1]#*[#S#2]#*[#3]%
   {\begingroup
+   \push_macro_currentconstructionreference % global
    \strc_constructions_initialize{#1}%
    \strc_constructions_register[#3][\c!reference=,\c!title=,\c!bookmark=,\c!list=,\c!referencetext=,#2]%
    \csname\??constructionstarthandler\currentconstructionhandler\endcsname}
 
 \permanent\protected\def\stopnamedconstruction
   {\csname\??constructionstophandler\currentconstructionhandler\endcsname
+   \pop_macro_currentconstructionreference
    \endgroup}
 
 %D As we will build on top of the generic construction mechanism we have handlers
@@ -296,17 +300,19 @@
 \protected\defcsname\??constructioncommandhandler\v!construction\endcsname
   {\endgroup}
 
-\lettonothing\p_strc_constructions_sample
 \lettonothing\p_strc_constructions_align
-\lettonothing\p_strc_constructions_indenting
-\lettonothing\p_strc_constructions_width
 \lettonothing\p_strc_constructions_aligntitle
-\lettonothing\p_strc_constructions_renderingsetup
-\lettonothing\p_strc_constructions_headalign
-\lettonothing\p_strc_constructions_hang
-\lettonothing\p_strc_constructions_inbetween
 \lettonothing\p_strc_constructions_closesymbol
 \lettonothing\p_strc_constructions_distance
+\lettonothing\p_strc_constructions_hang
+\lettonothing\p_strc_constructions_headalign
+\lettonothing\p_strc_constructions_inbetween
+\lettonothing\p_strc_constructions_indenting
+\lettonothing\p_strc_constructions_number
+\lettonothing\p_strc_constructions_renderingsetup
+\lettonothing\p_strc_constructions_sample
+\lettonothing\p_strc_constructions_title
+\lettonothing\p_strc_constructions_width
 
 \newconditional\c_strc_constructions_distance_none
 
@@ -637,6 +643,12 @@
 
 \permanent\protected\def\flushconstructionheadbox
   {\ifhbox\constructionheadbox\unhbox\else\box\fi\constructionheadbox}
+
+% \permanent\protected\def\flushconstructionheadbox
+%   {\ifhbox\constructionheadbox
+%      \scratchdimen\boxrepack\constructionheadbox
+%    \fi
+%    \box\constructionheadbox}
 
 % The setups. These only deal with placement of the descriptor and initializing the
 % environment. The wrapping happens elsewhere.
@@ -1048,66 +1060,220 @@
 \let\currentconstructionsynchronize\relax
 \let\currentconstructionattribute  \attributeunsetvalue
 
+% \def\strc_constructions_register_yes[#S#1][#S#2]% #1=optional user data #2=interfaced-settings
+%   {\begingroup                              % similar to structure so we might generalize this
+%    \setupcurrentconstruction[#2]%           % xdef's will become edef's
+%    \xdef\currentconstructionexpansion      {\constructionparameter\c!expansion}%
+%    \xdef\currentconstructionxmlsetup       {\constructionparameter\c!xmlsetup}%
+%    \xdef\currentconstructioncatcodes       {\constructionparameter\s!catcodes}%
+%    \xdef\currentconstructionlabel          {\constructionparameter\c!label}%
+%    \xdef\currentconstructionreference      {\constructionparameter\c!reference}%
+%    \xdef\currentconstructionreferencetext  {\constructionparameter\c!referencetext}%
+%    \xdef\currentconstructionreferenceprefix{\constructionparameter\c!referenceprefix}%
+%    %xdef\currentconstructionshownumber     {\constructionparameter\c!number}%
+%    \xdef\currentconstructionincrementnumber{\constructionparameter\c!incrementnumber}%
+%    \xdef\currentconstructiondelay          {\constructionparameter\c!delay}%
+%    %
+%    \ifempty\currentconstructionexpansion
+%      \glet\currentconstructionexpansion\v!no
+%    \fi
+%    %
+%    \ifempty\currentconstructionreferenceprefix
+%      \glet\currentconstructionreferenceprefix\referenceprefix
+%    \fi
+%    \ifx\currentconstructionexpansion\s!xml
+%      \xmlstartraw
+%        \xdef\currentconstructiontitle        {\constructionparameter\c!title}%
+%        \xdef\currentconstructionbookmark     {\constructionparameter\c!bookmark}%
+%        \xdef\currentconstructionmarking      {\constructionparameter\c!marking}%
+%        \xdef\currentconstructionlist         {\constructionparameter\c!list}%
+%        \xdef\currentconstructionreferencetext{\constructionparameter\c!referencetext}%
+%      \xmlstopraw
+%      \iflocation \ifempty\currentconstructionbookmark
+%        \xdef\currentconstructionbookmark{\prerolltostring{\currentconstructiontitle}}%
+%      \fi \fi
+%      \ifempty\currentconstructionlist
+%        \glet\currentconstructionlist\currentconstructiontitle
+%      \fi
+%      \glet\currentconstructioncoding\s!xml
+%    \else
+%      \ifx\currentconstructionexpansion\v!yes
+%        \xdef\currentconstructiontitle        {\constructionparameter\c!title}%
+%        \xdef\currentconstructionbookmark     {\constructionparameter\c!bookmark}%
+%        \xdef\currentconstructionmarking      {\constructionparameter\c!marking}%
+%        \xdef\currentconstructionlist         {\constructionparameter\c!list}%
+%        \xdef\currentconstructionreferencetext{\constructionparameter\c!referencetext}%
+%        \iflocation \ifempty\currentconstructionbookmark
+%          \xdef\currentconstructionbookmark{\prerolltostring{\currentconstructiontitle}}%
+%        \fi \fi
+%      \else
+%        \xdef\currentconstructiontitle        {\detokenizedconstructionparameter\c!title}%
+%        \xdef\currentconstructionbookmark     {\detokenizedconstructionparameter\c!bookmark}%
+%        \xdef\currentconstructionmarking      {\detokenizedconstructionparameter\c!marking}%
+%        \xdef\currentconstructionlist         {\detokenizedconstructionparameter\c!list}%
+%        \xdef\currentconstructionreferencetext{\detokenizedconstructionparameter\c!referencetext}%
+%        \iflocation \ifempty\currentconstructionbookmark
+%          \xdef\currentconstructionbookmark{\prerolltostring{\constructionparameter\c!title}}%
+%        \fi \fi
+%      \fi
+%      \ifempty\currentconstructionlist
+%        \glet\currentconstructionlist\currentconstructiontitle
+%      \fi
+%      \glet\currentconstructioncoding\s!tex
+%    \fi
+%    %
+%    \ifx\currentconstructiontitle\v!none % will become obsolete
+%      \global\noconstructioncaptiontrue
+%    \fi
+%    %
+%    \ifnoconstructioncaption % then why analyze anyway?
+%      \endgroup
+%      \let\currentconstructionlistnumber \relax
+%      \let\currentconstructionsynchronize\relax
+%      \let\currentconstructionattribute  \relax
+%    \else
+%      \setnextinternalreferences{construction}\currentconstructionmain % plural
+%      \relax
+%      \scratchcounter\clf_addtolist
+%         metadata {
+%             kind     {construction}
+%             name     {\currentconstructionmain}
+%           % level    structures.sections.currentlevel()
+%             catcodes \catcodetable
+%         }
+%         references {
+%             internal  \locationcount
+%             order     \locationorder
+%             reference {\currentconstructionreference}
+%             prefix    {\currentconstructionreferenceprefix}
+%           % block     {\currentsectionblock}
+%           % section   structures.sections.currentid(),
+%             delay     {\currentconstructiondelay}
+%         }
+%         titledata  {
+%             label     {\detokenize\expandafter{\currentconstructionlabel}}
+%             title     {\detokenize\expandafter{\currentconstructiontitle}}
+%         \ifx\currentconstructionbookmark\currentconstructiontitle \else
+%             bookmark  {\detokenize\expandafter{\currentconstructionbookmark}}
+%         \fi
+%         \ifx\currentconstructionreferencetext\currentconstructiontitle \else
+%             reference {\detokenize\expandafter{\currentconstructionreferencetext}}
+%         \fi
+%         \ifx\currentconstructionlist\currentconstructiontitle \else
+%             list      {\detokenize\expandafter{\currentconstructionlist}}
+%         \fi
+%         }
+%     \ifconditional\c_strc_constructions_number_state
+%         prefixdata {
+%             prefix        {\constructionparameter\c!prefix}
+%             separatorset  {\constructionparameter\c!prefixseparatorset}
+%             conversion    {\constructionparameter\c!prefixconversion}
+%             conversionset {\constructionparameter\c!prefixconversionset}
+%             set           {\constructionparameter\c!prefixset}
+%             segments      {\constructionparameter\c!prefixsegments}
+%             connector     {\constructionparameter\c!prefixconnector}
+%         }
+%         numberdata {
+%             numbers       {\currentconstructionnumber}
+%             separatorset  {\constructionparameter\c!numberseparatorset}
+%             conversion    {\constructionparameter\c!numberconversion}
+%             conversionset {\constructionparameter\c!numberconversionset}
+%             starter       {\constructionparameter\c!numberstarter}
+%             stopper       {\constructionparameter\c!numberstopper}
+%             segments      {\constructionparameter\c!numbersegments}
+%         }
+%     \else
+%        % symbol
+%     \fi
+%         userdata {\detokenize{#1}}
+%      \relax
+%    % \writestatus{constructions}{registering \currentconstruction: \number\scratchcounter}%
+%      \clf_setinternalreference
+%        prefix    {\currentconstructionreferenceprefix}%
+%        reference {\currentconstructionreference}%
+%        internal  \locationcount
+%        view      {\interactionparameter\c!focus}%
+%      \relax
+%      \expanded {%
+%        \endgroup
+%        \edef\noexpand\currentconstructionlistentry  {\the\scratchcounter}%
+%        \edef\noexpand\currentconstructionattribute  {\the\lastdestinationattribute}%
+%        \edef\noexpand\currentconstructionsynchronize{\clf_deferredenhancelist\the\scratchcounter}%
+%      }%
+%    \fi}
+
 \def\strc_constructions_register_yes[#S#1][#S#2]% #1=optional user data #2=interfaced-settings
   {\begingroup                              % similar to structure so we might generalize this
    \setupcurrentconstruction[#2]%           % xdef's will become edef's
-   \xdef\currentconstructionexpansion      {\constructionparameter\c!expansion}%
-   \xdef\currentconstructionxmlsetup       {\constructionparameter\c!xmlsetup}%
-   \xdef\currentconstructioncatcodes       {\constructionparameter\s!catcodes}%
-   \xdef\currentconstructionlabel          {\constructionparameter\c!label}%
+   \edef\currentconstructionexpansion      {\constructionparameter\c!expansion}%
+   \edef\currentconstructionxmlsetup       {\constructionparameter\c!xmlsetup}%
+   \edef\currentconstructioncatcodes       {\constructionparameter\s!catcodes}%
+   \edef\currentconstructionlabel          {\constructionparameter\c!label}%
+   % watch out, this one is global, see usage in strc-enu
    \xdef\currentconstructionreference      {\constructionparameter\c!reference}%
-   \xdef\currentconstructionreferencetext  {\constructionparameter\c!referencetext}%
-   \xdef\currentconstructionreferenceprefix{\constructionparameter\c!referenceprefix}%
-   %xdef\currentconstructionshownumber     {\constructionparameter\c!number}%
-   \xdef\currentconstructionincrementnumber{\constructionparameter\c!incrementnumber}%
+   %
+   \edef\currentconstructionreferencetext  {\constructionparameter\c!referencetext}%
+   \edef\currentconstructionreferenceprefix{\constructionparameter\c!referenceprefix}%
+   %edef\currentconstructionshownumber     {\constructionparameter\c!number}%
+   \edef\currentconstructionincrementnumber{\constructionparameter\c!incrementnumber}%
+   \edef\currentconstructiondelay          {\constructionparameter\c!delay}%
    %
    \ifempty\currentconstructionexpansion
-     \glet\currentconstructionexpansion\v!no
+     \let\currentconstructionexpansion\v!no
    \fi
    %
    \ifempty\currentconstructionreferenceprefix
-     \glet\currentconstructionreferenceprefix\referenceprefix
+     \let\currentconstructionreferenceprefix\referenceprefix
    \fi
    \ifx\currentconstructionexpansion\s!xml
      \xmlstartraw
-       \xdef\currentconstructiontitle        {\constructionparameter\c!title}%
-       \xdef\currentconstructionbookmark     {\constructionparameter\c!bookmark}%
-       \xdef\currentconstructionmarking      {\constructionparameter\c!marking}%
-       \xdef\currentconstructionlist         {\constructionparameter\c!list}%
-       \xdef\currentconstructionreferencetext{\constructionparameter\c!referencetext}%
+       \edef\currentconstructiontitle        {\constructionparameter\c!title}%
+       \edef\currentconstructionbookmark     {\constructionparameter\c!bookmark}%
+       \edef\currentconstructionmarking      {\constructionparameter\c!marking}%
+       \edef\currentconstructionlist         {\constructionparameter\c!list}%
+       \edef\currentconstructionreferencetext{\constructionparameter\c!referencetext}%
      \xmlstopraw
+     \iflocation \ifempty\currentconstructionbookmark % maybe also when tagging
+       \ifconditional\c_strc_tags_enabled
+         \edef\currentconstructionbookmark{\prerolltostring{\currentconstructiontitle}}%
+       \fi
+     \fi \fi
      \ifempty\currentconstructionlist
-       \glet\currentconstructionlist\currentconstructiontitle
+       \let\currentconstructionlist\currentconstructiontitle
      \fi
-     \glet\currentconstructioncoding\s!xml
+     \let\currentconstructioncoding\s!xml
    \else
      \ifx\currentconstructionexpansion\v!yes
-       \xdef\currentconstructiontitle        {\constructionparameter\c!title}%
-       \xdef\currentconstructionbookmark     {\constructionparameter\c!bookmark}%
-       \xdef\currentconstructionmarking      {\constructionparameter\c!marking}%
-       \xdef\currentconstructionlist         {\constructionparameter\c!list}%
-       \xdef\currentconstructionreferencetext{\constructionparameter\c!referencetext}%
+       \edef\currentconstructiontitle        {\constructionparameter\c!title}%
+       \edef\currentconstructionbookmark     {\constructionparameter\c!bookmark}%
+       \edef\currentconstructionmarking      {\constructionparameter\c!marking}%
+       \edef\currentconstructionlist         {\constructionparameter\c!list}%
+       \edef\currentconstructionreferencetext{\constructionparameter\c!referencetext}%
+       \iflocation \ifempty\currentconstructionbookmark % maybe also when tagging
+         \ifconditional\c_strc_tags_enabled
+           \edef\currentconstructionbookmark{\prerolltostring{\currentconstructiontitle}}%
+         \fi
+       \fi \fi
      \else
-       \xdef\currentconstructiontitle        {\detokenizedconstructionparameter\c!title}%
-       \xdef\currentconstructionbookmark     {\detokenizedconstructionparameter\c!bookmark}%
-       \xdef\currentconstructionmarking      {\detokenizedconstructionparameter\c!marking}%
-       \xdef\currentconstructionlist         {\detokenizedconstructionparameter\c!list}%
-       \xdef\currentconstructionreferencetext{\detokenizedconstructionparameter\c!referencetext}%
-       \iflocation \ifempty\currentconstructionbookmark
-         \begingroup
-         \simplifycommands
-         \xdef\currentconstructionbookmark{\detokenize\expandafter{\normalexpanded{\constructionparameter\c!title}}}%
-         \endgroup
+       \edef\currentconstructiontitle        {\detokenizedconstructionparameter\c!title}%
+       \edef\currentconstructionbookmark     {\detokenizedconstructionparameter\c!bookmark}%
+       \edef\currentconstructionmarking      {\detokenizedconstructionparameter\c!marking}%
+       \edef\currentconstructionlist         {\detokenizedconstructionparameter\c!list}%
+       \edef\currentconstructionreferencetext{\detokenizedconstructionparameter\c!referencetext}%
+       \iflocation \ifempty\currentconstructionbookmark % maybe also when tagging
+         \ifconditional\c_strc_tags_enabled
+           \edef\currentconstructionbookmark{\prerolltostring{\constructionparameter\c!title}}%
+         \fi
        \fi \fi
      \fi
      \ifempty\currentconstructionlist
-       \glet\currentconstructionlist\currentconstructiontitle
+       \let\currentconstructionlist\currentconstructiontitle
      \fi
-     \glet\currentconstructioncoding\s!tex
+     \let\currentconstructioncoding\s!tex
    \fi
    %
    \ifx\currentconstructiontitle\v!none % will become obsolete
-     \global\noconstructioncaptiontrue
+     \noconstructioncaptiontrue
    \fi
    %
    \ifnoconstructioncaption % then why analyze anyway?
@@ -1132,6 +1298,7 @@
             prefix    {\currentconstructionreferenceprefix}
           % block     {\currentsectionblock}
           % section   structures.sections.currentid(),
+            delay     {\currentconstructiondelay}
         }
         titledata  {
             label     {\detokenize\expandafter{\currentconstructionlabel}}
@@ -1177,7 +1344,7 @@
        internal  \locationcount
        view      {\interactionparameter\c!focus}%
      \relax
-     \normalexpanded {%
+     \expanded {%
        \endgroup
        \edef\noexpand\currentconstructionlistentry  {\the\scratchcounter}%
        \edef\noexpand\currentconstructionattribute  {\the\lastdestinationattribute}%

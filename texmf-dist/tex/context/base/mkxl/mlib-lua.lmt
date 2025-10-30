@@ -80,6 +80,29 @@ local expandtex = mplib.expandtex
 mp.solve     = function(...) return solvepath(currentmpx,...) end
 mp.expandtex = function(...) return expandtex(currentmpx,...) end
 
+local newbytemap        = mplib.newbytemap
+local getbytemap        = mplib.getbytemap
+local setbytemap        = mplib.setbytemap
+local fillbytemap       = mplib.fillbytemap
+local getbytemapdata    = mplib.getbytemapdata
+local setbytemapoctave  = mplib.setbytemapoctave
+local setbytemapoctave  = mplib.setbytemapoctave
+local processbytemap    = mplib.processbytemap
+local downsamplebytemap = mplib.downsamplebytemap
+
+mp.newbytemap        = function(...) return newbytemap       (currentmpx,...) end
+mp.getbytemap        = function(...) return getbytemap       (currentmpx,...) end
+mp.setbytemap        = function(...) return setbytemap       (currentmpx,...) end
+mp.fillbytemap       = function(...) return fillbytemap      (currentmpx,...) end
+mp.getbytemapdata    = function(...) return getbytemapdata   (currentmpx,...) end
+mp.setbytemapoctave  = function(...) return setbytemapoctave (currentmpx,...) end
+mp.processbytemap    = function(...) return processbytemap   (currentmpx,...) end
+mp.downsamplebytemap = function(...) return downsamplebytemap(currentmpx,...) end
+
+local getlastaddtype = mplib.getlastaddtype
+
+mp.getlastaddtype = function(...) return getlastaddtype(currentmpx,...) end
+
 local injectpath      = mplib.injectpath
 local injectnumeric   = mplib.injectnumeric
 local injectpair      = mplib.injectpair
@@ -90,6 +113,9 @@ local injectcolor     = mplib.injectcolor
 local injectcmykcolor = mplib.injectcmykcolor
 local injecttransform = mplib.injecttransform
 local injectwhatever  = mplib.injectwhatever
+local injectvector    = mplib.injectvector
+local injectvectors   = mplib.injectvectors
+----- injecttokens    = mplib.injecttokens
 
 ------.path      = function(t,cycle,curled)  if trace then reporti("path")      end return injectpath     (currentmpx,t,cycle,curled)  end
 inject.numeric   = function(n)               if trace then reporti("numeric")   end return injectnumeric  (currentmpx,n)               end
@@ -101,6 +127,9 @@ inject.color     = function(r,g,b)           if trace then reporti("color")     
 inject.cmykcolor = function(c,m,y,k)         if trace then reporti("cmykcolor") end return injectcmykcolor(currentmpx,c,m,y,k)         end
 inject.transform = function(x,y,xx,xy,yx,yy) if trace then reporti("transform") end return injecttransform(currentmpx,x,y,xx,xy,yx,yy) end
 inject.whatever  = function(...)             if trace then reporti("whatever")  end return injectwhatever (currentmpx,...)             end
+inject.vector    = function(v,s)             if trace then reporti("vector")    end return injectvector   (currentmpx,v,s)             end
+inject.vectors   = function(v,t,s)           if trace then reporti("vectors")   end return injectvectors  (currentmpx,v,t,s)           end
+------.tokens    = function(s)               if trace then reporti("tokens")    end return injecttokens   (currentmpx,s)               end
 
 inject.triplet    = inject.color
 inject.quadruplet = inject.cmykcolor
@@ -160,6 +189,7 @@ end
 function inject.path(p,connector,close)
     local closed = false
     local curled = false
+    local tense  = false
     local n = #p
     if close == nil then
         closed = (p.close or p.cycle or p.closed) and true or false
@@ -173,11 +203,13 @@ function inject.path(p,connector,close)
         if connector == false or connector == "--" then
             curled = true
         end
+    elseif p.tense then
+        tense = true
     elseif p.curled then
         curled = true
     end
     if trace then reporti("path") end
-    return injectpath(currentmpx,p,closed,curled)
+    return injectpath(currentmpx,p,closed,curled,tense)
 end
 
 -- bonus:
@@ -210,6 +242,8 @@ function mp.autoinject(m)
         injectstring(currentmpx,m)
     elseif t == "boolean" then
         injectboolean(currentmpx,m)
+    elseif t == "vector" then
+        injectvector(currentmpx,m)
     end
 end
 

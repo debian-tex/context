@@ -415,6 +415,7 @@ local function documentspecification()
  -- end
  -- addtoinfo   ("Trapped", pdfconstant("False")) -- '/Trapped' in /Info, 'Trapped' in XMP
     addtocatalog("Version", pdfconstant(format("%s.%s",pdfmajorversion(),pdfminorversion())))
+ -- local language = languages.names[texgetcount("mainlanguagenumber")]
     addtocatalog("Lang",    pdfstring(tokens.getters.macro("currentmainlanguage")))
 end
 
@@ -462,6 +463,15 @@ lpdf.registerdocumentfinalizer(documentspecification,"document specification")
 -- extra bytes due to lack of collapsing. Anyhow, for that we need a stupid prefix
 -- variant and that's not on the agenda now.
 
+-- % \disabledirectives[backends.pdf.pagelabels]
+-- \setupfittingpage[pagestate=start] % make page labels okay
+
+local enabled = true
+
+directives.register("backend.pdf.pagelabels", function(v)
+    enabled = v
+end)
+
 local map = {
     numbers       = "D",
     Romannumerals = "R",
@@ -471,6 +481,10 @@ local map = {
 }
 
 local function featurecreep()
+    if not enabled then
+        return
+    end
+    --
     local pages         = structures.pages.tobesaved
     local list          = pdfarray()
     local getset        = structures.sets.get

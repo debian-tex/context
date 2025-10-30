@@ -222,7 +222,7 @@ local p_resolve = ((1-lpegP("."))^1 / function(s) f_resolve = f_resolve[s] end *
 
 local function resolvestoredfunction(str)
     if type(str) == "string" then
-        f_resolve = global -- namespace
+        f_resolve = _G
         lpegmatch(p_resolve,str)
         return f_resolve
     else
@@ -383,64 +383,14 @@ interfaces.namesofscanners = namesofscanners
 
 storage.register("interfaces/storedscanners", storedscanners, "interfaces.storedscanners")
 
--- local function registerscanner(name,action,protected,public,usage) -- todo: combine value and condition
---     rawset(interfacescanners,name,action)
---     local n = storedscanners[name]
---     n = registerfunction("interfaces.scanners."..name,true,n)
---     storedscanners[name] = n
---     namesofscanners[n] = name
---     name = public and name or (privatenamespace .. name)
---  -- print(">>",name,protected and "protected" or "",usage or "macro")
---     setluatoken(name,n,"global",protected and "protected" or "",usage or "macro")
--- end
-
--- todo: bitmap
-
-local registerscanner if CONTEXTLMTXMODE > 0 then
-
-    -- always permanent but we can consider to obey permanent==false
-
-    -- todo: make bitset instead of keys (nil is skipped anyway)
-
-    local function toflags(specification)
-        local protected = (specification.protected and "protected") or (specification.semiprotected and "semiprotected")
-        local untraced  = specification.untraced  and "untraced"
-        local usage     = specification.usage
-        if usage == "value" then
-            return "global", "value", "permanent", "untraced", protected
-        elseif usage == "condition" then
-            return "global", "conditional", "permanent", "untraced", protected
-        elseif specification.frozen then
-            return "global", "frozen", untraced, protected
-        elseif specification.permanent == false or specification.onlyonce then -- for now onlyonce here
-            return "global", untraced, protected, semiprotected
-        else
-            return "global", "permanent", untraced, protected
-        end
-    end
-
-    registerscanner = function(name,action,specification)
-        rawset(interfacescanners,name,action)
-        local n = registerfunction("interfaces.scanners."..name,true,storedscanners[name])
-        storedscanners[name] = n
-        namesofscanners[n] = name
-        name = specification.public and name or (privatenamespace .. name)
-     -- print(name,n,toflags(specification))
-        setluatoken(name,n,toflags(specification))
-    end
-
-else
-
-    registerscanner = function(name,action,specification)
-        rawset(interfacescanners,name,action)
-        local n = storedscanners[name]
-        n = registerfunction("interfaces.scanners."..name,true,n)
-        storedscanners[name] = n
-        namesofscanners[n] = name
-        name = specification.public and name or (privatenamespace .. name)
-        setluatoken(name,n,"global",specification.protected and "protected" or "")
-    end
-
+local function registerscanner(name,action,specification)
+    rawset(interfacescanners,name,action)
+    local n = storedscanners[name]
+    n = registerfunction("interfaces.scanners."..name,true,n)
+    storedscanners[name] = n
+    namesofscanners[n] = name
+    name = specification.public and name or (privatenamespace .. name)
+    setluatoken(name,n,"global",specification.protected and "protected" or "")
 end
 
 interfaces.registerscanner = registerscanner
@@ -451,16 +401,6 @@ end
 
 function interfaces.nameofscanner(slot)
     return namesofscanners[slot] or slot
-end
-
-if CONTEXTLMTXMODE > 0 then
-
-    callbacks.register("show_lua_call", function(what, slot)
-        local name = namesofscanners[slot]
-     -- return name and formatters["%s: \\%s, slot: %i"](what,name,slot) or ""
-        return name and formatters["%s \\%s"](what,name) or ""
-    end, "provide lua call details")
-
 end
 
 setmetatablenewindex(interfacescanners, function(t,k,v)
@@ -627,7 +567,8 @@ function context.newtexthandler(specification)
     local pattern
     if f_space then
         if p_exception then
-            local content = lpegC((1-spacing-p_exception)^1)
+         -- local content = lpegC((1-spacing-p_exception)^1)
+            local content = lpegC((1-space-endofline-p_exception)^1)
             pattern =
               (
                     justaspace   / f_space
@@ -1791,13 +1732,9 @@ do
 
     for i=1,#t do local k = t[i] modelevels[-k] = modelevels[k] end
 
-    if CONTEXTLMTXMODE > 0 then
+end
 
-        -- also elsewhere
-
-        local flagcodes = tex.getflagvalues()
-        tex.flagcodes   = table.swapped(flagcodes,flagcodes) -- utilities.storage.allocate()
-
-    end
-
+function lua.registerglobal(k,v)
+    rawset(_G,k,v)
+    return v
 end

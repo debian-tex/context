@@ -171,6 +171,15 @@ do
 
 end
 
+interfaces.implement {
+    name      = "inhibitprimitive",
+    public    = true,
+    protected = true,
+    untraced  = true,
+    arguments = { "csname", true },
+    actions   = token.inhibit,
+}
+
 -- For the moment here, will move to initex only (also see node-ini.lua); we need
 -- to actually store these.
 
@@ -224,8 +233,10 @@ tex.userdiscoptioncodes = setthem({
 tex.glyphoptioncodes         = getthem(tex.getglyphoptionvalues,"glyphoptioncode")
 tex.discoptioncodes          = getthem(tex.getdiscoptionvalues,"discoptioncode")
 tex.ruleoptioncodes          = getthem(tex.getruleoptionvalues,"ruleoptioncode")
+tex.boxoptioncodes           = getthem(tex.getboxoptionvalues,"boxoptioncode")
 tex.glueoptioncodes          = getthem(tex.getglueoptionvalues)
-tex.mathoptioncodes          = getthem(tex.getmathoptionvalues)
+tex.mathoptioncodes          = getthem(tex.getmathoptionvalues,"mathoptioncode")
+tex.snappingcodes            = getthem(tex.getsnappingvalues)
 tex.penaltyoptioncodes       = getthem(tex.getpenaltyoptionvalues)
 tex.flagcodes                = getthem(tex.getflagvalues,"flagcode")
 tex.frozenparcodes           = getthem(tex.getfrozenparvalues,"frozenparcode")

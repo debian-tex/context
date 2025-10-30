@@ -55,6 +55,7 @@
 \newinteger\c_page_mvl_current_spreadsheet
 \newinteger\c_page_mvl_level
 \newinteger\c_page_mvl_main_level
+\newinteger\c_page_mvl_max_used_cells
 
 \newconditional\c_page_mvl_active
 
@@ -121,8 +122,8 @@
 
 \appendtoks % could become an option
     \ifempty\currentcolumnset\else
-      \frozen\instance\protected\edefcsname\e!start\currentcolumnset\endcsname{\startcolumnset[\currentcolumnset]}%
-      \frozen\instance\protected\edefcsname\e!stop \currentcolumnset\endcsname{\stopcolumnset}%
+      \protected\frozen\instance\edefcsname\e!start\currentcolumnset\endcsname{\startcolumnset[\currentcolumnset]}%
+      \protected\frozen\instance\edefcsname\e!stop \currentcolumnset\endcsname{\stopcolumnset}%
       \clf_definecolumnset {
         name     {\currentcolumnset}%
         nofrows  {\columnsetparameter\c!lines}%
@@ -249,20 +250,21 @@
    %
    \page_mvl_check
    %
-   \clf_resetcolumnset {
-        name       {\currentcolumnset}
-        nofrows    \c_page_mvl_n_of_rows
-        nofleft    \c_page_mvl_n_of_left
-        nofright   \c_page_mvl_n_of_right
+   \clf_resetcolumnset {%
+        name        {\currentcolumnset}
+        nofrows     \c_page_mvl_n_of_rows
+        nofleft     \c_page_mvl_n_of_left
+        nofright    \c_page_mvl_n_of_right
        %topskip
-        lineheight \strutht
-        linedepth  \strutdp
+        lineheight  \strutht
+        linedepth   \strutdp
       \ifchkdimexpr\columnsetparameter\c!width\or
-        width      \lastchkdimension
+        width       \lastchkdimension
       \fi
-        distance   \d_page_mvl_distance
-        maxwidth   \d_page_mvl_max_width
-        limit      {\columnsetparameter\c!limit}%
+        distance    \d_page_mvl_distance
+        maxwidth    \d_page_mvl_max_width
+        limit       {\columnsetparameter\c!limit}%
+        doublesided \ifconditional\layoutisdoublesided tru\else fals\fi e
    }%
    %
    \clf_flushcolumnsetareas{\currentcolumnset}\relax
@@ -990,6 +992,8 @@
 % sheets
 
 \mutable\lettonothing\askedsheet
+\mutable\lettonothing\askedsheetoption
+\mutable\lettonothing\askedspreadsheets
 
 \permanent\protected\defcsname\e!start\v!columnsetsheet\endcsname
   {\begingroup
@@ -1367,8 +1371,6 @@
    \fi
    \clf_columnsetreshape\currentcolumnset\relax
    \page_mvl_process_mvl_preroll_step\relax}
-
-\newinteger\c_page_mvl_max_used_cells
 
 \def\page_mvl_process_mvl_preroll_balance
   {\relax
@@ -1764,12 +1766,12 @@
      \page_floats_save\s!text % check this
    \else
      \begingroup
-     \edef\m_spacebefore{\floatparameter\c!spacebefore}%
-     \edef\m_spaceafter {\floatparameter\c!spaceafter}%
-     \ifx\m_spacebefore\v!halfline
+     \edef\p_spacebefore{\floatparameter\c!spacebefore}%
+     \edef\p_spaceafter {\floatparameter\c!spaceafter}%
+     \ifx\p_spacebefore\v!halfline
        \blank[\v!keep,\v!halfline]% \direct...
      \else
-       \blank[\m_spacebefore]%
+       \blank[\p_spacebefore]%
      \fi
     %\snaptogrid\ruledvpack\bgroup
      \ruledvpack\bgroup
@@ -1780,10 +1782,10 @@
        \dp\floatbox\zeropoint
        \box\floatbox
      \egroup
-     \ifx\m_spacebefore\v!halfline
+     \ifx\p_spacebefore\v!halfline % we check before here
        \blank[\v!halfline]%
      \else
-       \blank[\m_spaceafter]%
+       \blank[\p_spaceafter]%
      \fi
      \endgroup
    \fi}
@@ -1802,6 +1804,9 @@
      \par
      \balanceboundary\zerocount\zerocount\relax
      \endgroup
+     % good enough but it should be a property of \balanceboundary or
+     % we could actually intercept it in spac-ver
+     \inhibitblank
    \fi}
 
 \protected\def\page_mvl_command_next_spread{\page_mvl_break\plusone}

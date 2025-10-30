@@ -28,8 +28,6 @@ local nodes, node = nodes, node
 
 local nuts               = nodes.nuts
 
-local getid              = nuts.getid
-local getsubtype         = nuts.getsubtype
 local setsubtype         = nuts.setsubtype
 local getboth            = nuts.getboth
 local getnext            = nuts.getnext
@@ -41,7 +39,9 @@ local setchar            = nuts.setchar
 local setattrlist        = nuts.setattrlist
 local getfont            = nuts.getfont
 local getxscale          = nuts.getxscale
+local setoptions         = nuts.setoptions
 local isglyph            = nuts.isglyph
+local hasidsubtype       = nuts.hasidsubtype
 
 local setcolor           = nodes.tracers.colors.set
 
@@ -65,6 +65,8 @@ local gluecodes          = nodes.gluecodes
 local glyph_code         <const> = nodecodes.glyph
 local glue_code          <const> = nodecodes.glue
 local spaceskip_code     <const> = gluecodes.spaceskip
+
+local noautobreak_code   <const> = tex.glueoptioncodes.noautobreak
 
 local chardata           = characters.data
 local ispunctuation      = characters.is_punctuation
@@ -113,16 +115,23 @@ local function inject_char_space(unicode,head,current,parent)
     return insertnodeafter(head,current,glue)
 end
 
+local usepenalties = false
+
 local function inject_nobreak_space(unicode,head,current,space,spacestretch,spaceshrink)
     local scale   = getxscale(current)
     local glue    = new_glue(scale*space,scale*spacestretch,scale*spaceshrink)
-    local penalty = new_penalty(10000)
     setattrlist(glue,current)
-    setattrlist(penalty,current)
     setattrlist(current) -- why reset all
     setattr(glue,a_character,unicode) -- bombs
-    head, current = insertnodeafter(head,current,penalty)
+    if usepenalties then
+        local penalty = new_penalty(10000)
+        setattrlist(penalty,current)
+        head, current = insertnodeafter(head,current,penalty)
+    else
+        setoptions(glue,noautobreak_code)
+    end
     if trace_nbsp then
+        -- no penalties needed if not usepenalties
         local rule    = new_rule(space)
         local kern    = new_kern(-space)
         local penalty = new_penalty(10000)
@@ -206,7 +215,7 @@ local methods = {
 
     [0x001E] = function(head,current) -- kind of special
         local next = getnext(current)
-        if next and getid(next) == glue_code and getsubtype(next) == spaceskip_code then
+        if next and hasidsubtype(next,glue_code,spaceskip_code) then
             -- remove when no valid character following
             local nextnext = getnext(next)
             if nextnext then
@@ -337,6 +346,8 @@ characters.methods = methods
 function characters.handler(head)
     local wipe = false
     for current, char in nextchar, head do
+        -- Integrating this check in the iterator gives no gain, in spite of the
+        -- many calls.
         local method = methods[char]
         if method then
             if wipe then
@@ -357,6 +368,37 @@ function characters.handler(head)
     end
     return head
 end
+
+experiments.register("optimize.typesetting.char",function()
+    if helper and helper.traverseglyphmethod then
+        local glyph = nuts.pool.glyph()
+        local nextcharmethod  = helper.traversecharmethod(glyph,methods)  -- unprotected
+     -- local nextglyphmethod = helper.traverseglyphmethod(glyph,methods) -- always
+        nuts.flushnode(glyph)
+        function characters.handler(head)
+            local wipe = false
+            for current, method, char in nextcharmethod, head do
+         -- for current, method, char in nextglyphmethod, head do
+                if wipe then
+                    head = remove_node(head,wipe,true)
+                    wipe = false
+                end
+                if trace_characters then
+                    report_characters("replacing character %C, description %a",char,lower(chardata[char].description))
+                end
+                local h = method(head,current)
+                if h then
+                    wipe = current
+                end
+            end
+            if wipe then
+                head = remove_node(head,wipe,true)
+            end
+            return head
+        end
+
+    end
+end)
 
 -- function characters.handler(head)
 --     local wiped = false

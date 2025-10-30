@@ -136,7 +136,7 @@
    \c!align=\margindataparameter\c!align]
 
 \appendtoks
-    \frozen\instance\protected\edefcsname\currentmargindata\endcsname{\margindata[\currentmargindata]}%
+    \protected\frozen\instance\edefcsname\currentmargindata\endcsname{\margindata[\currentmargindata]}%
 \to \everydefinemargindata
 
 \newconditional\inhibitmargindata      % This one is used at the Lua end!
@@ -154,6 +154,9 @@
 \appendtoks
     \forgetall
     \tf
+%     \pickupdirectionattribute
+%     \pickupscriptattribute
+    \pickuptaggedattribute
     \resetallattributes % \deactivatecolor % needed, but maybe we should switch to maintextcolor: \onlyinheritmaintextcolor
     \pickupattributes
 \to \everymargindatacontent
@@ -206,7 +209,7 @@
      \dostarttaggedchained\t!margintext\currentmargindata\currentmargindata\??margindata
      \dotagmargintext\c_typo_margins_n
      \ifcsname\currentmarginframedhash\s!parent\endcsname
-       \setbox\nextbox\naturalhbox \currentmarginreference \bgroup
+       \setbox\nextbox\naturalhbox \currentmarginreference \bgroup % \s!noprofiling\bgroup
          \expand\everymargindatacontent
          \usemargindatastyleandcolor\c!style\c!color
          \setupcurrentmarginframed[\c!location=\v!normal,#textparameters]%
@@ -225,7 +228,7 @@
      \else
        \edef\currentmargindatawidth{\margindataparameter\c!width}%
        \ifempty\currentmargindatawidth
-         \setbox\nextbox\naturalhbox \currentmarginreference \bgroup
+         \setbox\nextbox\naturalhbox \currentmarginreference \bgroup % \s!noprofiling\bgroup
            \typo_margins_data_synchronize
            \expand\everymargindatacontent
            \usemargindatastyleandcolor\c!style\c!color
@@ -239,7 +242,7 @@
          \egroup
          \lettonothing\currentmarginfirstheight
        \else
-         \setbox\nextbox\naturalhbox \currentmarginreference \bgroup
+         \setbox\nextbox\naturalhbox \currentmarginreference \bgroup % \s!noprofiling\bgroup
            \typo_margins_data_synchronize
            \dosetraggedcommand{\margindataparameter\c!align}%
            \vtop \bgroup

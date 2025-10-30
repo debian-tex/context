@@ -200,6 +200,7 @@ local setchar            = nuts.setchar
 local getdisc            = nuts.getdisc
 local setdisc            = nuts.setdisc
 local getreplace         = nuts.getreplace
+local setreplace         = nuts.setreplace
 local setlink            = nuts.setlink
 local getwidth           = nuts.getwidth
 local getattr            = nuts.getattr
@@ -294,10 +295,10 @@ local factor             = 0
 local threshold          = 0
 local checkmarks         = false
 
-local discs              = false
 local spaces             = false
 
 local sweepnode          = nil
+local sweeptype          = nil
 local sweephead          = { } -- we don't nil entries but false them (no collection and such)
 
 local notmatchpre        = { } -- to be checked: can we use false instead of nil / what if a == b tests
@@ -1028,6 +1029,8 @@ function handlers.gpos_pair(head,start,dataset,sequence,kerns,rlmode,skiphash,st
                         end
                     end
                 else
+-- print("!!!!!!!!!!!!!",getchar(start))
+-- KE: Hans, hier gaat het nog niet goed in het geval van een disc!!!
                     break
                 end
             end
@@ -2126,8 +2129,6 @@ local function chaindisk(head,start,dataset,sequence,rlmode,skiphash,ck)
     local last          = start
     local prev          = getprev(start)
     local hasglue       = false
-    local useddisc      = nil   -- new 2022-09-25
-    local usedstart     = start -- new 2022-09-25
 
     -- fishy: so we can overflow and then go on in the sweep?
     -- todo : id can also be glue_code as we checked spaces
@@ -2353,7 +2354,6 @@ local function chaindisk(head,start,dataset,sequence,rlmode,skiphash,ck)
             setdisc(lookaheaddisc,cf,post,new)
         end
         start          = getprev(lookaheaddisc)
-        useddisc       = lookaheaddisc -- new 2022-09-25
         sweephead[cf]  = getnext(clast) or false
         sweephead[new] = getnext(cl) or false
     elseif backtrackdisc then
@@ -2414,7 +2414,6 @@ local function chaindisk(head,start,dataset,sequence,rlmode,skiphash,ck)
             setdisc(backtrackdisc,pre,post,replace)
         end
         start              = getprev(backtrackdisc)
-        useddisc           = backtrackdisc -- new 2022-09-25
         sweephead[post]    = getnext(clast) or false
         sweephead[replace] = getnext(last) or false
     else
@@ -2426,10 +2425,7 @@ local function chaindisk(head,start,dataset,sequence,rlmode,skiphash,ck)
         end
 
     end
-    if useddisc and start ~= usedstart then -- make this option per font -- new 2022-09-25
-       start = getnext(start)                                            -- new 2022-09-25
-    end                                                                  -- new 2022-09-25
-    return head, start, done, useddisc                                   -- new 2022-09-25
+    return head, start, done
 end
 
 local chaintrac do
@@ -2585,7 +2581,6 @@ local function handle_contextchain(head,start,dataset,sequence,contexts,rlmode,s
                                 goto next
                             end
                         elseif id == disc_code then
-                     -- elseif id == disc_code and (not discs or discs[last]) then
                             discseen              = true
                             discfound             = last
                             notmatchpre[last]     = nil
@@ -2693,7 +2688,6 @@ local function handle_contextchain(head,start,dataset,sequence,contexts,rlmode,s
                                     end
                                     break
                                 elseif id == disc_code then
-                             -- elseif id == disc_code and (not discs or discs[prev]) then
                                     -- the special case: f i where i becomes dottless i ..
                                     discseen              = true
                                     discfound             = prev
@@ -2825,7 +2819,6 @@ local function handle_contextchain(head,start,dataset,sequence,contexts,rlmode,s
                                     goto next
                                 end
                             elseif id == disc_code then
-                         -- elseif id == disc_code and (not discs or discs[current]) then
                                 discseen                 = true
                                 discfound                = current
                                 notmatchpre[current]     = nil
@@ -3145,6 +3138,10 @@ local function kernrun(disc,k_run,font,attr,...)
     -- can be optional, because why on earth do we get a disc after a mark (okay, maybe when a ccmp
     -- has happened but then it should be in the disc so basically this test indicates an error)
     --
+    if getid(prev) == disc_code then
+        local h, t = getreplace(prev,true)
+        prevmarks = t
+    end
     while prevmarks do
         local char = ischar(prevmarks,font)
         if char and marks[char] then
@@ -3157,8 +3154,18 @@ local function kernrun(disc,k_run,font,attr,...)
     if prev and not ischar(prev,font) then  -- and (pre or replace)
         prev = false
     end
-    if next and not ischar(next,font) then  -- and (post or replace)
-        next = false
+    --
+    local nisc
+    if next then
+        nisc = getid(next) == disc_code
+        if nisc then
+            nisc = getreplace(next)
+            if nisc and not ischar(nisc,font) then
+                nisc = false
+            end
+        elseif not ischar(next,font) then  -- and (post or replace) -- weak test
+            next = false
+        end
     end
     --
     -- we need to get rid of this nest mess some day .. has to be done otherwise
@@ -3174,6 +3181,14 @@ local function kernrun(disc,k_run,font,attr,...)
             end
             setprev(pre)
             setlink(prev,disc)
+        elseif prevmarks then
+            local n = getnext(prevmarks)
+            setlink(prevmarks,pre)
+            if k_run(prevmarks,"preinjections",pre,font,attr,...) then -- getnext(replace))
+                done = true
+            end
+            setprev(pre)
+            setnext(prevmarks,n)
         end
     end
     --
@@ -3181,7 +3196,15 @@ local function kernrun(disc,k_run,font,attr,...)
         if k_run(post,"injections",nil,font,attr,...) then
             done = true
         end
-        if next then
+        if nisc then
+            setlink(posttail,nisc)
+            if k_run(posttail,"postinjections",nisc,font,attr,...) then
+                done = true
+            end
+            setnext(posttail)
+            setprev(nisc)
+            setreplace(next,nisc)
+        elseif next then
             setlink(posttail,next)
             if k_run(posttail,"postinjections",next,font,attr,...) then
                 done = true
@@ -3202,8 +3225,24 @@ local function kernrun(disc,k_run,font,attr,...)
             end
             setprev(replace)
             setlink(prev,disc)
+        elseif prevmarks then
+            local n = getnext(prevmarks)
+            setlink(prevmarks,replace)
+            if k_run(prevmarks,"replaceinjections",replace,font,attr,...) then -- getnext(replace))
+                done = true
+            end
+            setprev(replace)
+            setnext(prevmarks,n)
         end
-        if next then
+        if nisc then
+            setlink(replacetail,nisc)
+            if k_run(replacetail,"replaceinjections",nisc,font,attr,...) then
+                done = true
+            end
+            setnext(replacetail)
+            setprev(nisc)
+            setreplace(next,nisc)
+        elseif next then
             setlink(replacetail,next)
             if k_run(replacetail,"replaceinjections",next,font,attr,...) then
                 done = true
@@ -3211,6 +3250,8 @@ local function kernrun(disc,k_run,font,attr,...)
             setnext(replacetail)
             setlink(disc,next)
         end
+    elseif nisc then
+        -- well
     elseif prev and next then
         setlink(prev,next)
         if k_run(prevmarks,"emptyinjections",next,font,attr,...) then
@@ -3355,6 +3396,7 @@ local function testrun(disc,t_run,c_run,...)
                 replace = nil
             end
         end
+        renewed = true
         setlink(disc,next)
      -- pre, post, replace, pretail, posttail, replacetail = getdisc(disc,true)
     end
@@ -3805,25 +3847,13 @@ otf.helpers.pardirstate = pardirstate
 
 do
 
-    -- This is a measurable experimental speedup (only with hyphenated text and multiple
-    -- fonts per processor call), especially for fonts with lots of contextual lookups.
-
-    local fastdisc = true
     local testdics = false
-
-    directives.register("otf.fastdisc",function(v) fastdisc = v end) -- normally enabled
 
     -- using a merged combined hash as first test saves some 30% on ebgaramond and
     -- about 15% on arabtype .. then moving the a test also saves a bit (even when
     -- often a is not set at all so that one is a bit debatable
 
     local otfdataset = nil -- todo: make an installer
-
-    local getfastdisc = { __index = function(t,k)
-        local v = usesfont(k,currentfont)
-        t[k] = v
-        return v
-    end }
 
     local getfastspace = { __index = function(t,k)
         -- we don't pass the id so that one can overload isspace
@@ -3832,7 +3862,7 @@ do
         return v
     end }
 
-    function otf.featuresprocessor(head,font,attr,direction,n)
+    function otf.featuresprocessor(head,font,attr,direction)
 
         local sequences = sequencelists[font] -- temp hack
 
@@ -3854,7 +3884,6 @@ do
                 otfdataset = otf.dataset
             end
 
-            discs  = fastdisc and n and n > 1 and setmetatable({},getfastdisc) -- maybe inline
             spaces = setmetatable({},getfastspace)
 
         elseif currentfont ~= font then
@@ -4009,16 +4038,12 @@ do
                             -- a different font|state or glue (happens often)
                             start = getnext(start)
                         elseif id == disc_code then
-                            if not discs or discs[start] == true then
-                                if gpossing then
-                                    start = kernrun(start,k_run_single,             font,attr,lookupcache,step,dataset,sequence,rlmode,skiphash,handler)
-                                elseif forcetestrun then
-                                    start = testrun(start,t_run_single,c_run_single,font,attr,lookupcache,step,dataset,sequence,rlmode,skiphash,handler)
-                                else
-                                    start = comprun(start,c_run_single,             font,attr,lookupcache,step,dataset,sequence,rlmode,skiphash,handler)
-                                end
+                            if gpossing then
+                                start = kernrun(start,k_run_single,             font,attr,lookupcache,step,dataset,sequence,rlmode,skiphash,handler)
+                            elseif forcetestrun then
+                                start = testrun(start,t_run_single,c_run_single,font,attr,lookupcache,step,dataset,sequence,rlmode,skiphash,handler)
                             else
-                                start = getnext(start)
+                                start = comprun(start,c_run_single,             font,attr,lookupcache,step,dataset,sequence,rlmode,skiphash,handler)
                             end
                         elseif id == math_code then
                             start = getnext(endofmath(start))
@@ -4085,16 +4110,12 @@ do
                             -- a different font|state or glue (happens often)
                             start = getnext(start)
                         elseif id == disc_code then
-                            if not discs or discs[start] == true then
-                                if gpossing then
-                                    start = kernrun(start,k_run_multiple,               font,attr,steps,nofsteps,dataset,sequence,rlmode,skiphash,handler)
-                                elseif forcetestrun then
-                                    start = testrun(start,t_run_multiple,c_run_multiple,font,attr,steps,nofsteps,dataset,sequence,rlmode,skiphash,handler)
-                                else
-                                    start = comprun(start,c_run_multiple,               font,attr,steps,nofsteps,dataset,sequence,rlmode,skiphash,handler)
-                                end
+                            if gpossing then
+                                start = kernrun(start,k_run_multiple,               font,attr,steps,nofsteps,dataset,sequence,rlmode,skiphash,handler)
+                            elseif forcetestrun then
+                                start = testrun(start,t_run_multiple,c_run_multiple,font,attr,steps,nofsteps,dataset,sequence,rlmode,skiphash,handler)
                             else
-                                start = getnext(start)
+                                start = comprun(start,c_run_multiple,               font,attr,steps,nofsteps,dataset,sequence,rlmode,skiphash,handler)
                             end
                         elseif id == math_code then
                             start = getnext(endofmath(start))
@@ -4266,7 +4287,7 @@ do
         end
     end
 
-    function otf.pluginprocessor(head,font,dynamic,direction) -- n
+    function otf.pluginprocessor(head,font,dynamic,direction)
         local s = fontdata[font].shared
         local p = s and s.plugin
         if p then

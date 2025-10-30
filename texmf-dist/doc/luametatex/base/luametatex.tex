@@ -1,0 +1,75 @@
+% signal=quadrant
+
+% language=us runpath=texruns:manuals/luametatex xsignal=runner signal=quadrant
+
+% https://u.mtxrun.eu/ctxmtg chat
+
+% \enabletrackers[callbacks.calls]
+
+\enableexperiments[optimize.typesetting.char]
+\enableexperiments[optimize.spacing.profile]
+\enableexperiments[optimize.math.process]
+\enableexperiments[optimize.math.indexed]
+\enableexperiments[optimize.backend.traverse]
+
+% watch out : profiling on different path
+
+% \profilemacro\dimexpr
+% \profilemacro\numexpr
+
+% \linebuffering
+
+% \nologbuffering
+
+% \nopdfcompression
+
+% \enabletrackers[resolvers.virtual]
+% \enabletrackers[resolvers.*]
+
+\environment luametatex-style
+
+\setupalign
+  [depth]
+
+\setuplayout
+  [vz=2]
+
+\setuptyping
+  [align=hangright,
+   keeptogether=yes,
+%    keeptogether=paragraph,
+   numbering=]
+
+% \showframe
+
+\startdocument[title=luametatex,alternative=manual]
+
+\startfrontmatter
+    \component luametatex-contents
+    \component luametatex-introduction
+\stopfrontmatter
+
+\startbodymatter
+    \component luametatex-engines
+    \component luametatex-principles
+    \component luametatex-constructions
+    \component luametatex-assumptions
+    \component luametatex-internals
+    \component luametatex-primitives
+%   \writestatus{FOOCHECK}{\meaningfull\foo}
+    \component luametatex-callbacks
+    \component luametatex-fonts
+    \component luametatex-languages
+    \component luametatex-lua
+    \component luametatex-metapost
+    \component luametatex-tex
+    \component luametatex-math
+    \component luametatex-pdf
+    \component luametatex-nodes
+    \component luametatex-tokens
+    \component luametatex-libraries
+    \component luametatex-security
+\stopbodymatter
+
+\stopdocument
+

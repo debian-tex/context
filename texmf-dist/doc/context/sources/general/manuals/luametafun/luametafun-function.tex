@@ -291,6 +291,133 @@ kind of code is not that hard to follow) is:
 \LL
 \stoptabulate
 
+
+In the beginning of 2025 we added support for sampled functions and parametric
+plots. Here are some examples but keep in mind that the interfaces might be
+extended.
+
+\startbuffer
+\startMPcode
+path p ; p := lmt_samplefunction [
+    preamble  = "local tan = math.tan",
+    code      = "return tan(x)",
+    xmin      = -5*pi,
+    xmax      =  5*pi,
+    ymin      =  -10,
+    ymax      =   10,
+  % tolerance = 0.001,
+] scaled 10 ;
+
+draw    p withpen pencircle scaled 10   withcolor "darkred" ;
+drawdot p withpen pencircle scaled  2.5 withcolor white ;
+\stopMPcode
+\stopbuffer
+
+\typebuffer[option=TEX]
+
+We draw with a thick line and show the points that make up the paths. As you can
+see in \in {figure} [function:sample] the density is larger where more points are
+needed.
+
+\startplacefigure[reference=function:sample]
+    \getbuffer
+\stopplacefigure
+
+\startbuffer[1]
+\startMPcode
+path p ; p := lmt_parametricplot [
+    preamble  = "local sin, cos = math.sin, math.cos",
+    xcode     = "2*cos(t/3)*cos(t)",
+    ycode     = "2*cos(t/3)*sin(t)",
+    tmin      =   0,
+    tmax      =   4*pi,
+    tolerance = 0.001,
+] ysized 5cm ;
+
+draw    p withpen pencircle scaled 10   withcolor "darkred" ;
+drawdot p withpen pencircle scaled  2.5 withcolor white ;
+\stopMPcode
+\stopbuffer
+
+\startbuffer[2]
+\startMPcode
+path p ; p := lmt_parametricplot [
+    preamble  = "local sin, cos = math.sin, math.cos",
+    rcode     = "1 + cos(t)",
+    tmin      =   0,
+    tmax      =   2*pi,
+    tolerance = 0.00025,
+] ysized 5cm ;
+
+draw    p withpen pencircle scaled 10   withcolor "darkred" ;
+drawdot p withpen pencircle scaled  2.5 withcolor white ;
+\stopMPcode
+\stopbuffer
+
+A parameteric plot runs over a range and gets two or one function passed:
+
+\typebuffer[1][option=TEX]
+
+and
+
+\typebuffer[2][option=TEX]
+
+show this. The results are collected in \in {figure} [function:parameter] where
+again we also highlight the points that make the curve. Drawing these function is
+of course up to \METAPOST\ but the calculations happen at the \LUA\ end.
+
+\startplacefigure[reference=function:parametric]
+    \startcombination
+        {\getbuffer[1]} {two functions}
+        {\getbuffer[2]} {one function}
+    \stopcombination
+\stopplacefigure
+
+\in {Figure} [function:tracedsample] shows a bit more decorated example,
+taken from Mikaels lecture notes. The rightmost variant shows the density of the
+points.
+
+\startbuffer
+
+% usage: \useMPgraphic{sample}{trace=0}
+
+\startuseMPgraphic{sample}{trace}
+path p ; p := lmt_samplefunction [
+    code = "return x*x*x/(2*x*x - 6)", % no preamble needed
+    xmin = -6,
+    xmax =  6,
+    ymin = -6,
+    ymax =  6,
+] scaled 10 ;
+
+if \MPvar{trace} == 1 :
+    draw    p withpen pencircle scaled 2 withcolor .4white ;
+    drawdot p withpen pencircle scaled 1 withcolor   white ;
+else :
+    draw p ;
+fi ;
+
+drawarrow (-60,  0) -- (60, 0) ;
+drawarrow (  0,-60) -- ( 0,60) ;
+draw (( sqrt(3)*10,-60) -- ( sqrt(3)*10,60)) withdashes 2 ;
+draw ((-sqrt(3)*10,-60) -- (-sqrt(3)*10,60)) withdashes 2 ;
+draw ((-60,-30) -- (60,30))                  withdashes 2 ;
+\stopuseMPgraphic
+\stopbuffer
+
+\startplacefigure[reference=function:tracedsample]
+\getbuffer
+\startcombination
+  {\useMPgraphic{sample}{trace=0}} {untraced}
+  {\useMPgraphic{sample}{trace=1}} {traced}
+\stopcombination
+\stopplacefigure
+
+\typebuffer[option=TEX]
+
+
 \stopchapter
 
 \stopcomponent
+
+

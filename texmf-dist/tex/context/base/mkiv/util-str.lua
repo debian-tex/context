@@ -683,7 +683,7 @@ string.texnewlines = lpeg.replacer(patterns.newline,"\r",true)
 local preamble = ""
 
 local environment = {
-    global          = global or _G,
+    ["global"]      = _G,
     lpeg            = lpeg,
     type            = type,
     tostring        = tostring,
@@ -835,7 +835,7 @@ local format_F = function(f) -- beware, no cast to number
     end
 end
 
--- if string.f9 then
+-- if string.f9 then-- f3 f4 f6 f9
 --     format_F = function(f) -- beware, no cast to number
 --         n = n + 1
 --         if not f or f == "" then
@@ -1118,6 +1118,11 @@ local format_z = function(f)
     return "''" -- okay, not that efficient to append '' but a special case anyway
 end
 
+local format_Z = function(f)
+ -- return "a" .. (tonumber(f) or 1)
+    return format("a%s",tonumber(f) or 1)
+end
+
 --
 
 -- local strip
@@ -1222,7 +1227,8 @@ local builder = Cs { "start",
               + V("A") -- new
               + V("j") + V("J") -- stripped e E
               + V("m") + V("M") -- new (formatted number)
-              + V("z") -- new
+           -- + V("z") -- new
+              + V("z") + V("Z")
               --
               + V(">") -- left padding
               + V("<") -- right padding
@@ -1282,6 +1288,7 @@ local builder = Cs { "start",
     --
     ["z"] = (prefix_any * P("z")) / format_z, -- %z => skip n arguments
  -- ["Z"] = (prefix_any * P("Z")) / format_Z, -- %Z => optionally strip zeros
+    ["Z"] = (prefix_any * P("Z")) / format_Z, -- %Z => access argument N
     --
     ["a"] = (prefix_any * P("a")) / format_a, -- %a => '...' (forces tostring)
     ["A"] = (prefix_any * P("A")) / format_A, -- %A => "..." (forces tostring)
@@ -1333,42 +1340,6 @@ local function make(t,str)
     t[str] = f
     return f
 end
-
--- -- collect periodically
---
--- local threshold = 1000 -- max nof cached formats
---
--- local function make(t,str)
---     local f = rawget(t,str)
---     if f then
---         return f
---     end
---     local parent = t._t_
---     if parent._n_ > threshold then
---         local m = { _t_ = parent }
---         getmetatable(parent).__index = m
---         setmetatable(m, { __index = make })
---     else
---         parent._n_ = parent._n_ + 1
---     end
---     local f
---     local p = lpegmatch(direct,str)
---     if p then
---         f = loadstripped(p)()
---     else
---         n = 0
---         p = lpegmatch(builder,str,1,"..",parent._extensions_) -- after this we know n
---         if n > 0 then
---             p = format(template,preamble,parent._preamble_,arguments[n],p)
---          -- print("builder>",p)
---             f = loadstripped(p)()
---         else
---             f = function() return str end
---         end
---     end
---     t[str] = f
---     return f
--- end
 
 local function use(t,fmt,...)
     return t[fmt](...)

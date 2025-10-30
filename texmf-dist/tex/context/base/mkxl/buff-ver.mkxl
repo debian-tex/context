@@ -72,6 +72,8 @@
 \protected\def\buff_verbatim_ignore_hyphens
   {\nohyphens}
 
+\lettonothing\p_buff_option
+
 \def\buff_verbatim_initialize_type_one
   {\enforced\let\obeylines\ignorelines
    \edef\p_buff_option{\typeparameter\c!option}%
@@ -160,7 +162,7 @@
 \installcommandhandler \??type {type} \??type
 
 \appendtoks
-    \frozen\instance\protected\edefcsname\currenttype\endcsname{\buff_verbatim_type{\currenttype}}%
+    \protected\frozen\instance\edefcsname\currenttype\endcsname{\buff_verbatim_type{\currenttype}}%
 \to \everydefinetype
 
 \appendtoks
@@ -188,12 +190,12 @@
 \installcommandhandler \??typing {typing} \??typing
 
 \appendtoks
-    \frozen\protected\instance\edefcsname\e!start\currenttyping\endcsname{\buff_verbatim_typing_start{\currenttyping}{\currenttyping}}%
-    \frozen\protected\instance\edefcsname\e!stop \currenttyping\endcsname{\buff_verbatim_typing_stop}%
+    \protected\frozen\instance\edefcsname\e!start\currenttyping\endcsname{\buff_verbatim_typing_start{\currenttyping}{\currenttyping}}%
+    \protected\frozen\instance\edefcsname\e!stop \currenttyping\endcsname{\buff_verbatim_typing_stop}%
     \ifempty\currenttypingparent
-      \normalexpanded{\definelinenumbering[\currenttyping]}%
+      \expanded{\definelinenumbering[\currenttyping]}%
     \else
-      \normalexpanded{\definelinenumbering[\currenttyping][\currenttypingparent]}%
+      \expanded{\definelinenumbering[\currenttyping][\currenttypingparent]}%
     \fi
 \to \everydefinetyping
 
@@ -417,14 +419,14 @@
 %D decided not to use that slow and sometimes troublesome solution. Instead we stick
 %D to some 'old' \CONTEXT\ macros for typesetting typical \TEX\ characters.
 
-\immutable\def\lesscharacter    {<} % obsolete
-\immutable\def\morecharacter    {>} % obsolete
+\permanent\cdef\lesscharacter    {<} % obsolete
+\permanent\cdef\morecharacter    {>} % obsolete
 
-\immutable\let\texescape        \textbackslash
-\immutable\let\leftargument     \textbraceleft
-\immutable\let\rightargument    \textbraceright
-\immutable\let\inlinemathmarker \textdollar
-\immutable\def\displaymathmarker{\textdollar\textdollar}
+\aliased  \let\texescape        \textbackslash
+\aliased  \let\leftargument     \textbraceleft
+\aliased  \let\rightargument    \textbraceright
+\aliased  \let\inlinemathmarker \textdollar
+\permanent\def\displaymathmarker{\textdollar\textdollar}
 
 \def\buff_verbatim_special_type#1#2#% # gobbles spaces
   {\dontleavehmode\bgroup
@@ -484,7 +486,7 @@
    \buff_verbatim_setup_keep_together
    \buff_verbatim_setup_line_numbering
    \buff_verbatim_initialize_typing_one
-   \normalexpanded{\buff_verbatim_type_block{\e!start\currenttypingwrapper}{\e!stop\currenttypingwrapper}}}
+   \expanded{\buff_verbatim_type_block{\e!start\currenttypingwrapper}{\e!stop\currenttypingwrapper}}}
 
 \def\buff_verbatim_typing_start_nop
   {\endgroup
@@ -493,7 +495,7 @@
    \buff_verbatim_setup_keep_together
    \buff_verbatim_setup_line_numbering
    \buff_verbatim_initialize_typing_one
-   \normalexpanded{\buff_verbatim_type_block{\e!start\currenttypingwrapper}{\e!stop \currenttypingwrapper}}}
+   \expanded{\buff_verbatim_type_block{\e!start\currenttypingwrapper}{\e!stop \currenttypingwrapper}}}
 
 %D \start \showmakeup[vpenalty]
 %D \starttyping[keeptogether=paragraph]
@@ -518,7 +520,7 @@
    \fi}
 
 \protected\def\buff_verbatim_type_block#1#2%
-  {\normalexpanded{\buff_pickup
+  {\expanded{\buff_pickup
      {_typing_}%
      {#1}%
      {#2}%
@@ -612,9 +614,10 @@
 % [category] [settings] {name} % for historic reasons, all filenames are {}
 
 \mutable\lettonothing\currenttypingfile
+\mutable\lettonothing\currenttypingwrapper
 
 \appendtoks
-    \frozen\protected\instance\edefcsname\e!type\currenttyping\v!file\endcsname{\typefile[\currenttyping]}%
+    \protected\frozen\instance\edefcsname\e!type\currenttyping\v!file\endcsname{\typefile[\currenttyping]}%
 \to \everydefinetyping
 
 \permanent\tolerant\protected\def\typefile[#S#1]#*[#S#2]#:#3%
@@ -804,17 +807,17 @@
   {\buff_verbatim_type_defined_buffer[\v!buffer][\thedefinedbuffer{#1}]}%
 
 % \appendtoks
-%     \frozen\instance\protected\edefcsname\e!type\currentbuffer\endcsname
+%     \protected\frozen\instance\edefcsname\e!type\currentbuffer\endcsname
 %       {\buff_verbatim_type_defined_buffer[\v!buffer][\currentdefinedbuffer]}%
 % \to \everydefinebuffer
 
 \appendtoks
-    \frozen\instance\protected\edefcsname\e!type\currentbuffer\endcsname
+    \protected\frozen\instance\edefcsname\e!type\currentbuffer\endcsname
       {\buff_verbatim_type_defined_buffer[\currentbuffer][\currentdefinedbuffer]}%
 \to \everydefinebuffer
 
 \appendtoks % \e!buffer
-    \frozen\instance\protected\edefcsname\e!type\currenttyping\v!buffer\endcsname
+    \protected\frozen\instance\edefcsname\e!type\currenttyping\v!buffer\endcsname
       {\buff_verbatim_type_buffer_class{\currenttyping}}%
 \to \everydefinetyping
 

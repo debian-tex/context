@@ -1,0 +1,3139 @@
+% language=us runpath=texruns:manuals/luametatex
+
+\environment luametatex-style
+
+\startdocument[title=Libraries]
+
+\startsection[title={Introduction}]
+
+The engines has quite some libraries built in of which some are discussed in
+dedicated chapters. Not all libraries will be detailed here, for instance, so
+called optional libraries depend on system libraries and usage is wrapped in
+modules because we delegate as much as possible to \LUA.
+
+\stopsection
+
+\startsection[title={Third party}]
+
+There is not much to tell here other than it depends on the \LUA\ symbols being
+visible and the \LUA\ version matching. We don't use this in \CONTEXT\ and have a
+different mechanism instead: optional libraries.
+
+\stopsection
+
+\startsection[title={Core}]
+
+The core libraries are those that interface with \TEX\ and \METAPOST, these are
+discussed in dedicated chapters:
+
+\starttabulate[|l|Tl|]
+\FL
+\BC chapter   \BC library          \NC \NR
+\TL
+\NC \LUA      \NC lua luac         \NC \NR
+\NC \TEX      \NC status tex texio \NC \NR
+\NC \METAPOST \NC mp               \NC \NR
+\NC Nodes     \NC node             \NC \NR
+\NC Tokens    \NC token            \NC \NR
+\NC Callbacks \NC callback         \NC \NR
+\NC Fonts     \NC font             \NC \NR
+\NC Languages \NC language         \NC \NR
+\NC Libraries \NC library          \NC \NR
+\LL
+\stoptabulate
+
+Some, like \type {node}, \type {token} and \type {tex} provide a lot of functions
+but most are used in more higher level \CONTEXT\ specific functions and
+interfaces. This means that in the code you will more often font \type {nodes}
+and \type {tokens} being used as well as functions that the macro package adds to
+the various built-in libraries.
+
+\stopsection
+
+\startsection[title={Auxiliary}]
+
+\startsubsection[title=Extensions]
+
+These are the libraries that are needed to implement various subsystems, like for
+instance the backend and image inclusion. Although much can be done in pure \LUA\
+for performance reasons helpers make sense. However, we try to minimize this,
+which means that for instance the \type {zip} library provides what we need for
+(de)compressing for instance \PDF\ streams but that unzipping files is done with
+\LUA\ code wrapped around the core zip routines. The same is true for \PNG\
+inclusion: all that was done in pure \LUA\ but a few critical helpers were
+translated to \CCODE.
+
+Some libraries extend existing ones, like for instance \type {file}, \type {io}
+and \type {os} and \type {string}.
+
+\stopsubsection
+
+\startsubsection[title=Extra file helpers]
+
+The original \type {lfs} module has been adapted a bit to our needs but for
+practical reasons we kept the namespace. In \LUAMETATEX\ we operate in \UTF8
+so for \MSWINDOWS\ system interfaces we convert from and to \UNICODE16.
+
+The \type {attributes} checker returns a table with details.
+
+\starttyping[option=LUA]
+function lfs.attributes ( <t:string> name )
+    return <t:table> -- details
+end
+\stoptyping
+
+The table has the following fields:
+
+\starttabulate[|T|||]
+\FL
+\BC field                \BC type    \BC meaning \NC \NR
+\TL
+\NC \type {mode}         \NC string  \NC \type{file} \type{directory} \type{link} \type{other} \NC \NR
+\NC \type {size}         \NC integer \NC bytes \NC \NR
+\NC \type {modification} \NC integer \NC time \NC \NR
+\NC \type {access}       \NC integer \NC time \NC \NR
+\NC \type {change}       \NC integer \NC time \NC \NR
+\NC \type {permissions}  \NC string  \NC \type {rwxrwxrwx} \NC \NR
+\NC \type {nlink}        \NC integer \NC number of links \NC \NR
+\LL
+\stoptabulate
+
+If you're not interested in details, then the next calls are more efficient:
+
+\starttyping[option=LUA]
+function lfs.isdir           ( <t:string> name ) return <t:boolean> end
+function lfs.isfile          ( <t:string> name ) return <t:boolean> end
+function lfs.iswriteabledir  ( <t:string> name ) return <t:boolean> end
+function lfs.iswriteablefile ( <t:string> name ) return <t:boolean> end
+function lfs.isreadabledir   ( <t:string> name ) return <t:boolean> end
+function lfs.isreadablefile  ( <t:string> name ) return <t:boolean> end
+\stoptyping
+
+The current (working) directory is fetch with:
+
+\starttyping[option=LUA]
+function lfs.currentdir ( )
+    return <t:string> -- directory
+end
+\stoptyping
+
+These three return \type {true} is the action was a success:
+
+\starttyping[option=LUA]
+function lfs.chdir ( <t:string> name ) return <t:boolean> end
+function lfs.mkdir ( <t:string> name ) return <t:boolean> end
+function lfs.rmdir ( <t:string> name ) return <t:boolean> end
+\stoptyping
+
+Here the second and third argument are optional:
+
+\starttyping[option=LUA]
+function lfs.touch (
+    <t:string>  name,
+    <t:integer> accesstime,
+    <t:integer> modificationtime
+)
+    return <t:boolean> -- success
+end
+\stoptyping
+
+The \type {dir} function is a traverser which in addition to the name returns
+some more properties. Keep in mind that the traverser loops over a directory and
+that it doesn't run well when used nested. This is a side effect of the operating
+system. It is also the reason why we return some properties because querying them
+via \type {attributes} would interfere badly. The directory iterator has two
+variants:
+
+\starttyping[option=LUA]
+for
+    <t:string> name,
+    <t:string> mode
+in lfs.dir (
+    <t:string> name
+)
+    -- actions
+end
+\stoptyping
+
+This one provides more details:
+
+\starttyping[option=LUA]
+for
+    <t:string>  name,
+    <t:string>  mode,
+    <t:integer> size,
+    <t:integer> mtime
+in lfs.dir (
+    <t:string>  name,
+    <t:true>
+)
+    -- actions
+end
+\stoptyping
+
+Here the boolean indicates if we want a symlink (\type {true}) or hard link
+(\type {false}).
+
+\starttyping[option=LUA]
+function lfs.link (
+    <t:string>  source,
+    <t:string>  target,
+    <t:boolean> symlink
+)
+    return <t:boolean> -- success
+end
+\stoptyping
+
+The next one is sort of redundant but explicit:
+
+\starttyping[option=LUA]
+function lfs.symlink (
+    <t:string>  source,
+    <t:string>  target,
+)
+    return <t:boolean> -- success
+end
+\stoptyping
+
+Helpers like these are a bit operating system and user permission dependent:
+
+\starttyping[option=LUA]
+function lfs.setexecutable ( <t:string> name )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function lfs.symlinktarget ( <t:string> name )
+    return <t:string> -- target
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Reading from a file]
+
+Because we load fonts in \LUA\ and because these are binary files we have some
+helpers that can read integers of various kind and some more. Originally we did
+this in pure \LUA, which actually didn't perform that bad but this is of course
+more efficient.
+
+We have readers for signed and unsigned, little and big endian. All return a (64
+bit) \LUA\ integer.
+
+\starttyping[option=LUA]
+function fio.readcardinal1 ( <t:file> handle ) return <t:integer> end
+function fio.readcardinal2 ( <t:file> handle ) return <t:integer> end
+function fio.readcardinal3 ( <t:file> handle ) return <t:integer> end
+function fio.readcardinal4 ( <t:file> handle ) return <t:integer> end
+
+function fio.readcardinal1le ( <t:file> handle ) return <t:integer> end
+function fio.readcardinal2le ( <t:file> handle ) return <t:integer> end
+function fio.readcardinal3le ( <t:file> handle ) return <t:integer> end
+function fio.readcardinal4le ( <t:file> handle ) return <t:integer> end
+
+function fio.readinteger1 ( <t:file> handle ) return <t:integer> end
+function fio.readinteger2 ( <t:file> handle ) return <t:integer> end
+function fio.readinteger3 ( <t:file> handle ) return <t:integer> end
+function fio.readinteger4 ( <t:file> handle ) return <t:integer> end
+
+function fio.readinteger1le ( <t:file> handle ) return <t:integer> end
+function fio.readinteger2le ( <t:file> handle ) return <t:integer> end
+function fio.readinteger3le ( <t:file> handle ) return <t:integer> end
+function fio.readinteger4le ( <t:file> handle ) return <t:integer> end
+\stoptyping
+
+These float readers are rather specific for fonts:
+
+\starttyping[option=LUA]
+function fio.readfixed2 ( <t:file> handle ) return <t:number>  end
+function fio.readfixed4 ( <t:file> handle ) return <t:number>  end
+function fio.read2dot14 ( <t:file> handle ) return <t:number>  end
+\stoptyping
+
+Of these two the first reads a line and the second a string the \CCODE\ way, so
+ending with a newline and null character:
+
+\starttyping[option=LUA]
+function fio.readcline   ( <t:file> handle ) return <t:string> end
+function fio.readcstring ( <t:file> handle ) return <t:string> end
+\stoptyping
+
+The next set of readers reads multiple integers in one call:
+
+\starttyping[option=LUA]
+function fio.readbytes (
+    <t:file> handle
+)
+    return <t:integer> -- one or more
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function fio.readintegertable (
+    <t:file>    handle,
+    <t:integer> size,
+    <t:integer> bytes
+)
+    return <t:table>
+end
+
+function fio.readcardinaltable (
+    <t:file>    handle,
+    <t:integer> size,
+    <t:integer> bytes
+)
+    return <t:table>
+end
+
+function fio.readbytetable (
+    <t:file> handle
+)
+    return <t:table>
+end
+\stoptyping
+
+In case we need a random access the following have to be used:
+
+\starttyping[option=LUA]
+function fio.setposition  ( <t:file> handle, <t:integer> ) return <t:integer> end
+function fio.getposition  ( <t:file> handle              ) return <t:integer> end
+function fio.skipposition ( <t:file> handle, <t:integer> ) return <t:integer> end
+\stoptyping
+
+The library also provide a few writers:
+
+\starttyping[option=LUA]
+function fio.writecardinal1 ( <t:file> handle, <t:integer> value ) end
+function fio.writecardinal2 ( <t:file> handle, <t:integer> value ) end
+function fio.writecardinal3 ( <t:file> handle, <t:integer> value ) end
+function fio.writecardinal4 ( <t:file> handle, <t:integer> value ) end
+
+function fio.writecardinal1le ( <t:file> handle, <t:integer> value ) end
+function fio.writecardinal2le ( <t:file> handle, <t:integer> value ) end
+function fio.writecardinal3le ( <t:file> handle, <t:integer> value ) end
+function fio.writecardinal4le ( <t:file> handle, <t:integer> value ) end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Reading from a string]
+
+These readers take a string and position. We could have used a userdata approach
+but it saves little. (Nowadays we can more easily store the position with the
+userdata so maybe some day \unknown).
+
+\starttyping[option=LUA]
+function sio.readcardinal1 ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readcardinal2 ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readcardinal3 ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readcardinal4 ( <t:string> s, <t:integer> p ) return <t:integer> end
+
+function sio.readcardinal1le ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readcardinal2le ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readcardinal3le ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readcardinal4le ( <t:string> s, <t:integer> p ) return <t:integer> end
+
+function sio.readinteger1 ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readinteger2 ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readinteger3 ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readinteger4 ( <t:string> s, <t:integer> p ) return <t:integer> end
+
+function sio.readinteger1le ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readinteger2le ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readinteger3le ( <t:string> s, <t:integer> p ) return <t:integer> end
+function sio.readinteger4le ( <t:string> s, <t:integer> p ) return <t:integer> end
+\stoptyping
+
+Here are the (handy for fonts) float readers:
+
+\starttyping[option=LUA]
+function sio.readfixed2 ( <t:string> s, <t:integer> p ) return <t:number> end
+function sio.readfixed4 ( <t:string> s, <t:integer> p ) return <t:number> end
+function sio.read2dot14 ( <t:string> s, <t:integer> p ) return <t:number> end
+\stoptyping
+
+A \CCODE\ line (terminated by a newline) and string (terminated by null) are read
+by:
+
+\starttyping[option=LUA]
+function sio.readcline   ( <t:string> s, <t:integer> p ) return <t:string> end
+function sio.readcstring ( <t:string> s, <t:integer> p ) return <t:string> end
+\stoptyping
+
+\starttyping[option=LUA]
+function sio.readbytes (
+    <t:string>  str,
+    <t:integer> pos
+)
+    return <t:integer> -- one or more
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function sio.readintegertable (
+    <t:string>  str,
+    <t:integer> pos,
+    <t:integer> size,
+    <t:integer> bytes
+)
+    return <t:table>
+end
+
+function sio.readcardinaltable (
+    <t:string>  str,
+    <t:integer> pos,
+    <t:integer> size,
+    <t:integer> bytes
+)
+    return <t:table>
+end
+
+function sio.readbytetable (
+    <t:string>  str,
+    <t:integer> pos
+)
+    return <t:table>
+end
+\stoptyping
+
+Here are a few straightforward converters:
+
+\starttyping[option=LUA]
+function sio.tocardinal1 ( <t:string> ) return <t:integer> end
+function sio.tocardinal2 ( <t:string> ) return <t:integer> end
+function sio.tocardinal3 ( <t:string> ) return <t:integer> end
+function sio.tocardinal4 ( <t:string> ) return <t:integer> end
+
+function sio.tocardinal1le ( <t:string> ) return <t:integer> end
+function sio.tocardinal2le ( <t:string> ) return <t:integer> end
+function sio.tocardinal3le ( <t:string> ) return <t:integer> end
+function sio.tocardinal4le ( <t:string> ) return <t:integer> end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Extra file helpers]
+
+This function gobble characters upto a newline. When characters are gobbled.
+\type {true} is returned when we end up at a newline or when something is gobbled
+before the file ends, other wise we get \type {false}. A \type {nil} return value
+indicates a bad handle.
+
+\starttyping[option=LUA]
+function io.gobble( <t:file> )
+    return <t:boolean> | <t:nil>
+end
+\stoptyping
+
+Function like type {io.open} \type {io.popen} are patched to support files on
+\MSWINDOWS\ that use wide \UNICODE.
+
+\stopsubsection
+
+\startsubsection[title=Extra operating system helpers]
+
+The \type {os} library has a few extra functions and variables so for complete
+overview you need to look in the \LUA\ manual.
+
+We can sleep for the given number of seconds. When the optional \type {units}
+arguments is (for instance) 1000 we assume milliseconds.
+
+\starttyping[option=LUA]
+function os.sleep (
+    <t:integer>  seconds,
+    <t:integers> units
+)
+    -- no return values
+end
+\stoptyping
+
+The \type {os.uname} function returns a table with specific operating system
+information acquired at runtime. The fields in the returned table are:
+\showenginekeylist {os.getunamefields()}.
+
+\starttyping[option=LUA]
+function os.uname ( )
+    return <t:table>
+\stoptyping
+
+The \type {os.gettimeofday} function returns the current \quote {\UNIX\ time},
+but as a float. Keep in mind that there might be platforms where this function is
+not available.
+
+\starttyping[option=LUA]
+function os.gettimeofday ( )
+    return <t:number>
+end
+\stoptyping
+
+When we execute a command the return code is returned. Interpretation is up to
+the caller.
+
+\starttyping[option=LUA]
+function os.execute ( <t:string> )
+    return <t:integer> -- return code
+end
+\stoptyping
+
+This one enable interpreting \ANSI\ escape sequences in the console. It is only
+implemented for \MSWINDOWS. In \CONTEXT\ you can run with \type {--ansi}.
+
+\starttyping[option=LUA]
+function os.enableansi ( )
+    return <t:boolean>
+end
+\stoptyping
+
+This one only returns something useful for \MSWINDOWS. One can of course just set
+your the system for \UTF8. It's just a reporter meant for debugging issues.
+
+\starttyping[option=LUA]
+function os.getcodepage ( )
+    return
+        <t:integer> oemcodepage,
+        <t:integer> applicationcodepage
+end
+\stoptyping
+
+The \type {os.setenv} function sets a variable in the environment. Passing
+\type {nil} instead of a value string will remove the variable.
+
+\starttyping[option=LUA]
+function os.setenv (
+    <t:string> key,
+    <t:string> value
+)
+    -- no return values
+end
+\stoptyping
+
+The possible values of \type {os.type} are: \showenginekeylist
+{os.gettypevalues()}.
+
+\starttyping[option=LUA]
+local currenttype = os.type
+\stoptyping
+
+The \type {os.name} string gives a more precise indication of the operating
+system. The possible values are: \showenginekeylist {os.getnamevalues()}.
+
+\starttyping[option=LUA]
+local currentname = os.name
+\stoptyping
+
+On \MSWINDOWS\ the original \type {os.rename}, \type {os.remove} and \type
+{os.getenv} functions are replaced by variants that interface to and convert from
+\UNICODE16\ to \UTF8.
+
+\stopsubsection
+
+\startsubsection[title=Extra string helpers]
+
+The \type {string} library has gotten a couple of extra functions too, some of
+which are iterators. There are some \UNICODE\ related helpers too. When we
+started \LUA\ had no \UTF8 function, now it has a few, but we keep using our own,
+if only because they were there before. We also add plenty extra functions in the
+\type {string} name space at the \LUA\ end.
+
+This first function runs over a string and pick sup single characters:
+
+\starttyping[option=LUA]
+for <t:string> c in string.characters ( <t:string> s ) do
+    -- some action
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+for c in string.characters("τεχ") do
+    context("[%02X]",string.byte(c))
+end
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+\starttyping[option=LUA]
+for <t:string> l, <t:string> r in string.characterpairs ( <t:string> s ) do
+    -- some action
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+for l, r in string.characterpairs("τεχ") do
+    context("[%02X %02X]",string.byte(l),string.byte(r))
+end
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+\starttyping[option=LUA]
+for <t:string> c in string.utfcharacters( <t:string> s ) do
+    -- some action
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+for c in string.utfcharacters("τεχ") do
+    context("[%s]",c)
+end
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+Instead of getting strings back we can also get integers.
+
+\starttyping[option=LUA]
+for <t:integer> c in string.bytes ( <t:string> s ) do
+    -- some action
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+for b in string.bytes("τεχ") do
+    context("[%02X]",b)
+end
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+\starttyping[option=LUA]
+for <t:integer> l, <t:integer> r in string.bytepairs ( <t:string> s ) do
+    -- some action
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+for l, r in string.bytepairs("τεχ") do
+    context("[%02X %02X]",l,r)
+end
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+\starttyping[option=LUA]
+for <t:integer> u in string.utfvalues( <t:string> s ) do
+    -- some action
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+for c in string.utfvalues("τεχ") do
+    context("[%U]",c)
+end
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+The \type {bytetable} function splits a string in bytes.
+
+\starttyping[option=LUA]
+function string.bytetable ( <s:string> s) do
+    return <t:table> -- with bytes
+end
+\stoptyping
+
+Here is a line splitter:
+
+\starttyping[option=LUA]
+function string.linetable  ( <s:string> s) do
+    return <t:table> -- with lines
+end
+\stoptyping
+
+This one converts an integer (code point) into an \UTF\ string:
+
+\starttyping[option=LUA]
+function string.utfcharacter ( <t:string> s )
+    return <t:string>
+end
+\stoptyping
+
+We also have a variant that takes a table. The table can have integers, strings,
+and subtables.
+
+\starttyping[option=LUA]
+function string.utfcharacter ( <t:table> s )
+    return <t:string>
+end
+\stoptyping
+
+This an \UTF8\ variant of \type {string.byte} and it returns the code points of
+the split on the stack.
+
+\starttyping[option=LUA]
+function string.utfvalue ( <t:string> s )
+    return <t:integer> -- zero or more
+end
+\stoptyping
+
+Instead of a list on the stack you can get a table:
+
+\starttyping[option=LUA]
+function string.utfvaluetable ( <t:string> s )
+    return <t:table> -- indexed
+end
+\stoptyping
+
+The name says it all:
+
+\starttyping[option=LUA]
+function string.utflength ( <tr:string> s )
+    return <t:integer>
+end
+\stoptyping
+
+Here we split a string in characters that are collected in an indexed table:
+
+\starttyping[option=LUA]
+function string.utfcharactertable ( <t:string> s )
+    return <t:table> -- indexed
+end
+\stoptyping
+
+In \CONTEXT\ we mostly use \type {string.formatters} which is often more
+efficient then \type {string.format} and also has additional formatting options,
+one being for instance \type {N} which is like \type {f} but strips trailing zero
+and returns efficient zeros and ones. Here is a similar low level formatter:
+
+\starttyping[option=LUA]
+function string.f6 ( <t:number> n )
+    return <t:string>
+end
+
+function string.f6 ( <t:number> n,  <t:string> f )
+    return <t:string>
+end
+\stoptyping
+
+In the first case it returns a string with at most 6 digits while the second one
+uses given format but tail strips the result.
+
+\starttyping[option=LUA]
+function string.tounicode16 ( <t:integer> code  ) return <t:string> end
+\stoptyping
+
+\starttyping[option=LUA]
+function string.toutf8  ( <t:table>   codes ) return <t:string> end
+-------- string.toutf16 ( <t:table>   codes ) return <t:string> end
+function string.toutf32 ( <t:table>   codes ) return <t:string> end
+\stoptyping
+
+The next one has quite some variation in calling:
+
+\starttyping[option=LUA]
+function string.utf16toutf8 ( <t:string> str, <t:true> )
+    return <t:string>  -- big endian
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function string.utf16toutf8 ( <t:string> str, <t:false> )
+    return <t:string> -- little endian
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function string.utf16toutf8 ( <t:string> str, <t:nil>, <t:true> )
+    return <t:string> -- check bom, default to big endian
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function string.utf16toutf8 ( <t:string> str, <t:nil>, <t:false> )
+    return <t:string> end -- check bom, default to little endian
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function string.utf16toutf8 ( <t:string> str, <t:nil>, <t:nil> )
+    return <t:string> end -- check bom, default to little endian
+end
+\stoptyping
+
+The next packer is used for creating bitmaps:
+
+\starttyping[option=LUA]
+function string.packrowscolumns ( <t:table> data )
+    return <t:string>
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+local t = {
+    { 65, 66, 67 },
+    { 68, 69, 70 },
+}
+context(string.packrowscolumns(t))
+\stopluacode
+\stopbuffer
+
+For example:
+
+\typebuffer
+
+gives: \inlinebuffer
+
+\startbuffer
+\startluacode
+local t = {
+    { { 114, 103, 98 }, { 114, 103, 98 } },
+    { { 114, 103, 98 }, { 114, 103, 98 } },
+}
+
+context(string.packrowscolumns(t))
+\stopluacode
+\stopbuffer
+
+While:
+
+\typebuffer
+
+gives: \inlinebuffer
+
+A string with hexadecimals can be converted with the following. Spaces are
+ignored. We use this for instance in the \METAPOST\ potrace interface to
+permits nice input.
+
+\starttyping[option=LUA]
+function string.hextocharacters ( <t:string> data )
+    return <t:string>
+end
+\stoptyping
+
+\startbuffer
+\startluacode
+local t = [[
+  414243 44 4546 47
+  414243 44 4546 47
+]]
+
+context(string.hextocharacters(t))
+\stopluacode
+\stopbuffer
+
+So:
+
+\typebuffer
+
+gives: \inlinebuffer
+
+These take strings and return integers:
+
+\starttyping[option=LUA]
+function string.octtointeger ( <t:string> octstr ) return <t:integer> end
+function string.dectointeger ( <t:string> decstr ) return <t:integer> end
+function string.hextointeger ( <t:string> hexstr ) return <t:integer> end
+function string.chrtointeger ( <t:string> chrstr ) return <t:integer> end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Extra table helpers]
+
+This returns the keys of the given table:
+
+\starttyping[option=LUA]
+function table.getkeys ( < t:table> )
+    return <t:table>
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Byte encoding and decoding]
+
+We use some helpers from \type {pplib}.
+
+\starttyping[option=LUA]
+function basexx.encode16  ( <t:string> str, <t:boolean> newline )
+    return <t:string>
+end
+function basexx.encode64  ( <t:string> str, <t:boolean> newline )
+    return <t:string>
+end
+function basexx.encode85  ( <t:string> str, <t:boolean> newline )
+    return <t:string>
+end
+
+function basexx.decode16  ( <t:string> str ) return <t:string> end
+function basexx.decode64  ( <t:string> str ) return <t:string> end
+function basexx.decode85  ( <t:string> str ) return <t:string> end
+
+function basexx.encodeRL  ( <t:string> str ) return <t:string> end
+function basexx.decodeRL  ( <t:string> str ) return <t:string> end
+
+function basexx.encodeLZW ( <t:string> str ) return <t:string> end
+function basexx.decodeLZW ( <t:string> str ) return <t:string> end
+\stoptyping
+
+The last two functions accept an optional bitset with coder flags that we leave
+for the user to ponder about. The \type {newline} directive in the first three is
+optional.
+
+\stopsubsection
+
+\startsubsection[title=\PNG\ decoding]
+
+These function started out as pure \LUA\ functions (extrapolated from the
+descriptions in the standard) but eventually became library helpers. It is
+worth noticing that \PDF\ supports \JPEG\ directly so there we can just use
+\LUA\ to interpret the file and pass relevant data. Support for \PNG\ is
+actually just support for \PNG\ compression, so there we need to do more
+work and filter the content:
+
+\starttyping[option=LUA]
+function decode.applyfilter (
+    <t:string>  data,
+    <t:integer> nx,
+    <t:integer> ny,
+    <t:integer> slice
+)
+    return <t:string>
+end
+\stoptyping
+
+We also need to split off the mask as ie becomes a separate object:
+
+\starttyping[option=LUA]
+function decode.splitmask (
+    <t:string>  data,
+    <t:integer> nx,
+    <t:integer> ny,
+    <t:integer> bpp,
+    <t:integer> bytes
+)
+    return
+        <t:string>, -- bitmap
+        <t:string>  -- mask
+end
+\stoptyping
+
+If present we have to deinterlace:
+
+\starttyping[option=LUA]
+function decode.interlace (
+    <t:string>  data,
+    <t:integer> nx,
+    <t:integer> ny,
+    <t:integer> slice,
+    <t:integer> pass
+)
+    return <t:string>
+end
+\stoptyping
+
+And maybe expand compressed:
+
+\starttyping[option=LUA]
+function decode.expand (
+    <t:string>  data,
+    <t:integer> nx,
+    <t:integer> ny,
+    <t:integer> parts,
+    <t:integer> xline,
+    <t:integer> factor
+)
+    return <t:string>
+end
+\stoptyping
+
+These are just helpers that permit integration in the \CONTEXT\ graphic
+ecosystem (including \METAPOST):
+
+\starttyping[option=LUA]
+function decode.tocmyk ( <t:string data )
+    return <t:string>
+end
+\stoptyping
+
+For usage see the \CONTEXT\ sources.
+
+\starttyping[option=LUA]
+function decode.tomask (
+    <t:string>  content,
+    <t:string>  mapping,
+    <t:integer> xsize,
+    <t:integer> ysize,
+    <t:integer> colordepth
+)
+    return <t:string>
+end
+\stoptyping
+
+There are to variants:
+
+\starttyping[option=LUA]
+function decode.makemask (
+    <t:string>  content,
+    <t:integer> mapping
+)
+    return <t:string>
+end
+
+function decode.makemask (
+    <t:string> content,
+    <t:table>  mapping
+)
+    return <t:string>
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=MD5 hashing]
+
+In the meantime we use some helpers from \type {pplib} because we have that
+anyway. These are useful when we need a reasonable unique hash of limited length:
+
+\starttyping[option=LUA]
+function md5.sum ( <t:string> ) return <t:string> end
+function md5.hex ( <t:string> ) return <t:string> end
+function md5.HEX ( <t:string> ) return <t:string> end
+\stoptyping
+
+\startbuffer
+\startluacode
+context.type(md5.HEX("normally this is unique enough"))
+\stopluacode
+\stopbuffer
+
+Using a hexadecimal representation of the 16 byte calculated checksum is less
+sensitive for escaping. This:
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+\stopsubsection
+
+\startsubsection[title=SHA2 hashing]
+
+Because \type {pplib} comes with some SHA2 support we can borrow its helpers
+instead of the \LUA\ code we used before (which was anyway fun to write).
+
+\starttyping[option=LUA]
+function sha2.digest256 ( <t:string> data ) return <t:string> end
+function sha2.digest384 ( <t:string> data ) return <t:string> end
+function sha2.digest512 ( <t:string> data ) return <t:string> end
+function sha2.sum256    ( <t:string> data ) return <t:string> end
+function sha2.sum384    ( <t:string> data ) return <t:string> end
+function sha2.sum512    ( <t:string> data ) return <t:string> end
+function sha2.hex256    ( <t:string> data ) return <t:string> end
+function sha2.hex384    ( <t:string> data ) return <t:string> end
+function sha2.hex512    ( <t:string> data ) return <t:string> end
+function sha2.HEX256    ( <t:string> data ) return <t:string> end
+function sha2.HEX384    ( <t:string> data ) return <t:string> end
+function sha2.HEX512    ( <t:string> data ) return <t:string> end
+\stoptyping
+
+\startbuffer
+\startluacode
+context.type(sha2.HEX256("normally this is unique enough"))
+\stopluacode
+\stopbuffer
+
+The number refers to bytes, so with 256 we get a 32 byte hash that we show in
+hexadecimal because that is less sensitive for escaping:
+
+\typebuffer
+
+gives: \inlinebuffer.
+
+\stopsubsection
+
+\startsubsection[title=AES encryption]
+
+In the next encryption functions the key should be 16, 24 or 32 bytes long.
+
+\starttyping[option=LUA]
+function aes.encode (
+    <t:string> data,
+    <t:string> key
+)
+    return <t:string>
+end
+
+function aes.decode (
+    <t:string> data,
+    <t:string> key
+)
+    return <t:string>
+end
+\stoptyping
+
+This returns a string. The default length is 16; the optional length is limited
+to 32.
+
+\starttyping[option=LUA]
+function aes.random ( <t:integer> length )
+    return <t:string>
+end
+\stoptyping
+
+Here is an example:
+
+\startbuffer
+\startluacode
+context.type ( basexx.encode16 ( aes.encode (
+    "normally this is unique enough",
+    "The key of live!"
+) ) )
+\stopluacode
+\stopbuffer
+
+\typebuffer
+
+This gives: \inlinebuffer, where we hexed the result because
+it is unlikely to be valid \UTF8.
+
+\stopsubsection
+
+\startsubsection[title=ZIP (de)compression]
+
+We provide the minimum needed to support compression in the backend but even this
+limited set makes it possible to implement a zip file compression utility which
+is indeed what we do in \CONTEXT. We use \type {minizip} as codebase, without the
+zip utility code. The meaning and application of the various arguments can be
+found (and are better explained) on the internet.
+
+\starttyping[option=LUA]
+function xzip.compress (
+    <t:string>  data,
+    <t:integer> compresslevel,
+    <t:integer> method,
+    <t:integer> window,
+    <t:integer> memory,
+    <t:integer> strategy
+)
+    return <t:string>
+end
+
+function xzip.compresssize (
+    <t:string>  data,
+    <t:integer> buffersize,
+    <t:integer> compresslevel,
+    <t:integer> window
+)
+    return <t:string>
+end
+
+function xzip.decompress (
+    <t:string>  data,
+    <t:integer> window
+)
+    return <t:string>
+end
+
+function xzip.decompresssize (
+    <t:string>  data,
+    <t:integer> targetsize,
+    <t:integer> window
+)
+    return <t:string>
+end
+
+function xzip.adler32 (
+    <t:string>  buffer,
+    <t:integer> checksum
+)
+    return <t:integer>
+end
+
+function xzip.crc32 (
+    <t:string>  buffer,
+    <t:integer> checksum
+)
+    return <t:integer>
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Potrace]
+
+The excellent potrace manual explains everything about this library therefore
+here we just show the interface. Possible fields in specification are:
+\showenginekeylist {table.sortedkeys (potrace.getnewfields ())}
+
+\starttyping[option=LUA]
+function potrace.new ( <t:table> specification )
+    return <t:userdata> -- instance
+end
+\stoptyping
+
+
+\starttyping[option=LUA]
+function potrace.free ( <t:userdata> instance)
+    -- no return values
+end
+\stoptyping
+
+The process is controlled by the specification: \showenginekeylist {table.sortedkeys
+(potrace.getprocessfields ())}, where permitted policy values are \showenginekeylist
+{potrace.getpolicyvalues()}.
+
+\starttyping[option=LUA]
+function potrace.process ( <t:userdata> instance, <t:table> specification )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+Results are collected in a table that we can feed into \METAPOST, The table has
+subtables per traced shape and these contain indexed tables with two (pair) or
+six (curve) entries. There is a boolean \type {sign} field and an integer \type
+{index} field. In the next function only the first argument is mandate.
+
+\starttyping[option=LUA]
+function potrace.totable  (
+    <t:userdata> instance,
+    <t:boolean>  debug,
+    <t:integer>  first,
+    <t:integer>  last
+)
+    return <t:table>
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Sparse hashes]
+
+The sparse library is just there because we use similar code to store all these
+character related codes that way (\type {\lccode}) and such). The entries can be
+1 (\type {0xFF}), 2 (\type {0xFFFF}) or 4 (\type {0xFFFFFFFF}) bytes wide. When 0
+is used as width then nibbles (\type {0xF}) are assumed.
+
+\starttyping[option=LUA]
+function sparse.new (
+    <t:integer> bytes,
+    <t:integer> default
+)
+    return <t:userdata>
+end
+\stoptyping
+
+You set a value by index. Optionally there can be the \type {"global"} keyword
+before the second argument.
+
+\starttyping[option=LUA]
+function sparse.set (
+    <t:userdata> instance,
+    <t:integer>  index,
+    <t:integer>  value
+)
+    return <t:integer>
+end
+\stoptyping
+
+We get back integers as that is what we store:
+
+\starttyping[option=LUA]
+function sparse.get ( <t:userdata> instance ) return <t:integer> end
+function sparse.min ( <t:userdata> instance ) return <t:integer> end
+function sparse.max ( <t:userdata> instance ) return <t:integer> end
+\stoptyping
+
+The range is fetched with:
+
+\starttyping[option=LUA]
+function sparse.range ( <t:userdata> instance )
+    return
+        <t:integer>, -- min
+        <t:integer>  -- max
+end
+\stoptyping
+
+We can iterate over the hash:
+
+\starttyping[option=LUA]
+for
+    <t:integer> index,
+    <t:integer> value
+in sparse.traverse (
+    <t:userdata> instance
+) do
+    -- actions
+end
+\stoptyping
+
+This is a somewhat strange one but it permits packing all values in a string.
+It's another way to create bitmaps.
+
+\starttyping[option=LUA]
+function sparse.concat (
+    <t:userdata> instance
+    <t:integer>  min,
+    <t:integer>  max,
+    <t:integer>  how  -- 0=byte, 1=lsb 2=msb
+)
+    return <t:string>
+end
+\stoptyping
+
+Setting values obeys grouping in \TEX, but we can restore any time:
+
+\starttyping[option=LUA]
+function sparse.restore ( <t:userdata> instance )
+    -- nothing to return
+end
+\stoptyping
+
+We can also wipe all values:
+
+\starttyping[option=LUA]
+function sparse.wipe (<t:userdata> instance )
+    -- nothing to return
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Posits]
+
+We implement posits as userdata . We use the library from the posit team,
+although it is not complete so we might roll out our own variant (as we need less
+anyway). The advance of userdata is that we can use the binary and relation
+operators.
+
+Here are the housekeeping functions. Some are more tolerant with respect to
+arguments, take the allocator:
+
+\starttyping[option=LUA]
+function posit.new (              ) return <t:posit> end
+function posit.new ( <t:string> s ) return <t:posit> end
+function posit.new ( <t:number> n ) return <t:posit> end
+\stoptyping
+
+When a posit is expected a number or string is also accepted which is then
+converted to a posit.
+
+\starttyping[option=LUA]
+function posit.copy      ( <t:posit>  p ) return <t:posit>   end
+function posit.tostring  ( <t:posit>  p ) return <t:string>  end
+function posit.tonumber  ( <t:posit>  p ) return <t:number>  end
+function posit.integer   ( <t:posit>  p ) return <t:integer  end
+function posit.rounded   ( <t:posit>  p ) return <t:integer> end
+function posit.toposit   ( <t:number> n ) return <t:posit>   end
+function posit.fromposit ( <t:posit>  p ) return <t:number>  end
+\stoptyping
+
+\starttyping[option=LUA]
+function posit.NaN ( <t:posit> p ) return <t:boolean> end
+function posit.NaR ( <t:posit> p ) return <t:boolean> end
+\stoptyping
+
+Here are the logical operators:
+
+\starttyping[option=LUA]
+function posit.bor  ( <t:posit> p1, <t:posit> p2 ) return <t:posit> end
+function posit.bxor ( <t:posit> p1, <t:posit> p2 ) return <t:posit> end
+function posit.band ( <t:posit> p1, <t:posit> p2 ) return <t:posit> end
+\stoptyping
+
+Ans shifters:
+
+\starttyping[option=LUA]
+function posit.shift  ( <t:posit> p1, <t:integer> n ) return <t:posit> end
+function posit.rotate ( <t:posit> p,  <t:integer> n ) return <t:posit> end
+\stoptyping
+
+There is a limited repertoire of math functions (basically what we needed for
+\METAPOST):
+
+\starttyping[option=LUA]
+function posit.abs   ( <t:posit> p ) return <t:posit> end
+function posit.conj  ( <t:posit> p ) return <t:posit> end
+function posit.acos  ( <t:posit> p ) return <t:posit> end
+function posit.asin  ( <t:posit> p ) return <t:posit> end
+function posit.atan  ( <t:posit> p ) return <t:posit> end
+function posit.ceil  ( <t:posit> p ) return <t:posit> end
+function posit.cos   ( <t:posit> p ) return <t:posit> end
+function posit.exp   ( <t:posit> p ) return <t:posit> end
+function posit.exp2  ( <t:posit> p ) return <t:posit> end
+function posit.floor ( <t:posit> p ) return <t:posit> end
+function posit.log   ( <t:posit> p ) return <t:posit> end
+function posit.log10 ( <t:posit> p ) return <t:posit> end
+function posit.log1p ( <t:posit> p ) return <t:posit> end
+function posit.log2  ( <t:posit> p ) return <t:posit> end
+function posit.logb  ( <t:posit> p ) return <t:posit> end
+function posit.round ( <t:posit> p ) return <t:posit> end
+function posit.sin   ( <t:posit> p ) return <t:posit> end
+function posit.sqrt  ( <t:posit> p ) return <t:posit> end
+function posit.tan   ( <t:posit> p ) return <t:posit> end
+
+function posit.modf ( <t:posit> p )
+    return
+        <t:posit>,
+        <t:posit>
+end
+
+function posit.min ( <t:posit> p1, <t:posit> p2 ) return <t:posit> end
+function posit.max ( <t:posit> p1, <t:posit> p2 ) return <t:posit> end
+function posit.pow ( <t:posit> p1, <t:posit> p2 ) return <t:posit> end
+\stoptyping
+
+% unsupported : acosh asinh atan2 atanh cbrt copysign cosh deg erf erfc expm1
+%               fabs fdim fma fmax fmin fmod frexp gamma hypot isfinite isinf
+%               isnan isnormal j0 j1 jn ldexp lgamma modf nearbyint nextafter rad
+%               remainder remquo scalbn sinh tanh tgamma trunc y0 y1 yn
+% supported   : add sub mul div unm pow / eq le lt / bor bxor band shl shr
+% unsupported : idiv mod
+
+\stopsubsection
+
+\startsubsection[title=Complex numbers]
+
+\starttyping[option=LUA]
+function xcomplex.new ( )
+    return <t:complex>
+end
+
+function xcomplex.new (
+    <t:number> re,
+    <t:number> im
+)
+    return <t:complex>
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function xcomplex.tostring ( <t:complex> z )
+    return <t:string>
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function xcomplex.topair ( <t:complex> z )
+    return
+        <t:number>, -- re
+        <t:number>  -- im
+end
+\stoptyping
+
+There is a bunch of functions that take a complex number:
+
+\starttyping[option=LUA]
+function xcomplex.abs   ( <t:complex> z ) return <t:complex> end
+function xcomplex.arg   ( <t:complex> z ) return <t:complex> end
+function xcomplex.imag  ( <t:complex> z ) return <t:complex> end
+function xcomplex.real  ( <t:complex> z ) return <t:complex> end
+function xcomplex.onj   ( <t:complex> z ) return <t:complex> end
+function xcomplex.proj  ( <t:complex> z ) return <t:complex> end
+function xcomplex.exp   ( <t:complex> z ) return <t:complex> end
+function xcomplex.log   ( <t:complex> z ) return <t:complex> end
+function xcomplex.sqrt  ( <t:complex> z ) return <t:complex> end
+function xcomplex.sin   ( <t:complex> z ) return <t:complex> end
+function xcomplex.cos   ( <t:complex> z ) return <t:complex> end
+function xcomplex.tan   ( <t:complex> z ) return <t:complex> end
+function xcomplex.asin  ( <t:complex> z ) return <t:complex> end
+function xcomplex.acos  ( <t:complex> z ) return <t:complex> end
+function xcomplex.atan  ( <t:complex> z ) return <t:complex> end
+function xcomplex.sinh  ( <t:complex> z ) return <t:complex> end
+function xcomplex.cosh  ( <t:complex> z ) return <t:complex> end
+function xcomplex.tanh  ( <t:complex> z ) return <t:complex> end
+function xcomplex.asinh ( <t:complex> z ) return <t:complex> end
+function xcomplex.acosh ( <t:complex> z ) return <t:complex> end
+function xcomplex.atanh ( <t:complex> z ) return <t:complex> end
+
+function xcomplex.pow   ( <t:complex> z1, <t:complex> z2 ) return <t:complex> end
+\stoptyping
+
+We added the \type {cerf} functions but none can wonder if we should carry that
+burden around (instead of just assuming a library to be used).
+
+The complex error function \type {erf(z)}:
+
+\starttyping[option=LUA]
+function cerf.erf ( <t:complex> z )
+    return <t:complex>
+end
+\stoptyping
+
+The complex complementary error function \type {erfc(z) = 1 - erf(z)}:
+
+\starttyping[option=LUA]
+function cerf.erfc ( <t:complex> z )
+    return <t:complex>
+end
+\stoptyping
+
+The underflow-compensating function \type {erfcx(z) = exp(z^2) erfc(z)}:
+
+\starttyping[option=LUA]
+function cerf.erfcx ( <t:complex> z )
+    return <t:complex>
+end
+\stoptyping
+
+The imaginary error function \type {erfi(z) = -i erf(iz)}:
+
+\starttyping[option=LUA]
+function cerf.erfi ( <t:complex> z )
+    return <t:complex>
+end
+\stoptyping
+
+Dawson's integral \type {D(z) = sqrt(pi)/2 * exp(-z^2) * erfi(z)}:
+
+\starttyping[option=LUA]
+function cerf.dawson ( <t:complex> z )
+    return <t:complex>
+end
+\stoptyping
+
+The convolution of a Gaussian and a Lorentzian:
+
+\starttyping[option=LUA]
+function cerf.voigt (
+    <t:number> n1,
+    <t:number> n2,
+    <t:number> n3
+)
+    return <t:number>
+end
+\stoptyping
+
+The half width at half maximum of the Voigt profile:
+
+\starttyping[option=LUA]
+function cerf.voigt_hwhm (
+    <t:number> n1,
+    <t:number> n2
+)
+    return <t:number>
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Decimal numbers]
+
+Because in \METAPOST\ we support the decimal number system, we also provide this
+at the \TEX\ end Apart from the usual support for operators there are some
+functions available.
+
+\starttyping[option=LUA]
+function xdecimal.new ( )              return <t:decimal> end
+function xdecimal.new ( <t:number> n ) return <t:decimal> end
+function xdecimal.new ( <t:string> s ) return <t:decimal> end
+\stoptyping
+
+\starttyping[option=LUA]
+function xdecimal.copy     ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.tostring ( <t:decimal> a ) return <t:string>  end
+function xdecimal.tonumber ( <t:decimal> a ) return <t:number>  end
+\stoptyping
+
+\starttyping[option=LUA]
+function xdecimal.setprecision ( <t:integer> digits )
+    --nothing to return
+end
+
+function xdecimal.getprecision ( )
+    return <t:integer>
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function xdecimal.bor  ( <t:decimal> a, <t:decimal> b ) return <t:decimal> end
+function xdecimal.bxor ( <t:decimal> a, <t:decimal> b ) return <t:decimal> end
+function xdecimal.band ( <t:decimal> a, <t:decimal> b ) return <t:decimal> end
+\stoptyping
+
+\starttyping[option=LUA]
+function xdecimal.shift  ( <t:decimal> a, <t:integer> n ) return <t:decimal> end
+function xdecimal.rotate ( <t:decimal> a, <t:integer> n ) return <t:decimal> end
+\stoptyping
+
+\starttyping[option=LUA]
+function xdecimal.abs   ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.trim  ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.conj  ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.abs   ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.sqrt  ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.ln    ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.log   ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.exp   ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.minus ( <t:decimal> a ) return <t:decimal> end
+function xdecimal.plus  ( <t:decimal> a ) return <t:decimal> end
+
+function xdecimal.min ( <t:decimal> a, <t:decimal> b ) return <t:decimal> end
+function xdecimal.max ( <t:decimal> a, <t:decimal> b ) return <t:decimal> end
+function xdecimal.pow ( <t:decimal> a, <t:decimal> b ) return <t:decimal> end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Math helpers]
+
+The \type {xmath} library provides function and a few constants:
+
+\starttyping[option=LUA]
+local infinty    = xmath.inf
+local notanumber = xmath.nan
+local pi         = xmath.pi
+\stoptyping
+
+There are more helpers than the average used needs. We also use these
+to extend the \METAPOST\ repertoire.
+
+\starttyping[option=LUA]
+function xmath.acos       ( <t:number> a )               return <t:number> end
+function xmath.acosh      ( <t:number> a )               return <t:number> end
+function xmath.asin       ( <t:number> a )               return <t:number> end
+function xmath.asinh      ( <t:number> a )               return <t:number> end
+function xmath.atan       ( <t:number> a )               return <t:number> end
+function xmath.atan       ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.atan2      ( <t:number> a )               return <t:number> end
+function xmath.atan2      ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.atanh      ( <t:number> a )               return <t:number> end
+function xmath.cbrt       ( <t:number> a )               return <t:number> end
+function xmath.ceil       ( <t:number> a )               return <t:number> end
+function xmath.copysign   ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.cos        ( <t:number> a )               return <t:number> end
+function xmath.cosh       ( <t:number> a )               return <t:number> end
+function xmath.deg        ( <t:number> a )               return <t:number> end
+function xmath.erf        ( <t:number> a )               return <t:number> end
+function xmath.erfc       ( <t:number> a )               return <t:number> end
+function xmath.exp        ( <t:number> a )               return <t:number> end
+function xmath.exp2       ( <t:number> a )               return <t:number> end
+function xmath.expm1      ( <t:number> a )               return <t:number> end
+function xmath.fabs       ( <t:number> a )               return <t:number> end
+function xmath.fdim       ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.floor      ( <t:number> a )               return <t:number> end
+function xmath.fmax       ( ... )                        return <t:number> end
+function xmath.fmin       ( ... )                        return <t:number> end
+function xmath.fmod       ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.frexp      ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.gamma      ( <t:number> a )               return <t:number> end
+function xmath.hypot      ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.isfinite   ( <t:number> a )               return <t:number> end
+function xmath.isinf      ( <t:number> a )               return <t:number> end
+function xmath.isnan      ( <t:number> a )               return <t:number> end
+function xmath.isnormal   ( <t:number> a )               return <t:number> end
+function xmath.j0         ( <t:number> a )               return <t:number> end
+function xmath.j1         ( <t:number> a )               return <t:number> end
+function xmath.jn         ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.ldexp      ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.lgamma     ( <t:number> a )               return <t:number> end
+function xmath.l0         ( <t:number> a )               return <t:number> end
+function xmath.l1         ( <t:number> a )               return <t:number> end
+function xmath.ln         ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.log        ( <t:number> a [,b])           return <t:number> end
+function xmath.log10      ( <t:number> a )               return <t:number> end
+function xmath.log1p      ( <t:number> a )               return <t:number> end
+function xmath.log2       ( <t:number> a )               return <t:number> end
+function xmath.logb       ( <t:number> a )               return <t:number> end
+function xmath.modf       ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.nearbyint  ( <t:number> a )               return <t:number> end
+function xmath.nextafter  ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.pow        ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.rad        ( <t:number> a )               return <t:number> end
+function xmath.remainder  ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.remquo     ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.round      ( <t:number> a )               return <t:number> end
+function xmath.scalbn     ( <t:number> a, <t:number> b ) return <t:number> end
+function xmath.sin        ( <t:number> a )               return <t:number> end
+function xmath.sinh       ( <t:number> a )               return <t:number> end
+function xmath.sqrt       ( <t:number> a )               return <t:number> end
+function xmath.tan        ( <t:number> a )               return <t:number> end
+function xmath.tanh       ( <t:number> a )               return <t:number> end
+function xmath.tgamma     ( <t:number> a )               return <t:number> end
+function xmath.trunc      ( <t:number> a )               return <t:number> end
+function xmath.y0         ( <t:number> a )               return <t:number> end
+function xmath.y1         ( <t:number> a )               return <t:number> end
+function xmath.yn         ( <t:number> a )               return <t:number> end
+
+function xmath.fma (
+    <t:number> a,
+    <t:number> b,
+    <t:number> c
+)
+    return <t:number>
+end
+\stoptyping
+
+\stopsubsection
+
+\stopsection
+
+\startsection[title={Optional}]
+
+\startsubsection[title=Loading]
+
+The optional libraries are (indeed) optional. Compilation of \LUAMETATEX\ doesn't
+depend on them being present. Loading (and binding) is delayed. In practice we
+only see a few being of interest and used, like \type {zint} for barcodes, \type
+{mysql} for database processing and \type {graphicmagick} for an occasional
+runtime conversion. Some are just there to show the principles and were used to
+test the interfaces and loading.
+
+A library can be loaded, and thereby registered in the \quote {optional}
+namespace, assuming that \type {--permitloadlib} is given with:
+
+\starttyping[option=LUA]
+function library.load (
+    <t:string> filename,
+    <t:string> openname,
+)
+    return
+        <t:function>, -- target
+        <t:string>    -- foundname
+end
+\stoptyping
+
+but there are no guarantees that it will work.
+
+\stopsubsection
+
+\startsubsection[title=Management]
+
+{\em Todo: something about how optionals are implemented and are supposed to work.}
+
+\stopsubsection
+
+\startsubsection[title=TDS (kpse)]
+
+The optional \type {kpse} library deals with lookups in the \TEX\ Directory
+Structure and before it can be used it has to be initialized:
+
+\starttyping[option=LUA]
+function optional.kpse.initialize ( <t:string> filename )
+    return <t:boolean>
+end
+\stoptyping
+
+By setting the program name the library knows in what namespace to resolve
+filenames and variables.
+
+\starttyping[option=LUA]
+function optional.kpse.set_program_name (
+    <t:string> binaryname,
+    <t:string> programname
+)
+    -- no return values
+end
+\stoptyping
+
+The main finder has one or more arguments. When the second and later arguments
+can be a boolean, string or number. The boolean indicates if the file must exist.
+A string sets the file type and a number does the same.
+
+\starttyping[option=LUA]
+function optional.kpse.find_file(
+    <t:string>  filename,
+    <t:string>  filetype.
+    <t:boolean> mustexist
+)
+    return <t:string>
+end
+\stoptyping
+
+You can also ask for a list of found files:
+
+\starttyping[option=LUA]
+function optional.kpse.find_files (
+    <t:string> userpath,
+    <t:string> filename
+)
+    return <t:table>
+end
+\stoptyping
+
+These return variables, values and paths:
+
+\starttyping[option=LUA]
+function optional.kpse.expand_path   ( <t:string> name ) return <t:string> end
+function optional.kpse.expand_var    ( <t:string> name ) return <t:string> end
+function optional.kpse.expand_braces ( <t:string> name ) return <t:string> end
+function optional.kpse.var_value     ( <t:string> name ) return <t:string> end
+\stoptyping
+
+If possible this returns the (first found) filename that is readable:
+
+\starttyping[option=LUA]
+function optional.kpse.readable_file ( <t:string> filename )
+    return <t:string>
+end
+\stoptyping
+
+The list of supported file types can be fetched with:
+
+\starttyping[option=LUA]
+function optional.kpse.get_file_types ( )
+    return <t:table>
+end
+\stoptyping
+
+\stopsubsection
+
+\startsubsection[title=Graphics]
+
+\startsubsubsubject[title=ghostscript]
+
+The \type {ghostscript} library has to be initialized:
+
+\starttyping[option=LUA]
+function optional.ghostscript.initialize ( <t:string> filename )
+    return <t:boolean>
+end
+\stoptyping
+
+A conversion is executed with the following command. Here the table is a mixed
+list of strings and numbers that represent the otherwise command like arguments.
+
+\starttyping[option=LUA]
+function optional.ghostscript.execute ( <t:table> )
+    return
+        <t:boolean>, -- success
+        <t:string>,  -- result
+        <t:string>   -- message
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=graphicsmagick]
+
+The \type {graphicsmagick} library has to be initialized:
+
+\starttyping[option=LUA]
+function optional.graphicsmagick.initialize ( <t:string> filename )
+    return <t:boolean>
+end
+\stoptyping
+
+A conversion is executed with the following command.
+
+\starttyping[option=LUA]
+function optional.graphicsmagick.execute (
+    {
+        inputfilename  = <t:string>,
+        outputfilename = <t:string>,
+        blur           = {
+            radius = <t:number>,
+            sigma  = <t:number>,
+        },
+        noise          - {
+            type   = <t:integer>,
+        },
+    }
+)
+    return <t:boolean>
+end
+\stoptyping
+
+The noise types can be fetched with:
+
+\starttyping[option=LUA]
+function optional.graphicsmagick.noisetypes ( )
+    return <t:table>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=imagemagick]
+
+The \type {imagemagick} library is initialized with:
+
+\starttyping[option=LUA]
+function optional.imagemagick.initialize ( <t:string> filename )
+    return <t:boolean>
+end
+\stoptyping
+
+After that you can execute convert commands. The options table is a sequence of
+strings, numbers and booleans that gets passes, in the same order, but where a
+boolean becomes one of the strings \type {true} or \type {false}.
+
+\starttyping[option=LUA]
+function optional.imagemagick.execute (
+    {
+        inputfilename  = <t:string>,
+        outputfilename = <t:string>,
+        options        = <t:table>,
+    }
+)
+    return <t:boolean>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=zint]
+
+The \type {zint} library is initialized with:
+
+\starttyping[option=LUA]
+function optional.zint.initialize ( <t:string> filename )
+    return <t:boolean>
+end
+\stoptyping
+
+As with the other graphic libraries we execute a command but here we implement a
+converter a bit more specific because we want back a result that we can handle in
+a combination of \TEX\ and \METAPOST.
+
+\starttyping[option=LUA]
+function optional.zint.execute (
+    {
+        code   = <t:integer>,
+        text   = <t:string>,
+        option = <t:string>, -- "square"
+    }
+)
+    return <t:table>
+end
+\stoptyping
+
+We get back a table that has graphic components, where each components table can
+zero or more subtables.
+
+\starttyping[option=LUA]
+result = {
+    rectangles = {
+        { <t:integer> x, <t:integer> y, <t:integer> w, <t:integer> h }, ...
+    },
+    hexagons = {
+        { <t:integer> x, <t:integer> y, <t:integer> d }, ...
+    },
+    circles = {
+        { <t:integer> x, <t:integer> y, <t:nteger> d }, ...
+    },
+    strings = {
+        { <t:integer> x, <t:integer> y, <t:integer> s, <t:string> t }, ...
+    }
+}
+\stoptyping
+
+\stopsubsubsubject
+
+\stopsubsection
+
+\startsubsection[title=Compression]
+
+\startsubsubsubject[title=lz4]
+
+The library is initialized with:
+
+\starttyping[option=LUA]
+function optional.lz4.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+There are compressors and decompressors. If you want the more efficient
+decompressor, make sure to save the size with the compressed stream and pass that
+when decompressing.
+
+\starttyping[option=LUA]
+function optional.lz4.compress (
+    <t:string>  data,
+    <t:integer> acceleration -- default 1
+)
+    return <t:string>
+end
+
+function optional.lz4.decompresssize (
+    <t:string>  data,
+    <t:integer> size
+)
+    return <t:string>
+end
+\stoptyping
+
+These are the frame based variants:
+
+\starttyping[option=LUA]
+function optional.lz4.framecompress ( <t:string> data )
+    return <t:string>
+end
+
+function optional.lz4.framedecompress ( return <t:string>  )
+    return <t:string>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=lzma]
+
+The library is initialized with:
+
+\starttyping[option=LUA]
+function optional.lzma.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+The compressor can take an estimated size which makes it possible to preallocate
+a buffer.
+
+\starttyping[option=LUA]
+function optional.lzma.compress (
+    <t:string>  data,
+    <t:integer> level,
+    <t:integer> size   -- estimated
+)
+    return <t:string>
+end
+\stoptyping
+
+The decompressor can be told what the final size is which is more efficient.
+
+\starttyping[option=LUA]
+function optional.lzma.decompress (
+    <t:string>  data,
+    <t:integer> size   -- estimated
+)
+    return <t:string>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=lzo]
+
+The library is initialized with:
+
+\starttyping[option=LUA]
+function optional.lzo.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+There is not much to tell about:
+
+\starttyping[option=LUA]
+function optional.lzo.compress ( <t:string> data )
+    return <t:string>
+end
+\stoptyping
+
+and
+
+\starttyping[option=LUA]
+function optional.lzo.decompresssize (
+    <t:string>  data,
+    <t:integer> size
+)
+    return <t:string>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=zstd]
+
+The library is initialized with:
+
+\starttyping[option=LUA]
+function optional.zstd.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+The compressor:
+
+\starttyping[option=LUA]
+function optional.zstd.compress (
+    <t:string>  data,
+    <t:integer> level
+)
+    return <t:string>
+end
+\stoptyping
+
+The decompressor:
+
+\starttyping[option=LUA]
+function optional.zstd.decompress ( <t:string> data )
+    return <t:string>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\stopsubsection
+
+\startsubsection[title=Databases]
+
+\startsubsubsubject[title=mysql]
+
+We start with the usual initializer:
+
+\starttyping[option=LUA]
+function optional.mysql.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+Opening the database is done with:
+
+\starttyping[option=LUA]
+function optional.mysql.open (
+    <t:string>  database,
+    <t:string>  username,
+    <t:string>  password,
+    <t:string>  host,
+    <t:integer> port -- optional
+)
+    return <t:userdata> -- instance
+end
+\stoptyping
+
+The database is kept \quote {open} but can be closed with:
+
+\starttyping[option=LUA]
+function optional.mysql.close ( <t:userdata> instance )
+    -- no return values
+end
+\stoptyping
+
+A query is executed with:
+
+\starttyping[option=LUA]
+function optional.mysql.execute (
+    <t:userdata> instance,
+    <t:string>   query,
+    <t:function> callback
+)
+    return <t:boolean> -- success
+end
+\stoptyping
+
+The callback is a \LUA\ function that looks like this:
+
+\starttyping[option=LUA]
+function callback(nofcolumns,values,fields)
+    ...
+end
+\stoptyping
+
+It gets called for every row of the result. The fields table is only filled the
+first time, if at all.
+
+This interface is rather minimalistic but in \CONTEXT\ we wrap all in a more
+advanced setup. It's among the oldest \LUA\ code in the distribution and evolved
+with the possibilities (client as well as external libraries) and is quite
+performing also due to the use of templates, caching, built-in conversions etc.
+
+If there is an error we can fetch the message with:
+
+\starttyping[option=LUA]
+function optional.mysql.getmessage ( <t:userdata> instance )
+    return <t:string> | <t:nil> -- last error message
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=postgress]
+
+This library has the same interface as the \type {mysql} interface, so it can be
+used instead.
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=sqlite]
+
+This library has the same interface as the \type {mysql} interface, so it can be
+used instead. The only function that differs is the opener:
+
+\starttyping[option=LUA]
+function optional.sqlite.open ( <t:string> filename )
+    return <t:userdata> -- instance
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\stopsubsection
+
+\startsubsection[title=Whatever]
+
+\startsubsubsubject[title=cerf]
+
+This library is plugged in the \type {xcomplex} so there is no need to discuss it
+here unless we decide to move it to an optional loaded library, which might
+happen eventually (depends on need).
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=curl]
+
+The library is initialized with:
+
+\starttyping[option=LUA]
+function optional.curl.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+The fetcher stays kind of close to how the library wants it so we have no fancy
+interface. We have pairs where the first member is an integer indicating the
+option. The library only has string and integer options so booleans are effective
+zeros or ones. A \LUA\ boolean therefore becomes an integer.
+
+\starttyping[option=LUA]
+function optional.curl.fetch (
+    {
+        <t:integer>, <t:string> | <t:integer> | <t:boolean>,
+        ...
+    }
+)
+end
+\stoptyping
+
+A \URL\ can be (un)escaped:
+
+\starttyping[option=LUA]
+function optional.curl.escape ( <t:string> data )
+    return <t:string>
+end
+
+function optional.curl.unescape ( <t:string> data )
+    return <t:string>
+end
+\stoptyping
+
+The current version of the library:
+
+\starttyping[option=LUA]
+function optional.curl.getversion ( )
+    return <t:string>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=hb]
+
+This module is mostly there to help Idris Hamid (The Oriental \TEX\ Project
+develop his fonts in such away that they work with other libraries (also
+uniscribe). We need to initialize this library with the following function. Best
+have the library in the \TEX\ tree because either more are present or the
+operating system updates them. As we don't use this in \CONTEXT\ we're also not
+sure of things work ok but we can assume stable interfaces anyway. See the plugin
+module for more info.
+
+\starttyping[option=LUA]
+function optional.hb.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+It probably makes sense to check for the version because (in the \TEXLIVE\ code
+base) it is one of the most frequently updated code bases and for \TEX\ stability
+and predictability (when working on a specific project) is important. When you
+initialize
+
+\starttyping[option=LUA]
+function optional.hb.getversion ( )
+    return <t:string>
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function optional.hb.getshapers ( )
+    return <t:table> -- strings
+end
+\stoptyping
+
+\starttyping[option=LUA]
+function optional.hb.loadfont (
+    <t:integer> id,
+    <t:string>  name
+)
+    return <t:userdata> -- instance
+end
+\stoptyping
+
+A run over characters happens with the next one. You get back a list of tables
+that specify to be handled glyphs. The interface is pretty much the same as what
+Kai Eigner came up with at the time he wanted to compare the results with the
+regular font loader, for which the \LUATEX\ and \LUAJITTEX) \FFI\ interfaces were
+used.
+
+\starttyping[option=LUA]
+function optional.hb.shapestring (
+    <t:userdata> font,
+    <t:string>   script,
+    <t:string>   language,
+    <t:string>   direction,
+    <t:table>    shapers,
+    <t:table>    features,
+    <t:string>   text
+    <t:boolean>  reverse
+    <t:integer>  utfbits, -- default 8
+)
+    return {
+        {
+            <t:integer>, -- codepoint
+            <t:integer>, -- cluster
+            <t:integer>, -- xoffset
+            <t:integer>, -- yoffset
+            <t:integer>, -- xadvance
+            <t:integer>, -- uadvance
+        },
+        ...
+    }
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=mujs]
+
+This is just a fun experiment that permits \JAVASCRIPT\ code to be used instead of
+\LUA. It was actually one of the first optional libraries I played with and as
+with the other optionals there is a module that wraps it. The library is
+initialized with:
+
+\starttyping[option=LUA]
+function optional.mujs.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+There are a few \quote {mandate} callbacks than need to be implemented:
+
+\starttyping[option=LUA]
+function optional.mujs.setfindfile (
+    function ( <t:string> name )
+        return <t:string>
+    end
+)
+    -- no return values
+end
+
+function optional.mujs.setopenfile  (
+    function ( <t:string> name )
+        return <t:integer> id
+    end
+)
+    -- no return values
+end
+
+function optional.mujs.setclosefile (
+    function ( <t:integer> id )
+        -- no return values
+    end
+)
+    -- no return values
+end
+
+function optional.mujs.setreadfile (
+    function ( <t:integer> id )
+        return <t:string> | <t:nil>
+    end
+)
+    -- no return values
+end
+
+function optional.mujs.setseekfile (
+    function ( <t:integer> id, <t:integer> position )
+        return <t:integer>
+    end
+)
+    -- no return values
+end
+
+function optional.mujs.setconsole ( )
+    function ( <t:string> category, <t:string> message )
+        -- no return values
+    end
+)
+    -- no return values
+end
+\stoptyping
+
+The library implements a few \JAVASCRIPT\ functions, like the ones
+printing to \TEX, they take an optional catcodes reference:
+
+\starttyping
+texprint (catcodes, ...)
+texsprint(catcodes, ...)
+\stoptyping
+
+and a reporter:
+
+\starttyping
+console  (category, message)
+\stoptyping
+
+The next function resets the interpreter:
+
+\starttyping[option=LUA]
+function optional.mujs.reset ( )
+    -- no return value
+end
+\stoptyping
+
+A snippet of \JAVASCRIPT\ can be executed with:
+
+\starttyping[option=LUA]
+function optional.mujs.execute ( <t:string> filename )
+    -- no return value
+end
+\stoptyping
+
+This loads a \JAVASCRIPT\ file:
+
+\starttyping[option=LUA]
+function optional.mujs.dofile ( <t:string> filename )
+    -- no return value
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\startsubsubsubject[title=openssl]
+
+We use this module for some \PDF\ features. Given the frequent updates to the
+(external) code base, it's for sure not something one wants in the engine. We use
+only a small subset of functionality. The library is initialized with:
+
+\starttyping[option=LUA]
+function optional.openssl.initialize ( )
+    return <t:boolean> -- success
+end
+\stoptyping
+
+When signing succeeds the first return value is \type {true} and possibly there
+is a string as second return value. When \type {false} is returned the second
+argument is an error code.
+
+\starttyping[option=LUA]
+function optional.openssl.sign (
+    {
+        certfile   = <t:string>,
+        datafile   = <t:string>,
+        data       = <t:string>,
+        password   = <t:string>,
+        resultfile = <t:string>,
+    }
+)
+    return
+        <t:boolean>, -- success
+        <t:string> | <t:integer> | <t:nil>
+end
+\stoptyping
+
+Verifying needs similar data:
+
+\starttyping[option=LUA]
+function optional.openssl.verify (
+    {
+        certfile - <t:string>,
+        datafile - <t:string>,
+        data     - <t:string>,
+        signature- <t:string>,
+        password - <t:string>,
+    }
+)
+    return
+        <t:boolean>, -- success
+        <t:integer> | <t:nil>
+end
+\stoptyping
+
+This needs no explanation:
+
+\starttyping[option=LUA]
+function optional.openssl.getversion ( )
+    return <t:integer>
+end
+\stoptyping
+
+\stopsubsubsubject
+
+\stopsubsection
+
+\startsubsection[title=Foreign]
+
+{\em Todo: something about how the foreign interface can be used (inspired by
+alien). Also see \typ {libs-imp-foreign.mkxl}.}
+
+\stopsubsection
+
+\usemodule[matrix]
+
+\startsubsection[title=Vector]
+
+% This chapter was written with Archive's Voleuses film music in the background. I
+% couldn't find the lyrics of \quote {A world that can exist} yet. And one day I
+% need to see that movie.
+
+This module has been added for the sake of \METAPOST\ graphics. Usually we talk
+in terms of matrices. The code evolved from a module in \CONTEXT. There are some
+helpers in the \METAPOST\ library that are \quote {vector aware}. We give some
+examples of usage and render the matrices involved.
+
+% use lua buffers
+
+\startbuffer
+\startluacode
+document.v44 = vector.new {
+    { 11, 12, 13, 14 },
+    { 21, 22, 23, 24 },
+    { 31, 32, 33, 34 },
+    { 41, 42, 43, 44 }
+}
+
+document.v14 = vector.new {
+    { 1, 2, 3, 4 }
+}
+
+document.v41 = vector.new {
+    { 1 }, { 2 }, { 3 }, { 4 }
+}
+
+document.v22 = vector.new {
+    { 1.1 , 2.2 },
+    { 8.8 , 9.9 }
+}
+
+document.v33 = vector.new {
+    { 1 , 2, 0.5 },
+    { 3 , 4, 1.0 },
+    { 5 , 6, 2.0 }
+}
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+These matrices have different dimensions (rows and columns):
+
+\startlinecorrection
+\startcombination[nx=5,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.v44)}} {\hbox{\tt 4 × 4}}
+    {\ctxlua{vector.typeset(document.v14)}} {\hbox{\tt 1 × 4}}
+    {\ctxlua{vector.typeset(document.v41)}} {\hbox{\tt 4 × 1}}
+    {\ctxlua{vector.typeset(document.v22)}} {\hbox{\tt 2 × 2}}
+    {\ctxlua{vector.typeset(document.v33)}} {\hbox{\tt 3 × 3}}
+\stopcombination
+\stoplinecorrection
+
+If performance is important, you can avoid the tables and specify the dimensions
+with (optionally) a series of values.
+
+\starttyping
+local a = vector.new(2,3, 1,2,3, 4,5,6)
+local b = vector.new(3,2, 1,2, 3,4, 5,6)
+local a = vector.new(2,2, 1,2 ,3,4)
+local b = vector.new(2,1, 5,6)
+\stoptyping
+
+A vector is a user data object that supports addition, subtraction,
+multiplication and division. Here we show multiplication:
+
+\startbuffer
+\startluacode
+document.vdemo1 = 4 * document.v41
+document.vdemo2 = document.v41 * 4
+document.vdemo3 = document.v44 * document.v41
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+When two matrices are multiplied, you get a matrix product, with numbers the
+elements are multiplied.
+
+\startlinecorrection
+\startcombination[nx=4,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.v44   )}} {}
+    {\ctxlua{vector.typeset(document.vdemo1)}} {\hbox{\tt 4 ×}}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {\hbox{\tt × 4}}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {\hbox{\tt ×  }}
+\stopcombination
+\stoplinecorrection
+
+In addition to \type {+} (\type {add}), \type {-} (\type {sub}), \type {*} (\type
+{mul}) and \type {/} (\type {div}) you can use the unary minus \type {-} (\type
+{negate}) and test for equality with \type {=} (\type {equal}). The concat
+operator \type {..} (\type {concat}) is also supported.
+
+The functions applied to a vector return a new vector. In most cases they also
+accept a table and then convert that on the fly to a vector. The \type {copy}
+function can be used to make a copy but is not really needed.
+
+\startbuffer
+\startluacode
+document.v1 = vector.new { { 1, 2 }, { 3, 4 } }
+document.v2 = document.v1
+document.v3 = vector.copy(document.v1)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+Here the two assignments to \type {v2} and \type {v3} are apparently
+equivalent but this is what we really have:
+
+\startlines
+\cldcontext{tostring(document.v1)}
+\cldcontext{tostring(document.v2)}
+\cldcontext{tostring(document.v3)}
+\stoplines
+
+\startbuffer
+\startluacode
+vector.set  (document.v1, 4, 100)
+vector.set  (document.v2, 4, 200)
+vector.set  (document.v3, 4, 300)
+vector.setrc(document.v1, 1, 1, 400)
+vector.setrc(document.v2, 1, 1, 500)
+vector.setrc(document.v3, 1, 1, 600)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+The copy actually is a copy while the assignment is an alias, as with tables. The
+only time that this shows is when we do in place assignments as here.
+
+\startlinecorrection
+\startcombination[nx=2,ny=3,distance=2em]
+  {\ctxlua{vector.typeset(document.v1)}} {} {\hbox{\tt \cldcontext{tostring(document.v1)}}} {}
+  {\ctxlua{vector.typeset(document.v2)}} {} {\hbox{\tt \cldcontext{tostring(document.v2)}}} {}
+  {\ctxlua{vector.typeset(document.v3)}} {} {\hbox{\tt \cldcontext{tostring(document.v3)}}} {}
+\stopcombination
+\stoplinecorrection
+
+There are also \type {get} and \type {getrc}. The reason why we have \type {set}
+and \type {get} is that they are equivalent to the direct accessors (using \type
+{[]}).
+
+\startbuffer
+\startluacode
+document.v1[3] = 2 * document.v1[3]
+document.v2[3] = 2 * document.v2[3]
+document.v3[3] = 2 * document.v3[3]
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+Watch how we multiply the shared vector object twice:
+
+\startlinecorrection % idem as above
+\startcombination[nx=2,ny=3,distance=2em]
+  {\ctxlua{vector.typeset(document.v1)}} {} {\hbox{\tt \cldcontext{tostring(document.v1)}}} {}
+  {\ctxlua{vector.typeset(document.v2)}} {} {\hbox{\tt \cldcontext{tostring(document.v2)}}} {}
+  {\ctxlua{vector.typeset(document.v3)}} {} {\hbox{\tt \cldcontext{tostring(document.v3)}}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.round  (document.v22)
+document.vdemo2 = vector.floor  (document.v22)
+document.vdemo3 = vector.ceiling(document.v22)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+There are various operations on vectors and you get back a new one; we don't
+replace in the passed vectors.
+
+\startlinecorrection
+\startcombination[nx=4,ny=1,distance=2em]
+  {\ctxlua{vector.typeset(document.v22   )}} {}
+  {\ctxlua{vector.typeset(document.vdemo1)}} {\hbox{\type {round}}}
+  {\ctxlua{vector.typeset(document.vdemo2)}} {\hbox{\type {floor}}}
+  {\ctxlua{vector.typeset(document.vdemo3)}} {\hbox{\type {ceiling}}}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.identity(3)
+document.vdemo2 = vector.identity(4)
+document.vdemo3 = vector.identity(2)
+\stopluacode
+\stopbuffer
+
+The identity matrix can be created with:
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=3,ny=1,distance=2em]
+  {\ctxlua{vector.typeset(document.vdemo1)}} {\hbox{\type {3 × 3}}}
+  {\ctxlua{vector.typeset(document.vdemo2)}} {\hbox{\type {4 × 4}}}
+  {\ctxlua{vector.typeset(document.vdemo3)}} {\hbox{\type {2 × 2}}}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.transpose(document.v44)
+document.vdemo2 = vector.swap(document.v41)
+document.vdemo3 = vector.swap(document.v14)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+Transposing has a simple companion that makes a vector with a single row into one
+with a single column and vise versa.
+
+\startlinecorrection
+\startcombination[nx=6,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.v44   )}} {}
+    {\ctxlua{vector.typeset(document.vdemo1)}} {\hbox{\tt transpose}}
+    {\ctxlua{vector.typeset(document.v41   )}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {\hbox{\tt swap}}
+    {\ctxlua{vector.typeset(document.v14   )}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {\hbox{\tt swap}}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.inverse   (document.v33)
+document.vdemo2 = vector.rowechelon(document.v33,true)
+document.vdemo3 = vector.rowechelon(document.v33)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=5,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.v33   )}}              {\hbox {v33}}
+    {\ctxlua{vector.typeset(document.vdemo1)}}              {\hbox {inverse}}
+    {\ctxlua{vector.typeset(document.vdemo1*document.v33)}} {\hbox {verified}}
+    {\ctxlua{vector.typeset(document.vdemo2)}}              {\hbox {row echelon}}
+    {\ctxlua{vector.typeset(document.vdemo3)}}              {\hbox {reduced echelon}}
+\stopcombination
+\stoplinecorrection
+
+The first one normalize each column vector in a matrix. The other one homogenize,
+dividing every entry in a row by the last element in the row, given that it is
+non-zero.
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.normalize (document.v33)
+document.vdemo2 = vector.homogenize(document.v33)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=3,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.v33   )}} {}
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+\stopcombination
+\stoplinecorrection
+
+Internally we use a criterium for determining if we have a zero entry:
+\cldcontext {vector.getepsilon()} that can be queried by \type {getepsilon}. The
+\type {truncate} function will reduce numbers outside this interval to zero. The
+\type {iszero} function takes a number and returns \type {true} when its within
+these bounds.
+
+\startbuffer
+\startluacode
+document.vdemo0 = vector.new {
+    { 0.00000005, 0.001 },
+    { 0.001, 0.00000001 },
+}
+
+document.vdemo1 = vector.truncate(document.vdemo0)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=2,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo0, { template = 8 } )}} {}
+    {\ctxlua{vector.typeset(document.vdemo1, { template = 3 } )}} {}
+\stopcombination
+\stoplinecorrection
+
+The \type {determinant} function return a number so we don't show this here but
+we do mention the various products. These are optimized for the dimensions.
+
+We feed \typ {inner} with two vectors (row or column) and get the inner product
+of them in return.
+
+\startbuffer
+\startluacode
+document.num0 = vector.inner(document.v41,document.v41)
+document.num1 = vector.inner(document.v14,document.v14)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=2,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.num0)}} {}
+    {\ctxlua{vector.typeset(document.num1)}} {}
+\stopcombination
+\stoplinecorrection
+
+The \typ {crossproduct} needs two 3-vectors, and returns one 3-vector. They can
+either be row or column vectors, and we get the same type in return.
+
+\startbuffer
+\startluacode
+document.cvec0 = vector.crossproduct(vector.new {{1,2,3}},     vector.new {{4,5,6}})
+document.cvec1 = vector.crossproduct(vector.new {{1},{2},{3}}, vector.new {{4},{5},{6}})
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=2,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.cvec0)}} {}
+    {\ctxlua{vector.typeset(document.cvec1)}} {}
+\stopcombination
+\stoplinecorrection
+
+% \startlines \em
+% MS todo: inner
+% MS todo: product
+% MS todo: crossproduct
+% \stoplines
+
+\startbuffer
+\startluacode
+document.vdemo0 = vector.new {
+    { 11, 12, 13, 14 },
+    { 21, 22, 23, 24 },
+    { 31, 32, 33, 34 },
+    { 41, 42, 43, 44 },
+}
+
+document.vdemo1 = vector.slice(document.vdemo0,2,2,1,1)
+document.vdemo2 = vector.slice(document.vdemo0,2,2,2,2)
+document.vdemo3 = vector.slice(document.vdemo0,2,2,3,3)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=4,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo0)}} {}
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.delete(document.vdemo0,2,2)
+document.vdemo2 = vector.delete(document.vdemo0,2,1)
+document.vdemo3 = vector.delete(document.vdemo0,2,2,true)
+document.vdemo4 = vector.delete(document.vdemo0,2,1,true)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=7,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo0)}} {}
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {}
+    {\ctxlua{vector.typeset(document.vdemo4)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.remove(document.vdemo0,2,2)
+document.vdemo2 = vector.remove(document.vdemo0,2,1)
+document.vdemo3 = vector.remove(document.vdemo0,2,2,true)
+document.vdemo4 = vector.remove(document.vdemo0,2,1,true)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=5,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo0)}} {}
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {}
+    {\ctxlua{vector.typeset(document.vdemo4)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo0 = vector.new {
+    { 11, 12, 13, 14 },
+    { 21, 22, 23, 24 },
+    { 31, 32, 33, 34 },
+    { 41, 42, 43, 44 },
+}
+
+document.vdemo0r = vector.new {
+    { 101, 201, 301, 401 },
+    { 102, 202, 302, 402 },
+}
+
+document.vdemo0c = vector.new {
+    { 101, 201 },
+    { 102, 202 },
+    { 103, 203 },
+    { 104, 204 },
+}
+
+document.vdemo0rc = vector.new {
+    { 101, 201 },
+    { 102, 202 },
+}
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=4,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo0)}}   {}
+    {\ctxlua{vector.typeset(document.vdemo0r)}}  {}
+    {\ctxlua{vector.typeset(document.vdemo0c)}}  {}
+    {\ctxlua{vector.typeset(document.vdemo0rc)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.insert(document.vdemo0,document.vdemo0c,0)
+document.vdemo2 = vector.insert(document.vdemo0,document.vdemo0c,1)
+document.vdemo3 = vector.insert(document.vdemo0,document.vdemo0c,2)
+document.vdemo4 = vector.insert(document.vdemo0,document.vdemo0c,3)
+document.vdemo5 = vector.insert(document.vdemo0,document.vdemo0c,4)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=5,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {}
+    {\ctxlua{vector.typeset(document.vdemo4)}} {}
+    {\ctxlua{vector.typeset(document.vdemo5)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.insert(document.vdemo0,document.vdemo0r,0,true)
+document.vdemo2 = vector.insert(document.vdemo0,document.vdemo0r,1,true)
+document.vdemo3 = vector.insert(document.vdemo0,document.vdemo0r,2,true)
+document.vdemo4 = vector.insert(document.vdemo0,document.vdemo0r,3,true)
+document.vdemo5 = vector.insert(document.vdemo0,document.vdemo0r,4,true)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=5,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {}
+    {\ctxlua{vector.typeset(document.vdemo4)}} {}
+    {\ctxlua{vector.typeset(document.vdemo5)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.replace(document.vdemo0,document.vdemo0rc,1,1)
+document.vdemo2 = vector.replace(document.vdemo0,document.vdemo0rc,2,2)
+document.vdemo3 = vector.replace(document.vdemo0,document.vdemo0rc,3,3)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=3,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+    {\ctxlua{vector.typeset(document.vdemo3)}} {}
+\stopcombination
+\stoplinecorrection
+
+\startbuffer
+\startluacode
+document.vdemo1 = vector.exchange(document.vdemo0,1,1)
+document.vdemo2 = vector.exchange(document.vdemo0,1,2,true)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=3,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.vdemo1)}} {}
+    {\ctxlua{vector.typeset(document.vdemo2)}} {}
+\stopcombination
+\stoplinecorrection
+
+This leaves a couple of auxiliary function that we just mention:
+
+\starttabulate[|Tl|Tl|l|]
+\NC isvector      \NC (v)       \NC return \type{true} when the argument is a vector \NC \NR
+\NC onerow        \NC (n,...,m) \NC a fast way to create a single row vector \NC \NR
+\NC onecolumn     \NC (n,...,m) \NC a fast way to create a single column vector \NC \NR
+\NC type          \NC (v)       \NC return the string \type {vector} if we pass one \NC \NR
+\NC tostring      \NC (v)       \NC returns the dimensions and pointer value \NC \NR
+\NC totable       \NC (v)       \NC returns a regular table representation \NC \NR
+\NC determinant   \NC (v)       \NC returns the determinant \NC \NR
+\NC issingular    \NC (v,[n])   \NC returns true if the determinant is \m{< 0.001}\NC \NR
+%NC gettype       \NC (v)       \NC returns the type of the vector (experimental) \NC \NR
+\NC setstacking   \NC (v,n)     \NC set the stacking property (\METAPOST) \NC \NR
+\NC getstacking   \NC (v)       \NC get the stacking property (\METAPOST) \NC \NR
+\NC getdimensions \NC (v)       \NC returns the number of rows and columns \NC \NR
+\stoptabulate
+
+We already mentioned that often you can also provide a table instead
+of a vector:
+
+\startbuffer
+\startluacode
+document.t1 = {
+    { 1, 2, 3 },
+    { 1, 2, 3 },
+    { 1, 2, 3 },
+}
+
+document.t2 = {
+    { 11, 2, 3 },
+    { 1, 12, 3 },
+    { 1, 2, 13 },
+}
+
+document.v1 = vector.new(document.t1)
+document.v2 = vector.new(document.t2)
+
+document.v1t1 = vector.product(document.v1,document.t2)
+document.t1v1 = vector.product(document.t1,document.v1)
+document.v1v2 = vector.product(document.v1,document.v2)
+document.t1t2 = vector.product(document.t1,document.t2)
+\stopluacode
+\stopbuffer
+
+\typebuffer[option=TEX] \getbuffer
+
+\startlinecorrection
+\startcombination[nx=4,ny=1,distance=2em]
+    {\ctxlua{vector.typeset(document.v1t1)}} {\type{v t}}
+    {\ctxlua{vector.typeset(document.t1v1)}} {\type{t v}}
+    {\ctxlua{vector.typeset(document.v1v2)}} {\type{v v}}
+    {\ctxlua{vector.typeset(document.t1t2)}} {\type{t t}}
+\stopcombination
+\stoplinecorrection
+
+When you define and fill a vector, you can use the setters mentioned before. Here
+we show a few ways, assuming that \type {ns} and \type {nt} are known and \type
+{calulate} does some useful magic.
+
+\starttyping[option=LUA]
+local t = { }  -- we could preallocate
+
+for s = 0, ns do
+    for t = 0, nt do
+        local x, y, z = calculate(s,t)
+        t[#t+1] = { x, y, z, 1 }
+   end
+end
+
+local v = newvector(t)
+\stoptyping
+
+We can avoid the fourth entry which is always~0 which gives smaller
+intermediate tables and just append these ones later using
+the \type {append} function.
+
+\starttyping[option=LUA]
+local t = { }  -- we could preallocate
+
+for s = 0, ns do
+    for t = 0, nt do
+        local x, y, z = calculate(s,t)
+        t[#t+1] = { x, y, z }
+   end
+end
+
+local v = newvector(t)
+v = vector.append(v,1)
+\stoptyping
+
+We can avoid the \LUA\\ table completely and just populate the
+vector as we go. The \type {setnext} does the trick:
+
+\starttyping[option=LUA]
+local setnext = vector.setnext
+
+local v = newvector((ns + 1) * (nt + 1), 4)
+for s = 0, ns do
+    for t = 0, nt do
+        local x, y, z = calculate(s,t)
+        setnext(v, x, y, z, 1)
+   end
+end
+\stoptyping
+
+That last variant is the most natural and also the most efficient approach but
+taste can differ.
+
+\stopsubsection
+
+\stopsection
+
+\stopdocument
+
+% Initial chapter documenting moment, musical timstamp: The Warning - You Oughta
+% Know - (Alanis Morissette) Cover, 2024, plus some energetic live shows on screen ...
+%
+% Coincidentally, at that time (October 30, 2024), after finishing this chapter we
+% had exactly 600 pages, but still plenty to go.

@@ -138,7 +138,7 @@
    #3% todo: #3{#1} as there is no need to pass #1 as part of #3
    % for the moment we use a simple system i.e. no prefixes etc .. todo: store as number
    \c_strc_references_bind_state\zerocount % we don't want the prewordbreak and manage it here
-   \normalexpanded{\strc_references_set_named_reference{line}{#2}{conversion=\linenumberingparameter\c!conversion}{\the\c_page_lines_reference}}% kind labels userdata text
+   \expanded{\strc_references_set_named_reference{line}{#2}{conversion=\linenumberingparameter\c!conversion}{\the\c_page_lines_reference}}% kind labels userdata text
    \endgroup}
 
 % \def\page_lines_reference_start#1{\page_lines_some_reference{#1}{lr:b:#1}{}} % reimplemented later
@@ -442,28 +442,69 @@
 % \def\dodorlap{\hbox to \zeropoint{\box\nextbox\normalhss}\endgroup}
 % \def\dodollap{\hbox to \zeropoint{\normalhss\box\nextbox}\endgroup}
 
-\def\page_line_handle_left#align#width#distance%
+\def\page_line_handle_left_skip#distance%
+   {\kern{%
+      #distance+\d_page_lines_distance
+      \ifconditional\c_page_lines_dir_left_to_right\else+\d_page_lines_line_width\fi
+    }}
+
+\def\page_line_handle_right_skip#distance%
+  {\kern{%
+     #distance+\d_page_lines_distance
+     \ifconditional\c_page_lines_dir_left_to_right+\d_page_lines_line_width\fi
+   }}
+
+\def\page_line_handle_left
+  {\ifconditional\c_spac_lines_enabled
+     \expandafter\page_line_handle_left_lines
+   \else
+     \expandafter\page_line_handle_left_normal
+   \fi}
+
+\def\page_line_handle_right
+  {\ifconditional\c_spac_lines_enabled
+     \expandafter\page_line_handle_right_lines
+   \else
+     \expandafter\page_line_handle_right_normal
+   \fi}
+
+% running text, anything can be a line, no structure
+
+\def\page_line_handle_left_normal#align#width#distance%
+  {\dostarttaggednodetail\t!ignore
+   \llap
+     {\page_lines_number_inject#align#width%
+      \page_line_handle_left_skip{#distance}%
+      \expand\everylinenumber
+      \hss}%
+   \dostoptagged}
+
+\def\page_line_handle_right_normal#align#width#distance%
+  {\dostarttaggednodetail\t!ignore
+   \rlap
+     {\page_line_handle_right_skip{#distance}%
+      \page_lines_number_inject#align#width%
+      \expand\everylinenumber
+      \hss}%
+   \dostoptagged}
+
+% the controlled situation, so we have structure
+
+\def\page_line_handle_left_lines#align#width#distance%
   {\dostarttaggednodetail\t!linenumber
    \llap
      {\page_lines_number_inject#align#width%
       \dostarttaggednodetail\t!ignore
-      \kern{%
-        #distance+\d_page_lines_distance
-        \ifconditional\c_page_lines_dir_left_to_right\else+\d_page_lines_line_width\fi
-      }%
+      \page_line_handle_left_skip{#distance}%
       \expand\everylinenumber
       \hss
       \dostoptagged}%
    \dostoptagged}
 
-\def\page_line_handle_right#align#width#distance%
+\def\page_line_handle_right_lines#align#width#distance%
   {\dostarttaggednodetail\t!linenumber
    \rlap
-     {\dostarttaggednodetail\t!ignore
-      \kern{%
-        #distance+\d_page_lines_distance
-        \ifconditional\c_page_lines_dir_left_to_right+\d_page_lines_line_width\fi
-      }%
+     {\page_line_handle_right_skip{#distance}%
       \dostoptagged
       \page_lines_number_inject#align#width%
       \dostarttaggednodetail\t!ignore

@@ -25,8 +25,10 @@ def exitunless expr c =
     exitif not c
 enddef ;
 
-let relax = \ ; % ignore the word relax, as in TeX
-let \\    = \ ; % double relaxation is like single
+let relax        = \ ; % ignore the word relax, as in TeX
+let norelax      = \ ; % LuaMetaTeX
+let relaxedspace = \ ; % LuaMetaTeX
+let \\           = \ ; % double relaxation is like single
 
 def [[ = [ [ enddef ;
 def ]] = ] ] enddef ;
@@ -356,7 +358,7 @@ primarydef w dotprod z =
     (xpart w * xpart z + ypart w * ypart z)
 enddef ;
 
-permanent mod, div, dotprod ;
+permanent mod, div, dotprod, crossprod ;
 
 % primarydef x**y =
 %     if y = 2 :
@@ -998,8 +1000,13 @@ permanent range, thru ;
 
 string extra_beginfig, extra_endfig ;
 
-extra_beginfig := "" ;
-extra_endfig   := "" ;
+extra_beginfig       := "" ;
+extra_endfig         := "" ;
+
+string every_before_shipout, every_after_shipout ;
+
+every_before_shipout := "" ;
+every_after_shipout  := "" ;
 
 newinternal boolean makingfigure ; makingfigure := false ;
 
@@ -1016,10 +1023,13 @@ def beginfig(expr c) = % redefined in mp-grph !
     scantokens extra_beginfig ;
 enddef ;
 
-def endfig =
+def endfig = % redefined in mp-grph !
     ; % added by HH
     scantokens extra_endfig ;
-    shipit ;
+    scantokens every_before_shipout ;
+    shipout currentpicture ; % shipit ;
+    resetbytemaps ;
+    scantokens every_after_shipout ;
     endgroup
 enddef ;
 

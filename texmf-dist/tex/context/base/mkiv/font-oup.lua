@@ -26,7 +26,7 @@ local report_optimizations = logs.reporter("otf reader","merges")
 local report_unicodes      = logs.reporter("otf reader","unicodes")
 
 local trace_markwidth      = false  trackers.register("otf.markwidth",     function(v) trace_markwidth     = v end)
-local trace_cleanup        = false  trackers.register("otf.cleanups",      function(v) trace_cleanups      = v end)
+local trace_cleanup        = false  trackers.register("otf.cleanups",      function(v) trace_cleanup       = v end)
 local trace_optimizations  = false  trackers.register("otf.optimizations", function(v) trace_optimizations = v end)
 local trace_unicodes       = false  trackers.register("otf.unicodes",      function(v) trace_unicodes      = v end)
 
@@ -1913,7 +1913,7 @@ function readers.pack(data)
                     end
                 end
 
-                packdeltas(variable.global)
+                packdeltas(variable["global"])
                 packdeltas(variable.horizontal)
                 packdeltas(variable.vertical)
                 packdeltas(variable.metrics)
@@ -2014,7 +2014,7 @@ function readers.pack(data)
                             end
                         end
                     end
-                    unpackdeltas(variable.global)
+                    unpackdeltas(variable["global"])
                     unpackdeltas(variable.horizontal)
                     unpackdeltas(variable.vertical)
                     unpackdeltas(variable.metrics)
@@ -2481,7 +2481,7 @@ function readers.unpack(data)
                     end
                 end
 
-                unpackdeltas(variable.global)
+                unpackdeltas(variable["global"])
                 unpackdeltas(variable.horizontal)
                 unpackdeltas(variable.vertical)
                 unpackdeltas(variable.metrics)
@@ -2994,91 +2994,6 @@ function readers.compact(data)
             report_optimizations("%i steps of %i steps turned from pairs into kerns",kerned,allsteps)
         end
     end
-end
-
-if CONTEXTLMTXMODE and CONTEXTLMTXMODE > 0 then
-
-    local done = 0
-
-    local function condense_1(k,v,t)
-        if type(v) == "table" then
-            local u = false
-            local l = false
-            for k, v in next, v do
-                if k == "ligature" then
-                    l = v
-                    if u then
-                        break
-                    end
-                elseif u then
-                    break
-                else
-                    u = true
-                end
-            end
-            if l and not u then
-                t[k] = l
-                done = done + 1
-            end
-            if u then
-                for k, vv in next, v do
-                    if k ~= "ligature" then
-                        condense_1(k,vv,v)
-                    end
-                end
-            end
-        end
-    end
-
-    local function condensesteps_1(lookup)
-        done = 0
-        if lookup.type == "gsub_ligature" then
-            local steps = lookup.steps
-            if steps then
-                for i=1,#steps do
-                    local step     = steps[i]
-                    local coverage = step.coverage
-                    if coverage then
-                        for k, v in next, coverage do
-                            if condense_1(k,v,coverage) then
-                                coverage[k] = v.ligature
-                                done = done + 1
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        return done
-    end
-
-    function readers.condense(data)
-        if not data or data.condensed then
-            return
-        else
-            data.condensed = true
-        end
-        local resources = data.resources
-        local condensed = 0
-        local function condense(what)
-            local lookups = resources[what]
-            if lookups then
-                for i=1,#lookups do
-                    condensed = condensed + condensesteps_1(lookups[i])
-                end
-            elseif trace_optimizations then
-                report_optimizations("no lookups in %a",what)
-            end
-        end
-        condense("sequences")
-        condense("sublookups")
-        if trace_optimizations then
-            if condensed > 0 then
-                report_optimizations("%i ligatures condensed",condensed)
-            end
-        end
-    end
-
 end
 
 local function mergesteps(t,k)

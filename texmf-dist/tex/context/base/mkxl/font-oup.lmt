@@ -15,7 +15,6 @@ local find = string.find
 local formatters           = string.formatters
 local sortedkeys           = table.sortedkeys
 local sortedhash           = table.sortedhash
-local tohash               = table.tohash
 local setmetatableindex    = table.setmetatableindex
 
 local report_error         = logs.reporter("otf reader","error")
@@ -25,7 +24,7 @@ local report_optimizations = logs.reporter("otf reader","merges")
 local report_unicodes      = logs.reporter("otf reader","unicodes")
 
 local trace_markwidth      = false  trackers.register("otf.markwidth",     function(v) trace_markwidth     = v end)
-local trace_cleanup        = false  trackers.register("otf.cleanups",      function(v) trace_cleanups      = v end)
+local trace_cleanup        = false  trackers.register("otf.cleanups",      function(v) trace_cleanup       = v end)
 local trace_optimizations  = false  trackers.register("otf.optimizations", function(v) trace_optimizations = v end)
 local trace_unicodes       = false  trackers.register("otf.unicodes",      function(v) trace_unicodes      = v end)
 
@@ -1912,7 +1911,7 @@ function readers.pack(data)
                     end
                 end
 
-                packdeltas(variable.global)
+                packdeltas(variable["global"])
                 packdeltas(variable.horizontal)
                 packdeltas(variable.vertical)
                 packdeltas(variable.metrics)
@@ -2013,7 +2012,7 @@ function readers.pack(data)
                             end
                         end
                     end
-                    unpackdeltas(variable.global)
+                    unpackdeltas(variable["global"])
                     unpackdeltas(variable.horizontal)
                     unpackdeltas(variable.vertical)
                     unpackdeltas(variable.metrics)
@@ -2480,7 +2479,7 @@ function readers.unpack(data)
                     end
                 end
 
-                unpackdeltas(variable.global)
+                unpackdeltas(variable["global"])
                 unpackdeltas(variable.horizontal)
                 unpackdeltas(variable.vertical)
                 unpackdeltas(variable.metrics)
@@ -2995,7 +2994,7 @@ function readers.compact(data)
     end
 end
 
-if CONTEXTLMTXMODE and CONTEXTLMTXMODE > 0 then
+do
 
     local done = 0
 
@@ -3235,6 +3234,10 @@ function readers.expand(data)
                                 v[1] = coverage -- slot 1 is a placeholder
                             end
                         end
+-- saves memory but not that impressive:
+--
+-- step.baseclasses = nil
+-- step.markclasses = nil -- saves memory but not that impressive
                         local rules = step.rules
                         if rules then
                             local rulehash   = { n = 0 } -- is contexts in font-ots
@@ -3277,9 +3280,9 @@ function readers.expand(data)
                                         if lookups then
                                             for k, v in next, lookups do -- actually this one is indexed
                                                 local lookup = sublookups[v]
-if not lookup and whatever then
-    lookup = whatever[v]
-end
+                                                if not lookup and whatever then
+                                                    lookup = whatever[v]
+                                                end
                                                 if lookup then
                                                     lookups[k] = lookup
                                                     if not subtype then

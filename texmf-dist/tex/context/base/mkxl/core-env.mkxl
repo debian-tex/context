@@ -15,7 +15,7 @@
 
 \installcorenamespace{setup} % is referenced in the lmt file:
 
-\registerctxluafile{core-env}{autosuffix}
+% \registerctxluafile{core-env}{autosuffix} % moved down
 
 \unprotect
 
@@ -47,9 +47,7 @@
 
 % TODO: make them mutable, also at the lua end
 
-\installcorenamespace{modestack}
-
-\immutable\def\??mode{mode>} % special namespace, also used at lua end
+\permanent\cdef\??mode{mode>} % special namespace, also used at lua end
 
 \permanent\protected\def\newmode              #1{\ifcsname                            \??mode#1\endcsname\else\resetmode{#1}\fi}
 \permanent\protected\def\setmode              #1{\expandafter       \integerdef\csname\??mode#1\endcsname\plusone}
@@ -63,19 +61,25 @@
 \permanent\protected\def\globalsetsystemmode  #1{\global\expandafter\integerdef\csname\??mode\systemmodeprefix#1\endcsname\plusone}
 \permanent\protected\def\globalresetsystemmode#1{\global\expandafter\integerdef\csname\??mode\systemmodeprefix#1\endcsname\zerocount}
 
+\expandafter\integerdef\csname\??mode\systemmodeprefix trialtypesetting\endcsname\zerocount
+
+\registerctxluafile{core-env}{autosuffix} % uses the mode variable above
+
 \expandafter \appendtoks
-    \expandafter\integerdef\csname\??mode\systemmodeprefix trialtypesetting\endcsname\plusone
+    \csname\??mode\systemmodeprefix trialtypesetting\endcsname\plusone
     \luacopyinputnodes\plusone
 \to \everysettrialtypesetting
 
 \expandafter \appendtoks
-    \expandafter\integerdef\csname\??mode\systemmodeprefix trialtypesetting\endcsname\zerocount
+    \csname\??mode\systemmodeprefix trialtypesetting\endcsname\zerocount
     \luacopyinputnodes\zerocount
 \to \everyresettrialtypesetting
 
 \pushoverloadmode \newsystemmode{trialtypesetting} \popoverloadmode
 
 \the\everyresettrialtypesetting
+
+\installcorenamespace{modestack}
 
 % user ones
 
@@ -114,6 +118,8 @@
 %D beforehand, in which case \type {\definemode} would reset the mode. The optional
 %D second argument \type {keep} will prevent changing the already set mode but defines
 %D it when undefined.
+
+\lettonothing\m_modes_asked
 
 \permanent\protected\def\definemode
   {\unprotect
@@ -158,6 +164,8 @@
 \newconditional\c_checked_mode
 
 % one
+
+\let\syst_modes_check_step\gobbleoneargument
 
 \def\syst_modes_check_indeed#1%
   {\ifcsname\??mode#1\endcsname
@@ -352,11 +360,13 @@
 
 \permanent\protected\lettonothing\stopmodeset
 
+\lettonothing\m_modes_case  % we could probably use \m_modes_asked
+
 \tolerant\def\syst_modes_set_start#.[#1]% skip spaces and pars
-  {\edef\m_mode_case{#1}%
-   \ifempty\m_mode_case
+  {\edef\m_modes_case{#1}%
+   \ifempty\m_modes_case
      \expandafter\syst_modes_set_quit
-   \orunless\ifx\m_mode_case\s!default
+   \orunless\ifx\m_modes_case\s!default
      \expandafter\syst_modes_set_check
    \orelse\ifconditional\c_syst_modes_set_done
      \expandafter\syst_modes_set_quit
@@ -365,7 +375,7 @@
    \fi}
 
 \def\syst_modes_set_check
-  {\syst_modes_check_lr\syst_modes_set_yes\syst_modes_set_nop\m_mode_case}
+  {\syst_modes_check_lr\syst_modes_set_yes\syst_modes_set_nop\m_modes_case}
 
 \tolerant\def\syst_modes_set_yes#1%
   {\c_syst_modes_set_done\conditionaltrue

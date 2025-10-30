@@ -70,8 +70,6 @@ local texsetbox         = tex.setbox
 local texsetcount       = tex.setcount
 local texsetdimen       = tex.setdimen
 
-local theprop           = nuts.theprop
-
 local nodepool          = nuts.pool
 
 local new_vlist         = nodepool.vlist
@@ -645,6 +643,7 @@ function columnsets.check(t)
     end
  -- report("checking width %p, height %p, depth %p, slot (%i,%i)",boxwidth,boxheight,boxdepth,c,r)
     local nr = ceil(boxheight/(lineheight+linedepth))
+    local nc = 1
     --
     local action = methods[method]
     local cfound = false

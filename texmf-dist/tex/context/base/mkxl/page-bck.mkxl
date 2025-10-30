@@ -54,6 +54,12 @@
 
 \mutable\lettonothing\currentotrbackground
 
+\lettonothing\p_page_backgrounds_command
+\lettonothing\p_page_backgrounds_depth
+\lettonothing\p_page_backgrounds_offset
+\lettonothing\p_page_backgrounds_setups
+\lettonothing\p_page_backgrounds_state
+
 %D This is the only spot where we have a low level dependency on the way
 %D parent chains are defined but we want the speed.
 
@@ -671,7 +677,7 @@
 \permanent\protected\def\disablehiddenbackground
   {\global\c_page_backgrounds_hidden_enabled\conditionalfalse}
 
-\immutable\def\hiddenbackgroundlist
+\permanent\def\hiddenbackgroundlist
   {\v!text-2,\v!text-1,\v!foreground,\v!text+1,\v!text+2}
 
 \permanent\protected\def\prependhiddenbackground#1{\enforced\edef\hiddenbackgroundlist{#1,\hiddenbackgroundlist}}

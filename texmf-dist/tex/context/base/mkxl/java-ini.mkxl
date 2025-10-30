@@ -15,6 +15,10 @@
 
 \registerctxluafile{java-ini}{}
 
+%D At some point this module will become a runtime loaded one, if only because time
+%D has learned that a decent stable subset of javascript never materialized. One of
+%D the disappointments of long term \PDF.
+
 \unprotect
 
 %D \macros
@@ -105,7 +109,7 @@
    \java_start_code}
 
 \def\java_start_code#1\stopJScode
-  {\normalexpanded{\endgroup\clf_storejavascriptcode{#1}}}
+  {\expanded{\endgroup\clf_storejavascriptcode{#1}}}
 
 \permanent\protected\lettonothing\stopJScode
 
@@ -116,7 +120,7 @@
    \java_start_preamble}
 
 \def\java_start_preamble#1\stopJSpreamble
-  {\normalexpanded{\endgroup\clf_storejavascriptpreamble{#1}}}
+  {\expanded{\endgroup\clf_storejavascriptpreamble{#1}}}
 
 \permanent\protected\lettonothing\stopJSpreamble
 

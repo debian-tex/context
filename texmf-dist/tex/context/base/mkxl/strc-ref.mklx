@@ -138,6 +138,8 @@
 
 \permanent\protected\def\dosetdirectpagereference#1{\strc_references_set_named_reference\s!page{#1}{}{}} % low level, maybe use _
 
+\lettonothing\m_strc_references_asked
+
 \permanent\protected\def\usereferenceparameter#1% faster local variant
   {\edef\m_strc_references_asked{#1\c!reference}%
    \ifempty\m_strc_references_asked\else
@@ -151,7 +153,7 @@
 % sett top : \newinteger\lastdestinationattribute
 
 \def\strc_references_finish#prefix#reference#internal% gets expanded anyway
-  {\normalexpanded{\clf_deferredenhancereference{#prefix}{#reference}}}
+  {\expanded{\clf_deferredenhancereference{#prefix}{#reference}}}
 
 \permanent\let\dofinishreference\strc_references_finish % used at lua end
 
@@ -217,7 +219,7 @@
   {\setbox\b_strc_destination_nodes\hbox\bgroup}       % also sets lastdestinationattribute
 
 \protected\def\strc_references_stop_destination_nodes
-  {\normalexpanded{\egroup\lastdestinationattribute\the\lastdestinationattribute\relax}}
+  {\expanded{\egroup\lastdestinationattribute\the\lastdestinationattribute\relax}}
 
 \protected\def\strc_references_set_named_reference_indeed#kind#labels#userdata#text% labels userdata text -> todo: userdata
   {\ifreferencing
@@ -323,6 +325,9 @@
      \lastdestinationattribute\attributeunsetvalue
    \fi}
 
+\lettonothing\m_strc_references_text
+\lettonothing\m_strc_references_user
+
 \protected\def\strc_references_direct_full_user#user#labels#text%
   {\ifreferencing
      \strc_references_start_destination_nodes
@@ -349,7 +354,7 @@
             }%
         \fi
         \ifempty\m_strc_references_user \else
-            userdata {\m_strc_references_user}% \detokenize\expandafter{\normalexpanded{...}}
+            userdata {\m_strc_references_user}% \detokenize\expandafter{\expanded{...}}
         \fi
         }%
      \relax
@@ -984,8 +989,7 @@
 \appendtoks
     % likely math
     \ifdefined\in    \aliased\let\normalmathin   \in    \permanent\protected\def\in   {\mathortext\normalmathin   \strc_references_in   } \else \aliased\let\in   \strc_references_in    \fi
-    \ifdefined\over  \aliased\let\normalmathover \over  \permanent\protected\def\over {\mathortext\normalmathover \strc_references_about} \else \aliased\let\over \strc_references_about \fi
-    %
+  % \ifdefined\over  \aliased\let\normalmathover \over  \permanent\protected\def\over {\mathortext\normalmathover \strc_references_about} \else \aliased\let\over \strc_references_about \fi
   % \ifdefined\at    \aliased\let\normalmathat   \at    \permanent\protected\def\at   {\mathortext\normalmathat   \strc_references_at   } \else \aliased\let\at   \strc_references_at    \fi
   % \ifdefined\about \aliased\let\normalmathabout\about \permanent\protected\def\about{\mathortext\normalmathabout\strc_references_about} \else \aliased\let\about\strc_references_about \fi
   % \ifdefined\from  \aliased\let\normalmathfrom \from  \permanent\protected\def\from {\mathortext\normalmathfrom \strc_references_from } \else \aliased\let\from \strc_references_from  \fi
@@ -1387,7 +1391,7 @@
 \installcommandhandler \??referenceformat {referenceformat} \??referenceformat
 
 \appendtoks
-    \frozen\instance\protected\edefcsname\currentreferenceformat\endcsname{\strc_references_apply_format{\currentreferenceformat}}%
+    \protected\frozen\instance\edefcsname\currentreferenceformat\endcsname{\strc_references_apply_format{\currentreferenceformat}}%
 \to \everydefinereferenceformat
 
 \setupreferenceformat
@@ -2054,43 +2058,60 @@
    \c!style=\v!type,
    \c!color=]
 
-\definereference [\v!CloseDocument    ] [action(close)]
-\definereference [\v!ExitViewer       ] [action(exit)]
+% officially in the standard
+
 \definereference [\v!FirstPage        ] [action(first)]
-\definereference [\v!LastPage         ] [action(last)]
-\definereference [\v!NextJump         ] [action(forward)]
 \definereference [\v!NextPage         ] [action(next)]
-\definereference [\v!PauseRendering   ] [action(pauserendering)]
-\definereference [\v!PreviousJump     ] [action(backward)]
 \definereference [\v!PreviousPage     ] [action(previous)]
-\definereference [\v!PrintDocument    ] [action(print)]
-\definereference [\v!SaveForm         ] [action(exportform)]
-\definereference [\v!LoadForm         ] [action(importform)]
+\definereference [\v!LastPage         ] [action(last)]
+
+% will never make it into the standard
+
+\definereference [\v!PreviousJump     ] [action(backward)]
+\definereference [\v!NextJump         ] [action(forward)]
+
+% we can forget about it
+
 \definereference [\v!ResetForm        ] [action(resetform)]
-\definereference [\v!ResumeRendering  ] [action(resumerendering)]
+\definereference [\v!SubmitForm       ] [action(submitform)]
+
+% we can forget about these, now in lpdf-imp-acrobat
+
+\definereference [\v!LoadForm         ] [action(importform)]
+\definereference [\v!SaveForm         ] [action(exportform)]
+\definereference [\v!PrintDocument    ] [action(print)]
+\definereference [\v!ExitViewer       ] [action(exit)]
+\definereference [\v!CloseDocument    ] [action(close)]
 \definereference [\v!SaveDocument     ] [action(save)]
 \definereference [\v!SaveNamedDocument] [action(savenamed)]
 \definereference [\v!OpenNamedDocument] [action(opennamed)]
-\definereference [\v!SearchDocument   ] [action(search)]
-\definereference [\v!SearchAgain      ] [action(searchagain)]
-\definereference [\v!StartRendering   ] [action(startrendering)]
-\definereference [\v!StopRendering    ] [action(stoprendering)]
-\definereference [\v!SubmitForm       ] [action(submitform)]
 \definereference [\v!ToggleViewer     ] [action(toggle)]
 \definereference [\v!ViewerHelp       ] [action(help)]
-\definereference [\v!HideField        ] [action(hide)]
-\definereference [\v!ShowField        ] [action(show)]
+\definereference [\v!SearchDocument   ] [action(search)]
+\definereference [\v!SearchAgain      ] [action(searchagain)]
 \definereference [\v!GotoPage         ] [action(gotopage)]
 \definereference [\v!Query            ] [action(query)]
 \definereference [\v!QueryAgain       ] [action(queryagain)]
 \definereference [\v!FitWidth         ] [action(fitwidth)]
 \definereference [\v!FitHeight        ] [action(fitheight)]
-\definereference [\v!ShowThumbs       ] [action(thumbnails)]
-\definereference [\v!ShowBookmarks    ] [action(bookmarks)]
+
+% lpdf-wid
+
+\definereference [\v!ResumeRendering  ] [action(resumerendering)]
+\definereference [\v!StartRendering   ] [action(startrendering)]
+\definereference [\v!StopRendering    ] [action(stoprendering)]
+\definereference [\v!PauseRendering   ] [action(pauserendering)]
+
+\definereference [\v!HideField        ] [action(hide)]
+\definereference [\v!ShowField        ] [action(show)]
+
+% lpdf-ren
 
 \definereference [\v!HideLayer        ] [action(hidelayer)]
 \definereference [\v!VideLayer        ] [action(videlayer)]
 \definereference [\v!ToggleLayer      ] [action(togglelayer)]
+
+% generic
 
 \definereference [\v!firstpage]       [page(firstpage)]
 \definereference [\v!previouspage]    [page(previouspage)]
@@ -2178,7 +2199,7 @@
    \fi}
 
 \permanent\def\currentreferencedefault % for some reason we need to explicitly expand
-  {\normalexpanded{\noexpand\clf_filterdefaultreference
+  {\expanded{\noexpand\clf_filterdefaultreference
      {\s!default}%
      \noexpand\getreferencestructureprefix\clf_getcurrentprefixspec{\s!default}% returns #kind#name#category
    \relax}}

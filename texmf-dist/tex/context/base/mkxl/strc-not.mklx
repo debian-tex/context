@@ -21,8 +21,9 @@
 % todo: more p_strc_notations_* (outside trial loop)
 % todo: see if we can now use \insertpenalties (>0 == some left)
 
-\ifdefined\dotagsetnotesymbol \else \aliased\let\dotagsetnotesymbol\relax \fi
-\ifdefined\dotagsetnotation   \else \aliased\let\dotagsetnotation  \relax \fi
+\ifdefined\dotagsetnotesymbol       \else \aliased\let\dotagsetnotesymbol      \relax              \fi
+\ifdefined\dotagsetnotation         \else \aliased\let\dotagsetnotation        \relax              \fi
+\ifdefined\dotagsetdescriptionindex \else \aliased\let\dotagsetdescriptionindex\gobbletwoarguments \fi
 
 %D \LMTX\ testcase:
 %D
@@ -135,18 +136,18 @@
 
 \protected\def\strc_define_commands_notation#tag#level#parent%
   {\ifempty{#parent}%
-     \normalexpanded{\defineconstruction[#tag][\s!handler=\v!notation,\c!level=#level]}%
+     \expanded{\defineconstruction[#tag][\s!handler=\v!notation,\c!level=#level]}%
      \edefcsname\??notation#tag:\s!parent\endcsname{\??notation}%
    \else
-     \normalexpanded{\defineconstruction[#tag][#parent][\s!handler=\v!notation,\c!level=#level]}%
+     \expanded{\defineconstruction[#tag][#parent][\s!handler=\v!notation,\c!level=#level]}%
      \edefcsname\??note    #tag:\s!parent\endcsname{\??note#parent}% see later for \s!note
      \edefcsname\??notation#tag:\s!parent\endcsname{\??notation#parent}%
    \fi
-   \instance\protected\edefcsname\e!next #tag\endcsname{\strc_notations_next{#tag}{\number#level}}% obsolete
-   \instance\protected\edefcsname\c!reset#tag\endcsname{\strc_notations_reset{#tag}{\number#level}}% obsolete
-   \instance\protected\edefcsname        #tag\endcsname{\strc_notations_command[#tag]}%
-   \instance\protected\edefcsname\e!start#tag\endcsname{\strc_notations_start[#tag]}%
-   \instance\protected\edefcsname\e!stop #tag\endcsname{\strc_notations_stop}}
+   \protected\instance\edefcsname\e!next #tag\endcsname{\strc_notations_next{#tag}{\number#level}}% obsolete
+   \protected\instance\edefcsname\c!reset#tag\endcsname{\strc_notations_reset{#tag}{\number#level}}% obsolete
+   \protected\instance\edefcsname        #tag\endcsname{\strc_notations_command[#tag]}%
+   \protected\instance\edefcsname\e!start#tag\endcsname{\strc_notations_start[#tag]}%
+   \protected\instance\edefcsname\e!stop #tag\endcsname{\strc_notations_stop}}
 
 \lettonothing\m_strc_notation_sub
 
@@ -244,7 +245,7 @@
    \fi}
 
 \def\strc_notations_finalize_previous
-  {\normalexpanded{\endgroup\noteparameter\c!next}}
+  {\expanded{\endgroup\noteparameter\c!next}}
 
 \def\strc_notations_finalize_next
   {\endgroup\ignorespaces}
@@ -270,11 +271,11 @@
    \fi[#2]}
 
 \def\strc_notations_command_setups[#S#1]%
-  {\strc_constructions_register[][\c!label={\descriptionparameter\c!text},\c!reference=,\c!title=,\c!bookmark=,\c!list=,\c!referencetext=,#1]%
+  {\strc_constructions_register[][\c!delay={\noteparameter\c!location},\c!label={\descriptionparameter\c!text},\c!reference=,\c!title=,\c!bookmark=,\c!list=,\c!referencetext=,#1]%
    \strc_notations_wrapup}
 
 \tolerant\def\strc_notations_command_reference[#1]#*#=%
-  {\strc_constructions_register[][\c!label={\descriptionparameter\c!text},\c!reference={#1},\c!title={#2},\c!bookmark=,\c!list=,\c!referencetext=]%
+  {\strc_constructions_register[][\c!delay={\noteparameter\c!location},\c!label={\descriptionparameter\c!text},\c!reference={#1},\c!title={#2},\c!bookmark=,\c!list=,\c!referencetext=]%
    \strc_notations_wrapup}
 
 \def\strc_notations_wrapup
@@ -312,19 +313,19 @@
 \let\strc_notations_pickup_yes\relax
 
 \protected\def\strc_notations_start_setups#1[#S#2]%
-  {\normalexpanded{\def\noexpand\strc_notations_pickup_yes##/#1{\strc_notations_start_setups_indeed[#2]{##1}}}%
+  {\expanded{\def\noexpand\strc_notations_pickup_yes##/#1{\strc_notations_start_setups_indeed[#2]{##1}}}%
    \strc_notations_pickup_yes}
 
 \protected\def\strc_notations_start_setups_indeed[#S#1]#*#2%
-  {\strc_constructions_register[][\c!label={\descriptionparameter\c!text},\c!reference=,\c!title={#2},\c!bookmark=,\c!list=,\c!referencetext=,#1]%
+  {\strc_constructions_register[][\c!delay={\noteparameter\c!location},\c!label={\descriptionparameter\c!text},\c!reference=,\c!title={#2},\c!bookmark=,\c!list=,\c!referencetext=,#1]%
    \strc_notations_wrapup}
 
 \protected\def\strc_notations_start_reference#1[#S#2]%
-  {\normalexpanded{\def\noexpand\strc_notations_pickup_yes##/#1{\strc_notations_start_reference_indeed[#2]{##1}}}%
+  {\expanded{\def\noexpand\strc_notations_pickup_yes##/#1{\strc_notations_start_reference_indeed[#2]{##1}}}%
    \strc_notations_pickup_yes}
 
 \protected\def\strc_notations_start_reference_indeed[#1]#*#2%
-  {\strc_constructions_register[][\c!label={\descriptionparameter\c!text},\c!reference={#1},\c!title={#2},\c!bookmark=,\c!list=,\c!referencetext=]%
+  {\strc_constructions_register[][\c!delay={\noteparameter\c!location},\c!label={\descriptionparameter\c!text},\c!reference={#1},\c!title={#2},\c!bookmark=,\c!list=,\c!referencetext=]%
    \strc_notations_wrapup}
 
 \protected\def\strc_notations_stop
@@ -408,6 +409,8 @@
   [\c!expansion=\v!no,
    \c!xmlsetup=,
    \s!catcodes=]
+
+%D Insertions are part of notes.c!delay
 
 %D Insertions are part of notes.
 
@@ -513,7 +516,7 @@
    \fi
    %
    \ifcstok{\noteparameter\c!range}\v!yes
-     \normalexpanded{\marks\c_strc_notes_insert_mark{\the\c_strc_notes_n}}%
+     \expanded{\marks\c_strc_notes_insert_mark{\the\c_strc_notes_n}}%
    \fi
    %
    \ifconditional\c_strc_notes_skip
@@ -597,7 +600,7 @@
 
 % inline
 
-\let\m_strc_notes_internal\relax
+\lettonothing\m_strc_notes_internal
 
 \def\strc_notes_prepare_inline_references_nop
   {\lettonothing\strc_notes_get_reference_attribute_symbol
@@ -740,8 +743,11 @@
    \nobreak
    \begingroup
    \strc_notes_interaction_check_inline\strc_notes_set_style_color_inline\c!textstyle\c!textcolor
-   \hbox \strc_notes_get_reference_attribute_symbol \strc_notes_get_destination_attribute_symbol \bgroup
-  % \hbox \strc_notes_get_reference_attribute_symbol \bgroup \strc_notes_destination_hack
+   \hbox
+     \s!keepspacing
+     \strc_notes_get_reference_attribute_symbol
+     \strc_notes_get_destination_attribute_symbol
+   \bgroup
      \strc_references_flush_destination_nodes % a bit late but ok
      \dostarttagged\t!descriptionsymbol\currentnote
      \dotagsetnotesymbol
@@ -925,7 +931,11 @@
   {\begincsname\??noterule#alternative\endcsname}
 
 \def\strc_notes_set_rule_autodir
-  {\doifelserighttoleftinbox\currentnoteinsertionnumber\righttoleft\lefttoright}
+  {\ifcase\insertdirection\currentnoteinsertionnumber
+     \lefttoright
+   \else
+     \righttoleft
+   \fi}
 
 \defcsname\??noterule  \v!command\endcsname{\letcurrentnoterulecommand\currentnoterulecommandcommand}
 \defcsname\??noterule       \v!on\endcsname{\letcurrentnoterulecommand\currentnoterulecommandnormal}
@@ -1057,7 +1067,7 @@
    \endcsname}
 
 \protected\def\strc_notes_set_variants
-  {\normalexpanded{\rawprocesscommalist[\noteparameter\c!location]\strc_notes_set_location_step}}
+  {\expanded{\rawprocesscommalist[\noteparameter\c!location]\strc_notes_set_location_step}}
 
 \protected\def\strc_notes_set_location_step#alternative% the insert related one
   {\begincsname\??notelocation#alternative\endcsname}
@@ -1114,7 +1124,7 @@
    \fi
 %    \expandafter\endgroup\expandafter
 %    \s_strc_notes_distance\the\scratchdimen\relax%
-   \normalexpanded{%
+   \expanded{%
      \endgroup
      \s_strc_notes_distance\the\scratchdimen\relax
      % this will / has to / might become a plug
@@ -1338,6 +1348,11 @@
      \noteparameter\c!inbetween
    \fi}
 
+\def\strc_notes_save_indices
+  {\dotagsetdescriptionindex
+      \currentnotenumber
+      \currentconstructionlistentry}
+
 \permanent\protected\def\handlenoteitself#tag#id%
   {\edef\currentnotenumber{#id}%
    \cdef\currentnote{#tag}%
@@ -1357,8 +1372,11 @@
    \begstrut
    \strc_references_flush_destination_nodes
    \strc_notes_set_destination_attribute_text
-   \ifconditional\c_strc_notes_flushed\else
-     \strc_notes_inject_text\relax
+   \ifconditional\c_strc_notes_flushed
+   \else
+       \strc_notes_save_indices % horrible hack (for tagging attachments)
+       \strc_notes_inject_text
+       \relax
    \fi
    \ifvmode\obeydepth\else\endstrut\fi % \obeydepth is new per 2015-01-10
    \strc_constructions_stored_stop
@@ -1733,6 +1751,7 @@
    \inlocalnotes\conditionalfalse}
 
 \lettonothing\p_strc_notes_continue
+\lettonothing\p_strc_notes_location
 
 \def\strc_notes_local_start_step#tag%
   {\p_strc_notes_continue{\noteparameter\c!continue}%
@@ -1953,16 +1972,16 @@
 
     \permanent\def\docalculatetotalnoteheight
       {\ifcase\c_strc_notes_page_location % tricky here ! ! ! to be sorted out ! ! !
-         \advanceby\totalnoteheight\normalexpanded{\additionaltotalnoteheight\currentnoteinsertionnumber}%
+         \advanceby\totalnoteheight\expanded{\additionaltotalnoteheight\currentnoteinsertionnumber}%
        \fi}
 
     \permanent\def\docalculatetotalclevernoteheight
       {\ifcase\c_strc_notes_page_location \else % tricky here ! ! ! to be sorted out ! ! !
-         \advanceby\totalnoteheight\normalexpanded{\additionaltotalnoteheight\currentnoteinsertionnumber}%
+         \advanceby\totalnoteheight\expanded{\additionaltotalnoteheight\currentnoteinsertionnumber}%
        \fi}
 
     \permanent\def\docalculatetotalpagenoteheight
-      {\advanceby\totalnoteheight\normalexpanded{\additionaltotalnoteheight\currentnoteinsertionnumber}}
+      {\advanceby\totalnoteheight\expanded{\additionaltotalnoteheight\currentnoteinsertionnumber}}
 
     \permanent\def\calculatetotalnoteheight      {\totalnoteheight\zeropoint\strc_notes_process\docalculatetotalnoteheight}
     \permanent\def\calculatetotalclevernoteheight{\totalnoteheight\zeropoint\strc_notes_process\docalculatetotalclevernoteheight}

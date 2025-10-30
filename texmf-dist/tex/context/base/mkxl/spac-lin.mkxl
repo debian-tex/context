@@ -59,11 +59,9 @@
    \c!space=\v!default]
 
 \appendtoks
-   \frozen\instance\protected\edefcsname\e!start\currentlines\endcsname{\spac_lines_start[\currentlines]}%
+   \protected\frozen\instance\edefcsname\e!start\currentlines\endcsname{\spac_lines_start[\currentlines]}%
    \frozen\instance\letcsname           \e!stop \currentlines\endcsname \spac_lines_stop
 \to \everydefinelines
-
-% \lettonothing\p_lines_option
 
 \let\spac_lines_break            \relax
 \let\spac_after_first_obeyed_line\relax
@@ -83,6 +81,8 @@
 \newinteger  \c_spac_lines_indent_cnt
 \newinteger  \c_spac_lines_indent_max
 \newdimension\d_spac_lines_indent
+
+\lettonothing\m_spac_lines_indentlist
 
 \def\spac_lines_indent_indeed
   {\ifnum\c_spac_lines_indent_cnt=\c_spac_lines_indent_max
@@ -116,8 +116,11 @@
 %D
 %D \start \showmakeup[vpenalty] \getbuffer \stop
 
+\newconditional \c_spac_lines_enabled
+
 \permanent\tolerant\protected\def\spac_lines_start[#1]%
   {\bgroup
+   \c_spac_lines_enabled\conditionaltrue
    \cdef\currentlines{#1}%
    \obeylines
    \spac_lines_start_indeed}
@@ -126,8 +129,6 @@
   {\ifarguments\or
      \setupcurrentlines[#1]%
    \fi
-%    \edef\p_lines_option{\linesparameter\c!option}%
-%    \ifx\p_lines_option\v!packed
    \ifcstok{\linesparameter\c!option}\v!packed
      \let\spac_lines_break\nobreak
      \c_spac_lines_as_paragraph\conditionalfalse
@@ -184,7 +185,7 @@
 
 \newconditional \c_spac_lines_as_paragraph
 
-\def\spac_lines_obeyed_line
+\def\spac_lines_obeyed_line % we get a dummy first
   {\ifdone\linesparameter\c!right\fi
    \dostoptagged % can be a dummy one as we don't look ahead
    \ifconditional\c_spac_lines_as_paragraph

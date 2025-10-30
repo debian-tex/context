@@ -220,6 +220,8 @@
   {\begingroup
    \futureexpandis[\syst_boxes_smash_yes\syst_boxes_smash_nop}
 
+\lettonothing\m_boxes_smash_options
+
 \def\syst_boxes_smash_nop
   {\edef\m_boxes_smash_options{hd}%
    \futurelet\nexttoken\syst_boxes_smash_indeed}
@@ -569,7 +571,7 @@
      \setbox\scratchbox\hbox % no \hpack because we can have fallbacks
        {\settrialtypesetting
         \ignorespaces#1\removeunwantedspaces}%
-     \normalexpanded{\endgroup\noexpand\expandafter\ifzeropt\wd\scratchbox\if_false\else\if_true\fi}%
+     \expanded{\endgroup\noexpand\expandafter\ifzeropt\wd\scratchbox\if_false\else\if_true\fi}%
    \else
      \expandafter\if_false
    \fi}
@@ -738,7 +740,7 @@
 % \def\syst_boxes_math_rlap{\mathpalette\syst_boxes_do_math_rlap}
 
 \def\syst_boxes_math_xlap#1#2%
-  {\normalexpanded{#1\bgroup\normalstartimath\givenmathstyle\the\mathstyle}%
+  {\expanded{#1\bgroup\normalstartimath\givenmathstyle\the\mathstyle}%
  %{\expandafter#1\expandafter\bgroup\expandafter\normalstartimath\expandafter\givenmathstyle\the\mathstyle
      \mathsurround\zeropoint#2%
    \normalstopimath\egroup}
@@ -1041,7 +1043,7 @@
 %D depth of the line.
 
 \permanent\protected\def\shapedhbox % lines with non strutted dimensions have
-  {\normalexpanded{\dowithnextbox         % interlineskip so if we want the original
+  {\expanded{\dowithnextbox         % interlineskip so if we want the original
      {\ht\nextbox\the\ht\shapebox   % spacing, we need to preserve the original
       \dp\nextbox\the\dp\shapebox   % height and depth which is definitely
       \box\nextbox}}                % needed if we apply struts to the 'new'
@@ -1119,6 +1121,8 @@
 %mutable\let\between\relax % is a math character
 \mutable\let\after  \relax % for now mutable
 \mutable\let\white  \relax % for now mutable
+
+\lettonothing\m_syst_boxes_before
 
 \permanent\protected\def\processtokens#1#2#3#4#5%
   {\begingroup
@@ -1456,10 +1460,24 @@
 \permanent\protected\def\topskippedbox
   {\hpack\bgroup\dowithnextboxcs\syst_boxes_topskippedbox_finish\hbox}
 
+% \def\syst_boxes_topskippedbox_finish
+%   {\edef\m_boxes_tmp{\ifdim\strutdepth=\dp\nextbox\dp\nextbox\the\dp\nextbox\fi}%
+%    \lower\topskip\hpack{\raise\strutheight\box\nextbox}%
+%    \m_boxes_tmp
+%    \egroup}
+
 \def\syst_boxes_topskippedbox_finish
-  {\edef\m_boxes_tmp{\ifdim\strutdepth=\dp\nextbox\dp\nextbox\the\dp\nextbox\fi}%
-   \lower\topskip\hpack{\raise\strutheight\box\nextbox}%
-   \m_boxes_tmp
+  {\ifdim\dp\nextbox=\strutdp
+     \donetrue
+   \else
+     \donefalse
+   \fi
+   \lower\topskip\hpack\bgroup
+     \raise\strutht\box\nextbox
+   \egroup
+   \ifdone
+     \dp\nextbox\strutdp
+   \fi
    \egroup}
 
 %D \macros
@@ -2140,7 +2158,7 @@
       \futurelet\nexttoken\dodocommand}%
    \def\dodocommand
      {\ifx\nexttoken\bgroup
-        \normalexpanded{\egroup#1 to \the\sizeofbox}%
+        \expanded{\egroup#1 to \the\sizeofbox}%
       \else
         \expandafter\afterassignment\expandafter\docommand\expandafter\scratchdimen
       \fi}%
@@ -2729,7 +2747,7 @@
 % \permanent\protected\def\nodestostring#1#2% more tolerant for #2=\cs
 %   {\begingroup
 %    \setbox\nextbox\hbox{#2}%
-%    \normalexpanded{\endgroup\edef\noexpand#1{\boxtostring\nextbox}}}
+%    \expanded{\endgroup\edef\noexpand#1{\boxtostring\nextbox}}}
 %
 % \permanent\def\tostring
 %   {\beginlocalcontrol
@@ -2737,10 +2755,10 @@
 %
 % \permanent\def\tostring
 %   {\beginlocalcontrol\begingroup
-%    \dowithnextbox{\normalexpanded{\endgroup\endlocalcontrol\boxtostring\nextbox}}\hbox}
+%    \dowithnextbox{\expanded{\endgroup\endlocalcontrol\boxtostring\nextbox}}\hbox}
 
 \def\syst_boxes_contenttostring
-  {\normalexpanded{\endgroup\endlocalcontrol\boxtostring\nextbox}}
+  {\expanded{\endgroup\endlocalcontrol\boxtostring\nextbox}}
 
 \permanent\def\contenttostring
   {\beginlocalcontrol\begingroup
@@ -2771,8 +2789,9 @@
 \appendtoks
     \permanent\def\prerolltostring#1%
       {\beginlocalcontrol
-       \setbox\b_syst_boxes\hbox{\expand\everypreroll#1}%
-       \normalexpanded
+       % hbox can fails when we have vskips (mail to list)
+       \setbox\b_syst_boxes\vpack{\expand\everypreroll#1}%
+       \expanded
          {\setbox\b_syst_boxes\emptybox
           \endlocalcontrol
           \boxtostring\b_syst_boxes}}
@@ -2861,9 +2880,10 @@
 %   {\expandafter\newbox\csname\??localbox\string#1\endcsname
 %    \newlocalbox#1}
 
-%D Who knows when this comes in handy:
+%D This is now a primitive:
 
-%permanent\protected\def\lastlinewidth{\dimexpr\clf_lastlinewidth\scaledpoint\relax} % at lua end
+% \lastlinewidth % minus [|parinit|parfil][left|right]skip
+% \lastlinecount % can be used to compensate for above
 
 %D Keep as reference:
 

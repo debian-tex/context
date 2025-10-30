@@ -174,7 +174,7 @@
 
 \permanent\protected\def\MPLIBscaledcm#1#2#3#4#5#6#7% 2-7: sx,rx,ry,sy,tx,ty
   {\begingroup
-% \setbox\MPbox
+\setbox\MPbox % needed for bytemaps
    \hpack\bgroup
      \dotransformnextbox{#2}{#3}{#4}{#5}{#6}{#7}%
     %\dotransformnextbox{\luaexpr{#2/10}}{\luaexpr{#3/10}}{\luaexpr{#4/10}}{\luaexpr{#5/10}}{\luaexpr{#6/10}}{\luaexpr{#7/10}}%
@@ -186,7 +186,8 @@
        \egroup
      \egroup
    \egroup
-% \smashbox\MPbox\box\MPbox
+\smashbox\MPbox
+\box\MPbox
    \endgroup}
 
 \permanent\protected\def\MPLIBgraphictext#1% use at mp end
@@ -259,7 +260,7 @@
 %D selsom used.
 
 \permanent\protected\def\MPLIBstartsetpattern#1#2#3#4#5#6%
-  {\normalexpanded{\registerpattern[mp-pattern-#1]\ifnum#6=\zerocount[hoffset=\MPx{mp-pattern-#1},voffset=\MPy{mp-pattern-#1}]\fi}%
+  {\expanded{\registerpattern[mp-pattern-#1]\ifnum#6=\zerocount[hoffset=\MPx{mp-pattern-#1},voffset=\MPy{mp-pattern-#1}]\fi}%
      \bgroup
         \dowithnextbox{%
           \boxxoffset\nextbox-#2\onebasepoint
@@ -286,7 +287,7 @@
    \ht\nextbox\zeropoint
    \wd\nextbox\zeropoint
    \dp\nextbox\zeropoint
-   \normalexpanded{\ifnum#6=\zerocount\hpos{mp-pattern-#1}\fi}{\box\nextbox}}
+   \expanded{\ifnum#6=\zerocount\hpos{mp-pattern-#1}\fi}{\box\nextbox}}
 
 \permanent\protected\lettonothing\MPLIBstopgetpattern
 

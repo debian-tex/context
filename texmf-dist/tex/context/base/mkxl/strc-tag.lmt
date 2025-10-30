@@ -100,20 +100,33 @@ tagpatterns.splitter = p_splitter
 -- Some NonStruct might become Part, Sect or Sub in which case titles and tage become Lbl
 -- but only when validators don't bark on it and the main structure is kept.
 
-local properties     = allocate { -- todo: more "record = true" to improve formatting
+local properties = allocate { -- todo: more "record = true" to improve formatting
 
     document           = { namespace = "context", nature = "display", pdf = "Document"  },
-    documentpart       = { namespace = "context", nature = "display", pdf = "DocumentFragment" },
+    documentpart       = { namespace = "context", nature = "display", pdf = "Part"      },
+
+    text               = { namespace = "context", nature = "inline",  pdf = "Span"      },
+ -- span               = { namespace = "context", nature = "inline",  pdf = "Span"      },
+ -- div                = { namespace = "context", nature = "display", pdf = "Div"       },
+
+    p                  = { namespace = "context", nature = "mixed",   pdf = "P"         }, -- display
+    t                  = { namespace = "context", nature = "mixed",   pdf = "Span"      }, -- inline
+    m                  = { namespace = "context", nature = "mixed",   pdf = "Artifact"  }, -- mixed
+
+ -- l                  = { namespace = "context", nature = "mixed",   pdf = "Link"      }, -- for testing
+ -- r                  = { namespace = "context", nature = "mixed",   pdf = "Reference" }, -- for testing
+
+    dummy              = { namespace = "context", nature = "mixed",   pdf = "Artifact"  }, -- for testing
+    crumpy             = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- for testing
 
     division           = { namespace = "context", nature = "display", pdf = "NonStruct" },
     paragraph          = { namespace = "context", nature = "mixed",   pdf = "P"         },
     subparagraph       = { namespace = "context", nature = "mixed",   pdf = "P"         },
-    p                  = { namespace = "context", nature = "mixed",   pdf = "P"         },
     highlight          = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
     ornament           = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
     textdisplay        = { namespace = "context", nature = "display", pdf = "NonStruct" },
     placeholder        = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
-    ["break"]          = { namespace = "context", nature = "display", pdf = "NonStruct" },
+    ["break"]          = { namespace = "context", nature = "display", pdf = "Artifact"  },
 
     construct          = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
     constructleft      = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
@@ -124,14 +137,14 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
 
     section            = { namespace = "context", nature = "display", pdf = "NonStruct" },
     sectioncaption     = { namespace = "context", nature = "display", pdf = "NonStruct" , record = true },
-    sectiontitle       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
     sectionnumber      = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
+    sectiontitle       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
     sectioncontent     = { namespace = "context", nature = "display", pdf = "NonStruct" },
 
-    itemgroup          = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    item               = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    itemtag            = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    itemcontent        = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
+    itemgroup          = { namespace = "context", nature = "display", pdf = "NonStruct" }, -- L
+    item               = { namespace = "context", nature = "display", pdf = "NonStruct" }, -- LI
+    itemtag            = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- Lbl
+    itemcontent        = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- LBody
     itemhead           = { namespace = "context", nature = "display", pdf = "NonStruct" },
     itembody           = { namespace = "context", nature = "display", pdf = "NonStruct" },
 
@@ -142,14 +155,14 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
     itemtext           = { namespace = "context", nature = "inline",  pdf = "TD"        },
 
     description        = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    descriptiontag     = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
+    descriptiontag     = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- Lbl
     descriptioncontent = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    descriptionsymbol  = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    descriptionsymbol  = { namespace = "context", nature = "inline",  pdf = "NonStruct" }, -- Lbl
 
     verbatimblock      = { namespace = "context", nature = "display", pdf = "NonStruct" },
     verbatimlines      = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    verbatimline       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    verbatim           = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    verbatimline       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- Code
+    verbatim           = { namespace = "context", nature = "inline",  pdf = "NonStruct" }, -- Code
 
     lines              = { namespace = "context", nature = "display", pdf = "NonStruct" },
     line               = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
@@ -187,16 +200,16 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
     tabulatebody       = { namespace = "context", nature = "display", pdf = "TBODY",    },
     tabulatefoot       = { namespace = "context", nature = "display", pdf = "TFOOT",    },
 
-    list               = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    listitem           = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    listtag            = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    listcontent        = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    listdata           = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    listpage           = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    listtext           = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    list               = { namespace = "context", nature = "display", pdf = "NonStruct" }, -- TOC
+    listitem           = { namespace = "context", nature = "display", pdf = "NonStruct" }, -- TOCI
+    listtag            = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- Lbl
+    listcontent        = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, --
+    listdata           = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, --
+    listpage           = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, --
+    listtext           = { namespace = "context", nature = "inline",  pdf = "NonStruct" }, --
 
-    delimitedblock     = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    delimited          = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    delimitedblock     = { namespace = "context", nature = "display", pdf = "NonStruct" }, -- BlockQuote
+    delimited          = { namespace = "context", nature = "inline",  pdf = "NonStruct" }, -- Quote
     delimitedcontent   = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
     delimitedsymbol    = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
 
@@ -208,14 +221,15 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
     number             = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
 
     float              = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    floatcaption       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    floatlabel         = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
-    floatnumber        = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    floatcaption       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" }, -- Lbl
+    floatlabel         = { namespace = "context", nature = "inline",  pdf = "NonStruct" }, -- Lbl
+    floatnumber        = { namespace = "context", nature = "inline",  pdf = "NonStruct" }, -- Lbl
     floattext          = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
     floatcontent       = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
+    subfloat           = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
 
-    image              = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    mpgraphic          = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
+    image              = { namespace = "context", nature = "mixed",   pdf = "Artifact"  },
+    mpgraphic          = { namespace = "context", nature = "mixed",   pdf = "Artifact"  },
 
     formulaset         = { namespace = "context", nature = "display", pdf = "NonStruct" },
     formula            = { namespace = "context", nature = "display", pdf = "NonStruct" },
@@ -226,14 +240,14 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
     subformula         = { namespace = "context", nature = "display", pdf = "NonStruct" },
 
     link               = { namespace = "context", nature = "inline",  pdf = "Link"      },
-    reference          = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    reference          = { namespace = "context", nature = "inline",  pdf = "Artifact"  },
 
-    navigation         = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    navigationbutton   = { namespace = "context", nature = "mixed",   pdf = "NonStruct" },
-    navigationmenu     = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    navigationmenuitem = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    navigationaction   = { namespace = "context", nature = "display", pdf = "NonStruct" },
-    navigationpage     = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
+    navigation         = { namespace = "context", nature = "mixed",   pdf = "Artifact"  },
+    navigationbutton   = { namespace = "context", nature = "mixed",   pdf = "Artifact"  },
+    navigationmenu     = { namespace = "context", nature = "display", pdf = "Artifact"  },
+    navigationmenuitem = { namespace = "context", nature = "display", pdf = "Artifact"  },
+    navigationaction   = { namespace = "context", nature = "display", pdf = "Artifact"  },
+    navigationpage     = { namespace = "context", nature = "inline",  pdf = "Artifact"  },
 
     margintextblock    = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
     margintext         = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
@@ -248,26 +262,26 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
 
     -- these are wrapped in math and only used in detailed math mode
 
- -- mn                 = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "mn"            },
- -- mi                 = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "mi"            },
- -- mo                 = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "mo"            },
- -- ms                 = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "ms"            },
-    mrow               = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "mrow"          },
- -- msubsup            = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "msubsup"       },
- -- msub               = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "msub"          },
- -- msup               = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "msup"          },
- -- merror             = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "merror"        },
- -- munderover         = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "munderover"    },
- -- munder             = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "munder"        },
- -- mover              = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "mover"         },
- -- mtext              = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "mtext"         },
- -- mfrac              = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "mfrac"         },
- -- mroot              = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "mroot"         },
- -- msqrt              = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "msqrt"         },
- -- mfenced            = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "mfenced"       },
- -- maction            = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "maction"       },
- -- mmultiscripts      = { namespace = "mathml",  nature = "display", pua = "mathml", pdf = "mmultiscripts" },
- -- mprescripts        = { namespace = "mathml",  nature = "mixed",   pua = "mathml", pdf = "mprescripts"   },
+ -- mn                 = { namespace = "mathml",  nature = "mixed",   pdf = "mn"            },
+ -- mi                 = { namespace = "mathml",  nature = "mixed",   pdf = "mi"            },
+ -- mo                 = { namespace = "mathml",  nature = "mixed",   pdf = "mo"            },
+ -- ms                 = { namespace = "mathml",  nature = "mixed",   pdf = "ms"            },
+    mrow               = { namespace = "mathml",  nature = "display", pdf = "mrow"          },
+ -- msubsup            = { namespace = "mathml",  nature = "display", pdf = "msubsup"       },
+ -- msub               = { namespace = "mathml",  nature = "display", pdf = "msub"          },
+ -- msup               = { namespace = "mathml",  nature = "display", pdf = "msup"          },
+ -- merror             = { namespace = "mathml",  nature = "mixed",   pdf = "merror"        },
+ -- munderover         = { namespace = "mathml",  nature = "display", pdf = "munderover"    },
+ -- munder             = { namespace = "mathml",  nature = "display", pdf = "munder"        },
+ -- mover              = { namespace = "mathml",  nature = "display", pdf = "mover"         },
+ -- mtext              = { namespace = "mathml",  nature = "mixed",   pdf = "mtext"         },
+ -- mfrac              = { namespace = "mathml",  nature = "display", pdf = "mfrac"         },
+ -- mroot              = { namespace = "mathml",  nature = "display", pdf = "mroot"         },
+ -- msqrt              = { namespace = "mathml",  nature = "display", pdf = "msqrt"         },
+ -- mfenced            = { namespace = "mathml",  nature = "display", pdf = "mfenced"       },
+ -- maction            = { namespace = "mathml",  nature = "display", pdf = "maction"       },
+ -- mmultiscripts      = { namespace = "mathml",  nature = "display", pdf = "mmultiscripts" },
+ -- mprescripts        = { namespace = "mathml",  nature = "mixed",   pdf = "mprescripts"   },
 
     mn                 = { namespace = "context",  nature = "mixed",   pdf = "Span"      },
     mi                 = { namespace = "context",  nature = "mixed",   pdf = "Span"      },
@@ -350,75 +364,12 @@ local properties     = allocate { -- todo: more "record = true" to improve forma
     verseseparator     = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
     versecontent       = { namespace = "context", nature = "inline",  pdf = "NonStruct" },
 
-}
+--     navigationpage     = { namespace = "context", nature = "inline",  pdf = "Link"  },
 
-local overloads = allocate {
-    -- this is needed for crappy pdf support
 }
 
 tags.properties = properties
-tags.overloads  = overloads
-
-directives.register("backend.usetags", function(v)
-    if type(v) == "string" then
-        local fullname = resolvers.findfile("lpdf-tag-imp-"..v..".lmt") or ""
-        if fullname ~= "" then
-            local n = 0
-            local c = 0
-            local data = table.load(fullname)
-            if data then
-                local merge = data.mapping
-                if merge then
-                    for k, v in next, merge do
-                        local p = properties[k]
-                        if p and p.pdf ~= v.pdf then
-                            p.pdf = v.pdf
-                            p.pua = v.pua or p.pua
-                            n = n + 1
-                        end
-                    end
-                end
-                merge = data.overloads
-                if merge then
-                    for maintag, details in sortedhash(merge) do
-                        local mapping = details.mapping
-                        if mapping then
-                            local okay = { }
-                            for detail, spec in sortedhash(mapping) do
-                                local tag = spec.tag
-                                local pdf = spec.pdf
-                                local pua = spec.pua
-                                if tag and pdf and pua then
-                                    if properties[tag] then
-                                        report_tags("tag %a can't be overloaded",tag)
-                                    else
-                                        okay[detail] = spec
-                                        properties[tag] = spec
-                                        spec.namespace = "user"
-                                        spec.original  = { maintag, detail }
-                                        c = c + 1
-                                    end
-                                else
-                                    report_tags("tag %a needs pdf and pua field",tag)
-                                end
-                            end
-                            if next(okay) then
-                                overloads[maintag] = {
-                                    criterium = details.criterium,
-                                    mapping   = okay,
-                                }
-                            end
-                        else
-                            report_tags("tag %a overload needs mapping",tag)
-                        end
-                    end
-                end
-            end
-            report_tags("%i pdf tags overloaded, %i crappy tags added, cross your fingers",n,c)
-        end
-    end
-end)
-
+tags.overloads  = allocate { }
 
 local patterns = setmetatableindex(function(t,tag)
     local v = topattern("^" .. tag .. ">")
@@ -519,6 +470,8 @@ end
 
 local ignored = { } tags.ignored = ignored
 
+    statistics.feedback.register { name = "tagging", index = 2, category = "performance" }
+
 local function enabletags()
     if not enabled then
         if tex.systemmodes.export then
@@ -526,6 +479,7 @@ local function enabletags()
         else
             codeinjections.enabletags()
         end
+        statistics.feedback.setstate("tagging", true)
         enabled = true
     end
 end
@@ -631,8 +585,21 @@ do
             attribute = tag_document_level
         end
         insert(tagstack, { texgetattribute(a_tagged), stacksize, stack[stacksize], chain })
-        chain            = attribute and { unpack(taglist[attribute].taglist) } or { }
-        stacksize        = #chain
+        if attribute then
+            local t = taglist[attribute]
+            if t then
+                chain     = { unpack(t.taglist) }
+                stacksize = #chain
+            else
+                chain    = { }
+                stacksize = 1
+            end
+        else
+            chain     = { }
+            stacksize = 1
+        end
+     -- chain            = attribute and { unpack(taglist[attribute].taglist) } or { }
+     -- stacksize        = #chain
         stack[stacksize] = attribute
     end
 
@@ -863,3 +830,55 @@ implement {
     public    = true,
     actions   = tags.pop
 }
+
+-- bonus
+
+do
+
+    function tags.analyze()
+     -- local taglist = tags.taglist
+        local used = setmetatableindex("number")
+        local head = setmetatableindex("number")
+     -- inspect(list)
+        for i=1,#taglist do
+            local l = taglist[i]
+            local tagname = l.tagname
+            local taglist = l.taglist
+            if tagname == "section" then
+                local detail = l.detail
+                head[detail] = head[detail] + 1
+            end
+            used[tagname] = used[tagname] + 1
+        end
+        if next(used) then
+            report_tags()
+            report_tags("used tags")
+            report_tags()
+            for k, v in sortedhash(used) do
+                report_tags("%4i  %s",v,k)
+            end
+            report_tags()
+        end
+        if next(head) then
+            report_tags("used heads")
+            report_tags()
+            for k, v in sortedhash(head) do
+                report_tags("%4i  %s",v,k)
+            end
+            report_tags()
+        end
+    end
+
+    local enabled
+
+    trackers.register("structures.tags.analyze", function(v)
+        enabled = true
+    end)
+
+    statistics.register("structure tags", function()
+        if enabled then
+            tags.analyze()
+        end
+    end)
+
+end

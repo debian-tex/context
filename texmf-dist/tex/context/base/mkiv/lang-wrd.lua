@@ -174,6 +174,7 @@ local function mark_words(head,whenfound) -- can be optimized and shared
                 action()
                 language = a
             end
+            -- still unicode
             local data = chardata[code]
             if is_letter[data.category] then
                 n = n + 1
@@ -229,8 +230,8 @@ local enabled    = false
 function words.check(head)
     if enabled then
         return methods[wordmethod](head)
-    elseif not head then
-        return head, false
+ -- elseif not head then
+ --     return head, false
     else
         return head, false
     end
