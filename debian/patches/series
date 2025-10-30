@@ -1,2 +1,3 @@
-texfont_fontforge
+# texfont_fontforge
+debian-texmfcnf.lua
 fix_for_manual_pages
