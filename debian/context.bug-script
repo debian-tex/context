@@ -1,0 +1,14 @@
+#!/bin/bash
+# bug script for TeX Live packages
+
+set -e
+
+cat <<EOF
+
+Please don't add attachments > 100KB. They won't make it through
+our mailing list and we won't see the report!
+
+Press ENTER to continue
+EOF
+
+getkey
